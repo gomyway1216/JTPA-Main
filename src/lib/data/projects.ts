@@ -1,11 +1,12 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { plainify } from "@/lib/data/serialize";
 import type { ProjectDoc, ProjectStatus } from "@/lib/types";
 
 function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): ProjectDoc {
   const data = doc.data() as Omit<ProjectDoc, "id">;
-  return { ...data, id: doc.id };
+  return plainify({ ...data, id: doc.id });
 }
 
 export async function listProjects(opts: {
@@ -46,5 +47,8 @@ export async function getProjectBySlug(
 export async function getProjectById(id: string): Promise<ProjectDoc | null> {
   const snap = await adminDb().collection("projects").doc(id).get();
   if (!snap.exists) return null;
-  return { ...(snap.data() as Omit<ProjectDoc, "id">), id: snap.id };
+  return plainify({
+    ...(snap.data() as Omit<ProjectDoc, "id">),
+    id: snap.id,
+  });
 }

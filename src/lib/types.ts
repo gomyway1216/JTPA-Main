@@ -1,8 +1,14 @@
 import type { Timestamp } from "firebase/firestore";
 
-// Firestore timestamps round-trip differently between client/admin SDKs.
-// All Date-like fields use this helper type.
-export type TsLike = Timestamp | Date | { seconds: number; nanoseconds: number };
+// Firestore timestamps round-trip differently between client/admin SDKs,
+// and again across the Server→Client component boundary (JSON-stringified
+// Admin Timestamps emit `_seconds`/`_nanoseconds`). All Date-like fields
+// use this helper type to cover every shape we might encounter.
+export type TsLike =
+  | Timestamp
+  | Date
+  | { seconds: number; nanoseconds: number }
+  | { _seconds: number; _nanoseconds: number };
 
 // ---------- users ----------
 export interface UserProfile {

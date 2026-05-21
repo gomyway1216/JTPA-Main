@@ -1,6 +1,7 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { plainify } from "@/lib/data/serialize";
 import type { RsvpDoc } from "@/lib/types";
 
 export async function getMyRsvp(
@@ -14,7 +15,7 @@ export async function getMyRsvp(
     .doc(uid)
     .get();
   if (!snap.exists) return null;
-  return snap.data() as RsvpDoc;
+  return plainify(snap.data() as RsvpDoc);
 }
 
 export async function listRsvps(eventId: string): Promise<RsvpDoc[]> {
@@ -24,7 +25,7 @@ export async function listRsvps(eventId: string): Promise<RsvpDoc[]> {
     .collection("rsvps")
     .orderBy("createdAt", "asc")
     .get();
-  return snap.docs.map((d) => d.data() as RsvpDoc);
+  return snap.docs.map((d) => plainify(d.data() as RsvpDoc));
 }
 
 export async function listMyRsvpEventIds(uid: string): Promise<string[]> {
