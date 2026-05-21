@@ -1,0 +1,99 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // ----- users -----
+    // Profile docs. Owner can read/write own, admin can read all.
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdmin();
+      allow create: if isSelf(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if isSelf(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.email == resource.data.email;
+      allow delete: if isAdmin();
+    }
+
+    // ----- events -----
+    // Public can read published events. Admins can do everything.
+    match /events/{eventId} {
+      allow read: if resource.data.status == 'published'
+        || resource.data.status == 'past'
+        || isAdmin();
+      allow create, update, delete: if isAdmin();
+
+      // ----- rsvps subcollection -----
+      // User can manage own RSVP doc. Admin can read/write all.
+      match /rsvps/{uid} {
+        allow read: if isSelf(uid) || isAdmin();
+        allow create: if isSelf(uid)
+          && request.resource.data.uid == uid;
+        allow update: if (isSelf(uid)
+          && request.resource.data.uid == resource.data.uid)
+          || isAdmin();
+        allow delete: if isSelf(uid) || isAdmin();
+      }
+
+      // ----- presentations subcollection -----
+      // Public can read for published events. Presenter or admin can write.
+      match /presentations/{presentationId} {
+        allow read: if true;
+        allow create: if isSignedIn()
+          && request.resource.data.presenterUid == request.auth.uid;
+        allow update: if (isSignedIn()
+          && resource.data.presenterUid == request.auth.uid)
+          || isAdmin();
+        allow delete: if (isSignedIn()
+          && resource.data.presenterUid == request.auth.uid)
+          || isAdmin();
+      }
+    }
+
+    // ----- projects (Showcase) -----
+    // Anyone signed in can submit. Admin approves. Public reads only approved.
+    match /projects/{projectId} {
+      allow read: if resource.data.status == 'approved'
+        || (isSignedIn() && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reviewerUid == null;
+
+      // Owner can edit metadata but cannot change status/reviewer fields.
+      // Editing flips status back to 'pending' for re-review.
+      allow update: if (
+        isSignedIn()
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.reviewerUid == resource.data.reviewerUid
+        && request.resource.data.status == 'pending'
+      ) || isAdmin();
+
+      allow delete: if (isSignedIn()
+        && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+    }
+
+    // ----- mail (Trigger Email extension) -----
+    // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
+    match /mail/{mailId} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,50 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    function maxSize(mb) {
+      return request.resource.size < mb * 1024 * 1024;
+    }
+
+    // Event cover images: public read, admin write.
+    match /events/{eventId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && maxSize(10);
+    }
+
+    // Presentation files: public read, presenter or admin write.
+    match /presentations/{eventId}/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if ((isSignedIn() && request.auth.uid == uid) || isAdmin())
+        && maxSize(50);
+    }
+
+    // Project (Showcase) assets: public read for thumbnails/screenshots,
+    // owner can write their own folder, admin can write any.
+    match /projects/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if ((isSignedIn() && request.auth.uid == uid) || isAdmin())
+        && isImage() && maxSize(5);
+    }
+
+    // User avatars
+    match /users/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if (isSignedIn() && request.auth.uid == uid)
+        && isImage() && maxSize(2);
+    }
+  }
+}
