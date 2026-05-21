@@ -3,12 +3,21 @@ import type { TsLike } from "@/lib/types";
 export function toDate(value: TsLike | undefined | null): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
-  if (typeof (value as { toDate?: () => Date }).toDate === "function") {
-    return (value as { toDate: () => Date }).toDate();
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.toDate === "function") {
+    return (obj.toDate as () => Date)();
   }
-  if (typeof (value as { seconds?: number }).seconds === "number") {
-    const v = value as { seconds: number; nanoseconds: number };
-    return new Date(v.seconds * 1000 + Math.floor(v.nanoseconds / 1e6));
+  if (typeof obj.seconds === "number") {
+    return new Date(
+      (obj.seconds as number) * 1000 +
+        Math.floor((obj.nanoseconds as number) / 1e6),
+    );
+  }
+  if (typeof obj._seconds === "number") {
+    return new Date(
+      (obj._seconds as number) * 1000 +
+        Math.floor((obj._nanoseconds as number) / 1e6),
+    );
   }
   return null;
 }

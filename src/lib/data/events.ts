@@ -3,11 +3,12 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { plainify } from "@/lib/data/serialize";
 import type { EventDoc, EventStatus } from "@/lib/types";
 
 function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): EventDoc {
   const data = doc.data() as Omit<EventDoc, "id">;
-  return { ...data, id: doc.id };
+  return plainify({ ...data, id: doc.id });
 }
 
 export async function listEvents(opts: {
@@ -51,5 +52,5 @@ export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
 export async function getEventById(id: string): Promise<EventDoc | null> {
   const snap = await adminDb().collection("events").doc(id).get();
   if (!snap.exists) return null;
-  return { ...(snap.data() as Omit<EventDoc, "id">), id: snap.id };
+  return plainify({ ...(snap.data() as Omit<EventDoc, "id">), id: snap.id });
 }
