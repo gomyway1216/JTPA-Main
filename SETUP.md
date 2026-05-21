@@ -83,6 +83,24 @@ firebase apphosting:secrets:grantaccess SESSION_COOKIE_SECRET
 `NEXT_PUBLIC_FIREBASE_*` は `apphosting.yaml` の `env` に直接書いてOK
 (クライアントに露出する値なので秘密ではない)。
 
+### Rules を GitHub Actions で自動 deploy する
+
+`.github/workflows/deploy-rules.yml` が `firestore.rules` / `firestore.indexes.json` /
+`storage.rules` / `firebase.json` のいずれかが main に push されたタイミングで自動 deploy します。
+セットアップに必要なもの:
+
+1. **GCP Service Account を作成** (Console → IAM → Service Accounts)
+   - 名前例: `gh-actions-rules-deployer`
+   - 付与する Role:
+     - `Firebase Rules Admin` (`roles/firebaserules.admin`)
+     - `Cloud Datastore Index Admin` (`roles/datastore.indexAdmin`)
+     - `Firebase Hosting Admin` (`roles/firebasehosting.admin`) ※将来 Hosting も deploy するなら
+2. **キーを発行**: 該当 SA → Keys → Add Key → JSON
+3. **GitHub Secret に登録**: repo Settings → Secrets and variables → Actions → New repository secret
+   - Name: `FIREBASE_SERVICE_ACCOUNT`
+   - Value: ダウンロードしたJSONの中身を丸ごとペースト
+4. ワークフローを手動キックして動作確認: Actions → "Deploy Firestore & Storage Rules" → Run workflow
+
 ## 6. データ構造
 
 | Collection | 説明 |
