@@ -51,13 +51,19 @@ export function formatTime(value: TsLike | undefined | null): string {
 }
 
 export function slugify(input: string): string {
-  return input
+  const cleaned = input
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[^\w\s-]/g, "")
     .trim()
     .replace(/\s+/g, "-")
     .slice(0, 80);
+  // Japanese/CJK-only titles strip to empty — fall back to a base36 timestamp
+  // so the slug always satisfies the min(2) regex requirement.
+  if (cleaned.length < 2) {
+    return `event-${Date.now().toString(36)}`;
+  }
+  return cleaned;
 }
 
 export function classNames(...parts: Array<string | false | null | undefined>) {

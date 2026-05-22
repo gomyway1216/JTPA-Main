@@ -10,18 +10,36 @@ import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { slugify } from "@/lib/utils";
 
+// Pre-process empty strings to `undefined` so blank optional URL fields don't
+// trip the `.url()` validator.
+const optionalUrl = z.preprocess(
+  (v) => (v === "" ? undefined : v),
+  z.string().url().optional(),
+);
+
 const ProjectInputSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(10).max(5000),
   tags: z.array(z.string().min(1).max(30)).max(10).default([]),
   appUrl: z.string().url(),
-  repoUrl: z.string().url().optional().or(z.literal("")),
-  demoVideoUrl: z.string().url().optional().or(z.literal("")),
+  repoUrl: optionalUrl,
+  demoVideoUrl: optionalUrl,
   thumbnailPath: z.string().optional(),
   screenshots: z.array(z.string()).max(8).default([]),
 });
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
+
+function parseProjectInput(
+  input: ProjectFormInput,
+): z.infer<typeof ProjectInputSchema> {
+  const result = ProjectInputSchema.safeParse(input);
+  if (result.success) return result.data;
+  const issues = result.error.issues
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
+  throw new Error(`入力エラー: ${issues}`);
+}
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
   const slug = slugify(base);
@@ -39,7 +57,7 @@ async function uniqueSlug(base: string, existingId?: string): Promise<string> {
 
 export async function submitProject(input: ProjectFormInput): Promise<string> {
   const user = await requireUser();
-  const parsed = ProjectInputSchema.parse(input);
+  const parsed = parseProjectInput(input);
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
@@ -80,7 +98,7 @@ export async function updateMyProject(
   input: ProjectFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = ProjectInputSchema.parse(input);
+  const parsed = parseProjectInput(input);
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");
