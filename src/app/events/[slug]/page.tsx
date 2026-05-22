@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
+import { PresentationSection } from "@/app/events/[slug]/PresentationSection";
 import { RsvpSection } from "@/app/events/[slug]/RsvpSection";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
+import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
 import { formatDateTime } from "@/lib/utils";
 
@@ -24,7 +26,10 @@ export default async function EventDetailPage({
   if (event.visibility === "members_only" && !user) {
     redirect(`/login?redirect=/events/${slug}`);
   }
-  const myRsvp = user ? await getMyRsvp(event.id, user.uid) : null;
+  const [myRsvp, presentations] = await Promise.all([
+    user ? getMyRsvp(event.id, user.uid) : Promise.resolve(null),
+    listPresentations(event.id).catch(() => []),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -106,6 +111,14 @@ export default async function EventDetailPage({
           </Link>
         </div>
       )}
+
+      <PresentationSection
+        eventId={event.id}
+        eventSlug={event.slug}
+        user={user}
+        myRsvp={myRsvp}
+        initialPresentations={presentations}
+      />
     </div>
   );
 }
