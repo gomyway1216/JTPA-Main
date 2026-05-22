@@ -36,6 +36,9 @@ const EventInputSchema = z.object({
   capacity: z.coerce.number().int().min(0),
   presenterCapacity: z.coerce.number().int().min(0),
   status: z.enum(["draft", "published", "past", "cancelled"]),
+  // Optional in the schema so existing forms / older clients keep working;
+  // we default to "public" when writing to Firestore below.
+  visibility: z.enum(["public", "members_only"]).optional(),
   surveyFields: z.array(SurveyFieldSchema).default([]),
 });
 
@@ -83,6 +86,7 @@ export async function createEvent(input: EventFormInput): Promise<string> {
     capacity: parsed.capacity,
     presenterCapacity: parsed.presenterCapacity,
     status: parsed.status,
+    visibility: parsed.visibility ?? "public",
     surveyFields: parsed.surveyFields,
     rsvpCount: 0,
     presenterCount: 0,
@@ -131,6 +135,7 @@ export async function updateEvent(
     capacity: parsed.capacity,
     presenterCapacity: parsed.presenterCapacity,
     status: parsed.status,
+    visibility: parsed.visibility ?? "public",
     surveyFields: parsed.surveyFields,
     updatedAt: FieldValue.serverTimestamp(),
   });

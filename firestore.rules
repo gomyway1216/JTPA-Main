@@ -29,11 +29,15 @@ service cloud.firestore {
     }
 
     // ----- events -----
-    // Public can read published events. Admins can do everything.
+    // Public reads any non-cancelled event where visibility is not
+    // 'members_only'. Older docs missing the visibility field are treated as
+    // public (the `!=` comparison returns true for missing fields). Members-
+    // only events still need a signed-in user. Admins always pass.
     match /events/{eventId} {
-      allow read: if resource.data.status == 'published'
-        || resource.data.status == 'past'
-        || isAdmin();
+      allow read: if (
+        (resource.data.status == 'published' || resource.data.status == 'past')
+        && (resource.data.visibility != 'members_only' || isSignedIn())
+      ) || isAdmin();
       allow create, update, delete: if isAdmin();
 
       // ----- rsvps subcollection -----

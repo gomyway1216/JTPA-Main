@@ -39,7 +39,14 @@ export default async function AdminEventsPage() {
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {events.map((e) => (
               <tr key={e.id}>
-                <td className="py-2 font-medium">{e.title}</td>
+                <td className="py-2 font-medium">
+                  {e.title}
+                  {e.visibility === "members_only" && (
+                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      メンバー限定
+                    </span>
+                  )}
+                </td>
                 <td className="py-2 text-zinc-500">{formatDateTime(e.startAt)}</td>
                 <td className="py-2">{e.status}</td>
                 <td className="py-2">

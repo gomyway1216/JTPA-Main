@@ -42,6 +42,9 @@ export function EventForm({
   const [status, setStatus] = useState<EventFormInput["status"]>(
     event?.status ?? "draft",
   );
+  const [visibility, setVisibility] = useState<
+    NonNullable<EventFormInput["visibility"]>
+  >(event?.visibility ?? "public");
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -64,6 +67,7 @@ export function EventForm({
           capacity,
           presenterCapacity,
           status,
+          visibility,
           surveyFields: fields,
         };
         if (mode === "create") {
@@ -231,6 +235,20 @@ export function EventForm({
           <option value="published">公開</option>
           <option value="past">過去</option>
           <option value="cancelled">中止</option>
+        </select>
+      </Field>
+      <Field label="公開範囲">
+        <select
+          value={visibility}
+          onChange={(e) =>
+            setVisibility(
+              e.target.value as NonNullable<EventFormInput["visibility"]>,
+            )
+          }
+          className={inputCls}
+        >
+          <option value="public">全員 (ログインなしでも閲覧可)</option>
+          <option value="members_only">メンバー限定 (要ログイン)</option>
         </select>
       </Field>
 
