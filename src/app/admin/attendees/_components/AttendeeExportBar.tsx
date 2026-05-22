@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import type { RsvpDoc } from "@/lib/types";
+import type { RsvpDoc, SurveyField } from "@/lib/types";
 
 type Filter = "confirmed" | "all";
 
@@ -13,8 +13,17 @@ function csvEscape(value: string): string {
   return value;
 }
 
-function buildCsv(rsvps: RsvpDoc[]): string {
-  const header = [
+function formatResponse(
+  value: string | string[] | boolean | undefined,
+): string {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (Array.isArray(value)) return value.join("|"); // pipe-separated to survive comma split
+  return value;
+}
+
+function buildCsv(rsvps: RsvpDoc[], surveyFields: SurveyField[]): string {
+  const baseHeader = [
     "displayName",
     "affiliation",
     "email",
@@ -23,8 +32,13 @@ function buildCsv(rsvps: RsvpDoc[]): string {
     "presentationTitle",
     "presentationAbstract",
   ];
-  const rows = rsvps.map((r) =>
-    [
+  // Survey columns are appended at the end, using the field key as the header
+  // (Excel/Sheets users can rename if they want the human label).
+  const surveyHeader = surveyFields.map((f) => `survey_${f.key}`);
+  const header = [...baseHeader, ...surveyHeader];
+
+  const rows = rsvps.map((r) => {
+    const base = [
       r.displayName,
       r.affiliation ?? "",
       r.email,
@@ -32,10 +46,16 @@ function buildCsv(rsvps: RsvpDoc[]): string {
       r.status,
       r.presentationTitle ?? "",
       r.presentationAbstract ?? "",
-    ]
+    ];
+    const survey = surveyFields.map((f) => {
+      // Presenter-only fields are blank for plain attendees.
+      if (f.audience === "presenter" && r.role !== "presenter") return "";
+      return formatResponse(r.surveyResponses?.[f.key]);
+    });
+    return [...base, ...survey]
       .map((v) => csvEscape(String(v ?? "")))
-      .join(","),
-  );
+      .join(",");
+  });
   // Prepend a UTF-8 BOM so Excel opens it without garbled Japanese.
   return "﻿" + [header.join(","), ...rows].join("\n");
 }
@@ -43,9 +63,11 @@ function buildCsv(rsvps: RsvpDoc[]): string {
 export function AttendeeExportBar({
   rsvps,
   eventTitle,
+  surveyFields = [],
 }: {
   rsvps: RsvpDoc[];
   eventTitle: string;
+  surveyFields?: SurveyField[];
 }) {
   const [filter, setFilter] = useState<Filter>("confirmed");
   const [toast, setToast] = useState<string | null>(null);
@@ -75,7 +97,7 @@ export function AttendeeExportBar({
   }
 
   function downloadCsv() {
-    const csv = buildCsv(filtered);
+    const csv = buildCsv(filtered, surveyFields);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -115,6 +137,11 @@ export function AttendeeExportBar({
         className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
       >
         CSV ダウンロード
+        {surveyFields.length > 0 && (
+          <span className="ml-1 text-[10px] text-zinc-500">
+            (+{surveyFields.length} アンケート列)
+          </span>
+        )}
       </button>
       {toast && (
         <span className="text-xs text-emerald-700 dark:text-emerald-300">{toast}</span>

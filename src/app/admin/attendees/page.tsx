@@ -2,8 +2,29 @@ import { AttendeeExportBar } from "@/app/admin/attendees/_components/AttendeeExp
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { formatDateTime } from "@/lib/utils";
+import type { RsvpDoc, SurveyField } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+function formatResponse(
+  value: string | string[] | boolean | undefined,
+): string {
+  if (value === undefined || value === null || value === "") return "—";
+  if (typeof value === "boolean") return value ? "はい" : "いいえ";
+  if (Array.isArray(value)) return value.join(", ");
+  return value;
+}
+
+function fieldsForRsvp(
+  fields: SurveyField[],
+  r: RsvpDoc,
+): SurveyField[] {
+  // Hide presenter-only questions for plain attendees (their answers should
+  // be blank anyway, but it's cleaner to skip the rows entirely).
+  return fields.filter(
+    (f) => f.audience === "all" || r.role === "presenter",
+  );
+}
 
 export default async function AdminAttendeesPage({
   searchParams,
@@ -17,6 +38,7 @@ export default async function AdminAttendeesPage({
   }).catch(() => []);
   const selectedId = eventId || events[0]?.id;
   const selectedEvent = events.find((e) => e.id === selectedId);
+  const surveyFields = selectedEvent?.surveyFields ?? [];
   const rsvps = selectedId
     ? await listRsvps(selectedId).catch(() => [])
     : [];
@@ -53,6 +75,7 @@ export default async function AdminAttendeesPage({
         <AttendeeExportBar
           rsvps={rsvps}
           eventTitle={selectedEvent?.title ?? "attendees"}
+          surveyFields={surveyFields}
         />
       )}
 
@@ -67,20 +90,76 @@ export default async function AdminAttendeesPage({
               <th className="py-2">メール</th>
               <th className="py-2">役割</th>
               <th className="py-2">ステータス</th>
+              <th className="py-2">詳細</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {rsvps.map((r) => (
-              <tr key={r.uid}>
-                <td className="py-2 font-medium">{r.displayName}</td>
-                <td className="py-2 text-zinc-500">{r.affiliation || "—"}</td>
-                <td className="py-2 text-zinc-500">{r.email}</td>
-                <td className="py-2">
-                  {r.role === "presenter" ? "発表者" : "参加者"}
-                </td>
-                <td className="py-2">{r.status}</td>
-              </tr>
-            ))}
+            {rsvps.map((r) => {
+              const applicableFields = fieldsForRsvp(surveyFields, r);
+              const hasDetails =
+                applicableFields.length > 0 ||
+                !!r.presentationTitle ||
+                !!r.presentationAbstract;
+              return (
+                <tr key={r.uid} className="align-top">
+                  <td className="py-2 font-medium">{r.displayName}</td>
+                  <td className="py-2 text-zinc-500">{r.affiliation || "—"}</td>
+                  <td className="py-2 text-zinc-500">{r.email}</td>
+                  <td className="py-2">
+                    {r.role === "presenter" ? "発表者" : "参加者"}
+                  </td>
+                  <td className="py-2">{r.status}</td>
+                  <td className="py-2">
+                    {hasDetails ? (
+                      <details>
+                        <summary className="cursor-pointer text-xs text-blue-600 hover:underline">
+                          表示
+                        </summary>
+                        <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
+                          {r.role === "presenter" && r.presentationTitle && (
+                            <>
+                              <dt className="font-medium text-zinc-500">
+                                発表タイトル
+                              </dt>
+                              <dd className="whitespace-pre-wrap">
+                                {r.presentationTitle}
+                              </dd>
+                            </>
+                          )}
+                          {r.role === "presenter" && r.presentationAbstract && (
+                            <>
+                              <dt className="font-medium text-zinc-500">
+                                発表概要
+                              </dt>
+                              <dd className="whitespace-pre-wrap">
+                                {r.presentationAbstract}
+                              </dd>
+                            </>
+                          )}
+                          {applicableFields.map((f) => (
+                            <span key={f.key} className="contents">
+                              <dt className="font-medium text-zinc-500">
+                                {f.label}
+                                {f.audience === "presenter" && (
+                                  <span className="ml-1 text-[10px] text-zinc-400">
+                                    (発表者のみ)
+                                  </span>
+                                )}
+                              </dt>
+                              <dd className="whitespace-pre-wrap">
+                                {formatResponse(r.surveyResponses?.[f.key])}
+                              </dd>
+                            </span>
+                          ))}
+                        </dl>
+                      </details>
+                    ) : (
+                      <span className="text-xs text-zinc-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}
