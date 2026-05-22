@@ -9,30 +9,53 @@ import { requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import type { PresentationDoc, RsvpDoc } from "@/lib/types";
 
-// Either a file (filePath + fileUrl) or an external URL must be present.
 const optionalUrl = z.preprocess(
   (v) => (v === "" ? undefined : v),
   z.string().url().optional(),
 );
 
-const SavePresentationSchema = z
+// A presentation needs a title plus at least one of (uploaded file, external
+// URL). Both can co-exist — e.g. PDF slides + a recording link.
+const CorePresentationFields = {
+  title: z.string().min(1).max(200),
+  abstract: z.string().max(5000).optional(),
+  filePath: z.string().optional(),
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
+  externalSlidesUrl: optionalUrl,
+};
+
+const CreateSchema = z
   .object({
     eventId: z.string().min(1),
     eventSlug: z.string().min(1),
-    filePath: z.string().optional(),
-    fileUrl: z.string().optional(),
-    fileName: z.string().optional(),
-    externalSlidesUrl: optionalUrl,
+    ...CorePresentationFields,
   })
   .refine(
     (v) => !!v.externalSlidesUrl || (!!v.filePath && !!v.fileUrl),
     "ファイル または 外部URL のどちらかを指定してください",
   );
 
-export type SavePresentationInput = z.input<typeof SavePresentationSchema>;
+const UpdateSchema = z
+  .object({
+    presentationId: z.string().min(1),
+    eventId: z.string().min(1),
+    eventSlug: z.string().min(1),
+    ...CorePresentationFields,
+  })
+  .refine(
+    (v) => !!v.externalSlidesUrl || (!!v.filePath && !!v.fileUrl),
+    "ファイル または 外部URL のどちらかを指定してください",
+  );
 
-function parse(input: SavePresentationInput) {
-  const result = SavePresentationSchema.safeParse(input);
+export type CreatePresentationInput = z.input<typeof CreateSchema>;
+export type UpdatePresentationInput = z.input<typeof UpdateSchema>;
+
+function readableParse<T extends z.ZodTypeAny>(
+  schema: T,
+  input: z.input<T>,
+): z.infer<T> {
+  const result = schema.safeParse(input);
   if (result.success) return result.data;
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
@@ -40,71 +63,106 @@ function parse(input: SavePresentationInput) {
   throw new Error(`入力エラー: ${issues}`);
 }
 
-export async function savePresentation(
-  input: SavePresentationInput,
-): Promise<PresentationDoc> {
-  const user = await requireUser();
-  const parsed = parse(input);
-
-  // Verify the caller has a confirmed presenter RSVP for this event. We pull
-  // title/abstract straight from the RSVP so the presenter doesn't re-type
-  // them, and so we can't accept "phantom" presentations from non-presenters.
+async function ensurePresenter(eventId: string, uid: string): Promise<void> {
   const rsvpSnap = await adminDb()
     .collection("events")
-    .doc(parsed.eventId)
+    .doc(eventId)
     .collection("rsvps")
-    .doc(user.uid)
+    .doc(uid)
     .get();
   if (!rsvpSnap.exists) throw new Error("発表者として登録されていません");
   const rsvp = rsvpSnap.data() as RsvpDoc;
   if (rsvp.role !== "presenter" || rsvp.status !== "confirmed") {
     throw new Error("発表者として登録されていません");
   }
+}
 
-  const presentationRef = adminDb()
+async function deleteStorageFile(path: string): Promise<void> {
+  try {
+    await adminStorage().bucket().file(path).delete();
+  } catch (err) {
+    // File may already be gone, or perms changed. Don't block the metadata
+    // write — just log.
+    console.warn("Failed to delete presentation file:", path, err);
+  }
+}
+
+export async function createPresentation(
+  input: CreatePresentationInput,
+): Promise<PresentationDoc> {
+  const user = await requireUser();
+  const parsed = readableParse(CreateSchema, input);
+  await ensurePresenter(parsed.eventId, user.uid);
+
+  const now = Timestamp.now();
+  const ref = adminDb()
     .collection("events")
     .doc(parsed.eventId)
     .collection("presentations")
-    .doc(user.uid);
-  const existingSnap = await presentationRef.get();
-  const now = Timestamp.now();
-
-  // If replacing an existing file upload with a new one (or with an external
-  // URL), delete the previous Storage object so we don't accumulate dead
-  // bytes. Best-effort — log and continue on failure.
-  if (existingSnap.exists) {
-    const prev = existingSnap.data() as PresentationDoc;
-    const prevPath = prev.filePath;
-    if (prevPath && prevPath !== parsed.filePath) {
-      try {
-        await adminStorage().bucket().file(prevPath).delete();
-      } catch (err) {
-        console.warn("Failed to delete previous presentation file:", err);
-      }
-    }
-  }
+    .doc(); // auto-id → multiple presentations per presenter
 
   const doc: Omit<PresentationDoc, "id"> = {
     eventId: parsed.eventId,
     presenterUid: user.uid,
     presenterName: user.displayName,
-    title: rsvp.presentationTitle ?? "",
-    abstract: rsvp.presentationAbstract,
+    title: parsed.title,
+    abstract: parsed.abstract,
     filePath: parsed.filePath,
     fileUrl: parsed.fileUrl,
+    fileName: parsed.fileName,
     externalSlidesUrl: parsed.externalSlidesUrl,
-    createdAt: existingSnap.exists
-      ? ((existingSnap.data() as PresentationDoc).createdAt as Timestamp)
-      : now,
+    createdAt: now,
     updatedAt: now,
   };
-  await presentationRef.set(doc, { merge: false });
+  await ref.set(doc);
 
   revalidatePath(`/events/${parsed.eventSlug}`);
-  return plainify({ ...doc, id: presentationRef.id });
+  return plainify({ ...doc, id: ref.id });
+}
+
+export async function updatePresentation(
+  input: UpdatePresentationInput,
+): Promise<PresentationDoc> {
+  const user = await requireUser();
+  const parsed = readableParse(UpdateSchema, input);
+
+  const ref = adminDb()
+    .collection("events")
+    .doc(parsed.eventId)
+    .collection("presentations")
+    .doc(parsed.presentationId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("発表資料が見つかりません");
+  const prev = snap.data() as PresentationDoc;
+  if (prev.presenterUid !== user.uid) throw new Error("FORBIDDEN");
+
+  // If the caller replaced an uploaded file (different filePath, or
+  // switched to URL-only), drop the previous Storage object so we don't
+  // leak bytes.
+  if (prev.filePath && prev.filePath !== parsed.filePath) {
+    await deleteStorageFile(prev.filePath);
+  }
+
+  const patch: Omit<PresentationDoc, "id" | "createdAt"> = {
+    eventId: parsed.eventId,
+    presenterUid: prev.presenterUid,
+    presenterName: prev.presenterName,
+    title: parsed.title,
+    abstract: parsed.abstract,
+    filePath: parsed.filePath,
+    fileUrl: parsed.fileUrl,
+    fileName: parsed.fileName,
+    externalSlidesUrl: parsed.externalSlidesUrl,
+    updatedAt: Timestamp.now(),
+  };
+  await ref.set(patch, { merge: true });
+
+  revalidatePath(`/events/${parsed.eventSlug}`);
+  return plainify({ ...patch, id: ref.id, createdAt: prev.createdAt });
 }
 
 export async function deletePresentation(args: {
+  presentationId: string;
   eventId: string;
   eventSlug: string;
 }): Promise<void> {
@@ -113,24 +171,19 @@ export async function deletePresentation(args: {
     .collection("events")
     .doc(args.eventId)
     .collection("presentations")
-    .doc(user.uid);
+    .doc(args.presentationId);
   const snap = await ref.get();
   if (!snap.exists) return;
-
   const data = snap.data() as PresentationDoc;
+  if (data.presenterUid !== user.uid) throw new Error("FORBIDDEN");
+
   if (data.filePath) {
-    try {
-      await adminStorage().bucket().file(data.filePath).delete();
-    } catch (err) {
-      // File may already be gone, or storage perms changed — let the doc
-      // delete proceed so the UI isn't stuck.
-      console.warn("Failed to delete presentation file:", err);
-    }
+    await deleteStorageFile(data.filePath);
   }
   await ref.delete();
 
-  // Touch the event so revalidate / cache invalidation cascades, in case we
-  // later denormalize a presenterCount or similar.
+  // Touch the event so downstream caches invalidate even if we later add
+  // a denormalized presentation count.
   await adminDb()
     .collection("events")
     .doc(args.eventId)

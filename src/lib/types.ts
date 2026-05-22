@@ -84,6 +84,10 @@ export interface RsvpDoc {
 }
 
 // ---------- presentations ----------
+// One presenter can register multiple presentations per event. Each doc is
+// keyed by a Firestore auto-id (NOT by uid) so the same presenter can have
+// several slides/talks attached. `filePath` and `externalSlidesUrl` are both
+// optional and can co-exist (e.g. PDF slides + a YouTube recording link).
 export interface PresentationDoc {
   id: string;
   eventId: string;
@@ -93,6 +97,7 @@ export interface PresentationDoc {
   abstract?: string;
   filePath?: string;
   fileUrl?: string;
+  fileName?: string;
   externalSlidesUrl?: string;
   createdAt: TsLike;
   updatedAt: TsLike;

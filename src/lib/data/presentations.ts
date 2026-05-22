@@ -22,20 +22,3 @@ export async function listPresentations(
     .get();
   return snap.docs.map(fromSnap);
 }
-
-export async function getMyPresentation(
-  eventId: string,
-  uid: string,
-): Promise<PresentationDoc | null> {
-  // We use the presenter's uid as the doc id, so getMyPresentation is a
-  // single point read instead of a query — and it gives a stable key for
-  // upserts in savePresentation.
-  const snap = await adminDb()
-    .collection("events")
-    .doc(eventId)
-    .collection("presentations")
-    .doc(uid)
-    .get();
-  if (!snap.exists) return null;
-  return plainify({ ...(snap.data() as Omit<PresentationDoc, "id">), id: snap.id });
-}
