@@ -1,5 +1,15 @@
 # Firebase App Hosting configuration
 # https://firebase.google.com/docs/app-hosting/configure
+#
+# Public Firebase Web SDK values (NEXT_PUBLIC_FIREBASE_*) and
+# ADMIN_NOTIFICATION_EMAILS are set in the Firebase Console under
+#   App Hosting → jtpa-main → Settings → Environment variables
+# (kept out of git on purpose — they end up in the client bundle either
+# way, but at least the source code repo stays free of identifiers).
+#
+# Secrets stored in Google Secret Manager and referenced via `secret:`:
+#   firebase apphosting:secrets:set SESSION_COOKIE_SECRET
+#   firebase apphosting:secrets:grantaccess SESSION_COOKIE_SECRET --backend jtpa-main
 
 runConfig:
   minInstances: 0
@@ -9,39 +19,6 @@ runConfig:
   memoryMiB: 512
 
 env:
-  # Public Firebase Web SDK config (safe to expose; required at build/runtime for the client)
-  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
-    value: ""
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-    value: jtpa-main.firebaseapp.com
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-    value: jtpa-main
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-    value: jtpa-main.firebasestorage.app
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-    value: ""
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
-    value: ""
-    availability:
-      - BUILD
-      - RUNTIME
-
-  # Server-only session signing secret (set via Secret Manager in production)
   - variable: SESSION_COOKIE_SECRET
     secret: SESSION_COOKIE_SECRET
     availability:
