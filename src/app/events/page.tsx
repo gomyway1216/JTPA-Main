@@ -1,17 +1,30 @@
 import Link from "next/link";
 
+import { getSessionUser } from "@/lib/auth/session";
 import { listEvents, listPastEvents } from "@/lib/data/events";
+import type { EventDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export const metadata = { title: "イベント一覧" };
 
+// Hide members-only events from logged-out visitors. The Firestore rules
+// already enforce this at the read layer, but filtering here keeps the page
+// from rendering "blank" listings for users who don't have access.
+function visibleTo(signedIn: boolean) {
+  return (e: EventDoc) => signedIn || e.visibility !== "members_only";
+}
+
 export default async function EventsPage() {
-  const [upcoming, past] = await Promise.all([
+  const user = await getSessionUser();
+  const signedIn = !!user;
+  const [upcomingRaw, pastRaw] = await Promise.all([
     listEvents({ futureOnly: true, limit: 30 }).catch(() => []),
     listPastEvents(10).catch(() => []),
   ]);
+  const upcoming = upcomingRaw.filter(visibleTo(signedIn));
+  const past = pastRaw.filter(visibleTo(signedIn));
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-10 space-y-12">

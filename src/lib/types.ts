@@ -25,6 +25,9 @@ export interface UserProfile {
 // ---------- events ----------
 export type EventStatus = "draft" | "published" | "past" | "cancelled";
 export type LocationType = "online" | "offline" | "hybrid";
+// `members_only` hides the event from logged-out visitors. Older docs without
+// the field are treated as `public` everywhere it's checked.
+export type EventVisibility = "public" | "members_only";
 
 export interface SurveyField {
   key: string;
@@ -51,6 +54,7 @@ export interface EventDoc {
   capacity: number;
   presenterCapacity: number;
   status: EventStatus;
+  visibility?: EventVisibility;
   coverImagePath?: string;
   surveyFields: SurveyField[];
   rsvpCount: number;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { RsvpSection } from "@/app/events/[slug]/RsvpSection";
 import { getSessionUser } from "@/lib/auth/session";
@@ -19,13 +19,25 @@ export default async function EventDetailPage({
   if (!event) notFound();
 
   const user = await getSessionUser();
+  // Members-only events redirect anonymous visitors to login. Admins always
+  // pass; the firestore.rules backstop already enforces the same boundary.
+  if (event.visibility === "members_only" && !user) {
+    redirect(`/login?redirect=/events/${slug}`);
+  }
   const myRsvp = user ? await getMyRsvp(event.id, user.uid) : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
       <header className="space-y-3">
         <p className="text-sm text-zinc-500">{formatDateTime(event.startAt)}</p>
-        <h1 className="text-3xl font-bold tracking-tight">{event.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {event.title}
+          {event.visibility === "members_only" && (
+            <span className="ml-3 align-middle rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+              メンバー限定
+            </span>
+          )}
+        </h1>
         <dl className="grid grid-cols-1 gap-2 text-sm text-zinc-600 dark:text-zinc-400 sm:grid-cols-2">
           <div>
             <dt className="font-medium text-zinc-800 dark:text-zinc-200">開始</dt>
