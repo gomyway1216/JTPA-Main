@@ -1,0 +1,453 @@
+"use client";
+
+import {
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytesResumable,
+} from "firebase/storage";
+import { useState, useTransition } from "react";
+
+import {
+  createPresentation,
+  deletePresentation,
+  updatePresentation,
+} from "@/app/actions/presentations";
+import { clientStorage } from "@/lib/firebase/client";
+import type { PresentationDoc, RsvpDoc, SessionUser } from "@/lib/types";
+
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // matches storage.rules
+
+// Draft state shared between "new" and "edit" forms. A draft can hold an
+// existing uploaded file (from a prior save) plus a freshly picked file
+// that hasn't been uploaded yet; submit time decides which to use.
+interface Draft {
+  title: string;
+  abstract: string;
+  filePath?: string;
+  fileUrl?: string;
+  fileName?: string;
+  externalSlidesUrl: string;
+}
+
+function emptyDraft(): Draft {
+  return { title: "", abstract: "", externalSlidesUrl: "" };
+}
+
+function draftFrom(p: PresentationDoc): Draft {
+  return {
+    title: p.title,
+    abstract: p.abstract ?? "",
+    filePath: p.filePath,
+    fileUrl: p.fileUrl,
+    fileName: p.fileName,
+    externalSlidesUrl: p.externalSlidesUrl ?? "",
+  };
+}
+
+export function PresentationSection({
+  eventId,
+  eventSlug,
+  user,
+  myRsvp,
+  initialPresentations,
+}: {
+  eventId: string;
+  eventSlug: string;
+  user: SessionUser | null;
+  myRsvp: RsvpDoc | null;
+  initialPresentations: PresentationDoc[];
+}) {
+  const [presentations, setPresentations] =
+    useState<PresentationDoc[]>(initialPresentations);
+  const [editingId, setEditingId] = useState<string | "new" | null>(null);
+
+  const canPresent =
+    !!user && myRsvp?.role === "presenter" && myRsvp?.status === "confirmed";
+
+  function applyUpsert(saved: PresentationDoc) {
+    setPresentations((cur) => {
+      const i = cur.findIndex((p) => p.id === saved.id);
+      if (i === -1) return [...cur, saved];
+      const copy = cur.slice();
+      copy[i] = saved;
+      return copy;
+    });
+  }
+
+  function applyDelete(id: string) {
+    setPresentations((cur) => cur.filter((p) => p.id !== id));
+  }
+
+  return (
+    <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">発表資料</h2>
+        {canPresent && editingId === null && (
+          <button
+            type="button"
+            onClick={() => setEditingId("new")}
+            className="rounded-md bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            + 発表資料を追加
+          </button>
+        )}
+      </div>
+
+      {presentations.length === 0 && editingId !== "new" && (
+        <p className="text-sm text-zinc-500">まだ発表資料は登録されていません。</p>
+      )}
+
+      <ul className="space-y-3">
+        {presentations.map((p) => {
+          const owned = !!user && p.presenterUid === user.uid;
+          if (editingId === p.id) {
+            return (
+              <li key={p.id}>
+                <PresentationForm
+                  mode="edit"
+                  initial={draftFrom(p)}
+                  eventId={eventId}
+                  eventSlug={eventSlug}
+                  uid={user!.uid}
+                  presentationId={p.id}
+                  onSaved={(saved) => {
+                    applyUpsert(saved);
+                    setEditingId(null);
+                  }}
+                  onCancel={() => setEditingId(null)}
+                  onDelete={() => {
+                    applyDelete(p.id);
+                    setEditingId(null);
+                  }}
+                />
+              </li>
+            );
+          }
+          return (
+            <li
+              key={p.id}
+              className="rounded-md border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-800"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{p.title || "(タイトル未設定)"}</p>
+                  <p className="text-xs text-zinc-500">{p.presenterName}</p>
+                  {p.abstract && (
+                    <p className="mt-1 whitespace-pre-wrap text-xs text-zinc-600 dark:text-zinc-400">
+                      {p.abstract}
+                    </p>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-3 text-xs">
+                    {p.fileUrl && (
+                      <a
+                        href={p.fileUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-blue-600 hover:underline"
+                      >
+                        📎 {p.fileName || "ファイルを開く"}
+                      </a>
+                    )}
+                    {p.externalSlidesUrl && (
+                      <a
+                        href={p.externalSlidesUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-blue-600 hover:underline"
+                      >
+                        🔗 外部リンク
+                      </a>
+                    )}
+                  </div>
+                </div>
+                {owned && editingId === null && (
+                  <button
+                    type="button"
+                    onClick={() => setEditingId(p.id)}
+                    className="shrink-0 text-xs text-blue-600 hover:underline"
+                  >
+                    編集
+                  </button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      {canPresent && editingId === "new" && (
+        <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+          <PresentationForm
+            mode="create"
+            initial={emptyDraft()}
+            eventId={eventId}
+            eventSlug={eventSlug}
+            uid={user!.uid}
+            onSaved={(saved) => {
+              applyUpsert(saved);
+              setEditingId(null);
+            }}
+            onCancel={() => setEditingId(null)}
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+// -------- form (used for both create and edit) --------
+
+function PresentationForm({
+  mode,
+  initial,
+  eventId,
+  eventSlug,
+  uid,
+  presentationId,
+  onSaved,
+  onCancel,
+  onDelete,
+}: {
+  mode: "create" | "edit";
+  initial: Draft;
+  eventId: string;
+  eventSlug: string;
+  uid: string;
+  presentationId?: string;
+  onSaved: (saved: PresentationDoc) => void;
+  onCancel: () => void;
+  onDelete?: () => void;
+}) {
+  const [draft, setDraft] = useState<Draft>(initial);
+  const [stagedFile, setStagedFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  // Effective file fields = freshly staged upload, else whatever's already
+  // on the doc. Used for validation + the eventual save payload.
+  const hasFile = !!stagedFile || !!draft.filePath;
+  const hasUrl = !!draft.externalSlidesUrl.trim();
+
+  async function uploadIfNeeded(): Promise<Pick<
+    Draft,
+    "filePath" | "fileUrl" | "fileName"
+  > | null> {
+    if (!stagedFile) {
+      return {
+        filePath: draft.filePath,
+        fileUrl: draft.fileUrl,
+        fileName: draft.fileName,
+      };
+    }
+    if (stagedFile.size > MAX_FILE_BYTES) {
+      throw new Error("ファイルサイズは 50MB 以下にしてください");
+    }
+    const safeName = stagedFile.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
+    const path = `presentations/${eventId}/${uid}/${Date.now()}-${safeName}`;
+    const objectRef = storageRef(clientStorage, path);
+    setProgress(0);
+    return new Promise((resolve, reject) => {
+      const task = uploadBytesResumable(objectRef, stagedFile, {
+        contentType: stagedFile.type || "application/octet-stream",
+      });
+      task.on(
+        "state_changed",
+        (snap) =>
+          setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+        (err) => {
+          setProgress(null);
+          reject(err);
+        },
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            setProgress(null);
+            resolve({ filePath: path, fileUrl: url, fileName: safeName });
+          } catch (err) {
+            setProgress(null);
+            reject(err);
+          }
+        },
+      );
+    });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    if (!draft.title.trim()) {
+      setError("タイトルを入力してください");
+      return;
+    }
+    if (!hasFile && !hasUrl) {
+      setError("ファイル または 外部URL のどちらか (両方OK) を指定してください");
+      return;
+    }
+
+    let fileFields: Pick<Draft, "filePath" | "fileUrl" | "fileName"> | null;
+    try {
+      fileFields = await uploadIfNeeded();
+    } catch (err) {
+      setError(
+        err instanceof Error ? `アップロード失敗: ${err.message}` : "アップロード失敗",
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const payload = {
+          eventId,
+          eventSlug,
+          title: draft.title.trim(),
+          abstract: draft.abstract.trim() || undefined,
+          filePath: fileFields?.filePath,
+          fileUrl: fileFields?.fileUrl,
+          fileName: fileFields?.fileName,
+          externalSlidesUrl: draft.externalSlidesUrl.trim() || undefined,
+        };
+        const saved =
+          mode === "create"
+            ? await createPresentation(payload)
+            : await updatePresentation({
+                ...payload,
+                presentationId: presentationId!,
+              });
+        onSaved(saved);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "保存に失敗しました");
+      }
+    });
+  }
+
+  async function handleDelete() {
+    if (!presentationId) return;
+    if (!confirm("発表資料を削除しますか？")) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await deletePresentation({ presentationId, eventId, eventSlug });
+        onDelete?.();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "削除に失敗しました");
+      }
+    });
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+    >
+      <input
+        type="text"
+        value={draft.title}
+        onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+        placeholder="タイトル"
+        required
+        className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+      />
+      <textarea
+        rows={2}
+        value={draft.abstract}
+        onChange={(e) => setDraft({ ...draft, abstract: e.target.value })}
+        placeholder="概要 (任意)"
+        className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+      />
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          ファイル (任意・最大 50MB)
+        </label>
+        {draft.filePath && !stagedFile && (
+          <p className="text-xs text-zinc-500">
+            現在のファイル: {draft.fileName || draft.filePath}{" "}
+            <button
+              type="button"
+              onClick={() =>
+                setDraft({
+                  ...draft,
+                  filePath: undefined,
+                  fileUrl: undefined,
+                  fileName: undefined,
+                })
+              }
+              className="ml-1 text-red-600 hover:underline"
+            >
+              削除
+            </button>
+          </p>
+        )}
+        <input
+          type="file"
+          onChange={(e) => setStagedFile(e.target.files?.[0] ?? null)}
+          accept=".pdf,.ppt,.pptx,.key,.odp,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+          className="block w-full text-sm"
+        />
+        {stagedFile && (
+          <p className="text-xs text-zinc-500">
+            選択中: {stagedFile.name} ({(stagedFile.size / 1024 / 1024).toFixed(1)}{" "}
+            MB)
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+          外部URL (任意・Google Slides / YouTube 等)
+        </label>
+        <input
+          type="url"
+          value={draft.externalSlidesUrl}
+          onChange={(e) =>
+            setDraft({ ...draft, externalSlidesUrl: e.target.value })
+          }
+          placeholder="https://..."
+          className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        />
+      </div>
+
+      {progress !== null && (
+        <p className="text-xs text-zinc-600 dark:text-zinc-400">
+          アップロード中… {progress.toFixed(0)}%
+        </p>
+      )}
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="submit"
+          disabled={pending || progress !== null}
+          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          {progress !== null
+            ? "アップロード中..."
+            : pending
+              ? "保存中..."
+              : mode === "create"
+                ? "保存"
+                : "更新"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          disabled={pending || progress !== null}
+          className="rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+        >
+          キャンセル
+        </button>
+        {mode === "edit" && onDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={pending}
+            className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+          >
+            削除
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
