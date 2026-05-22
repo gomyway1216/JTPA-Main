@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth/session";
+import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
 import type { RsvpDoc } from "@/lib/types";
 
@@ -93,7 +94,10 @@ export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
 
   revalidatePath(`/events`);
   revalidatePath(`/my/rsvps`);
-  return result;
+  // Strip Firestore Timestamp class instances before returning to the Client
+  // Component; otherwise React rejects them with "Only plain objects... can be
+  // passed to Client Components".
+  return plainify(result);
 }
 
 export async function cancelRsvp({
