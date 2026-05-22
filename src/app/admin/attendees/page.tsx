@@ -1,3 +1,4 @@
+import { AttendeeExportBar } from "@/app/admin/attendees/_components/AttendeeExportBar";
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { formatDateTime } from "@/lib/utils";
@@ -15,6 +16,7 @@ export default async function AdminAttendeesPage({
     limit: 50,
   }).catch(() => []);
   const selectedId = eventId || events[0]?.id;
+  const selectedEvent = events.find((e) => e.id === selectedId);
   const rsvps = selectedId
     ? await listRsvps(selectedId).catch(() => [])
     : [];
@@ -46,6 +48,13 @@ export default async function AdminAttendeesPage({
           表示
         </button>
       </form>
+
+      {rsvps.length > 0 && (
+        <AttendeeExportBar
+          rsvps={rsvps}
+          eventTitle={selectedEvent?.title ?? "attendees"}
+        />
+      )}
 
       {rsvps.length === 0 ? (
         <p className="text-sm text-zinc-500">参加者がいません。</p>
