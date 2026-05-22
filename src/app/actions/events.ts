@@ -18,16 +18,21 @@ const SurveyFieldSchema = z.object({
   audience: z.enum(["all", "presenter"]),
 });
 
+// Pre-process empty strings on optional URL/slug fields into `undefined` so the
+// validator doesn't reject a blank form field as a length/regex violation.
+const optionalNonEmpty = (schema: z.ZodTypeAny) =>
+  z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
+
 const EventInputSchema = z.object({
   title: z.string().min(2).max(200),
-  slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/).optional(),
+  slug: optionalNonEmpty(z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)),
   description: z.string().min(1).max(20000),
   startAt: z.string().min(1),
   endAt: z.string().min(1),
   locationType: z.enum(["online", "offline", "hybrid"]),
   address: z.string().optional(),
-  mapUrl: z.string().url().optional().or(z.literal("")),
-  meetingUrl: z.string().url().optional().or(z.literal("")),
+  mapUrl: optionalNonEmpty(z.string().url()),
+  meetingUrl: optionalNonEmpty(z.string().url()),
   capacity: z.coerce.number().int().min(0),
   presenterCapacity: z.coerce.number().int().min(0),
   status: z.enum(["draft", "published", "past", "cancelled"]),
@@ -36,9 +41,20 @@ const EventInputSchema = z.object({
 
 export type EventFormInput = z.input<typeof EventInputSchema>;
 
+function parseEventInput(input: EventFormInput): z.infer<typeof EventInputSchema> {
+  const result = EventInputSchema.safeParse(input);
+  if (result.success) return result.data;
+  // Surface a readable error so the user sees which field failed instead of
+  // the generic Server Component crash.
+  const issues = result.error.issues
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
+  throw new Error(`入力エラー: ${issues}`);
+}
+
 export async function createEvent(input: EventFormInput): Promise<string> {
   const admin = await requireAdmin();
-  const parsed = EventInputSchema.parse(input);
+  const parsed = parseEventInput(input);
 
   const slug = parsed.slug || slugify(parsed.title);
   // Ensure slug uniqueness
@@ -86,7 +102,7 @@ export async function updateEvent(
   input: EventFormInput,
 ): Promise<void> {
   await requireAdmin();
-  const parsed = EventInputSchema.parse(input);
+  const parsed = parseEventInput(input);
   const ref = adminDb().collection("events").doc(eventId);
 
   if (parsed.slug) {
