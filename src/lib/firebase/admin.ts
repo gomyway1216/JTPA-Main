@@ -6,6 +6,7 @@ import { Firestore, getFirestore } from "firebase-admin/firestore";
 import { Storage, getStorage } from "firebase-admin/storage";
 
 let cachedApp: App | null = null;
+let cachedDb: Firestore | null = null;
 
 function getAdminApp(): App {
   if (cachedApp) return cachedApp;
@@ -38,7 +39,15 @@ export function adminAuth(): Auth {
 }
 
 export function adminDb(): Firestore {
-  return getFirestore(getAdminApp());
+  if (cachedDb) return cachedDb;
+  const db = getFirestore(getAdminApp());
+  // Optional fields like `presentationTitle` come through as `undefined` when
+  // the user is an attendee, not a presenter. Without this, Firestore throws
+  // "Cannot use 'undefined' as a Firestore value", which surfaces in Next.js
+  // production as the generic Server Components render error.
+  db.settings({ ignoreUndefinedProperties: true });
+  cachedDb = db;
+  return cachedDb;
 }
 
 export function adminStorage(): Storage {
