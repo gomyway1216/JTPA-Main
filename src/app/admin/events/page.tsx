@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { CloneEventButton } from "@/app/admin/events/_components/CloneEventButton";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { formatDateTime } from "@/lib/utils";
@@ -59,12 +60,15 @@ export default async function AdminEventsPage() {
                   {e.capacity > 0 ? ` / ${e.capacity}` : ""}
                 </td>
                 <td className="py-2 text-right">
-                  <Link
-                    href={`/admin/events/${e.id}/edit`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    編集
-                  </Link>
+                  <div className="flex items-center justify-end gap-3">
+                    <Link
+                      href={`/admin/events/${e.id}/edit`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      編集
+                    </Link>
+                    <CloneEventButton eventId={e.id} eventTitle={e.title} />
+                  </div>
                 </td>
               </tr>
             ))}
