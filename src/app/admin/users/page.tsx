@@ -26,7 +26,7 @@ export default async function AdminUsersPage() {
 
       {truncated && (
         <p className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-          ユーザー数が表示上限 (1000) を超えています。検索しても見つからない場合は
+          ユーザー数が表示上限 (5000) を超えています。検索しても見つからない場合は
           別途追加実装が必要です。
         </p>
       )}

@@ -14,11 +14,13 @@ export interface AdminUserListEntry {
   createdAt: string | null; // ISO 8601
 }
 
-// Single hop fetches up to `cap` users. Firebase Auth's listUsers returns
-// at most 1000 per call; for a JTPA-sized member base that's a single round
-// trip. If/when we cross 1000, switch this to paginated fetching with a
-// pageToken cursor surfaced through the UI.
-const DEFAULT_CAP = 1000;
+// Cap on how many users we hand the client per render. Firebase Auth's
+// listUsers caps each call at 1000, so 5000 means up to five paged
+// round-trips. Picked to comfortably cover the foreseeable member base
+// while keeping the all-rows-on-one-page UI viable; past this point the
+// page would need server pagination + a real search backend instead of
+// client-side filtering.
+const DEFAULT_CAP = 5000;
 
 export async function listAllUsersForAdmin(
   cap: number = DEFAULT_CAP,
