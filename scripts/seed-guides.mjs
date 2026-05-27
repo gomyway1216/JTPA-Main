@@ -17,8 +17,9 @@
  * containing the JSON inline (same as the set-admin / set-editor scripts).
  */
 
-import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { Timestamp, getFirestore } from "firebase-admin/firestore";
+
+import { initAdmin } from "./_lib/firebase-init.mjs";
 
 const SEED_AUTHOR = {
   uid: "seed",
@@ -155,23 +156,7 @@ AI に期待した回答を引き出すには、いくつかの基本があり�
   },
 ];
 
-// Match `src/lib/firebase/admin.ts` and the env vars documented in
-// docs/admin.md so the script honors whichever one the operator has
-// set (NEXT_PUBLIC_… for local dev, FIREBASE_PROJECT_ID per the docs,
-// GOOGLE_CLOUD_PROJECT in App Hosting / Cloud Run).
-const projectId =
-  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
-  process.env.FIREBASE_PROJECT_ID ??
-  process.env.GOOGLE_CLOUD_PROJECT;
-
-const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
-if (!getApps().length) {
-  initializeApp(
-    inline
-      ? { credential: cert(JSON.parse(inline)), projectId }
-      : { projectId },
-  );
-}
+initAdmin();
 
 const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });
