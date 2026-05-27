@@ -5,10 +5,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
-import { enqueueAdminNewProjectNotification, enqueueProjectDecisionNotification } from "@/lib/notifications";
+import {
+  enqueueAdminNewProjectNotification,
+  enqueueProjectDecisionNotification,
+} from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import { slugify } from "@/lib/utils";
+import type { ProjectAsset, ProjectDoc } from "@/lib/types";
 
 // Pre-process empty strings to `undefined` so blank optional URL fields don't
 // trip the `.url()` validator.
@@ -17,6 +21,11 @@ const optionalUrl = z.preprocess(
   z.string().url().optional(),
 );
 
+const AssetSchema = z.object({
+  path: z.string().min(1),
+  url: z.string().url(),
+});
+
 const ProjectInputSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(10).max(5000),
@@ -24,8 +33,8 @@ const ProjectInputSchema = z.object({
   appUrl: z.string().url(),
   repoUrl: optionalUrl,
   demoVideoUrl: optionalUrl,
-  thumbnailPath: z.string().optional(),
-  screenshots: z.array(z.string()).max(8).default([]),
+  thumbnail: AssetSchema.optional(),
+  screenshots: z.array(AssetSchema).max(8).default([]),
 });
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
@@ -55,6 +64,38 @@ async function uniqueSlug(base: string, existingId?: string): Promise<string> {
   return `${slug}-${Date.now().toString(36)}`;
 }
 
+// Best-effort Storage cleanup. Logged and swallowed so a single missing object
+// can't block a metadata write or a doc deletion.
+async function deleteStoragePaths(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  const bucket = adminStorage().bucket();
+  await Promise.all(
+    paths.map((p) =>
+      bucket
+        .file(p)
+        .delete()
+        .catch((err) => {
+          console.warn("Failed to delete storage object:", p, err);
+        }),
+    ),
+  );
+}
+
+function diffAssetPaths(
+  prev: ProjectAsset[] | undefined,
+  next: ProjectAsset[],
+  prevSingle?: ProjectAsset,
+  nextSingle?: ProjectAsset,
+): string[] {
+  const nextPaths = new Set<string>();
+  for (const a of next) nextPaths.add(a.path);
+  if (nextSingle) nextPaths.add(nextSingle.path);
+  const orphans: string[] = [];
+  for (const a of prev ?? []) if (!nextPaths.has(a.path)) orphans.push(a.path);
+  if (prevSingle && !nextPaths.has(prevSingle.path)) orphans.push(prevSingle.path);
+  return orphans;
+}
+
 export async function submitProject(input: ProjectFormInput): Promise<string> {
   const user = await requireUser();
   const parsed = parseProjectInput(input);
@@ -71,7 +112,7 @@ export async function submitProject(input: ProjectFormInput): Promise<string> {
     appUrl: parsed.appUrl,
     repoUrl: parsed.repoUrl || "",
     demoVideoUrl: parsed.demoVideoUrl || "",
-    thumbnailPath: parsed.thumbnailPath ?? "",
+    thumbnail: parsed.thumbnail,
     screenshots: parsed.screenshots,
     status: "pending" as const,
     reviewerUid: null,
@@ -102,8 +143,17 @@ export async function updateMyProject(
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");
-  const cur = snap.data() as { ownerUid: string };
+  const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
+
+  // Drop any Storage objects that the new payload no longer references.
+  const orphans = diffAssetPaths(
+    cur.screenshots,
+    parsed.screenshots,
+    cur.thumbnail,
+    parsed.thumbnail,
+  );
+  if (orphans.length > 0) await deleteStoragePaths(orphans);
 
   // Editing flips back to pending for re-review.
   await ref.update({
@@ -113,7 +163,7 @@ export async function updateMyProject(
     appUrl: parsed.appUrl,
     repoUrl: parsed.repoUrl || "",
     demoVideoUrl: parsed.demoVideoUrl || "",
-    thumbnailPath: parsed.thumbnailPath ?? "",
+    thumbnail: parsed.thumbnail ?? FieldValue.delete(),
     screenshots: parsed.screenshots,
     status: "pending" as const,
     submittedAt: Timestamp.now(),
@@ -130,8 +180,16 @@ export async function deleteMyProject(projectId: string): Promise<void> {
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
   if (!snap.exists) return;
-  const cur = snap.data() as { ownerUid: string };
+  const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
+
+  // Tear down associated Storage objects before deleting the doc, so we
+  // don't end up with unreachable files.
+  const paths: string[] = [];
+  if (cur.thumbnail) paths.push(cur.thumbnail.path);
+  for (const s of cur.screenshots ?? []) paths.push(s.path);
+  if (paths.length > 0) await deleteStoragePaths(paths);
+
   await ref.delete();
   revalidatePath("/showcase");
   revalidatePath("/my/projects");

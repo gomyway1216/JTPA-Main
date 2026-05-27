@@ -33,7 +33,41 @@ export default async function ProjectDetailPage({
         )}
       </header>
 
+      {project.thumbnail && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={project.thumbnail.url}
+          alt=""
+          className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
+        />
+      )}
+
       <section className="prose-jtpa">{project.description}</section>
+
+      {project.screenshots.length > 0 && (
+        <section className="space-y-2">
+          <h2 className="text-lg font-semibold">スクリーンショット</h2>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {project.screenshots.map((s, i) => (
+              <li key={s.path}>
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="block"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.url}
+                    alt={`screenshot ${i + 1}`}
+                    className="h-32 w-full rounded border border-zinc-200 object-cover hover:opacity-90 dark:border-zinc-800"
+                  />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-3">
         <Link
