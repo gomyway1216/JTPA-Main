@@ -29,6 +29,7 @@ export default async function AdminLayout({
             {user.isAdmin && <AdminLink href="/admin/posts">ブログ管理</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/attendees">参加者</AdminLink>}
             <AdminLink href="/admin/guides">ガイド</AdminLink>
+            {user.isAdmin && <AdminLink href="/admin/users">ユーザー</AdminLink>}
           </nav>
         </aside>
         <section>{children}</section>
