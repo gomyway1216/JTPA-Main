@@ -140,7 +140,8 @@ Community blog entries. Distinct from `guides` (admin/editor curated help docs w
 | `body` | string | Markdown source, rendered via `MarkdownBody` |
 | `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
 | `tags` | string[] | Up to 8 |
-| `authorUid`, `authorName`, `authorPhotoURL` | string | Denormalized from auth |
+| `authorUid`, `authorName` | string | Denormalized from auth |
+| `authorPhotoURL` | string \| null | Denormalized from auth (`null` if the user has no Google profile photo) |
 | `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
 | `reviewerUid` | string \| null | Set by admin on decision |
 | `reviewNote` | string? | Visible to author if rejected |
@@ -150,18 +151,25 @@ Community blog entries. Distinct from `guides` (admin/editor curated help docs w
 **Rules**:
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
-- Owner edits preserve `authorUid`; the Server Action flips status back to `pending` for re-review
+- Owner edits force `status == "pending"` (no self-publish), keep `authorUid` and `reviewerUid` unchanged. Admins can change anything. Mirrors the `projects/{projectId}` pattern
 - Comments live in the `comments` subcollection
 
 ### `posts/{postId}/comments/{commentId}`
 
 | Field | Type | Notes |
 |---|---|---|
-| `authorUid`, `authorName`, `authorPhotoURL` | string | |
-| `body` | string | Max 2000 chars |
+| `authorUid`, `authorName` | string | |
+| `authorPhotoURL` | string \| null | |
+| `body` | string | Length cap (~2000 chars) will be enforced by the comment Server Action in the follow-up PR; rules currently only constrain identity, not size |
 | `createdAt`, `updatedAt` | Timestamp | |
 
-**Rules**: public read, signed-in create, author-or-admin edit/delete. UI lands in a follow-up PR.
+**Rules**:
+- Read: visible if the parent post is `published`, OR caller is the comment author, OR caller is admin
+- Create: signed-in user, only on `published` posts, and `authorUid` must match the caller
+- Update: author can edit body, but `authorUid` is immutable (no impersonation by edit). Admin can change anything
+- Delete: author or admin
+
+UI lands in a follow-up PR.
 
 ## `mail/{autoId}` (Trigger Email)
 
