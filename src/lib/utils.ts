@@ -50,7 +50,7 @@ export function formatTime(value: TsLike | undefined | null): string {
   return d ? timeFormatter.format(d) : "";
 }
 
-export function slugify(input: string): string {
+export function slugify(input: string, fallbackPrefix = "event"): string {
   const cleaned = input
     .toLowerCase()
     .normalize("NFKD")
@@ -61,7 +61,7 @@ export function slugify(input: string): string {
   // Japanese/CJK-only titles strip to empty — fall back to a base36 timestamp
   // so the slug always satisfies the min(2) regex requirement.
   if (cleaned.length < 2) {
-    return `event-${Date.now().toString(36)}`;
+    return `${fallbackPrefix}-${Date.now().toString(36)}`;
   }
   return cleaned;
 }
