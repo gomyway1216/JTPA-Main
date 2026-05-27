@@ -1,12 +1,54 @@
 "use client";
 
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytes,
+  type StorageReference,
 } from "firebase/storage";
 
 import { clientStorage } from "./client";
+
+/**
+ * Build a token-less public download URL for a Storage object.
+ *
+ * `getDownloadURL()` from the Firebase SDK returns the same endpoint with
+ * an `&token=<UUID>` appended. The token is only meaningful when the
+ * bucket isn't public-read — for every path that calls into this helper
+ * (guides, posts, projects, presentations, user avatars, event covers)
+ * `storage.rules` already has `allow read: if true`, so the token adds
+ * nothing the bucket doesn't already grant. Skipping it means:
+ *
+ * - URLs are roughly half the length and don't carry a UUID secret
+ *   that gets persisted into Firestore alongside the Markdown body.
+ * - There's no `firebaseStorageDownloadTokens` metadata to revoke
+ *   later (a feature we never use anyway), so the per-object token
+ *   rotation footgun goes away.
+ *
+ * The URL shape matches `getDownloadURL()` minus the token query param.
+ * Caller MUST only use this for objects under a publicly-readable path.
+ *
+ * Host resolution: the SDK records the configured host+protocol on the
+ * storage instance, defaulting to the production endpoint and being
+ * overwritten by `connectStorageEmulator` (which the app calls in
+ * `src/lib/firebase/client.ts` when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS`
+ * is on). We read those internal fields so this helper resolves the
+ * same way `getDownloadURL` would in either environment — hardcoding
+ * `firebasestorage.googleapis.com` would silently 404 in the emulator.
+ * `_host` / `_protocol` aren't in the public type definitions but they
+ * are how the SDK builds URLs internally and have been stable across
+ * SDK versions; falling back to the production defaults keeps things
+ * working if a future SDK rename ever drops them.
+ */
+type StorageHostInternals = { _host?: string; _protocol?: string };
+
+export function publicDownloadUrl(ref: StorageReference): string {
+  const s = ref.storage as unknown as StorageHostInternals;
+  const host = s._host ?? "firebasestorage.googleapis.com";
+  const protocol = s._protocol ?? "https";
+  return `${protocol}://${host}/v0/b/${ref.bucket}/o/${encodeURIComponent(
+    ref.fullPath,
+  )}?alt=media`;
+}
 
 // Raster allowlist — deliberately excludes `image/svg+xml`, matching the
 // raster check in `storage.rules` and ProjectForm. SVGs can carry active
@@ -69,5 +111,5 @@ export async function uploadGuideImage(
   const path = `guides/${guideId}/${Date.now()}-${sanitizeFilename(file.name)}`;
   const r = storageRef(clientStorage, path);
   await uploadBytes(r, file, { contentType: file.type });
-  return await getDownloadURL(r);
+  return publicDownloadUrl(r);
 }
