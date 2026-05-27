@@ -45,7 +45,7 @@ Bootstrapped on first sign-in by `signInWithIdToken` (`src/app/actions/auth.ts`)
 | `presenterCapacity` | number | `0` = unlimited |
 | `status` | enum | `"draft" \| "published" \| "past" \| "cancelled"` |
 | `visibility` | enum? | `"public" \| "members_only"` (optional; missing = public for back-compat) |
-| `coverImagePath` | string? | Storage path; UI not built yet (issue #18) |
+| `coverImage` | `{ path, url }?` | Optional cover image. Same `{path, url}` shape as `ProjectDoc.thumbnail` / `PostDoc.coverImage`. Shown on `/events` cards and at the top of `/events/[slug]`. Files live at `events/{adminUid}/<ts>-<file>` and are best-effort deleted on event delete or cover replacement. Older docs may carry a legacy `coverImagePath: string`; `updateEvent` removes it on next save. |
 | `surveyFields` | `SurveyField[]` | See below |
 | `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions |
 | `createdBy` | string (uid) | |

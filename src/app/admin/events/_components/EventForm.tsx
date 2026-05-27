@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytesResumable,
+} from "firebase/storage";
 import { useState, useTransition } from "react";
 
 import {
@@ -8,8 +13,26 @@ import {
   updateEvent,
   type EventFormInput,
 } from "@/app/actions/events";
-import type { EventDoc, SurveyField } from "@/lib/types";
+import { clientStorage } from "@/lib/firebase/client";
+import type {
+  EventDoc,
+  ProjectAsset,
+  SessionUser,
+  SurveyField,
+} from "@/lib/types";
 import { toDate } from "@/lib/utils";
+
+// Matches the events/{eventId}/{**} storage rule (admin write, image only,
+// 10MB cap). Cover images get a slightly larger budget than project /
+// post thumbnails because they're the hero asset on /events cards.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_MIME = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+const ACCEPT = ALLOWED_MIME.join(",");
 
 function toLocalInput(d: Date | null): string {
   if (!d) return "";
@@ -19,9 +42,11 @@ function toLocalInput(d: Date | null): string {
 
 export function EventForm({
   mode,
+  user,
   event,
 }: {
   mode: "create" | "edit";
+  user: SessionUser;
   event?: EventDoc;
 }) {
   const [title, setTitle] = useState(event?.title ?? "");
@@ -46,8 +71,70 @@ export function EventForm({
     NonNullable<EventFormInput["visibility"]>
   >(event?.visibility ?? "public");
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
+  const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
+    event?.coverImage,
+  );
+  const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function uploadCover(
+    file: File,
+    onProgress: (pct: number) => void,
+  ): Promise<ProjectAsset> {
+    if (file.size > MAX_IMAGE_BYTES) {
+      return Promise.reject(new Error("画像サイズは 10MB 以下にしてください"));
+    }
+    if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
+      return Promise.reject(
+        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
+      );
+    }
+    const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
+    // events/{eventId-or-admin-uid}/... — the rule matches any first
+    // segment with admin write, so for both create (no event id yet) and
+    // edit we just root under the admin's uid and let the doc reference
+    // the resulting URL.
+    const path = `events/${user.uid}/${Date.now()}-${safeName}`;
+    const objectRef = storageRef(clientStorage, path);
+    return new Promise<ProjectAsset>((resolve, reject) => {
+      const task = uploadBytesResumable(objectRef, file, {
+        contentType: file.type,
+      });
+      task.on(
+        "state_changed",
+        (snap) =>
+          onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+        (err) => reject(err),
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({ path, url });
+          } catch (err) {
+            reject(err);
+          }
+        },
+      );
+    });
+  }
+
+  async function handleCoverPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setCoverProgress(0);
+      const asset = await uploadCover(file, setCoverProgress);
+      setCoverImage(asset);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "アップロード失敗");
+    } finally {
+      setCoverProgress(null);
+      e.target.value = "";
+    }
+  }
+
+  const uploading = coverProgress !== null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +155,7 @@ export function EventForm({
           presenterCapacity,
           status,
           visibility,
+          coverImage,
           surveyFields: fields,
         };
         if (mode === "create") {
@@ -252,6 +340,40 @@ export function EventForm({
         </select>
       </Field>
 
+      <Field label="カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)">
+        <div className="space-y-2">
+          {coverImage && (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverImage.url}
+                alt="cover preview"
+                className="h-24 w-40 rounded border border-zinc-200 object-cover dark:border-zinc-800"
+              />
+              <button
+                type="button"
+                onClick={() => setCoverImage(undefined)}
+                className="text-xs text-red-600 hover:underline"
+              >
+                削除
+              </button>
+            </div>
+          )}
+          <input
+            type="file"
+            accept={ACCEPT}
+            disabled={pending || uploading}
+            onChange={handleCoverPick}
+            className="block w-full text-sm disabled:opacity-50"
+          />
+          {coverProgress !== null && (
+            <p className="text-xs text-zinc-500">
+              アップロード中… {coverProgress.toFixed(0)}%
+            </p>
+          )}
+        </div>
+      </Field>
+
       <div className="space-y-3 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">アンケート項目</h3>
@@ -355,10 +477,10 @@ export function EventForm({
       <div className="flex justify-between">
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || uploading}
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
         >
-          {pending ? "保存中..." : "保存"}
+          {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
         </button>
         {mode === "edit" && (
           <button

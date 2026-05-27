@@ -33,6 +33,15 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
+      {event.coverImage?.url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={event.coverImage.url}
+          alt={`${event.title} のカバー画像`}
+          className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
+        />
+      )}
+
       <header className="space-y-3">
         <p className="text-sm text-zinc-500">{formatDateTime(event.startAt)}</p>
         <h1 className="text-3xl font-bold tracking-tight">
