@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { EventForm } from "@/app/admin/events/_components/EventForm";
+import { getSessionUser } from "@/lib/auth/session";
 import { getEventById } from "@/lib/data/events";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,9 @@ export default async function EditEventPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) redirect("/admin/guides");
+
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) notFound();

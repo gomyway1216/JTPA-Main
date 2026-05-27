@@ -1,9 +1,15 @@
+import { redirect } from "next/navigation";
+
 import { ProjectReviewCard } from "@/app/admin/projects/_components/ProjectReviewCard";
+import { getSessionUser } from "@/lib/auth/session";
 import { listProjects } from "@/lib/data/projects";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) redirect("/admin/guides");
+
   const [pending, approved, rejected] = await Promise.all([
     listProjects({ status: "pending", limit: 50 }).catch(() => []),
     listProjects({ status: "approved", limit: 50 }).catch(() => []),

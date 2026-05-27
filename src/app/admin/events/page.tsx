@@ -1,11 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminEventsPage() {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) redirect("/admin/guides");
+
   const events = await listEvents({
     statuses: ["draft", "published", "past", "cancelled"],
     limit: 100,

@@ -1,11 +1,16 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listProjects } from "@/lib/data/projects";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) redirect("/admin/guides");
+
   const [pending, upcoming] = await Promise.all([
     listProjects({ status: "pending", limit: 5 }).catch(() => []),
     listEvents({ statuses: ["draft", "published"], limit: 5 }).catch(() => []),
