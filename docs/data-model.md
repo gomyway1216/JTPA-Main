@@ -10,6 +10,8 @@ events/{eventId}
   ├─ rsvps/{uid}
   └─ presentations/{autoId}
 projects/{projectId}
+posts/{postId}
+  └─ comments/{commentId}
 mail/{autoId}      ← Trigger Email extension (writes only via Admin SDK)
 ```
 
@@ -126,6 +128,48 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 - Admins approve/reject (sets `status`, `reviewerUid`, `reviewNote`, `reviewedAt`)
 
 Notification on decision is enqueued via `enqueueProjectDecisionNotification` (no-op until issue #15 lands).
+
+## `posts/{postId}` (Blog)
+
+Community blog entries. Distinct from `guides` (admin/editor curated help docs without comments). Members can submit posts; admins approve before public release, similar to the Showcase project workflow.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Unique URL slug |
+| `title`, `excerpt` | string | Excerpt shown on the list view |
+| `body` | string | Markdown source, rendered via `MarkdownBody` |
+| `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
+| `tags` | string[] | Up to 8 |
+| `authorUid`, `authorName` | string | Denormalized from auth |
+| `authorPhotoURL` | string \| null | Denormalized from auth (`null` if the user has no Google profile photo) |
+| `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
+| `reviewerUid` | string \| null | Set by admin on decision |
+| `reviewNote` | string? | Visible to author if rejected |
+| `publishedAt` | Timestamp? | Set when status flips to `published` |
+| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
+- Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
+- Owner edits force `status == "pending"` (no self-publish), keep `authorUid` and `reviewerUid` unchanged. Admins can change anything. Mirrors the `projects/{projectId}` pattern
+- Comments live in the `comments` subcollection
+
+### `posts/{postId}/comments/{commentId}`
+
+| Field | Type | Notes |
+|---|---|---|
+| `authorUid`, `authorName` | string | |
+| `authorPhotoURL` | string \| null | |
+| `body` | string | Length cap (~2000 chars) will be enforced by the comment Server Action in the follow-up PR; rules currently only constrain identity, not size |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Read: visible if the parent post is `published`, OR caller is the comment author, OR caller is admin
+- Create: signed-in user, only on `published` posts, and `authorUid` must match the caller
+- Update: author can edit body, but `authorUid` is immutable (no impersonation by edit). Admin can change anything
+- Delete: author or admin
+
+UI lands in a follow-up PR.
 
 ## `mail/{autoId}` (Trigger Email)
 

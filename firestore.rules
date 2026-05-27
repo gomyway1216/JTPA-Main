@@ -110,6 +110,67 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin() || isEditor();
     }
 
+    // ----- blog posts -----
+    // Published posts are public. All other states (draft, pending, rejected,
+    // archived) are only visible to the author and admins. Write paths
+    // normally go through Server Actions, but the rules enforce the same
+    // invariants in case a client ever calls Firestore directly.
+    match /posts/{postId} {
+      allow read: if isAdmin()
+        || (resource != null && resource.data.status == 'published')
+        || (isSignedIn() && resource != null
+            && resource.data.authorUid == request.auth.uid);
+
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status in ['draft', 'pending']
+        && request.resource.data.reviewerUid == null;
+
+      // Authors can edit their own posts but can NOT self-publish. Mirror of
+      // the projects/{projectId} pattern: authorUid + reviewerUid must stay
+      // the same, and status is forced back to 'pending' so admin review
+      // happens again. Admins can change anything.
+      allow update: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorUid == resource.data.authorUid
+          && request.resource.data.reviewerUid == resource.data.reviewerUid
+          && request.resource.data.status == 'pending'
+        );
+
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+      // Comments live under the post. Reads are gated on the parent post
+      // being publicly readable — otherwise comments on a draft / rejected
+      // post would leak metadata about its existence. Author and admin
+      // always see their own.
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (isSignedIn() && resource != null
+              && resource.data.authorUid == request.auth.uid)
+          || get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published';
+
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published';
+
+        // Authors can edit body but NOT change authorUid (prevents
+        // impersonation by editing an existing comment to look like
+        // someone else).
+        allow update: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == resource.data.authorUid
+          );
+
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+      }
+    }
+
     // ----- mail (Trigger Email extension) -----
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {

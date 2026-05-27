@@ -147,6 +147,50 @@ export interface SessionUser {
   isEditor: boolean;
 }
 
+// ---------- blog posts ----------
+// Distinct from `guides`. Guides are admin/editor-curated help content with
+// no comments and a manual `order`. Posts are chronological community blog
+// entries that any signed-in member can submit; admins review before public
+// release. Comments live in a subcollection.
+export type PostStatus =
+  | "draft"
+  | "pending"
+  | "published"
+  | "rejected"
+  | "archived";
+
+export interface PostDoc {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  body: string;
+  coverImage?: ProjectAsset; // reuse the {path, url} shape from projects
+  tags: string[];
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  status: PostStatus;
+  reviewerUid: string | null;
+  reviewNote?: string;
+  publishedAt?: TsLike;
+  submittedAt: TsLike;
+  reviewedAt?: TsLike;
+  createdAt: TsLike;
+  updatedAt: TsLike;
+}
+
+export interface PostCommentDoc {
+  id: string;
+  postId: string;
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  body: string;
+  createdAt: TsLike;
+  updatedAt: TsLike;
+}
+
 // ---------- guides (AI setup / help content) ----------
 export type GuideStatus = "draft" | "published";
 

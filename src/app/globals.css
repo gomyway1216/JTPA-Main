@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Syntax highlighting theme for Markdown code blocks (rehype-highlight). */
+@import "highlight.js/styles/github.css";
 
 :root {
   --background: #fafafa;
