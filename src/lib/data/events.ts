@@ -25,10 +25,17 @@ export async function listEvents(opts: {
   let q: FirebaseFirestore.Query = adminDb()
     .collection("events")
     .where("status", "in", statuses);
+  // Firestore requires the first orderBy to match any inequality filter,
+  // so the `notEndedOnly` path orders by endAt. For practical UX this is
+  // close enough to startAt order: ongoing events (endAt soonest) sort
+  // first, upcoming events follow. Without `notEndedOnly` we keep the
+  // intuitive startAt ascending sort.
   if (notEndedOnly) {
-    q = q.where("endAt", ">=", Timestamp.now());
+    q = q.where("endAt", ">=", Timestamp.now()).orderBy("endAt", "asc");
+  } else {
+    q = q.orderBy("startAt", "asc");
   }
-  q = q.orderBy("startAt", "asc").limit(limit);
+  q = q.limit(limit);
   const snap = await q.get();
   return snap.docs.map(fromSnap);
 }
