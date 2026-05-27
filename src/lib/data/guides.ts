@@ -13,6 +13,11 @@ export async function listGuides(
   opts: { statuses?: GuideStatus[]; limit?: number } = {},
 ): Promise<GuideDoc[]> {
   const { statuses = ["published"], limit = 100 } = opts;
+  // Firestore's `in` operator rejects empty arrays and caps at 10 values.
+  // GuideStatus only has two variants so the upper bound isn't reachable
+  // today, but guard the empty case so a caller passing `[]` gets `[]`
+  // back instead of a runtime crash.
+  if (statuses.length === 0) return [];
   const snap = await adminDb()
     .collection("guides")
     .where("status", "in", statuses)
