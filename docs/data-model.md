@@ -10,6 +10,8 @@ events/{eventId}
   ├─ rsvps/{uid}
   └─ presentations/{autoId}
 projects/{projectId}
+posts/{postId}
+  └─ comments/{commentId}
 mail/{autoId}      ← Trigger Email extension (writes only via Admin SDK)
 ```
 
@@ -126,6 +128,40 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 - Admins approve/reject (sets `status`, `reviewerUid`, `reviewNote`, `reviewedAt`)
 
 Notification on decision is enqueued via `enqueueProjectDecisionNotification` (no-op until issue #15 lands).
+
+## `posts/{postId}` (Blog)
+
+Community blog entries. Distinct from `guides` (admin/editor curated help docs without comments). Members can submit posts; admins approve before public release, similar to the Showcase project workflow.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Unique URL slug |
+| `title`, `excerpt` | string | Excerpt shown on the list view |
+| `body` | string | Markdown source, rendered via `MarkdownBody` |
+| `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
+| `tags` | string[] | Up to 8 |
+| `authorUid`, `authorName`, `authorPhotoURL` | string | Denormalized from auth |
+| `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
+| `reviewerUid` | string \| null | Set by admin on decision |
+| `reviewNote` | string? | Visible to author if rejected |
+| `publishedAt` | Timestamp? | Set when status flips to `published` |
+| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
+- Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
+- Owner edits preserve `authorUid`; the Server Action flips status back to `pending` for re-review
+- Comments live in the `comments` subcollection
+
+### `posts/{postId}/comments/{commentId}`
+
+| Field | Type | Notes |
+|---|---|---|
+| `authorUid`, `authorName`, `authorPhotoURL` | string | |
+| `body` | string | Max 2000 chars |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**: public read, signed-in create, author-or-admin edit/delete. UI lands in a follow-up PR.
 
 ## `mail/{autoId}` (Trigger Email)
 
