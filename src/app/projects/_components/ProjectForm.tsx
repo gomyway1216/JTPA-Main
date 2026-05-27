@@ -1,24 +1,135 @@
 "use client";
 
+import {
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytesResumable,
+} from "firebase/storage";
 import { useState, useTransition } from "react";
 
 import { submitProject, updateMyProject } from "@/app/actions/projects";
-import type { ProjectDoc } from "@/lib/types";
+import { clientStorage } from "@/lib/firebase/client";
+import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // matches storage.rules
+const MAX_SCREENSHOTS = 8;
+// Allowlist used by both the <input accept=...> hint and the runtime MIME
+// check. SVG is deliberately excluded — `<img src=svg>` doesn't execute its
+// scripts, but admins re-displaying via other means (downloads, direct
+// links) could be tricked into rendering the markup. Stick to raster.
+const ALLOWED_MIME = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+const ACCEPT = ALLOWED_MIME.join(",");
 
 interface Props {
   mode: "create" | "edit";
+  user: SessionUser;
   project?: ProjectDoc;
 }
 
-export function ProjectForm({ mode, project }: Props) {
+export function ProjectForm({ mode, user, project }: Props) {
   const [title, setTitle] = useState(project?.title ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
   const [appUrl, setAppUrl] = useState(project?.appUrl ?? "");
   const [repoUrl, setRepoUrl] = useState(project?.repoUrl ?? "");
   const [demoVideoUrl, setDemoVideoUrl] = useState(project?.demoVideoUrl ?? "");
+  const [thumbnail, setThumbnail] = useState<ProjectAsset | undefined>(
+    project?.thumbnail,
+  );
+  const [screenshots, setScreenshots] = useState<ProjectAsset[]>(
+    project?.screenshots ?? [],
+  );
+  const [thumbProgress, setThumbProgress] = useState<number | null>(null);
+  const [shotProgress, setShotProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function uploadOne(
+    file: File,
+    onProgress: (pct: number) => void,
+  ): Promise<ProjectAsset> {
+    if (file.size > MAX_IMAGE_BYTES) {
+      return Promise.reject(new Error("画像サイズは 5MB 以下にしてください"));
+    }
+    if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
+      return Promise.reject(
+        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
+      );
+    }
+    const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
+    const path = `projects/${user.uid}/${Date.now()}-${safeName}`;
+    const objectRef = storageRef(clientStorage, path);
+    return new Promise<ProjectAsset>((resolve, reject) => {
+      const task = uploadBytesResumable(objectRef, file, {
+        contentType: file.type,
+      });
+      task.on(
+        "state_changed",
+        (snap) =>
+          onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+        (err) => reject(err),
+        async () => {
+          try {
+            const url = await getDownloadURL(task.snapshot.ref);
+            resolve({ path, url });
+          } catch (err) {
+            reject(err);
+          }
+        },
+      );
+    });
+  }
+
+  async function handleThumbnailPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setThumbProgress(0);
+      const asset = await uploadOne(file, setThumbProgress);
+      setThumbnail(asset);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "アップロード失敗");
+    } finally {
+      setThumbProgress(null);
+      e.target.value = ""; // allow re-picking the same file
+    }
+  }
+
+  async function handleScreenshotPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const remaining = MAX_SCREENSHOTS - screenshots.length;
+    if (remaining <= 0) {
+      setError(`スクリーンショットは最大 ${MAX_SCREENSHOTS} 枚までです`);
+      return;
+    }
+    const toUpload = files.slice(0, remaining);
+    for (const file of toUpload) {
+      try {
+        setShotProgress(0);
+        const asset = await uploadOne(file, setShotProgress);
+        setScreenshots((cur) => [...cur, asset]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "アップロード失敗");
+        setShotProgress(null);
+        e.target.value = "";
+        return;
+      }
+    }
+    setShotProgress(null);
+    e.target.value = "";
+  }
+
+  function removeScreenshot(index: number) {
+    setScreenshots((cur) => cur.filter((_, i) => i !== index));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -35,7 +146,8 @@ export function ProjectForm({ mode, project }: Props) {
           appUrl,
           repoUrl,
           demoVideoUrl,
-          screenshots: [],
+          thumbnail,
+          screenshots,
         };
         if (mode === "create") {
           await submitProject(payload);
@@ -47,6 +159,8 @@ export function ProjectForm({ mode, project }: Props) {
       }
     });
   }
+
+  const uploading = thumbProgress !== null || shotProgress !== null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -104,6 +218,82 @@ export function ProjectForm({ mode, project }: Props) {
         />
       </Field>
 
+      <Field label="カバー画像 (一覧のサムネ用・1枚・5MBまで)">
+        <div className="space-y-2">
+          {thumbnail && (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnail.url}
+                alt="thumbnail preview"
+                className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
+              />
+              <button
+                type="button"
+                onClick={() => setThumbnail(undefined)}
+                className="text-xs text-red-600 hover:underline"
+              >
+                削除
+              </button>
+            </div>
+          )}
+          <input
+            type="file"
+            accept={ACCEPT}
+            onChange={handleThumbnailPick}
+            className="block w-full text-sm"
+          />
+          {thumbProgress !== null && (
+            <p className="text-xs text-zinc-500">
+              アップロード中… {thumbProgress.toFixed(0)}%
+            </p>
+          )}
+        </div>
+      </Field>
+
+      <Field label={`スクリーンショット (最大 ${MAX_SCREENSHOTS} 枚・各 5MBまで)`}>
+        <div className="space-y-2">
+          {screenshots.length > 0 && (
+            <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {screenshots.map((s, i) => (
+                <li key={s.path} className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={s.url}
+                    alt={`screenshot ${i + 1}`}
+                    className="h-24 w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeScreenshot(i)}
+                    className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black/80"
+                  >
+                    削除
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {screenshots.length < MAX_SCREENSHOTS && (
+            <input
+              type="file"
+              accept={ACCEPT}
+              multiple
+              onChange={handleScreenshotPick}
+              className="block w-full text-sm"
+            />
+          )}
+          {shotProgress !== null && (
+            <p className="text-xs text-zinc-500">
+              アップロード中… {shotProgress.toFixed(0)}%
+            </p>
+          )}
+          <p className="text-xs text-zinc-500">
+            {screenshots.length} / {MAX_SCREENSHOTS} 枚
+          </p>
+        </div>
+      </Field>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
       {mode === "edit" && (
         <p className="text-xs text-zinc-500">
@@ -113,14 +303,16 @@ export function ProjectForm({ mode, project }: Props) {
 
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || uploading}
         className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
       >
         {pending
           ? "送信中..."
-          : mode === "create"
-            ? "投稿して審査依頼"
-            : "更新して再審査"}
+          : uploading
+            ? "アップロード中..."
+            : mode === "create"
+              ? "投稿して審査依頼"
+              : "更新して再審査"}
       </button>
     </form>
   );

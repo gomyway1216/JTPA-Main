@@ -18,7 +18,7 @@ export default async function NewProjectPage() {
           投稿された内容は管理者の承認後にショーケースに掲載されます。
         </p>
       </header>
-      <ProjectForm mode="create" />
+      <ProjectForm mode="create" user={user} />
     </div>
   );
 }

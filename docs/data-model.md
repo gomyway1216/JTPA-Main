@@ -113,7 +113,8 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 | `tags` | string[] | Max 10 |
 | `appUrl` | string | Required |
 | `repoUrl`, `demoVideoUrl` | string? | Optional |
-| `thumbnailPath`, `screenshots[]` | string? | Storage paths (UI not finished) |
+| `thumbnail` | `{ path, url }?` | Optional cover image. Falls back to the first screenshot on the public list when not set. |
+| `screenshots` | `{ path, url }[]` | Up to 8 images shown in the project detail page gallery. |
 | `status` | enum | `"pending" \| "approved" \| "rejected" \| "archived"` |
 | `reviewerUid` | string \| null | Set by admin on decision |
 | `reviewNote` | string? | Visible to owner if rejected |
