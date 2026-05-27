@@ -17,6 +17,8 @@ import {
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
+  GUIDE_IMAGE_LABEL,
+  GUIDE_IMAGE_TYPES,
   MAX_GUIDE_IMAGE_BYTES,
   uploadGuideImage,
 } from "@/lib/firebase/uploads";
@@ -45,12 +47,21 @@ function stringToTags(s: string): string[] {
     .filter(Boolean);
 }
 
-// Pull only image-typed files out of an arbitrary list — covers drops
+// Pull only allowlisted images out of an arbitrary list — covers drops
 // and clipboard pastes that may contain a mix of text, html, and one
-// or more images.
+// or more images. Matches the SVG-exclusion the rest of the app applies
+// to user-uploaded raster content.
 function pickImageFiles(files: FileList | File[]): File[] {
-  const arr = Array.from(files);
-  return arr.filter((f) => f.type.startsWith("image/"));
+  const allow = GUIDE_IMAGE_TYPES as readonly string[];
+  return Array.from(files).filter((f) => allow.includes(f.type));
+}
+
+// Markdown image syntax is `![alt](url)`. An unescaped `]` in the alt
+// text closes the alt segment early; a stray backslash gets read as an
+// escape for the next char. Both are common enough in real filenames
+// ("Screenshot [draft].png", paths with `\`) to merit escaping.
+function escapeAlt(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
 export function GuideForm({
@@ -106,47 +117,79 @@ export function GuideForm({
   // case, which is rare in practice (user has to drop something before
   // the editor finishes loading).
   const editorRef = useRef<RefMDEditor | null>(null);
-
-  function insertAtCursor(markdown: string) {
-    const ta = editorRef.current?.textarea ?? null;
-    if (!ta) {
-      setBody((prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + markdown);
-      return;
-    }
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    const next = body.slice(0, start) + markdown + body.slice(end);
-    setBody(next);
-    // Restore cursor + focus after React commits the new value. Without
-    // the rAF deferral the textarea still holds the old value and the
-    // selection range lands at a stale offset.
-    requestAnimationFrame(() => {
-      ta.focus();
-      const pos = start + markdown.length;
-      ta.setSelectionRange(pos, pos);
-    });
-  }
+  // Synchronous concurrency guard. State-based gating (`if (uploading)`)
+  // would race when drag/drop/paste fire faster than React can flip the
+  // flag — a ref updates immediately and is reliable.
+  const uploadingRef = useRef(false);
 
   async function uploadAndInsert(files: File[]) {
     if (files.length === 0) return;
+    if (uploadingRef.current) {
+      setError(
+        "前のアップロードが完了するまでお待ちください",
+      );
+      return;
+    }
+    uploadingRef.current = true;
     setError(null);
     setUploading(true);
     setUploadInfo(`${files.length} 件アップロード中...`);
+
+    // Snapshot the caret BEFORE we kick off uploads. Splicing once at the
+    // end (rather than per-image) keeps the math simple and avoids the
+    // stale-state trap of reading `body` from the closure inside an
+    // async loop. We use functional setBody at splice time so anything
+    // the user typed during the upload window is preserved.
+    const ta = editorRef.current?.textarea ?? null;
+    const cursorStart = ta?.selectionStart ?? null;
+    const cursorEnd = ta?.selectionEnd ?? null;
+
     try {
+      const inserts: string[] = [];
       for (const file of files) {
         const url = await uploadGuideImage(guideId, file);
-        const alt = file.name.replace(/\.[^.]+$/, "");
-        insertAtCursor(`\n![${alt}](${url})\n`);
+        const altRaw = file.name.replace(/\.[^.]+$/, "");
+        inserts.push(`\n![${escapeAlt(altRaw)}](${url})\n`);
       }
+      const block = inserts.join("");
+
+      if (ta && cursorStart !== null && cursorEnd !== null) {
+        setBody((prev) => {
+          // Clamp the snapshot offsets to the current length — if the
+          // user typed (or, more importantly, deleted) during upload,
+          // the original indices may now point past the end of the
+          // string. Clamping degrades to "insert at the closest valid
+          // position" rather than throwing.
+          const s = Math.min(cursorStart, prev.length);
+          const e = Math.min(cursorEnd, prev.length);
+          return prev.slice(0, s) + block + prev.slice(e);
+        });
+        // Restore caret on the next paint so React has flushed the new
+        // value into the textarea. Clamp again for the same reason.
+        requestAnimationFrame(() => {
+          ta.focus();
+          const safeStart = Math.min(cursorStart, ta.value.length);
+          const pos = safeStart + block.length;
+          ta.setSelectionRange(pos, pos);
+        });
+      } else {
+        // Editor still lazy-loading — append at the end.
+        setBody(
+          (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+        );
+      }
+
       setUploadInfo(`${files.length} 件アップロードしました`);
-      // Clear the success banner after a beat so it doesn't sit forever.
       setTimeout(() => setUploadInfo(null), 3000);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "画像のアップロードに失敗しました",
+        err instanceof Error
+          ? err.message
+          : "画像のアップロードに失敗しました",
       );
       setUploadInfo(null);
     } finally {
+      uploadingRef.current = false;
       setUploading(false);
     }
   }
@@ -289,8 +332,8 @@ export function GuideForm({
               {uploading ? "アップロード中..." : "📷 画像をアップロード"}
             </button>
             <span className="text-xs text-zinc-500">
-              ドラッグ&ドロップ / ペーストも可 (
-              {MAX_GUIDE_IMAGE_BYTES / 1024 / 1024}MB以下, image/* のみ)
+              ドラッグ&ドロップ / ペーストも可 ({GUIDE_IMAGE_LABEL}、
+              {MAX_GUIDE_IMAGE_BYTES / 1024 / 1024}MB以下)
             </span>
             {uploadInfo && (
               <span className="text-xs text-emerald-700 dark:text-emerald-300">

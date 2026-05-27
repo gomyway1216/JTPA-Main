@@ -98,14 +98,19 @@ export async function createGuide(
       throw new Error("不正な下書きIDが指定されました");
     }
     const ref = adminDb().collection("guides").doc(draftId);
-    // Defensive uniqueness check — collisions on auto-IDs are
-    // astronomical, but if the client somehow reuses an id we don't
-    // want to clobber an existing doc.
-    const snap = await ref.get();
-    if (snap.exists) {
-      throw new Error("下書きIDが既に使われています");
+    // `create()` is atomic — fails with ALREADY_EXISTS instead of
+    // clobbering — so we avoid the read-then-write race that a
+    // `get()` + `set()` pair would have. Auto-id collisions are
+    // astronomical but we want correctness, not a near-miss.
+    try {
+      await ref.create(payload);
+    } catch (err) {
+      const e = err as { code?: number | string };
+      if (e.code === 6 || e.code === "already-exists") {
+        throw new Error("下書きIDが既に使われています");
+      }
+      throw err;
     }
-    await ref.set(payload);
     guideId = draftId;
   } else {
     const ref = await adminDb().collection("guides").add(payload);
