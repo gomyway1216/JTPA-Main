@@ -11,6 +11,10 @@ service firebase.storage {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
+    function isEditor() {
+      return isSignedIn() && request.auth.token.editor == true;
+    }
+
     // Raster image types only. Excludes SVG (image/svg+xml) deliberately —
     // SVGs can carry markup that some downstream tools execute, and we don't
     // need vector uploads anywhere in the app today.
@@ -53,6 +57,17 @@ service firebase.storage {
       allow read: if true;
       allow write: if (isSignedIn() && request.auth.uid == uid)
         && isImage() && maxSize(2);
+    }
+
+    // Guide images (embedded in Markdown body): public read,
+    // admin or editor write. Split create/update from delete because
+    // `request.resource` is null on delete, which would null-eval
+    // through isImage()/maxSize() and reject authorized deletes.
+    match /guides/{guideId}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if (isAdmin() || isEditor())
+        && isImage() && maxSize(5);
+      allow delete: if isAdmin() || isEditor();
     }
   }
 }

@@ -44,6 +44,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       displayName: (decoded.name as string | undefined) ?? "",
       photoURL: (decoded.picture as string | undefined) ?? null,
       isAdmin: decoded.admin === true,
+      isEditor: decoded.editor === true,
     };
   } catch {
     return null;
@@ -59,5 +60,13 @@ export async function requireUser(): Promise<SessionUser> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (!user.isAdmin) throw new Error("FORBIDDEN");
+  return user;
+}
+
+// Allows either admin OR editor. Use for content (guide) write paths where
+// editors are trusted to publish but should not get admin-only powers.
+export async function requireEditor(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.isAdmin && !user.isEditor) throw new Error("FORBIDDEN");
   return user;
 }
