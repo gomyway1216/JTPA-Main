@@ -6,9 +6,14 @@ import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { requireEditor } from "@/lib/auth/session";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import type { GuideAuthorRef } from "@/lib/types";
 import { slugify } from "@/lib/utils";
+
+// Firestore auto-IDs are 20 alphanumeric chars; we accept the same shape
+// from the client when a draft id is supplied so we can co-locate
+// pre-save image uploads under the eventual doc's path.
+const FIRESTORE_AUTO_ID = /^[A-Za-z0-9]{20}$/;
 
 const optionalNonEmpty = (schema: z.ZodTypeAny) =>
   z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
@@ -52,7 +57,10 @@ function revalidate() {
   revalidatePath("/admin/guides");
 }
 
-export async function createGuide(input: GuideFormInput): Promise<string> {
+export async function createGuide(
+  input: GuideFormInput,
+  draftId?: string,
+): Promise<string> {
   const user = await requireEditor();
   const parsed = parseGuideInput(input);
 
@@ -68,7 +76,7 @@ export async function createGuide(input: GuideFormInput): Promise<string> {
 
   const now = Timestamp.now();
   const author = authorRef(user);
-  const ref = await adminDb().collection("guides").add({
+  const payload = {
     slug,
     title: parsed.title,
     body: parsed.body,
@@ -79,10 +87,38 @@ export async function createGuide(input: GuideFormInput): Promise<string> {
     updatedAt: now,
     createdBy: author,
     updatedBy: author,
-  });
+  };
+
+  let guideId: string;
+  if (draftId !== undefined) {
+    // Client supplied an id ahead of time so it could upload images to
+    // `guides/{guideId}/...` before saving. Validate the shape to keep
+    // anything else out of doc().set().
+    if (!FIRESTORE_AUTO_ID.test(draftId)) {
+      throw new Error("不正な下書きIDが指定されました");
+    }
+    const ref = adminDb().collection("guides").doc(draftId);
+    // `create()` is atomic — fails with ALREADY_EXISTS instead of
+    // clobbering — so we avoid the read-then-write race that a
+    // `get()` + `set()` pair would have. Auto-id collisions are
+    // astronomical but we want correctness, not a near-miss.
+    try {
+      await ref.create(payload);
+    } catch (err) {
+      const e = err as { code?: number | string };
+      if (e.code === 6 || e.code === "already-exists") {
+        throw new Error("下書きIDが既に使われています");
+      }
+      throw err;
+    }
+    guideId = draftId;
+  } else {
+    const ref = await adminDb().collection("guides").add(payload);
+    guideId = ref.id;
+  }
 
   revalidate();
-  redirect(`/admin/guides/${ref.id}/edit`);
+  redirect(`/admin/guides/${guideId}/edit`);
 }
 
 export async function updateGuide(
@@ -121,5 +157,17 @@ export async function updateGuide(
 export async function deleteGuide(guideId: string): Promise<void> {
   await requireEditor();
   await adminDb().collection("guides").doc(guideId).delete();
+
+  // Best-effort cleanup of any uploaded images. Logged and swallowed so a
+  // Storage hiccup can't leave a half-deleted guide in Firestore; an
+  // orphaned image is recoverable, a phantom Firestore doc is worse.
+  try {
+    await adminStorage()
+      .bucket()
+      .deleteFiles({ prefix: `guides/${guideId}/` });
+  } catch (err) {
+    console.warn(`Failed to clean up Storage for guide ${guideId}:`, err);
+  }
+
   revalidate();
 }
