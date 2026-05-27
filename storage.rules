@@ -11,6 +11,10 @@ service firebase.storage {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
+    function isEditor() {
+      return isSignedIn() && request.auth.token.editor == true;
+    }
+
     function isImage() {
       return request.resource.contentType.matches('image/.*');
     }
@@ -45,6 +49,14 @@ service firebase.storage {
       allow read: if true;
       allow write: if (isSignedIn() && request.auth.uid == uid)
         && isImage() && maxSize(2);
+    }
+
+    // Guide images (embedded in Markdown body): public read,
+    // admin or editor write.
+    match /guides/{guideId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if (isAdmin() || isEditor())
+        && isImage() && maxSize(5);
     }
   }
 }

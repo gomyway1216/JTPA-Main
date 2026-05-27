@@ -135,4 +135,28 @@ export interface SessionUser {
   displayName: string;
   photoURL: string | null;
   isAdmin: boolean;
+  isEditor: boolean;
+}
+
+// ---------- guides (AI setup / help content) ----------
+export type GuideStatus = "draft" | "published";
+
+export interface GuideAuthorRef {
+  uid: string;
+  displayName: string | null;
+  email: string | null;
+}
+
+export interface GuideDoc {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  tags: string[];
+  status: GuideStatus;
+  order: number;
+  createdAt: TsLike;
+  updatedAt: TsLike;
+  createdBy: GuideAuthorRef;
+  updatedBy: GuideAuthorRef;
 }
