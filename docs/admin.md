@@ -70,13 +70,24 @@ Same credentials story as the role scripts (ADC or `FIREBASE_SERVICE_ACCOUNT`). 
 
 ## Event lifecycle
 
-1. **Create draft** at `/admin/events/new`. Status defaults to `draft` — only admins can see it.
+1. **Create draft** at `/admin/events/new` *(or click 「複製」 on a similar past event in the `/admin/events` list to copy its content + survey fields into a fresh draft)*. Status defaults to `draft` — only admins can see it.
 2. **Define survey fields** (optional) — pairs of `key` + `label` + `type` + `audience` (all / presenter only).
 3. **Set visibility** — `公開` (default) or `メンバー限定` (logged-in only, hidden from `/events` for anonymous visitors).
 4. **Flip to `公開` (published)** when ready. The event now appears on `/events`.
 5. Users **RSVP** at `/events/[slug]` — name auto-filled from Google account, all survey responses captured.
 6. **Presenters upload slides** below the RSVP form (own folder under `presentations/{eventId}/{uid}/...`).
-7. After the event, manually flip status to `過去 (past)` (auto-transition tracked in [issue #20](https://github.com/gomyway1216/JTPA-Main/issues/20)).
+7. After the event ends, the public site automatically treats it as past (RSVP form hidden, listed under 過去のイベント). Admins can also explicitly flip status to `過去 (past)` to remove the literal "published" chip from `/admin/events`.
+
+### Cloning an event
+
+Recurring events (monthly meetup, repeat workshops): on `/admin/events`, click 「複製」 on the row. A new draft is created with:
+- Same title (suffixed " (コピー)" — rename in the edit form)
+- Same description, location, capacity, presenter capacity, survey fields, visibility
+- `startAt` shifted to **today + 7 days**, `endAt` preserving the original duration
+- Status reset to `draft`, all counters back to 0
+- Subcollections (rsvps, presentations) **not copied** — those belong to the original event
+
+You land on the new event's edit page to adjust dates and publish.
 
 ## Reviewing project submissions
 
