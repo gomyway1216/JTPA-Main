@@ -247,3 +247,69 @@ export async function publishPost(postId: string): Promise<void> {
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/admin/posts");
 }
+
+export async function decidePost(
+  postId: string,
+  decision: "published" | "rejected",
+  note?: string,
+): Promise<void> {
+  const admin = await requireAdmin();
+  const ref = adminDb().collection("posts").doc(postId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as PostDoc;
+
+  // Same first-publish detection as publishPost — anchored on the actual
+  // publishedAt timestamp so re-publish after edit doesn't overwrite it
+  // or re-notify.
+  const isFirstPublish = decision === "published" && !cur.publishedAt;
+  await ref.update({
+    status: decision,
+    reviewerUid: admin.uid,
+    reviewNote: note ?? "",
+    ...(isFirstPublish ? { publishedAt: Timestamp.now() } : {}),
+    reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  // Notify the author of approval (first publish only) or any rejection.
+  const notifyOnDecision =
+    decision === "rejected" || (decision === "published" && isFirstPublish);
+  if (notifyOnDecision && cur.authorUid) {
+    const ownerSnap = await adminDb()
+      .collection("users")
+      .doc(cur.authorUid)
+      .get();
+    const ownerEmail = ownerSnap.exists
+      ? (ownerSnap.data()?.email as string)
+      : null;
+    if (ownerEmail) {
+      await enqueuePostDecisionNotification({
+        to: ownerEmail,
+        title: cur.title,
+        decision,
+        note,
+      });
+    }
+  }
+
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/my/posts");
+  revalidatePath("/admin/posts");
+}
+
+export async function archivePost(postId: string): Promise<void> {
+  await requireAdmin();
+  const ref = adminDb().collection("posts").doc(postId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as PostDoc;
+  await ref.update({
+    status: "archived" as const,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/admin/posts");
+}
