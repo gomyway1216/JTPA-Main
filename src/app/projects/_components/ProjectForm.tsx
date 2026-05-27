@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -9,6 +8,7 @@ import { useState, useTransition } from "react";
 
 import { submitProject, updateMyProject } from "@/app/actions/projects";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // matches storage.rules
@@ -73,13 +73,10 @@ export function ProjectForm({ mode, user, project }: Props) {
         (snap) =>
           onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
         (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            resolve({ path, url });
-          } catch (err) {
-            reject(err);
-          }
+        () => {
+          // projects/{uid}/ is publicly readable per storage.rules; no
+          // token needed in the URL we hand back. See uploads.ts.
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
         },
       );
     });

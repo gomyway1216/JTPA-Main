@@ -1,12 +1,37 @@
 "use client";
 
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytes,
+  type StorageReference,
 } from "firebase/storage";
 
 import { clientStorage } from "./client";
+
+/**
+ * Build a token-less public download URL for a Storage object.
+ *
+ * `getDownloadURL()` from the Firebase SDK returns the same endpoint with
+ * an `&token=<UUID>` appended. The token is only meaningful when the
+ * bucket isn't public-read — for every path that calls into this helper
+ * (guides, posts, projects, presentations, user avatars, event covers)
+ * `storage.rules` already has `allow read: if true`, so the token adds
+ * nothing the bucket doesn't already grant. Skipping it means:
+ *
+ * - URLs are roughly half the length and don't carry a UUID secret
+ *   that gets persisted into Firestore alongside the Markdown body.
+ * - There's no `firebaseStorageDownloadTokens` metadata to revoke
+ *   later (a feature we never use anyway), so the per-object token
+ *   rotation footgun goes away.
+ *
+ * The URL shape matches `getDownloadURL()` minus the token query param.
+ * Caller MUST only use this for objects under a publicly-readable path.
+ */
+export function publicDownloadUrl(ref: StorageReference): string {
+  return `https://firebasestorage.googleapis.com/v0/b/${ref.bucket}/o/${encodeURIComponent(
+    ref.fullPath,
+  )}?alt=media`;
+}
 
 // Raster allowlist — deliberately excludes `image/svg+xml`, matching the
 // raster check in `storage.rules` and ProjectForm. SVGs can carry active
@@ -69,5 +94,5 @@ export async function uploadGuideImage(
   const path = `guides/${guideId}/${Date.now()}-${sanitizeFilename(file.name)}`;
   const r = storageRef(clientStorage, path);
   await uploadBytes(r, file, { contentType: file.type });
-  return await getDownloadURL(r);
+  return publicDownloadUrl(r);
 }

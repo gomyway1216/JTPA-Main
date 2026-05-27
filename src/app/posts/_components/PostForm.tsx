@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -18,6 +17,7 @@ import {
   type PostFormInput,
 } from "@/app/actions/posts";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -104,13 +104,12 @@ export function PostForm({ mode, user, post }: Props) {
         (snap) =>
           onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
         (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            resolve({ path, url });
-          } catch (err) {
-            reject(err);
-          }
+        () => {
+          // posts/{uid}/ has `allow read: if true` in storage.rules, so we
+          // skip the getDownloadURL fetch entirely and build the URL from
+          // the upload ref. No second network round-trip, no token in the
+          // persisted Markdown body.
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
         },
       );
     });
