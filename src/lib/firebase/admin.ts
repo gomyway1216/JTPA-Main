@@ -29,7 +29,22 @@ export function adminAuth(): Auth {
   return getAuth(getAdminApp());
 }
 
+// Cached Firestore instance. Keeping a module-scoped cache means we only
+// pay the `settings()` overhead once per module evaluation:
+//
+// - In production the module is evaluated once at boot; every subsequent
+//   `adminDb()` returns the cached instance immediately, with no
+//   throw/catch on the hot path.
+// - In dev the cache is reset on every Turbopack module re-eval. The
+//   first `adminDb()` after a re-eval calls `settings()` against a
+//   Firestore that firebase-admin already configured under the previous
+//   module instance — that throws, we swallow the "already been
+//   initialized" error specifically, and cache the same Firestore. All
+//   subsequent calls inside the re-eval window skip the throw.
+let cachedDb: Firestore | null = null;
+
 export function adminDb(): Firestore {
+  if (cachedDb) return cachedDb;
   const db = getFirestore(getAdminApp());
   // Optional fields like `presentationTitle` come through as `undefined`
   // when the user is an attendee, not a presenter. Without
@@ -38,19 +53,18 @@ export function adminDb(): Firestore {
   // production as the generic Server Components render error.
   //
   // `settings()` can only be called once per Firestore instance — second
-  // call throws "Firestore has already been initialized". That's awkward
-  // here because firebase-admin keeps the Firestore singleton attached to
-  // the App object across Turbopack hot reloads, while our own
-  // module-scoped cache dies on every re-eval. We can't switch to
-  // `initializeFirestore` either; its public `FirestoreSettings` type
-  // only exposes `preferRest` and silently drops everything else
+  // call throws "Firestore has already been initialized". firebase-admin
+  // keeps the Firestore singleton attached to the App object across
+  // Turbopack hot reloads, while our `cachedDb` dies on every re-eval —
+  // so the post-reload first call lands on an already-configured
+  // Firestore and throws. We can't switch to `initializeFirestore`
+  // either; its public `FirestoreSettings` type only exposes
+  // `preferRest` and silently drops everything else
   // (`ignoreUndefinedProperties` included).
   //
-  // The pragmatic shape that survives both production and the
-  // hot-reload edge case: call settings every time and swallow only the
-  // specific "already initialized" error. Settings are static (same
-  // object literal each call) so this is genuinely idempotent — there
-  // is no risk of overriding a different config silently.
+  // Swallow only the specific "already initialized" error. Settings are
+  // a static literal so this is genuinely idempotent — there is no risk
+  // of silently overriding a different config.
   try {
     db.settings({ ignoreUndefinedProperties: true });
   } catch (err) {
@@ -61,6 +75,7 @@ export function adminDb(): Firestore {
       throw err;
     }
   }
+  cachedDb = db;
   return db;
 }
 
