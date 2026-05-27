@@ -86,13 +86,16 @@ function orphanPaths(
 
 // ---------- create ----------
 
-export async function submitPost(input: PostFormInput): Promise<string> {
+export async function submitPost(input: PostFormInput): Promise<void> {
   const user = await requireUser();
   const parsed = parsePostInput(input);
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
-  await adminDb().collection("posts").add({
+  // Capture the doc id from `.add()` — admin tooling and future moderation
+  // actions look posts up by document id, not by slug, so the notification
+  // metadata needs the id (not the slug).
+  const ref = await adminDb().collection("posts").add({
     slug,
     title: parsed.title,
     excerpt: parsed.excerpt,
@@ -111,7 +114,7 @@ export async function submitPost(input: PostFormInput): Promise<string> {
 
   if (parsed.intent === "pending") {
     await enqueueAdminNewPostNotification({
-      postId: slug,
+      postId: ref.id,
       title: parsed.title,
       authorName: user.displayName,
       authorEmail: user.email,
@@ -142,9 +145,15 @@ export async function updateMyPost(
 
   const orphans = orphanPaths(cur.coverImage, parsed.coverImage);
 
-  // Non-admin author edits always go back to pending for re-review.
-  // Admin edits preserve the current status (admin uses publishPost /
-  // decidePost separately for state transitions).
+  // Non-admin author edits land in the author's chosen intent (draft or
+  // pending). Authoring intent → status:
+  //   - "draft"   : save without resubmitting for review
+  //   - "pending" : (re)submit for admin review
+  // The author can never directly set published/rejected/archived; admins
+  // handle those transitions via publishPost (or future moderation
+  // actions). Firestore rules enforce the same constraint client-side.
+  // Admin edits preserve the current status — admins use publishPost
+  // explicitly for state transitions.
   const nextStatus: PostStatus = user.isAdmin
     ? cur.status
     : (parsed.intent as PostStatus);
@@ -166,6 +175,7 @@ export async function updateMyPost(
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
+  redirect("/my/posts");
 }
 
 // ---------- delete (owner) ----------
@@ -187,6 +197,9 @@ export async function deleteMyPost(postId: string): Promise<void> {
   if (paths.length > 0) await deleteStoragePaths(paths);
 
   revalidatePath("/blog");
+  // Also revalidate the now-gone detail route so a cached 200 from earlier
+  // doesn't keep serving the deleted post.
+  revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
 }
@@ -200,7 +213,10 @@ export async function publishPost(postId: string): Promise<void> {
   if (!snap.exists) throw new Error("NOT_FOUND");
   const cur = snap.data() as PostDoc;
 
-  const isFirstPublish = cur.status !== "published";
+  // Check the timestamp directly so re-publishing a post that was edited
+  // back to pending doesn't re-trigger "first publish" handling
+  // (publishedAt overwrite + duplicate author notification).
+  const isFirstPublish = !cur.publishedAt;
   await ref.update({
     status: "published" as const,
     reviewerUid: admin.uid,

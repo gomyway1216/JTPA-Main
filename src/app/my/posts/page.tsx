@@ -35,7 +35,14 @@ export default async function MyPostsPage() {
   const user = await getSessionUser();
   if (!user) redirect("/login?redirect=/my/posts");
 
-  const posts = await listMyPosts(user.uid).catch(() => []);
+  // Surface unexpected errors to server logs. Missing composite indexes
+  // (the most common cause of failure here) show up as Firestore errors
+  // that include a one-click "create index" link in the message, but only
+  // if we actually log them.
+  const posts = await listMyPosts(user.uid).catch((err) => {
+    console.error("Failed to list my posts:", err);
+    return [];
+  });
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">

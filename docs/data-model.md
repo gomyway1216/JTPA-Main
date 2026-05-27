@@ -151,7 +151,7 @@ Community blog entries. Distinct from `guides` (admin/editor curated help docs w
 **Rules**:
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
-- Owner edits force `status == "pending"` (no self-publish), keep `authorUid` and `reviewerUid` unchanged. Admins can change anything. Mirrors the `projects/{projectId}` pattern
+- Owner edits can land in `draft` (save without resubmitting) or `pending` (resubmit for review); never directly in published/rejected/archived. `authorUid` and `reviewerUid` are immutable for owners. Admins can change anything
 - Comments live in the `comments` subcollection
 
 ### `posts/{postId}/comments/{commentId}`

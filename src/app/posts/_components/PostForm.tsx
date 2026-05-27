@@ -246,8 +246,9 @@ export function PostForm({ mode, user, post }: Props) {
           <input
             type="file"
             accept={ACCEPT}
+            disabled={pending || uploading}
             onChange={handleCoverPick}
-            className="block w-full text-sm"
+            className="block w-full text-sm disabled:opacity-50"
           />
           {coverProgress !== null && (
             <p className="text-xs text-zinc-500">
