@@ -13,7 +13,17 @@ import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // matches storage.rules
 const MAX_SCREENSHOTS = 8;
-const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+// Allowlist used by both the <input accept=...> hint and the runtime MIME
+// check. SVG is deliberately excluded — `<img src=svg>` doesn't execute its
+// scripts, but admins re-displaying via other means (downloads, direct
+// links) could be tricked into rendering the markup. Stick to raster.
+const ALLOWED_MIME = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+const ACCEPT = ALLOWED_MIME.join(",");
 
 interface Props {
   mode: "create" | "edit";
@@ -46,8 +56,10 @@ export function ProjectForm({ mode, user, project }: Props) {
     if (file.size > MAX_IMAGE_BYTES) {
       return Promise.reject(new Error("画像サイズは 5MB 以下にしてください"));
     }
-    if (!file.type.startsWith("image/")) {
-      return Promise.reject(new Error("画像ファイルを選択してください"));
+    if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
+      return Promise.reject(
+        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
+      );
     }
     const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
     const path = `projects/${user.uid}/${Date.now()}-${safeName}`;

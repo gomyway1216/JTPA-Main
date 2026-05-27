@@ -41,7 +41,7 @@ export default async function ShowcasePage() {
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
                     src={p.thumbnail?.url || p.screenshots?.[0]?.url}
-                    alt=""
+                    alt={`${p.title} のカバー画像`}
                     className="h-40 w-full object-cover"
                   />
                 )}

@@ -11,8 +11,16 @@ service firebase.storage {
       return isSignedIn() && request.auth.token.admin == true;
     }
 
+    // Raster image types only. Excludes SVG (image/svg+xml) deliberately —
+    // SVGs can carry markup that some downstream tools execute, and we don't
+    // need vector uploads anywhere in the app today.
     function isImage() {
-      return request.resource.contentType.matches('image/.*');
+      return request.resource.contentType in [
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'image/gif',
+      ];
     }
 
     function maxSize(mb) {

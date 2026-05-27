@@ -146,16 +146,21 @@ export async function updateMyProject(
   const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
 
-  // Drop any Storage objects that the new payload no longer references.
+  // Compute orphans now — they're whatever paths the previous version
+  // referenced but the new payload doesn't — but defer the actual Storage
+  // delete until AFTER the Firestore write succeeds. Otherwise a failed
+  // update would leave a doc pointing at already-deleted Storage objects.
   const orphans = diffAssetPaths(
     cur.screenshots,
     parsed.screenshots,
     cur.thumbnail,
     parsed.thumbnail,
   );
-  if (orphans.length > 0) await deleteStoragePaths(orphans);
 
-  // Editing flips back to pending for re-review.
+  // Editing flips back to pending for re-review. Explicitly delete the
+  // legacy `thumbnailPath` field on first save so the doc normalizes to
+  // the new shape (PR #24 introduced thumbnail: { path, url } in its
+  // place).
   await ref.update({
     title: parsed.title,
     description: parsed.description,
@@ -165,10 +170,13 @@ export async function updateMyProject(
     demoVideoUrl: parsed.demoVideoUrl || "",
     thumbnail: parsed.thumbnail ?? FieldValue.delete(),
     screenshots: parsed.screenshots,
+    thumbnailPath: FieldValue.delete(),
     status: "pending" as const,
     submittedAt: Timestamp.now(),
     updatedAt: FieldValue.serverTimestamp(),
   });
+
+  if (orphans.length > 0) await deleteStoragePaths(orphans);
 
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
@@ -183,14 +191,17 @@ export async function deleteMyProject(projectId: string): Promise<void> {
   const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
 
-  // Tear down associated Storage objects before deleting the doc, so we
-  // don't end up with unreachable files.
+  // Collect the asset paths now, but defer the Storage cleanup until AFTER
+  // the doc is deleted. If the Storage cleanup runs first and the doc
+  // delete then fails (transient error), retrying would have nothing to
+  // clean up and we'd be left with a doc pointing at missing files.
   const paths: string[] = [];
   if (cur.thumbnail) paths.push(cur.thumbnail.path);
   for (const s of cur.screenshots ?? []) paths.push(s.path);
-  if (paths.length > 0) await deleteStoragePaths(paths);
 
   await ref.delete();
+  if (paths.length > 0) await deleteStoragePaths(paths);
+
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
 }

@@ -37,7 +37,7 @@ export default async function ProjectDetailPage({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={project.thumbnail.url}
-          alt=""
+          alt={`${project.title} のカバー画像`}
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
