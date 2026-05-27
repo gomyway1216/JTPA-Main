@@ -10,8 +10,11 @@ export interface AdminUserListEntry {
   isAdmin: boolean;
   isEditor: boolean;
   disabled: boolean;
-  lastSignInAt: string | null; // ISO 8601, null if user never signed in
-  createdAt: string | null; // ISO 8601
+  // Normalized to ISO 8601 (UTC). Firebase Auth metadata returns these as
+  // RFC 2822-style strings — we convert here so consumers can rely on a
+  // single format and Date.parse() succeeds everywhere.
+  lastSignInAt: string | null; // ISO 8601 (UTC), null if user never signed in
+  createdAt: string | null; // ISO 8601 (UTC)
 }
 
 // Cap on how many users we hand the client per render. Firebase Auth's
@@ -20,10 +23,19 @@ export interface AdminUserListEntry {
 // while keeping the all-rows-on-one-page UI viable; past this point the
 // page would need server pagination + a real search backend instead of
 // client-side filtering.
-const DEFAULT_CAP = 5000;
+export const DEFAULT_USER_CAP = 5000;
+
+// Firebase Auth metadata uses RFC 2822 ("Mon, 01 Jan 2024 12:00:00 GMT")
+// while the rest of our app — and Date.parse() consumers downstream —
+// prefer ISO 8601. Normalize on the way out.
+function toIso(input: string | undefined): string | null {
+  if (!input) return null;
+  const d = new Date(input);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 
 export async function listAllUsersForAdmin(
-  cap: number = DEFAULT_CAP,
+  cap: number = DEFAULT_USER_CAP,
 ): Promise<{ users: AdminUserListEntry[]; truncated: boolean }> {
   const pageSize = Math.min(cap, 1000);
   const out: AdminUserListEntry[] = [];
@@ -41,8 +53,8 @@ export async function listAllUsersForAdmin(
         isAdmin: u.customClaims?.admin === true,
         isEditor: u.customClaims?.editor === true,
         disabled: u.disabled,
-        lastSignInAt: u.metadata.lastSignInTime || null,
-        createdAt: u.metadata.creationTime || null,
+        lastSignInAt: toIso(u.metadata.lastSignInTime),
+        createdAt: toIso(u.metadata.creationTime),
       });
       if (out.length >= cap) break;
     }

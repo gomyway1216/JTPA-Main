@@ -31,7 +31,7 @@ export default async function AdminUsersPage() {
         </p>
       )}
 
-      <UserTable users={users} currentUid={me.uid} />
+      <UserTable users={users} currentUid={me.uid} truncated={truncated} />
     </div>
   );
 }

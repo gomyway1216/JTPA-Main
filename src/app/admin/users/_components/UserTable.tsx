@@ -9,21 +9,32 @@ function formatDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
+  // Pin the timezone so the SSR pre-render (UTC on server) and the
+  // client hydration produce the same string — otherwise React fires a
+  // hydration warning when the server-rendered HTML doesn't match the
+  // client's locale-aware render.
   return d.toLocaleString("ja-JP", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Tokyo",
   });
 }
 
 export function UserTable({
   users,
   currentUid,
+  truncated,
 }: {
   users: AdminUserListEntry[];
   currentUid: string;
+  // When the upstream listUsers walk hit its cap, `users` is incomplete
+  // and the client-side admin count may undercount. The "last-admin"
+  // disable in that case would be unreliable — defer entirely to the
+  // server check.
+  truncated: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -68,6 +79,7 @@ export function UserTable({
     <div className="space-y-3">
       <input
         type="search"
+        aria-label="ユーザーをメールアドレスまたは名前で検索"
         placeholder="メールアドレス or 名前で絞り込み"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -94,7 +106,12 @@ export function UserTable({
                 const isSelf = u.uid === currentUid;
                 const isPending = pendingUid === u.uid;
                 // Last-admin guard (client-side mirror of the server check).
-                const isLastAdmin = u.isAdmin && totalAdmins <= 1;
+                // Skip when the list is truncated — `totalAdmins` would
+                // be undercounting and could disable the button for a
+                // perfectly safe revoke. The server enforces the same
+                // rule authoritatively either way.
+                const isLastAdmin =
+                  !truncated && u.isAdmin && totalAdmins <= 1;
                 const canRevokeAdmin = u.isAdmin && !isSelf && !isLastAdmin;
 
                 return (
