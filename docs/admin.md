@@ -51,6 +51,7 @@ Same sign-out-and-back-in rule applies.
 | `/admin/events/new` | Create event | admin |
 | `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) | admin |
 | `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
+| `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
 | `/admin/guides` | Guide list (create, edit, publish, delete) | admin + editor |
 | `/admin/users` | User list with role grant/revoke | admin |
@@ -76,6 +77,17 @@ The `/admin/*` layout admits admins or editors; admin-only pages each add a one-
 5. Submitter notification email goes out automatically — **once issue #15 (Trigger Email setup) is done**. Until then, the mail doc is enqueued but nothing sends it.
 
 Submitters can edit their own projects from `/my/projects`; editing flips the status back to `pending` for re-review.
+
+## Reviewing blog post submissions
+
+1. Open `/admin/posts` — the page shows four sections: 審査待ち, 公開中, 下書き, 却下.
+2. 審査待ち cards include the cover image preview, excerpt, tags, and links to a full プレビュー (the public detail page) and to 内容を編集 (the same form authors use; admins can edit before approving to fix typos etc).
+3. Optionally type a comment (shown to the author on rejection — not on approval).
+4. Click **公開** or **却下**.
+5. Approved posts immediately appear on `/blog` with `publishedAt` set to now (only on first publish — re-publishing an edited post preserves the original date).
+6. Author notification email goes out automatically — same as projects, **gated on issue #15** for actual delivery.
+
+Authors can edit their own posts from `/my/posts`; non-admin edits can land in either `draft` (save without resubmitting) or `pending` (resubmit for review). Admins can also edit any post via the same form (handy for typo fixes).
 
 ## Exporting attendees
 

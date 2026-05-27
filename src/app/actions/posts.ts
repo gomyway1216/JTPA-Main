@@ -247,3 +247,77 @@ export async function publishPost(postId: string): Promise<void> {
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/admin/posts");
 }
+
+export async function decidePost(
+  postId: string,
+  decision: "published" | "rejected",
+  note?: string,
+): Promise<void> {
+  const admin = await requireAdmin();
+  const ref = adminDb().collection("posts").doc(postId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as PostDoc;
+
+  // Same first-publish detection as publishPost — anchored on the actual
+  // publishedAt timestamp so re-publish after edit doesn't overwrite it
+  // or re-notify.
+  const isFirstPublish = decision === "published" && !cur.publishedAt;
+  const isRejection = decision === "rejected";
+  await ref.update({
+    status: decision,
+    reviewerUid: admin.uid,
+    // The note is documented (and labeled in the UI) as the rejection
+    // reason. Clear it on approval so a previous rejection's note doesn't
+    // accidentally persist when the same post comes back through review
+    // and gets approved.
+    reviewNote: isRejection ? (note ?? "") : "",
+    ...(isFirstPublish ? { publishedAt: Timestamp.now() } : {}),
+    reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  // Notify the author on first publish OR any rejection. The note only
+  // travels with rejection mails to match the UI placeholder + docs.
+  const notifyOnDecision = isRejection || isFirstPublish;
+  if (notifyOnDecision && cur.authorUid) {
+    const ownerSnap = await adminDb()
+      .collection("users")
+      .doc(cur.authorUid)
+      .get();
+    const ownerEmail = ownerSnap.exists
+      ? (ownerSnap.data()?.email as string)
+      : null;
+    if (ownerEmail) {
+      await enqueuePostDecisionNotification({
+        to: ownerEmail,
+        title: cur.title,
+        decision,
+        note: isRejection ? note : undefined,
+      });
+    }
+  }
+
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/my/posts");
+  revalidatePath("/admin/posts");
+}
+
+// Not wired into the UI yet — kept ready for the published-list "アーカイブ"
+// button (planned follow-up) so older posts can be retired without losing
+// the doc (vs deleteMyPost which removes it entirely).
+export async function archivePost(postId: string): Promise<void> {
+  await requireAdmin();
+  const ref = adminDb().collection("posts").doc(postId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as PostDoc;
+  await ref.update({
+    status: "archived" as const,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  revalidatePath("/blog");
+  revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/admin/posts");
+}
