@@ -87,3 +87,32 @@ export function isEventEnded(event: {
 export function classNames(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }
+
+// Lightweight Markdown→plain-text strip for excerpts, meta descriptions,
+// and other plaintext rendering of authored bodies. Not a full parser:
+// covers fenced/inline code, image and link syntax, headings, and emphasis
+// markers. Anything missed renders as raw Markdown — mildly ugly but
+// never wrong.
+export function stripMarkdown(body: string): string {
+  return body
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]*`/g, " ")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/^#+\s+/gm, "")
+    .replace(/[*_~]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Truncate to AT MOST `max` characters, using a Unicode ellipsis when
+// truncating so the final string never exceeds the budget. Tries to land
+// on a word boundary; falls back to a hard cut (CJK has no spaces).
+export function truncate(text: string, max: number): string {
+  if (text.length <= max) return text;
+  // Reserve one char for the ellipsis so we honor the cap.
+  const budget = max - 1;
+  const cut = text.slice(0, budget);
+  const space = cut.lastIndexOf(" ");
+  return (space > budget * 0.6 ? cut.slice(0, space) : cut) + "…";
+}
