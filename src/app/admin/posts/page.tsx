@@ -11,7 +11,10 @@ export const metadata = { title: "ブログ管理" };
 
 export default async function AdminPostsPage() {
   const user = await getSessionUser();
-  if (!user?.isAdmin) redirect("/admin");
+  // Skip the /admin landing — editors hit a second redirect to
+  // /admin/guides anyway. Send them straight there for one fewer hop and
+  // consistency with the other admin-only routes.
+  if (!user?.isAdmin) redirect("/admin/guides");
 
   // Surface the full review queue + the recently-published / rejected /
   // drafted lists. Drafts are visible to admins so they can nudge an

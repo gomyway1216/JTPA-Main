@@ -38,7 +38,7 @@ A web UI for adding/removing admins without the script is tracked in [issue #17]
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export |
 
-All routes are gated by `requireAdmin()`; non-admin users hit a 403.
+All `/admin/*` pages check the session in the page itself (`getSessionUser` + `redirect(...)` for non-admins — usually to `/admin/guides` for editors, `/` or `/login` for everyone else). `requireAdmin()` is the matching gate on Server Actions that mutate admin-only data, where a hard `FORBIDDEN` throw is the right shape.
 
 ## Event lifecycle
 

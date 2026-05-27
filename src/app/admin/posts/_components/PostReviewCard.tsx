@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { decidePost } from "@/app/actions/posts";
@@ -11,6 +12,7 @@ export function PostReviewCard({ post }: { post: PostDoc }) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function decide(decision: "published" | "rejected") {
     setError(null);
@@ -20,11 +22,20 @@ export function PostReviewCard({ post }: { post: PostDoc }) {
     startTransition(async () => {
       try {
         await decidePost(post.id, decision, note);
+        // revalidatePath inside the Server Action invalidates the cache,
+        // but the existing client-side React tree won't re-fetch until we
+        // tell the router to refresh. Without this the just-decided card
+        // would linger in the 審査待ち list until manual reload.
+        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "失敗しました");
       }
     });
   }
+
+  // Unique-per-card id so the <label>'s for/id pairing isn't ambiguous when
+  // the queue lists multiple cards.
+  const noteId = `review-note-${post.id}`;
 
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -77,12 +88,17 @@ export function PostReviewCard({ post }: { post: PostDoc }) {
         </div>
       )}
 
+      <label htmlFor={noteId} className="sr-only">
+        コメント (却下時に投稿者へ送信)
+      </label>
       <textarea
+        id={noteId}
         rows={2}
         placeholder="コメント (却下時に投稿者へ送信)"
         value={note}
         onChange={(e) => setNote(e.target.value)}
-        className="mt-3 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+        disabled={pending}
+        className="mt-3 w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-50"
       />
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <div className="mt-3 flex gap-2">

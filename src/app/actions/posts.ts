@@ -263,18 +263,23 @@ export async function decidePost(
   // publishedAt timestamp so re-publish after edit doesn't overwrite it
   // or re-notify.
   const isFirstPublish = decision === "published" && !cur.publishedAt;
+  const isRejection = decision === "rejected";
   await ref.update({
     status: decision,
     reviewerUid: admin.uid,
-    reviewNote: note ?? "",
+    // The note is documented (and labeled in the UI) as the rejection
+    // reason. Clear it on approval so a previous rejection's note doesn't
+    // accidentally persist when the same post comes back through review
+    // and gets approved.
+    reviewNote: isRejection ? (note ?? "") : "",
     ...(isFirstPublish ? { publishedAt: Timestamp.now() } : {}),
     reviewedAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // Notify the author of approval (first publish only) or any rejection.
-  const notifyOnDecision =
-    decision === "rejected" || (decision === "published" && isFirstPublish);
+  // Notify the author on first publish OR any rejection. The note only
+  // travels with rejection mails to match the UI placeholder + docs.
+  const notifyOnDecision = isRejection || isFirstPublish;
   if (notifyOnDecision && cur.authorUid) {
     const ownerSnap = await adminDb()
       .collection("users")
@@ -288,7 +293,7 @@ export async function decidePost(
         to: ownerEmail,
         title: cur.title,
         decision,
-        note,
+        note: isRejection ? note : undefined,
       });
     }
   }
@@ -299,6 +304,9 @@ export async function decidePost(
   revalidatePath("/admin/posts");
 }
 
+// Not wired into the UI yet — kept ready for the published-list "アーカイブ"
+// button (planned follow-up) so older posts can be retired without losing
+// the doc (vs deleteMyPost which removes it entirely).
 export async function archivePost(postId: string): Promise<void> {
   await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
