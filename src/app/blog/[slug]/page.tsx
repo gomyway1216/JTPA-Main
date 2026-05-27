@@ -91,7 +91,11 @@ export default async function BlogPostPage({
 
       <MarkdownBody source={post.body} />
 
+      {/* key={post.id} forces a fresh instance per post so local state
+          (draft text, optimistic comment list) doesn't leak when the
+          user navigates between two posts via the soft router. */}
       <CommentsSection
+        key={post.id}
         postId={post.id}
         postSlug={post.slug}
         initialComments={comments}

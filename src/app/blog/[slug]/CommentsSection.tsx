@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 
 import { deleteComment, postComment } from "@/app/actions/comments";
 import type { PostCommentDoc, SessionUser } from "@/lib/types";
-import { formatDateTime, toDate } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 
 const MAX_BODY = 2000;
 
@@ -36,7 +36,6 @@ export function CommentsSection({
       try {
         const saved = await postComment({
           postId,
-          postSlug,
           body: body.trim(),
         });
         setComments((cur) => [...cur, saved]);
@@ -55,7 +54,7 @@ export function CommentsSection({
     setError(null);
     startTransition(async () => {
       try {
-        await deleteComment({ postId, postSlug, commentId });
+        await deleteComment({ postId, commentId });
         setComments((cur) => cur.filter((c) => c.id !== commentId));
         router.refresh();
       } catch (err) {
@@ -99,7 +98,7 @@ export function CommentsSection({
                     )}
                     <span className="font-medium">{c.authorName}</span>
                     <span className="text-xs text-zinc-500">
-                      {formatDateTime(toDate(c.createdAt))}
+                      {formatDateTime(c.createdAt)}
                     </span>
                   </div>
                   {canDelete && (
@@ -158,7 +157,7 @@ export function CommentsSection({
               コメントするにはログインが必要です。
             </p>
             <Link
-              href={`/login?redirect=/blog/${postSlug}`}
+              href={`/login?redirect=${encodeURIComponent(`/blog/${postSlug}`)}`}
               className="inline-flex rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               Googleでログイン
