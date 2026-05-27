@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "set-admin": "node scripts/set-admin.mjs"
+    "set-admin": "node scripts/set-admin.mjs",
+    "set-editor": "node scripts/set-editor.mjs",
+    "seed-guides": "node scripts/seed-guides.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

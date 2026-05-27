@@ -58,6 +58,16 @@ Same sign-out-and-back-in rule applies.
 
 The `/admin/*` layout admits admins or editors; admin-only pages each add a one-line redirect (to `/admin/guides`) for editors hitting them directly. Server actions re-check with `requireAdmin()` or `requireEditor()` so the page-level guard isn't load-bearing for security.
 
+## Seeding sample guides
+
+A small set of starter guides ("Claude Code とは", "API キーとは", etc.) ships in `scripts/seed-guides.mjs`. Useful when bringing up a fresh environment so `/guide` isn't empty and editors have a reference for what good content looks like.
+
+```bash
+node scripts/seed-guides.mjs
+```
+
+Same credentials story as the role scripts (ADC or `FIREBASE_SERVICE_ACCOUNT`). Idempotent: re-running with the same slugs leaves existing docs alone. Edit through the admin UI, not by changing the script and re-running it.
+
 ## Event lifecycle
 
 1. **Create draft** at `/admin/events/new`. Status defaults to `draft` — only admins can see it.
