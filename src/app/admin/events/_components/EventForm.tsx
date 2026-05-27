@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  deleteObject,
   getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
@@ -118,12 +119,35 @@ export function EventForm({
     });
   }
 
+  // True if the path on the current state was uploaded during this session
+  // (different from whatever the form was initialized with). The previous
+  // image lives only because the picker eagerly uploads; if the user
+  // replaces or deletes it without saving, we should drop the orphaned
+  // Storage object instead of relying on a hypothetical cleanup cron.
+  function isUnsavedUpload(path: string | undefined): boolean {
+    return !!path && path !== event?.coverImage?.path;
+  }
+
+  async function discardUnsavedUpload(path: string | undefined): Promise<void> {
+    if (!isUnsavedUpload(path)) return;
+    try {
+      await deleteObject(storageRef(clientStorage, path!));
+    } catch (err) {
+      // Best-effort — the file might already be gone, or perms shifted.
+      // Don't block the UI on this.
+      console.warn("Failed to clean up unsaved cover image:", err);
+    }
+  }
+
   async function handleCoverPick(e: React.ChangeEvent<HTMLInputElement>) {
     setError(null);
     const file = e.target.files?.[0];
     if (!file) return;
     try {
       setCoverProgress(0);
+      // Replacing an unsaved upload: drop the previous file first so we
+      // don't leak a Storage object the doc never references.
+      await discardUnsavedUpload(coverImage?.path);
       const asset = await uploadCover(file, setCoverProgress);
       setCoverImage(asset);
     } catch (err) {
@@ -347,12 +371,20 @@ export function EventForm({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverImage.url}
-                alt="cover preview"
+                alt={`${title || "イベント"} のカバー画像プレビュー`}
                 className="h-24 w-40 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
                 type="button"
-                onClick={() => setCoverImage(undefined)}
+                onClick={async () => {
+                  // Same orphan-cleanup as replace: if this image was
+                  // uploaded during the current session and the user is
+                  // backing out of it, drop the Storage object now. The
+                  // original saved image (if any) stays in Storage and
+                  // gets cleaned up server-side when the form submits.
+                  await discardUnsavedUpload(coverImage.path);
+                  setCoverImage(undefined);
+                }}
                 className="text-xs text-red-600 hover:underline"
               >
                 削除

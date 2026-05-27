@@ -188,13 +188,14 @@ Written by `src/lib/notifications.ts` via the Admin SDK. Once the Firebase Trigg
 ## Storage layout
 
 ```
-events/{eventId}/...                    cover images (admin write, public read)
+events/{anything}/...                   cover images (admin write, public read; in practice we use the admin uid for the first segment since the rule's {eventId} is a wildcard)
 presentations/{eventId}/{uid}/...       slide files (presenter or admin write, public read)
-projects/{uid}/...                      project thumbnails (owner write, public read)
+projects/{uid}/...                      project thumbnails + screenshots (owner write, public read)
+posts/{uid}/...                         blog cover images (author write, public read)
 users/{uid}/...                         avatars (self write, public read)
 ```
 
-All paths are public-read so direct download URLs work without auth. Write rules enforce ownership + max size (10MB events, 50MB presentations, 5MB projects, 2MB avatars). See `storage.rules`.
+All paths are public-read so direct download URLs work without auth. Write rules enforce ownership + max size (10MB events, 50MB presentations, 5MB projects/posts, 2MB avatars). See `storage.rules`.
 
 ## Composite indexes
 

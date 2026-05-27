@@ -34,11 +34,14 @@ export default async function EventDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
       {event.coverImage?.url && (
+        // aspect-[21/9] keeps the hero a cinematic-ish banner regardless of
+        // the source aspect ratio — without this, a portrait upload would
+        // push the title way below the fold.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={event.coverImage.url}
           alt={`${event.title} のカバー画像`}
-          className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
+          className="aspect-[21/9] w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
 

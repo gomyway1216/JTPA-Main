@@ -48,7 +48,9 @@ export default async function EventsPage() {
                     <img
                       src={e.coverImage.url}
                       alt={`${e.title} のカバー画像`}
-                      className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
+                      loading="lazy"
+                      decoding="async"
+                      className="h-40 w-full object-cover sm:w-48 sm:shrink-0"
                     />
                   )}
                   <div className="flex flex-1 flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
