@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"firebase\" /Users/yudaiyaguchi/Desktop/projects/JTPA-Main --include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\" --include=\"*.jsx\" ! -path \"*/node_modules/*\" ! -path \"*/.next/*\" -l)",
+      "Bash(grep -E \"\\\\.tsx?$\")"
+    ]
+  }
+}

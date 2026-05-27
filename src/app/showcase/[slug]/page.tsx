@@ -44,11 +44,11 @@ export default async function ProjectDetailPage({
 
       <section className="prose-jtpa">{project.description}</section>
 
-      {project.screenshots.length > 0 && (
+      {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">
           <h2 className="text-lg font-semibold">スクリーンショット</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {project.screenshots.map((s, i) => (
+            {project.screenshots?.map((s, i) => (
               <li key={s.path}>
                 <a
                   href={s.url}

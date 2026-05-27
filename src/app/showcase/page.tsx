@@ -35,12 +35,12 @@ export default async function ShowcasePage() {
                 href={`/showcase/${p.slug}`}
                 className="block h-full overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
               >
-                {(p.thumbnail?.url || p.screenshots[0]?.url) && (
+                {(p.thumbnail?.url || p.screenshots?.[0]?.url) && (
                   // Cover image. Falls back to the first screenshot when the
                   // submitter didn't upload a dedicated thumbnail.
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={p.thumbnail?.url || p.screenshots[0]?.url}
+                    src={p.thumbnail?.url || p.screenshots?.[0]?.url}
                     alt=""
                     className="h-40 w-full object-cover"
                   />

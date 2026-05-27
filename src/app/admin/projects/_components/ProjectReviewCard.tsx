@@ -65,7 +65,7 @@ export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
       <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
         {project.description}
       </p>
-      {(project.thumbnail || project.screenshots.length > 0) && (
+      {(project.thumbnail || (project.screenshots?.length ?? 0) > 0) && (
         <ul className="mt-3 flex flex-wrap gap-2">
           {project.thumbnail && (
             <li>
@@ -77,7 +77,7 @@ export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
               />
             </li>
           )}
-          {project.screenshots.map((s, i) => (
+          {project.screenshots?.map((s, i) => (
             <li key={s.path}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
