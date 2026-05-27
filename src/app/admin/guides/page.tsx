@@ -6,10 +6,13 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function AdminGuidesPage() {
+  // Intentionally not catching: Firestore raises a helpful "create this
+  // composite index" error here, and swallowing it would hide why guides
+  // fail to load. Let it bubble up to Next.js's error boundary.
   const guides = await listGuides({
     statuses: ["draft", "published"],
     limit: 200,
-  }).catch(() => []);
+  });
 
   return (
     <div className="space-y-4">

@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
@@ -27,9 +27,12 @@ function tagsToString(tags: string[]): string {
   return tags.join(", ");
 }
 
+// Splits on half-width comma plus the two common full-width Japanese
+// commas — typing a tag list on a JP IME often produces `、` or `，`,
+// and accepting only `,` would treat the whole input as one tag.
 function stringToTags(s: string): string[] {
   return s
-    .split(",")
+    .split(/[,、，]/)
     .map((t) => t.trim())
     .filter(Boolean);
 }
@@ -51,6 +54,18 @@ export function GuideForm({
   const [body, setBody] = useState<string>(guide?.body ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // The app drives dark mode off `prefers-color-scheme` (see globals.css),
+  // not a `.dark` class on <html>, so we sync MDEditor's `data-color-mode`
+  // off matchMedia rather than a MutationObserver. Renders one editor
+  // instance instead of duplicating it for each theme.
+  const [colorMode, setColorMode] = useState<"light" | "dark">("light");
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const update = () => setColorMode(mq.matches ? "dark" : "light");
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -142,15 +157,7 @@ export function GuideForm({
         </Field>
       </div>
       <Field label="本文 (Markdown)" required>
-        <div data-color-mode="light" className="dark:hidden">
-          <MDEditor
-            value={body}
-            onChange={(v) => setBody(v ?? "")}
-            height={500}
-            preview="live"
-          />
-        </div>
-        <div data-color-mode="dark" className="hidden dark:block">
+        <div data-color-mode={colorMode}>
           <MDEditor
             value={body}
             onChange={(v) => setBody(v ?? "")}
