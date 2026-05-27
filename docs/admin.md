@@ -1,43 +1,61 @@
 # Admin operations
 
-How to run JTPA-Main as an admin. Covers granting admin, managing events, reviewing project submissions, exporting attendee data, and the email notification setup.
+How to run JTPA-Main as an admin. Covers granting admin, granting the lighter editor role, managing events, reviewing project submissions, exporting attendee data, and the email notification setup.
 
 The repo is public, so this doc is also public. Nothing here is a secret — admin authorization is enforced in code (`requireAdmin()` + Firebase Auth Custom Claim), not by hiding URLs.
 
-## Granting admin
+## Roles
 
-Admin is a Firebase Auth Custom Claim (`admin: true`), set via a CLI script.
+| Role | What it can do | What it can't |
+|---|---|---|
+| `admin` (`admin: true`) | Everything below + manage roles | — |
+| `editor` (`editor: true`) | Create / edit / publish / delete guides | Touch events, projects, attendees, roles |
+| (none) | RSVP events, submit projects | Anything admin-only |
+
+Editors are strictly less privileged than admins. An editor visiting any admin-only URL is redirected to `/admin/guides`.
+
+## Granting roles (preferred: admin UI)
+
+`/admin/users` lists every user with their current roles and last-login time. Admins can:
+
+- Grant or revoke `editor` on any user.
+- Grant or revoke `admin` on any other user. The page refuses to remove `admin` from yourself or from the last remaining admin, so it's safe to click around.
+
+Role changes only take effect after the target user signs out and back in (the claim has to flow into a freshly minted session cookie).
+
+A user has to sign in once before they show up in the list — there's no way to pre-grant a role to an email that's never been seen by Firebase Auth.
+
+## Granting roles (CLI fallback)
+
+For bootstrap (the very first admin) or recovery when the UI is unreachable:
 
 ```bash
-node scripts/set-admin.mjs <email>
+node scripts/set-admin.mjs <email>           # grant admin
+node scripts/set-admin.mjs <email> --revoke  # revoke admin
+node scripts/set-editor.mjs <email>          # grant editor
+node scripts/set-editor.mjs <email> --revoke # revoke editor
 ```
 
 Requirements:
 - ADC set up (`gcloud auth application-default login` with a Firebase IAM Editor or Owner)
 - `FIREBASE_PROJECT_ID=jtpa-main` in env or `.env.local`
 
-The granted user **must sign out and back in** before the new claim flows into their session cookie. Until they do, the app still treats them as a regular user.
-
-Revoke:
-
-```bash
-node scripts/set-admin.mjs <email> --revoke
-```
-
-A web UI for adding/removing admins without the script is tracked in [issue #17](https://github.com/gomyway1216/JTPA-Main/issues/17).
+Same sign-out-and-back-in rule applies.
 
 ## Admin pages map
 
-| URL | Purpose |
-|---|---|
-| `/admin` | Overview cards |
-| `/admin/events` | Event list (with chips for メンバー限定, status badges, RSVP counts) |
-| `/admin/events/new` | Create event |
-| `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) |
-| `/admin/projects` | Pending / approved project list, with approve/reject actions |
-| `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export |
+| URL | Purpose | Who |
+|---|---|---|
+| `/admin` | Overview cards | admin |
+| `/admin/events` | Event list (with chips for メンバー限定, status badges, RSVP counts) | admin |
+| `/admin/events/new` | Create event | admin |
+| `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) | admin |
+| `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
+| `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
+| `/admin/guides` | Guide list (create, edit, publish, delete) | admin + editor |
+| `/admin/users` | User list with role grant/revoke | admin |
 
-All routes are gated by `requireAdmin()`; non-admin users hit a 403.
+The `/admin/*` layout admits admins or editors; admin-only pages each add a one-line redirect (to `/admin/guides`) for editors hitting them directly. Server actions re-check with `requireAdmin()` or `requireEditor()` so the page-level guard isn't load-bearing for security.
 
 ## Event lifecycle
 
