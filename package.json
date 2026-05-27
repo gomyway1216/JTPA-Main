@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
+    "@uiw/react-md-editor": "^4.1.1",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.10.0",
     "next": "16.2.6",

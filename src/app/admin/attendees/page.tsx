@@ -1,4 +1,7 @@
+import { redirect } from "next/navigation";
+
 import { AttendeeExportBar } from "@/app/admin/attendees/_components/AttendeeExportBar";
+import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { formatDateTime } from "@/lib/utils";
@@ -31,6 +34,9 @@ export default async function AdminAttendeesPage({
 }: {
   searchParams: Promise<{ eventId?: string }>;
 }) {
+  const user = await getSessionUser();
+  if (!user?.isAdmin) redirect("/admin/guides");
+
   const { eventId } = await searchParams;
   const events = await listEvents({
     statuses: ["draft", "published", "past"],
