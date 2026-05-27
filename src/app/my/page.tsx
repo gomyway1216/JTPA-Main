@@ -37,6 +37,15 @@ export default async function MyPage() {
             ショーケースに投稿したプロジェクト
           </p>
         </Link>
+        <Link
+          href="/my/posts"
+          className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <h2 className="text-lg font-semibold">自分の記事</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            ブログに投稿した記事 (下書き含む)
+          </p>
+        </Link>
       </nav>
     </div>
   );

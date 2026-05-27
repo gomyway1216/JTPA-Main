@@ -99,3 +99,42 @@ export async function enqueueEventBlast(opts: {
     category: "event_blast",
   });
 }
+
+export async function enqueueAdminNewPostNotification(opts: {
+  postId: string;
+  title: string;
+  authorName: string;
+  authorEmail: string;
+}): Promise<void> {
+  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  await enqueueMail({
+    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    message: {
+      subject: `[JTPA] 新規ブログ記事の審査依頼: ${opts.title}`,
+      text: `${opts.authorName} (${opts.authorEmail}) が新しい記事を投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/posts`,
+    },
+    category: "admin_post_pending",
+    metadata: { postId: opts.postId },
+  });
+}
+
+export async function enqueuePostDecisionNotification(opts: {
+  to: string;
+  title: string;
+  decision: "published" | "rejected";
+  note?: string;
+}): Promise<void> {
+  const subj =
+    opts.decision === "published"
+      ? `[JTPA] ブログ記事が公開されました: ${opts.title}`
+      : `[JTPA] ブログ記事のレビュー結果について: ${opts.title}`;
+  const body =
+    opts.decision === "published"
+      ? `記事「${opts.title}」が公開されました。`
+      : `記事「${opts.title}」のレビュー結果をお知らせします。${opts.note ? `\n\nコメント: ${opts.note}` : ""}\n\n内容を修正して再投稿いただけます。`;
+  await enqueueMail({
+    to: opts.to,
+    message: { subject: subj, text: body },
+    category: `post_${opts.decision}`,
+  });
+}
