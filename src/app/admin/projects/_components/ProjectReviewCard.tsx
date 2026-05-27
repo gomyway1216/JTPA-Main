@@ -65,6 +65,30 @@ export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
       <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
         {project.description}
       </p>
+      {(project.thumbnail || (project.screenshots?.length ?? 0) > 0) && (
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {project.thumbnail && (
+            <li>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={project.thumbnail.url}
+                alt="thumbnail"
+                className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
+              />
+            </li>
+          )}
+          {project.screenshots?.map((s, i) => (
+            <li key={s.path}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={s.url}
+                alt={`screenshot ${i + 1}`}
+                className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
       {project.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {project.tags.map((t) => (

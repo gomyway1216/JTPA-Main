@@ -106,6 +106,15 @@ export interface PresentationDoc {
 // ---------- projects (Showcase) ----------
 export type ProjectStatus = "pending" | "approved" | "rejected" | "archived";
 
+// Both fields are needed because Firebase Storage download URLs include a
+// token; we can't reconstruct them from the path alone. We keep the path so
+// the Server Action can delete the underlying Storage object on
+// replacement/deletion.
+export interface ProjectAsset {
+  path: string;
+  url: string;
+}
+
 export interface ProjectDoc {
   id: string;
   slug: string;
@@ -117,8 +126,8 @@ export interface ProjectDoc {
   appUrl: string;
   repoUrl?: string;
   demoVideoUrl?: string;
-  thumbnailPath?: string;
-  screenshots: string[];
+  thumbnail?: ProjectAsset;
+  screenshots: ProjectAsset[];
   status: ProjectStatus;
   reviewerUid: string | null;
   reviewNote?: string;
