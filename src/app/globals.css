@@ -1,6 +1,13 @@
 @import "tailwindcss";
-/* Syntax highlighting theme for Markdown code blocks (rehype-highlight). */
-@import "highlight.js/styles/github.css";
+/*
+ * Syntax highlighting themes for Markdown code blocks (rehype-highlight).
+ * Light/dark variants are loaded with media-query @imports so the light
+ * theme is inactive under `prefers-color-scheme: dark` (otherwise the
+ * github.css foreground colors stay applied on top of the dark pre
+ * background and code text becomes near-invisible).
+ */
+@import "highlight.js/styles/github.css" (prefers-color-scheme: light);
+@import "highlight.js/styles/github-dark.css" (prefers-color-scheme: dark);
 
 :root {
   --background: #fafafa;
@@ -79,6 +86,18 @@ body {
 .prose-jtpa li { margin: 0.25em 0; }
 .prose-jtpa li > :is(ul, ol) { margin: 0.25em 0; }
 
+/*
+ * remark-gfm renders task lists as
+ *   <ul class="contains-task-list">
+ *     <li class="task-list-item"><input type="checkbox"> ...</li>
+ *   </ul>
+ * If we leave `list-style: disc` on, each task list item shows both a
+ * disc bullet AND the checkbox, which overlap. Strip the bullet and the
+ * default indent for those specifically.
+ */
+.prose-jtpa ul.contains-task-list { padding-left: 0.5em; }
+.prose-jtpa li.task-list-item { list-style: none; }
+
 .prose-jtpa a {
   color: var(--accent);
   text-decoration: underline;
@@ -129,7 +148,16 @@ body {
   .prose-jtpa hr { border-top-color: #27272a; }
 }
 
+/*
+ * `display: block` + `overflow-x: auto` makes wide tables horizontally
+ * scrollable on narrow viewports instead of bursting out of the article
+ * column. Browsers keep table-cell semantics for the children even when
+ * the outer table is a block, so the row/cell layout is preserved.
+ */
 .prose-jtpa table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
   border-collapse: collapse;
   margin: 1em 0;
   width: 100%;
