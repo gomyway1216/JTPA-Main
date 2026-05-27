@@ -150,3 +150,84 @@ export async function deleteEvent(eventId: string): Promise<void> {
   revalidatePath("/events");
   revalidatePath("/admin/events");
 }
+
+// Try the base slug first, then append `-1`, `-2`, ... until we find one
+// that's free. Returns a base36-timestamp fallback if we hit 20 collisions.
+// Mirrors the helper in `src/app/actions/projects.ts` (kept inline so this
+// file doesn't reach across module boundaries for a 12-line utility).
+async function findFreeSlug(base: string): Promise<string> {
+  const seed = slugify(base);
+  for (let i = 0; i < 20; i++) {
+    const candidate = i === 0 ? seed : `${seed}-${i}`;
+    const snap = await adminDb()
+      .collection("events")
+      .where("slug", "==", candidate)
+      .limit(1)
+      .get();
+    if (snap.empty) return candidate;
+  }
+  return `${seed}-${Date.now().toString(36)}`;
+}
+
+export async function cloneEvent(originalId: string): Promise<void> {
+  const admin = await requireAdmin();
+  const srcRef = adminDb().collection("events").doc(originalId);
+  const srcSnap = await srcRef.get();
+  if (!srcSnap.exists) throw new Error("NOT_FOUND");
+  const src = srcSnap.data() as {
+    title: string;
+    description: string;
+    startAt: Timestamp;
+    endAt: Timestamp;
+    location: {
+      type: "online" | "offline" | "hybrid";
+      address?: string;
+      mapUrl?: string;
+      meetingUrl?: string;
+    };
+    capacity: number;
+    presenterCapacity: number;
+    surveyFields: unknown[];
+    visibility?: "public" | "members_only";
+  };
+
+  // Shift the copy a week ahead and preserve the original duration so a
+  // 90-minute meetup clones into a 90-minute meetup, not into a
+  // datetime-local default of 1 hour.
+  const now = Timestamp.now();
+  const duration =
+    src.endAt.toMillis() - src.startAt.toMillis();
+  const newStart = Timestamp.fromMillis(
+    Date.now() + 7 * 24 * 60 * 60 * 1000,
+  );
+  const newEnd = Timestamp.fromMillis(
+    newStart.toMillis() + Math.max(duration, 60 * 60 * 1000),
+  );
+
+  const slug = await findFreeSlug(`${src.title} copy`);
+
+  // Subcollections (rsvps, presentations) are NOT copied — they belong to
+  // the original event. The new clone starts fresh.
+  const newRef = await adminDb().collection("events").add({
+    slug,
+    title: `${src.title} (コピー)`,
+    description: src.description,
+    startAt: newStart,
+    endAt: newEnd,
+    location: src.location,
+    capacity: src.capacity,
+    presenterCapacity: src.presenterCapacity,
+    status: "draft" as const,
+    visibility: src.visibility ?? "public",
+    surveyFields: src.surveyFields,
+    rsvpCount: 0,
+    presenterCount: 0,
+    waitlistCount: 0,
+    createdBy: admin.uid,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  revalidatePath("/admin/events");
+  redirect(`/admin/events/${newRef.id}/edit`);
+}
