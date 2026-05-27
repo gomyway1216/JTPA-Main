@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, isEventEnded } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +96,18 @@ export default async function EventDetailPage({
 
       <hr className="border-zinc-200 dark:border-zinc-800" />
 
-      {user ? (
+      {isEventEnded(event) ? (
+        // Past events show a static notice instead of the RSVP form. The
+        // presentation list below is intentionally still rendered — slides
+        // remain useful after the fact.
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 text-center text-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-zinc-700 dark:text-zinc-300">
+            {event.status === "cancelled"
+              ? "このイベントは中止されました。"
+              : "このイベントは終了しました。"}
+          </p>
+        </div>
+      ) : user ? (
         <RsvpSection event={event} initialRsvp={myRsvp} user={user} />
       ) : (
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -104,7 +115,7 @@ export default async function EventDetailPage({
             参加登録にはログインが必要です。
           </p>
           <Link
-            href={`/login?redirect=/events/${event.slug}`}
+            href={`/login?redirect=${encodeURIComponent(`/events/${event.slug}`)}`}
             className="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
             Googleでログイン
