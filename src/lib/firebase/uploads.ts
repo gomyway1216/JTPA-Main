@@ -26,9 +26,26 @@ import { clientStorage } from "./client";
  *
  * The URL shape matches `getDownloadURL()` minus the token query param.
  * Caller MUST only use this for objects under a publicly-readable path.
+ *
+ * Host resolution: the SDK records the configured host+protocol on the
+ * storage instance, defaulting to the production endpoint and being
+ * overwritten by `connectStorageEmulator` (which the app calls in
+ * `src/lib/firebase/client.ts` when `NEXT_PUBLIC_USE_FIREBASE_EMULATORS`
+ * is on). We read those internal fields so this helper resolves the
+ * same way `getDownloadURL` would in either environment — hardcoding
+ * `firebasestorage.googleapis.com` would silently 404 in the emulator.
+ * `_host` / `_protocol` aren't in the public type definitions but they
+ * are how the SDK builds URLs internally and have been stable across
+ * SDK versions; falling back to the production defaults keeps things
+ * working if a future SDK rename ever drops them.
  */
+type StorageHostInternals = { _host?: string; _protocol?: string };
+
 export function publicDownloadUrl(ref: StorageReference): string {
-  return `https://firebasestorage.googleapis.com/v0/b/${ref.bucket}/o/${encodeURIComponent(
+  const s = ref.storage as unknown as StorageHostInternals;
+  const host = s._host ?? "firebasestorage.googleapis.com";
+  const protocol = s._protocol ?? "https";
+  return `${protocol}://${host}/v0/b/${ref.bucket}/o/${encodeURIComponent(
     ref.fullPath,
   )}?alt=media`;
 }
