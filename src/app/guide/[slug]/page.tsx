@@ -3,26 +3,9 @@ import { notFound } from "next/navigation";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getGuideBySlug } from "@/lib/data/guides";
-import { formatDate } from "@/lib/utils";
+import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-
-// Same light Markdown strip used on the index page so the SEO description
-// stays readable. Imports would create a server/client dependency cycle
-// otherwise.
-function plainExcerpt(body: string, max = 160): string {
-  const text = body
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]*`/g, " ")
-    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
-    .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1")
-    .replace(/^#+\s+/gm, "")
-    .replace(/[*_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-  if (text.length <= max) return text;
-  return text.slice(0, max) + "…";
-}
 
 export async function generateMetadata({
   params,
@@ -32,7 +15,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const guide = await getGuideBySlug(slug).catch(() => null);
   if (!guide || guide.status !== "published") return {};
-  const description = plainExcerpt(guide.body);
+  const description = truncate(stripMarkdown(guide.body), 160);
   return {
     title: guide.title,
     description,
@@ -55,6 +38,8 @@ export default async function GuideDetailPage({
   // leak in-progress content via guessed slugs.
   if (!guide || guide.status !== "published") notFound();
 
+  const tags = guide.tags ?? [];
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/guide" className="text-xs text-zinc-500 hover:underline">
@@ -66,9 +51,9 @@ export default async function GuideDetailPage({
         <p className="text-xs text-zinc-500">
           最終更新: {formatDate(guide.updatedAt)}
         </p>
-        {guide.tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {guide.tags.map((t) => (
+            {tags.map((t) => (
               <span
                 key={t}
                 className="rounded bg-zinc-100 px-2 py-1 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
