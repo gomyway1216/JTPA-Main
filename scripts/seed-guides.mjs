@@ -155,8 +155,13 @@ AI に期待した回答を引き出すには、いくつかの基本があり�
   },
 ];
 
+// Match `src/lib/firebase/admin.ts` and the env vars documented in
+// docs/admin.md so the script honors whichever one the operator has
+// set (NEXT_PUBLIC_… for local dev, FIREBASE_PROJECT_ID per the docs,
+// GOOGLE_CLOUD_PROJECT in App Hosting / Cloud Run).
 const projectId =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
+  process.env.FIREBASE_PROJECT_ID ??
   process.env.GOOGLE_CLOUD_PROJECT;
 
 const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -203,3 +208,8 @@ for (const g of GUIDES) {
 }
 
 console.log(`\nDone. ${created} created, ${skipped} skipped.`);
+// Firestore's gRPC client keeps connections open after the work is done,
+// which leaves the Node event loop active and stops the process from
+// exiting on its own. An explicit exit avoids the "script just hangs"
+// experience.
+process.exit(0);
