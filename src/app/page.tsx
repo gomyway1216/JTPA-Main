@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const [events, projects] = await Promise.all([
-    listEvents({ limit: 3, futureOnly: true }).catch(() => []),
+    listEvents({ limit: 3, notEndedOnly: true }).catch(() => []),
     listProjects({ limit: 6 }).catch(() => []),
   ]);
 

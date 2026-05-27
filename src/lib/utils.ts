@@ -66,6 +66,24 @@ export function slugify(input: string, fallbackPrefix = "event"): string {
   return cleaned;
 }
 
+/**
+ * True if the event has ended (its `endAt` is in the past) OR an admin
+ * has explicitly flipped its status to `cancelled` or `past`.
+ *
+ * Used to gate the RSVP form and to surface "イベント終了" notices without
+ * waiting for an admin to manually transition `status: "published"` → `"past"`
+ * (issue #20). Status remains the source of truth for `draft` / `cancelled`.
+ */
+export function isEventEnded(event: {
+  endAt: TsLike;
+  status: string;
+}): boolean {
+  if (event.status === "past" || event.status === "cancelled") return true;
+  const end = toDate(event.endAt);
+  if (!end) return false;
+  return end.getTime() < Date.now();
+}
+
 export function classNames(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
 }

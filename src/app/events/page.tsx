@@ -20,7 +20,7 @@ export default async function EventsPage() {
   const user = await getSessionUser();
   const signedIn = !!user;
   const [upcomingRaw, pastRaw] = await Promise.all([
-    listEvents({ futureOnly: true, limit: 30 }).catch(() => []),
+    listEvents({ notEndedOnly: true, limit: 30 }).catch(() => []),
     listPastEvents(10).catch(() => []),
   ]);
   const upcoming = upcomingRaw.filter(visibleTo(signedIn));
