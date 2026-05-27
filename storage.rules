@@ -52,11 +52,14 @@ service firebase.storage {
     }
 
     // Guide images (embedded in Markdown body): public read,
-    // admin or editor write.
+    // admin or editor write. Split create/update from delete because
+    // `request.resource` is null on delete, which would null-eval
+    // through isImage()/maxSize() and reject authorized deletes.
     match /guides/{guideId}/{allPaths=**} {
       allow read: if true;
-      allow write: if (isAdmin() || isEditor())
+      allow create, update: if (isAdmin() || isEditor())
         && isImage() && maxSize(5);
+      allow delete: if isAdmin() || isEditor();
     }
   }
 }

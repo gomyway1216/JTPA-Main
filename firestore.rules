@@ -101,9 +101,12 @@ service cloud.firestore {
     // ----- guides (AI setup / help content) -----
     // Published guides are public. Drafts only readable by admin/editor.
     // Editors and admins can write.
+    // Note: privileged checks run first so `resource` (null when the doc
+    // doesn't exist) isn't dereferenced for admins/editors who must still
+    // be able to probe missing docs without hitting a null-eval failure.
     match /guides/{guideId} {
-      allow read: if resource.data.status == 'published'
-        || isAdmin() || isEditor();
+      allow read: if isAdmin() || isEditor()
+        || (resource != null && resource.data.status == 'published');
       allow create, update, delete: if isAdmin() || isEditor();
     }
 
