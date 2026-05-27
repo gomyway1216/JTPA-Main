@@ -23,12 +23,13 @@ export function CloneEventButton({
         // normally — error handling only catches actual failures.
         await cloneEvent(eventId);
       } catch (err) {
-        // Next.js' redirect() throws a NEXT_REDIRECT error that React
-        // re-throws — let those propagate so the navigation happens.
-        if (
-          err instanceof Error &&
-          /NEXT_REDIRECT/.test(err.message)
-        ) {
+        // Next.js' `redirect()` throws an error whose `.digest` starts
+        // with "NEXT_REDIRECT". Let those propagate so the navigation
+        // actually happens. (Next.js exposes `isRedirectError` only via
+        // an internal path in Next 16; the digest check is the stable
+        // contract.)
+        const digest = (err as { digest?: unknown })?.digest;
+        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
           throw err;
         }
         setError(err instanceof Error ? err.message : "複製に失敗しました");

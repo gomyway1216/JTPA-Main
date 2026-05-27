@@ -174,7 +174,12 @@ export async function cloneEvent(originalId: string): Promise<void> {
   const srcRef = adminDb().collection("events").doc(originalId);
   const srcSnap = await srcRef.get();
   if (!srcSnap.exists) throw new Error("NOT_FOUND");
+  // Existing docs predate some of the optional fields here (visibility,
+  // surveyFields, etc), so all of them get explicit defaults below before
+  // we write the clone. ignoreUndefinedProperties handles undefined at the
+  // Firestore level, but defaulting also keeps the doc shape predictable.
   const src = srcSnap.data() as {
+    slug?: string;
     title: string;
     description: string;
     startAt: Timestamp;
@@ -185,27 +190,31 @@ export async function cloneEvent(originalId: string): Promise<void> {
       mapUrl?: string;
       meetingUrl?: string;
     };
-    capacity: number;
-    presenterCapacity: number;
-    surveyFields: unknown[];
+    capacity?: number;
+    presenterCapacity?: number;
+    surveyFields?: unknown[];
     visibility?: "public" | "members_only";
   };
 
   // Shift the copy a week ahead and preserve the original duration so a
-  // 90-minute meetup clones into a 90-minute meetup, not into a
-  // datetime-local default of 1 hour.
-  const now = Timestamp.now();
-  const duration =
-    src.endAt.toMillis() - src.startAt.toMillis();
+  // 30-min lightning talk clones into a 30-min slot, a 90-min meetup
+  // stays 90 minutes, etc. If the source's duration is non-positive (data
+  // corruption / hand-edited doc), fall back to 1 hour rather than
+  // creating an inverted or zero-length range.
+  const rawDuration = src.endAt.toMillis() - src.startAt.toMillis();
+  const duration = rawDuration > 0 ? rawDuration : 60 * 60 * 1000;
   const newStart = Timestamp.fromMillis(
     Date.now() + 7 * 24 * 60 * 60 * 1000,
   );
-  const newEnd = Timestamp.fromMillis(
-    newStart.toMillis() + Math.max(duration, 60 * 60 * 1000),
-  );
+  const newEnd = Timestamp.fromMillis(newStart.toMillis() + duration);
 
-  const slug = await findFreeSlug(`${src.title} copy`);
+  // Base the new slug on the source slug (when it exists) so a Japanese-
+  // only title like "第32回 JTPAサロン" carries the original's clean
+  // English slug forward as `jtpa-salon-32-1`, instead of collapsing into
+  // a generic timestamp via slugify of the title.
+  const slug = await findFreeSlug(src.slug || src.title);
 
+  const now = Timestamp.now();
   // Subcollections (rsvps, presentations) are NOT copied — they belong to
   // the original event. The new clone starts fresh.
   const newRef = await adminDb().collection("events").add({
@@ -215,11 +224,11 @@ export async function cloneEvent(originalId: string): Promise<void> {
     startAt: newStart,
     endAt: newEnd,
     location: src.location,
-    capacity: src.capacity,
-    presenterCapacity: src.presenterCapacity,
+    capacity: src.capacity ?? 0,
+    presenterCapacity: src.presenterCapacity ?? 0,
     status: "draft" as const,
     visibility: src.visibility ?? "public",
-    surveyFields: src.surveyFields,
+    surveyFields: src.surveyFields ?? [],
     rsvpCount: 0,
     presenterCount: 0,
     waitlistCount: 0,
