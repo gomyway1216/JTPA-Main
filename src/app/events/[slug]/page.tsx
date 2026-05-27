@@ -92,7 +92,12 @@ export default async function EventDetailPage({
         </dl>
       </header>
 
-      <section className="prose-jtpa">{event.description}</section>
+      {/* Plain-text description (not Markdown) — `whitespace-pre-wrap` preserves
+          author-entered newlines, `break-words` handles long URLs/tokens. The
+          `prose-jtpa` styles are Markdown-specific and would not help here. */}
+      <section className="whitespace-pre-wrap break-words leading-relaxed">
+        {event.description}
+      </section>
 
       <hr className="border-zinc-200 dark:border-zinc-800" />
 

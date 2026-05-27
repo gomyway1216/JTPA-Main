@@ -42,7 +42,10 @@ export default async function ProjectDetailPage({
         />
       )}
 
-      <section className="prose-jtpa">{project.description}</section>
+      {/* Plain-text description (not Markdown) — see events/[slug]/page.tsx. */}
+      <section className="whitespace-pre-wrap break-words leading-relaxed">
+        {project.description}
+      </section>
 
       {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">
