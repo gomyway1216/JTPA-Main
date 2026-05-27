@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CommentsSection } from "@/app/blog/[slug]/CommentsSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { getSessionUser } from "@/lib/auth/session";
+import { listPostComments } from "@/lib/data/comments";
 import { getPostBySlug } from "@/lib/data/posts";
 import { formatDate } from "@/lib/utils";
 
@@ -34,6 +37,14 @@ export default async function BlogPostPage({
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post || post.status !== "published") notFound();
+
+  const [user, comments] = await Promise.all([
+    getSessionUser(),
+    listPostComments(post.id).catch((err) => {
+      console.error("Failed to list comments:", err);
+      return [];
+    }),
+  ]);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -80,16 +91,16 @@ export default async function BlogPostPage({
 
       <MarkdownBody source={post.body} />
 
-      {/* Comments live in a separate PR (see follow-up). The container is
-          here so the page layout doesn't shift later. */}
-      <section
-        aria-label="コメント"
-        className="border-t border-zinc-200 pt-6 dark:border-zinc-800"
-      >
-        <p className="text-sm text-zinc-500">
-          コメント機能は近日公開予定です。
-        </p>
-      </section>
+      {/* key={post.id} forces a fresh instance per post so local state
+          (draft text, optimistic comment list) doesn't leak when the
+          user navigates between two posts via the soft router. */}
+      <CommentsSection
+        key={post.id}
+        postId={post.id}
+        postSlug={post.slug}
+        initialComments={comments}
+        user={user}
+      />
     </article>
   );
 }
