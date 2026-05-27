@@ -11,11 +11,19 @@ export default async function BlogIndexPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
-      <header>
-        <h1 className="text-3xl font-bold">ブログ</h1>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          JTPAコミュニティのメンバーによる記事
-        </p>
+      <header className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">ブログ</h1>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            JTPAコミュニティのメンバーによる記事
+          </p>
+        </div>
+        <Link
+          href="/blog/new"
+          className="shrink-0 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          記事を投稿
+        </Link>
       </header>
 
       {posts.length === 0 ? (

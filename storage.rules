@@ -52,6 +52,17 @@ service firebase.storage {
         && isImage() && maxSize(5);
     }
 
+    // Blog post images (cover image + inline body images): public read,
+    // author writes their own folder, admin writes any. Same shape as
+    // projects/. Split delete from create/update so deletes don't null-eval
+    // through isImage()/maxSize() (`request.resource` is null on delete).
+    match /posts/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if ((isSignedIn() && request.auth.uid == uid) || isAdmin())
+        && isImage() && maxSize(5);
+      allow delete: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+    }
+
     // User avatars
     match /users/{uid}/{allPaths=**} {
       allow read: if true;
