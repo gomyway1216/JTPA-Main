@@ -1,13 +1,14 @@
-# JTPA-Main セットアップ
+# JTPA-Main セットアップ (日本語版)
 
-Firebase プロジェクト `jtpa-main` を前提とした初期セットアップ手順。
+Firebase プロジェクト `jtpa-main` を前提とした初期セットアップ手順。詳細な英語版は [`docs/setup.md`](docs/setup.md) を参照してください。
 
 ## 1. Firebase コンソール側で有効化するもの
 
-- **Authentication** → Sign-in method で **Google** を有効化
-- **Firestore Database** を `us-central` あたりで作成 (本番モード)
+- **Authentication** → Sign-in method で **Google** と **Anonymous** を有効化
+  (Anonymous はイベント当日のウォークイン来場者の QR チェックインで使用)
+- **Firestore Database** を `us-west1` で作成 (本番モード)
 - **Storage** を作成
-- **Extensions** → "Trigger Email" (Stream Firestore to Email) をインストール
+- **Extensions** → "Trigger Email" (Stream Firestore to Email) をインストール *(未設定: [issue #15](https://github.com/gomyway1216/JTPA-Main/issues/15))*
   - 配信プロバイダ: Resend / SendGrid どちらでも可
   - Collection を `mail` に設定 (このリポの実装と一致)
   - From address はドメイン認証済みの送信元を指定
@@ -15,117 +16,85 @@ Firebase プロジェクト `jtpa-main` を前提とした初期セットアッ�
 ## 2. ローカル開発
 
 ```bash
-# 依存インストール (npm)
+# 依存インストール
 npm install
 
 # Firebase Web SDK 設定をコピー
 cp .env.example .env.local
-# Firebase Console → Project Settings → Web app → SDK setup and config から
+# Firebase Console → プロジェクト設定 → マイアプリ → Web → SDK の設定 から
 # 各 NEXT_PUBLIC_FIREBASE_* を埋める
 
-# セッション署名用シークレット
-openssl rand -base64 32 # 出力を SESSION_COOKIE_SECRET に設定
-
-# 管理者通知の宛先 (カンマ区切り) — 必要なら .env.local に追加
-# ADMIN_NOTIFICATION_EMAILS=uwyudai@gmail.com,jin@example.com
-
-# Firebase Admin の認証情報 (ローカルのみ)
-# Firebase Console → Project Settings → Service accounts → "Generate new private key"
-# でダウンロードしたJSONを ./secrets/service-account.json として保存
-export GOOGLE_APPLICATION_CREDENTIALS="$(pwd)/secrets/service-account.json"
+# Firebase Admin の認証情報 (ローカル) — ADC を推奨
+gcloud auth application-default login
 
 # 開発サーバー起動
 npm run dev
 ```
 
+`gcloud` の代わりにサービスアカウント JSON を使いたい場合は
+`FIREBASE_SERVICE_ACCOUNT` に JSON 文字列を入れて `.env.local` に追加。
+ただし通常は ADC で十分です (詳細: [`docs/setup.md`](docs/setup.md))。
+
+セッション Cookie は Firebase Auth が署名するため、別途のシークレットは不要です。
+
 ## 3. ルール・インデックスのデプロイ
+
+`main` に push されると GitHub Actions が自動 deploy するので、通常は手動操作は不要。
+手元から手動で push する場合のみ:
 
 ```bash
 # 初回のみ
 npm install -g firebase-tools
 firebase login
+firebase use jtpa-main
 
-# ルールとインデックスを push
-firebase deploy --only firestore:rules,firestore:indexes,storage:rules
+# ルールとインデックスを push (Firestore + Storage の rules + indexes をまとめて)
+firebase deploy --only firestore,storage
 ```
 
-## 4. 管理者を作る (Custom Claim を付与)
+## 4. 管理者・エディタを作る (Custom Claim を付与)
 
-ログインしたいGoogleアカウントで一度サインインしてから:
+対象アカウントで一度サインインしてから:
 
 ```bash
-# サービスアカウントJSONを使う場合
-GOOGLE_APPLICATION_CREDENTIALS=./secrets/service-account.json \
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=jtpa-main \
+# admin 付与 / 解除
 npm run set-admin -- uwyudai@gmail.com
-
-# 解除するとき
 npm run set-admin -- uwyudai@gmail.com -- --revoke
+
+# editor 付与 / 解除 (ガイド執筆者向け、admin 未満の権限)
+npm run set-editor -- editor@example.com
+npm run set-editor -- editor@example.com -- --revoke
 ```
 
 権限反映には一度ログアウト→再ログインが必要。
+admin がいる場合は `/admin/users` の UI からロール付与・剥奪もできるので、
+CLI は最初の bootstrap だけで OK。
 
 ## 5. Firebase App Hosting へのデプロイ
 
-```bash
-# Firebase Console → App Hosting → Backend を作成、GitHub リポジトリを連携
-# ブランチ: main / リージョン: us-central1 推奨
-```
+Backend は作成済み (`jtpa-main`)。GitHub `main` への push で自動デプロイ。
+環境変数は App Hosting Console UI で管理 (詳細: [`docs/deployment.md`](docs/deployment.md))。
 
-App Hosting にデプロイすると `apphosting.yaml` を読み込んで自動ビルド。
-本番では Secret Manager で機微情報を管理:
+### Rules を GitHub Actions で自動 deploy
 
-```bash
-firebase apphosting:secrets:set SESSION_COOKIE_SECRET
-firebase apphosting:secrets:grantaccess SESSION_COOKIE_SECRET
-```
+`.github/workflows/deploy-rules.yml` が以下のいずれかが `main` に push された時に発火:
+`firestore.rules`, `firestore.indexes.json`, `storage.rules`, `firebase.json`, `.github/workflows/deploy-rules.yml`。
 
-`NEXT_PUBLIC_FIREBASE_*` は `apphosting.yaml` の `env` に直接書いてOK
-(クライアントに露出する値なので秘密ではない)。
+サービスアカウント `gh-actions-rules-deployer@jtpa-main.iam.gserviceaccount.com` の JSON キーが
+`FIREBASE_SERVICE_ACCOUNT` の GitHub Secret に登録済み (Role 詳細: [`docs/deployment.md`](docs/deployment.md))。
 
-### Rules を GitHub Actions で自動 deploy する
+## 6. 機能・データ構造
 
-`.github/workflows/deploy-rules.yml` が `firestore.rules` / `firestore.indexes.json` /
-`storage.rules` / `firebase.json` のいずれかが main に push されたタイミングで自動 deploy します。
-セットアップに必要なもの:
+主要機能とそれぞれが書き込むコレクションは [`docs/features.md`](docs/features.md) と
+[`docs/data-model.md`](docs/data-model.md) を参照。
+ユーザー向けの使い方ガイドはアプリ内 [/help](src/app/help/page.tsx) に常駐 (日本語)。
 
-1. **GCP Service Account を作成** (Console → IAM → Service Accounts)
-   - 名前例: `gh-actions-rules-deployer`
-   - 付与する Role:
-     - `Firebase Rules Admin` (`roles/firebaserules.admin`)
-     - `Cloud Datastore Index Admin` (`roles/datastore.indexAdmin`)
-     - `Firebase Hosting Admin` (`roles/firebasehosting.admin`) ※将来 Hosting も deploy するなら
-2. **キーを発行**: 該当 SA → Keys → Add Key → JSON
-3. **GitHub Secret に登録**: repo Settings → Secrets and variables → Actions → New repository secret
-   - Name: `FIREBASE_SERVICE_ACCOUNT`
-   - Value: ダウンロードしたJSONの中身を丸ごとペースト
-4. ワークフローを手動キックして動作確認: Actions → "Deploy Firestore & Storage Rules" → Run workflow
+## 7. ドキュメントの場所
 
-## 6. データ構造
-
-| Collection | 説明 |
-|---|---|
-| `users/{uid}` | ユーザープロファイル (Googleログイン時に自動作成) |
-| `events/{eventId}` | イベント。`status: draft/published/past/cancelled` |
-| `events/{eventId}/rsvps/{uid}` | 参加登録 |
-| `events/{eventId}/presentations/{id}` | 発表資料 (Phase 2) |
-| `projects/{projectId}` | ショーケース投稿。`status: pending/approved/rejected/archived` |
-| `mail/{id}` | Trigger Email extension が読むキュー |
-
-## 7. 何が動いて、何が未実装か
-
-実装済み:
-- Googleログイン (Firebase ID Token → セッションCookie)
-- イベント作成・編集・削除 (admin)
-- 公開イベント一覧 / 詳細
-- RSVP (一般 / 発表者) + 任意のアンケート項目
-- ショーケース投稿フロー + 承認制 + 編集後の自動 pending 化
-- 管理ダッシュボード (承認待ち、イベント、参加者一覧)
-- メール通知の枠組み (新規投稿時/承認・却下時)
-
-未実装 (今後追加候補):
-- 発表資料の Storage アップロードUI (`presentations/` のルールは設定済み)
-- 一斉メール送信のUI (関数 `enqueueEventBlast` は実装済み)
-- 当日リマインダー (Cloud Functions v2 `onSchedule` で実装予定)
-- カバー画像・スクリーンショットの実アップロード (Storage 経由)
-- メンバー間のプロフィールページ
+- [`README.md`](README.md) — リポジトリ概要 + クイックスタート
+- [`docs/setup.md`](docs/setup.md) — ローカル開発の詳細手順 (英語、より詳しい)
+- [`docs/architecture.md`](docs/architecture.md) — Next.js + Firebase の構成、認可レイヤー、アップロードフロー
+- [`docs/data-model.md`](docs/data-model.md) — Firestore コレクションと rules
+- [`docs/features.md`](docs/features.md) — 機能一覧と URL / データ / 権限のマッピング
+- [`docs/admin.md`](docs/admin.md) — 管理者運用 (ロール、レビュー、イベント管理、チェックイン、エクスポート)
+- [`docs/deployment.md`](docs/deployment.md) — App Hosting、Rules CI、環境変数

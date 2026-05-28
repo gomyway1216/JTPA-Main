@@ -36,7 +36,7 @@ Next.js Server
 
 ## Why Admin SDK only
 
-`src/lib/firebase/client.ts` exports `clientDb = getFirestore(app)` but **no app code calls it**. All Firestore traffic goes through `adminDb()`:
+`src/lib/firebase/client.ts` exports `clientDb = getFirestore(app)`, but client-side Firestore is used in only one narrow way: **minting auto-ids ahead of a Server Action call**. The Q&A form (`src/app/qa/_components/QaForm.tsx`) and the guide editor (`src/app/admin/guides/_components/GuideForm.tsx`) both need a stable doc id before submit so they can upload body images into `qa/{qaId}/{uid}/...` or `guides/{guideId}/...` storage paths; `doc(collection(clientDb, ...)).id` generates one without writing. No reads or writes go through `clientDb`. All actual Firestore traffic goes through `adminDb()`:
 
 - Server Components call `lib/data/*.ts` loaders (which use `adminDb()`)
 - Server Actions in `app/actions/*.ts` use `adminDb()` directly
@@ -72,15 +72,27 @@ If you add a new loader or Server Action that returns Firestore data, **remember
 
 Admin is set via `scripts/set-admin.mjs <email>`. The script calls `auth.setCustomUserClaims(uid, { admin: true })` and the user must re-login before the new claim flows into their session cookie.
 
-## File uploads — the one place client SDK is used
+## File uploads — direct browser → Storage
 
-Presentation file uploads (`PresentationSection.tsx`) go **direct from the browser to Firebase Storage** via `uploadBytesResumable`. Cloud Run never proxies the bytes. After the upload completes, the client calls a Server Action with just the `filePath` + `fileUrl` to record metadata in Firestore.
+All file uploads go **direct from the browser to Firebase Storage** via `uploadBytesResumable` (`src/lib/firebase/uploads.ts`). Cloud Run never proxies the bytes. After the upload completes, the client calls a Server Action with just the `{path, url}` (or `{filePath, fileUrl}` for presentations) to record metadata in Firestore.
 
-Authorization at upload time:
-- Storage rules check `request.auth.uid == uid` in the path `presentations/{eventId}/{uid}/{...}`, so a user can only write into their own presenter folder
-- The metadata Server Action then re-checks RSVP role=presenter status=confirmed before accepting the write
+The full set of upload paths:
 
-If we ever do event cover images (issue #18), they should follow the same pattern.
+| Path | Used for | Who can write |
+|---|---|---|
+| `presentations/{eventId}/{uid}/...` | Presenter slide files (up to 50MB, any content type) | Presenter (uid match) or admin |
+| `events/{eventId}/...` | Event cover images (up to 10MB, image only) | Admin |
+| `projects/{uid}/...` | Project thumbnail + screenshots (up to 5MB each, image only) | Owner (uid match) or admin |
+| `posts/{uid}/...` | Blog cover image + inline body images (up to 5MB each, image only) | Author (uid match) or admin |
+| `guides/{guideId}/...` | Guide body images (up to 5MB each, image only) | Admin or editor |
+| `qa/{qaId}/{uid}/...` | Q&A body images (up to 5MB each, image only) | Uploader (uid match) or admin |
+| `users/{uid}/...` | User avatar (up to 2MB, image only) | Self only |
+
+Authorization happens in two places at upload time:
+- Storage rules check the path (`request.auth.uid == uid`, or `isAdmin()` / `isEditor()`) and validate `contentType` + `size`
+- The metadata Server Action re-checks identity / ownership before persisting `{path, url}` to Firestore — the storage rule is the only thing protecting the bytes themselves, but the metadata write goes through `requireUser()` etc. like every other Server Action
+
+Image-only paths reject SVG (`image/svg+xml`) deliberately — SVG can carry executable markup. For guide and Q&A body images, the form mints an auto-id via `clientDb` *before* upload so the storage path is known when the user picks a file (see the [Why Admin SDK only](#why-admin-sdk-only) section).
 
 ## Code conventions
 

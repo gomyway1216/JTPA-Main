@@ -56,9 +56,9 @@ To change a value in the Console UI:
 
 Deploy is wired via GitHub Actions (`.github/workflows/deploy-rules.yml`):
 
-- Trigger: push to `main` that touches `firestore.rules` or `storage.rules`
+- Trigger: push to `main` that touches `firestore.rules`, `firestore.indexes.json`, `storage.rules`, `firebase.json`, or the workflow file itself
 - Uses `google-github-actions/auth@v2` with the `FIREBASE_SERVICE_ACCOUNT` repo secret
-- Calls `firebase deploy --only firestore:rules,storage:rules`
+- Calls `firebase deploy --only firestore,storage --project jtpa-main` (deploys both rules and indexes; the CLI no-ops anything that hasn't changed)
 
 The service account behind that secret is `gh-actions-rules-deployer@jtpa-main.iam.gserviceaccount.com`, with the `Firebase Admin` + `Service Usage Consumer` roles. (See setup history in the closed PRs for context.)
 
@@ -75,8 +75,10 @@ firebase deploy --only firestore:rules,storage:rules
 
 - `npm ci`
 - `npm run lint` (ESLint)
-- `npm run typecheck` (`tsc --noEmit`)
+- `npm test` (Vitest)
 - `npm run build` (Next.js production build, with placeholder `NEXT_PUBLIC_FIREBASE_*` env vars so the build doesn't fail on missing client config)
+
+Type checking isn't a separate CI step — `next build` runs the TypeScript compiler internally, so type errors still fail the build. If you want a faster local check, `npm run typecheck` runs `tsc --noEmit` standalone.
 
 Required status check before merging to `main`.
 
@@ -94,7 +96,6 @@ If we add another custom domain, add it here too or sign-in will throw `auth/una
 | Thing | Tracking issue |
 |---|---|
 | Trigger Email extension + SMTP provider | [#15](https://github.com/gomyway1216/JTPA-Main/issues/15) |
-| Auto-transition published events to past | [#20](https://github.com/gomyway1216/JTPA-Main/issues/20) |
 | `ADMIN_NOTIFICATION_EMAILS` env var (depends on #15) | #15 |
 
 ## Cost model

@@ -25,12 +25,17 @@ qa/{qaId}
   ├─ comments/{commentId}
   │   └─ likes/{uid}
   └─ likes/{uid}
+polls/{pollId}
+  ├─ votes/{uid}        ← one ballot per voter (Admin-SDK-only writes)
+  ├─ comments/{commentId}
+  │   └─ likes/{uid}
+  └─ likes/{uid}
 sitePages/{slug}      ← admin-edited static-ish content (currently just `about`)
 mail/{autoId}         ← Trigger Email extension (writes only via Admin SDK)
 ```
 
-Comments and likes use the same shape across all four "content parent" types
-(`post` / `guide` / `qa` / `project`). The shared helpers live in
+Comments and likes use the same shape across all five "content parent" types
+(`post` / `guide` / `qa` / `project` / `poll`). The shared helpers live in
 `src/lib/comments-parent.ts` (URL prefix mapping + visibility check) and
 `src/lib/data/comments.ts` (queries). `CommentDoc.parentType` is denormalized
 into every comment so we can build cross-parent activity feeds (e.g.
@@ -73,7 +78,9 @@ public; it does **not** rely on rules.
 | `visibility` | enum? | `"public" \| "members_only"` (optional; missing = public for back-compat) |
 | `coverImage` | `{ path, url }?` | Optional cover image. Same `{path, url}` shape as `ProjectDoc.thumbnail` / `PostDoc.coverImage`. Shown on `/events` cards and at the top of `/events/[slug]`. Files live at `events/{adminUid}/<ts>-<file>` and are best-effort deleted on event delete or cover replacement. Older docs may carry a legacy `coverImagePath: string`; `updateEvent` removes it on next save. |
 | `surveyFields` | `SurveyField[]` | See below |
-| `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions |
+| `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions by `submitRsvp` / `cancelRsvp` |
+| `attendanceCount` | number? | Denormalized count of RSVPs with `attendedAt` set. Updated transactionally by the check-in Server Actions. Missing = 0 on legacy docs. |
+| `checkInToken` | string? | 16-char alphanumeric token (confusable-free alphabet) embedded in the QR-code URL. Admin generates/rotates via `generateCheckInToken` on `/admin/events/[id]/checkin`. Missing = token not yet issued. |
 | `createdBy` | string (uid) | |
 | `createdAt`, `updatedAt` | Timestamp | |
 
@@ -107,11 +114,13 @@ One RSVP per user per event. Doc id = user uid.
 | `status` | enum | `"confirmed" \| "waitlist" \| "cancelled"` |
 | `surveyResponses` | `Record<string, string \| string[] \| boolean>` | Keyed by survey field `key` |
 | `presentationTitle`, `presentationAbstract` | string? | Free text the presenter typed at signup. Independent of any uploaded presentation doc (see below) |
+| `attendedAt` | Timestamp? | Set when the attendee checks in (QR self check-in, walk-in guest, or admin manual toggle). Missing = not checked in. **Server-managed** — clients cannot set or change this field, even on their own doc. |
+| `isGuest` | boolean? | `true` for walk-in attendees who used the anonymous-auth check-in flow (no Google account). Missing or `false` = pre-registered RSVP. **Server-managed**, same as `attendedAt`. |
 | `createdAt`, `updatedAt` | Timestamp | |
 
-**Rules**: self-read, self-write; admins do everything.
+**Rules**: self-read, self-write — but `attendedAt` and `isGuest` are explicitly blocklisted from both create and update (rules use `!('attendedAt' in request.resource.data)` and `.diff(resource.data).affectedKeys().hasAny(['attendedAt', 'isGuest'])`). Only Admin SDK writes (from `selfCheckIn` / `guestCheckIn` / `setAttendance` Server Actions) can touch them. Admins can do everything.
 
-**Transactional counters**: `submitRsvp` (`src/app/actions/rsvps.ts`) maintains `rsvpCount` / `presenterCount` / `waitlistCount` on the parent event doc inside the transaction. Don't update the RSVP doc outside that path or counters drift.
+**Transactional counters**: `submitRsvp` (`src/app/actions/rsvps.ts`) maintains `rsvpCount` / `presenterCount` / `waitlistCount` on the parent event doc inside the transaction. Check-in Server Actions maintain `attendanceCount` the same way. Don't update the RSVP doc outside those paths or counters drift.
 
 ### `events/{eventId}/presentations/{autoId}`
 
@@ -146,18 +155,20 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 | `status` | enum | `"pending" \| "approved" \| "rejected" \| "archived"` |
 | `reviewerUid` | string \| null | Set by admin on decision |
 | `reviewNote` | string? | Visible to owner if rejected |
+| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0 on legacy docs) |
 | `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
 
 **Rules**:
 - Public read only if `status == "approved"` (so pending/rejected stay private to owner+admin)
-- Owners can create with `status: "pending"`, edit (which flips status back to `pending` for re-review), and delete
+- Owners can create with `status: "pending"`, edit (which flips status back to `pending` for re-review), and delete. `likeCount` is pinned by the rules so a direct client write can't inflate it.
 - Admins approve/reject (sets `status`, `reviewerUid`, `reviewNote`, `reviewedAt`)
+- `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below. Comment reads use the project's `status == 'approved'` gate (not `'published'` like the other parent types).
 
 Notification on decision is enqueued via `enqueueProjectDecisionNotification` (no-op until issue #15 lands).
 
 ## `posts/{postId}` (Blog)
 
-Community blog entries. Distinct from `guides` (admin/editor curated help docs without comments). Members can submit posts; admins approve before public release, similar to the Showcase project workflow.
+Community blog entries. Members can submit posts; admins approve before public release, similar to the Showcase project workflow. Distinct from `guides` — those are admin/editor-curated help articles. Both support comments and likes via the shared subcollections.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -172,30 +183,14 @@ Community blog entries. Distinct from `guides` (admin/editor curated help docs w
 | `reviewerUid` | string \| null | Set by admin on decision |
 | `reviewNote` | string? | Visible to author if rejected |
 | `publishedAt` | Timestamp? | Set when status flips to `published` |
+| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0 on legacy docs) |
 | `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
 
 **Rules**:
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
 - Owner edits can land in `draft` (save without resubmitting) or `pending` (resubmit for review); never directly in published/rejected/archived. `authorUid` and `reviewerUid` are immutable for owners. Admins can change anything
-- Comments live in the `comments` subcollection
-
-### `posts/{postId}/comments/{commentId}`
-
-| Field | Type | Notes |
-|---|---|---|
-| `authorUid`, `authorName` | string | |
-| `authorPhotoURL` | string \| null | |
-| `body` | string | Length cap (~2000 chars) will be enforced by the comment Server Action in the follow-up PR; rules currently only constrain identity, not size |
-| `createdAt`, `updatedAt` | Timestamp | |
-
-**Rules**:
-- Read: visible if the parent post is `published`, OR caller is the comment author, OR caller is admin
-- Create: signed-in user, only on `published` posts, and `authorUid` must match the caller
-- Update: author can edit body, but `authorUid` is immutable (no impersonation by edit). Admin can change anything
-- Delete: author or admin
-
-UI lands in a follow-up PR.
+- `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below
 
 ## `qa/{qaId}` (Community Q&A)
 
@@ -220,6 +215,45 @@ Open-mic question/tip board. Any signed-in member can post; there's **no review 
 
 UI: `/qa` list, `/qa/[slug]` detail, `/qa/new` + `/qa/[slug]/edit` (signed-in), `/my/qa` (author dashboard).
 
+## `polls/{pollId}` (Community polls)
+
+Lightweight multi-select polls. Any signed-in member can create a poll; it's published immediately. Anyone (incl. anonymous visitors) can read published polls and see the results; voting requires sign-in. Option labels are frozen as soon as the first vote lands so existing ballots stay meaningful.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Unique URL slug, auto-generated from title |
+| `title` | string | 2–120 chars |
+| `description` | string | 0–2000 chars; rendered as plain text in current UI |
+| `options` | `PollOption[]` | Each option: `{ id: string, label: string, voteCount: number }`. Frozen once `voterCount > 0`. Up to 8 options. |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth |
+| `status` | enum | `"published" \| "archived"` — lands as `published`; admin-only flip to `archived` (via `setPollStatus`) hides from `/poll` |
+| `voterCount` | number | Distinct-voter count, not total selections. Maintained transactionally with each `castPollVote`. |
+| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0) |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Public reads only when `status == "published"`; archived visible to author + admin
+- Create: signed-in user; `authorUid` must match caller; must start `published` with `voterCount == 0` and every `options[i].voteCount == 0` (the `optionsAllZero` helper in `firestore.rules` unrolls the array check). Timestamps pinned to `request.time`.
+- Update: author can edit only `title` / `description` / `slug` / `updatedAt`. **Cannot change `options`** — option mutations go through Admin SDK-only paths. `authorUid`, `status`, `voterCount` are pinned. Admin can change anything (including `status`).
+- Delete: author or admin
+- `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below
+
+### `polls/{pollId}/votes/{uid}`
+
+One ballot per voter. Doc existence == voted.
+
+| Field | Type | Notes |
+|---|---|---|
+| `optionIds` | string[] | The user's current selections. Empty array = un-vote; `castPollVote` then deletes the doc and decrements `voterCount` |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**: read self-only (owner or admin); **all writes denied for clients**. Every change flows through `castPollVote` (Admin SDK), which:
+1. Computes per-option deltas (added vs. removed)
+2. Updates `options[i].voteCount` for each touched option
+3. Updates `voterCount` (only when the doc is being created or fully cleared)
+
+…all inside a transaction so the denormalized counters never drift.
+
 ## `guides/{guideId}` (Curated help articles)
 
 Admin- and editor-curated reference docs. Distinct from `qa` (open community) and `posts` (community blog with review queue).
@@ -242,7 +276,7 @@ Comments + likes subcollections behave the same as posts.
 
 ## Comment + like subcollections (shared shape)
 
-These collections live under each of `posts`, `guides`, `qa`, and `projects`:
+These collections live under each of `posts`, `guides`, `qa`, `projects`, and `polls`:
 
 ```
 {parent}/{parentId}/comments/{commentId}
@@ -251,14 +285,17 @@ These collections live under each of `posts`, `guides`, `qa`, and `projects`:
 ```
 
 The doc shape and rules are identical across parent types; the URL prefix
-(post→`/blog`, guide→`/guide`, qa→`/qa`, project→`/showcase`) is derived
-via `parentRoutePrefix` in `src/lib/comments-parent.ts`.
+(post→`/blog`, guide→`/guide`, qa→`/qa`, project→`/showcase`, poll→`/poll`)
+is derived via `parentRoutePrefix` in `src/lib/comments-parent.ts`. The
+"is this parent publicly visible?" check (`isParentPubliclyVisible`) gates
+on `status == 'published'` for posts/guides/qa/polls and `status == 'approved'`
+for projects.
 
 ### `comments/{commentId}`
 
 | Field | Type | Notes |
 |---|---|---|
-| `parentType` | `"post" \| "guide" \| "qa" \| "project"` | Denormalized for cross-parent activity feeds |
+| `parentType` | `"post" \| "guide" \| "qa" \| "project" \| "poll"` | Denormalized for cross-parent activity feeds |
 | `parentId` | string | |
 | `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | |
 | `body` | string | Capped at 2000 chars in the Server Action (`src/app/actions/comments.ts`) |
@@ -328,11 +365,15 @@ Written by `src/lib/notifications.ts` via the Admin SDK. Once the Firebase Trigg
 events/{anything}/...                   cover images (admin write, public read; in practice we use the admin uid for the first segment since the rule's {eventId} is a wildcard)
 presentations/{eventId}/{uid}/...       slide files (presenter or admin write, public read)
 projects/{uid}/...                      project thumbnails + screenshots (owner write, public read)
-posts/{uid}/...                         blog cover images (author write, public read)
+posts/{uid}/...                         blog cover images + inline body images (author write, public read)
+guides/{guideId}/...                    guide body images (admin or editor write, public read)
+qa/{qaId}/{uid}/...                     Q&A body images (uploader-only write, public read)
 users/{uid}/...                         avatars (self write, public read)
 ```
 
-All paths are public-read so direct download URLs work without auth. Write rules enforce ownership + max size (10MB events, 50MB presentations, 5MB projects/posts, 2MB avatars). See `storage.rules`.
+All paths are public-read so direct download URLs work without auth. Image-only paths reject SVG deliberately (it can carry executable markup). Write rules enforce ownership + max size: 10MB events, 50MB presentations, 5MB projects/posts/guides/qa, 2MB avatars. See `storage.rules`.
+
+Polls don't have a storage path — descriptions are plain text in current UI, no image uploads.
 
 ## Composite indexes
 
@@ -345,6 +386,7 @@ Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
 - `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`
 - `guides`: `status + order + updatedAt`
 - `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
+- `polls`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
 - **`comments` collection-group**: `authorUid + likeCount DESC` — powers `/my/likes`
 
 If you add a new sort/filter combination, prefer adding it locally + pushing rather than waiting for production to hit the missing-index error.
