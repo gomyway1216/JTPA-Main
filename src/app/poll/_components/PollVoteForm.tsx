@@ -33,12 +33,13 @@ export function PollVoteForm({
   const [selectedIds, setSelectedIds] =
     useState<string[]>(initialSelectedIds);
   const [voterCount, setVoterCount] = useState(initialVoterCount);
-  // Anonymous visitors never see the edit form; signed-in users who
-  // haven't voted yet start in edit mode so the call-to-action is
-  // visible without an extra click.
-  const [editing, setEditing] = useState(
-    !!user && initialSelectedIds.length === 0,
-  );
+  // Everyone — including signed-in users who haven't voted yet — lands
+  // on the results view by default. The "投票する" / "投票を変更" button
+  // opens the edit form. This keeps the PR's "results visible from
+  // page load" guarantee for non-voters too (an earlier version
+  // auto-entered edit mode for them and hid the bars until they
+  // canceled).
+  const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<string[]>(initialSelectedIds);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

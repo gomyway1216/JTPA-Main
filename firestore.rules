@@ -19,6 +19,24 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Returns true when every entry in `opts` has `voteCount == 0`.
+    // Firestore rules has no array `.every()`, so we unroll up to the
+    // server-enforced MAX_OPTIONS (8). The `opts.size() < N` guard on
+    // each line short-circuits when fewer options are present so the
+    // index access doesn't fault. Used by the polls create rule to
+    // block clients from publishing a poll with pre-inflated option
+    // counts while `voterCount == 0`.
+    function optionsAllZero(opts) {
+      return (opts.size() < 1 || opts[0].voteCount == 0)
+        && (opts.size() < 2 || opts[1].voteCount == 0)
+        && (opts.size() < 3 || opts[2].voteCount == 0)
+        && (opts.size() < 4 || opts[3].voteCount == 0)
+        && (opts.size() < 5 || opts[4].voteCount == 0)
+        && (opts.size() < 6 || opts[5].voteCount == 0)
+        && (opts.size() < 7 || opts[6].voteCount == 0)
+        && (opts.size() < 8 || opts[7].voteCount == 0);
+    }
+
     // ----- users -----
     // Profile docs. Owner can read/write own, admin can read all.
     match /users/{uid} {
@@ -417,24 +435,37 @@ service cloud.firestore {
             && resource.data.authorUid == request.auth.uid);
 
       // Create gate: only the doc author can write a doc for themselves,
-      // it must start `published` with zero denormalized counters, and
-      // the create-time timestamps must match `request.time`. Without
-      // these, a client could bypass the Server Action to seed inflated
-      // counts, backdated timestamps, or someone else's `authorUid`.
+      // it must start `published` with zero denormalized counters
+      // (including every option's `voteCount`), and the create-time
+      // timestamps must match `request.time`. Without these, a client
+      // could bypass the Server Action to seed inflated counts,
+      // backdated timestamps, or someone else's `authorUid`.
+      //
+      // The `options[].voteCount` check uses a helper that walks the
+      // array — there's no Firestore-rules array-quantifier primitive,
+      // so we cap at MAX_OPTIONS (8) and short-circuit on the first
+      // non-zero. Anything longer than that is rejected upstream by
+      // Zod, so the cap is a safe assumption here.
       allow create: if isSignedIn()
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.status == 'published'
         && request.resource.data.voterCount == 0
         && (!('likeCount' in request.resource.data)
             || request.resource.data.likeCount == 0)
+        && request.resource.data.options.size() <= 8
+        && optionsAllZero(request.resource.data.options)
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
 
-      // Update gate: authors can edit only the listed content fields and
-      // must keep `authorUid` / `status` / `voterCount` / `likeCount`
-      // unchanged. The denormalized counters and the options array are
-      // only ever touched by the Server Action (which goes through Admin
-      // SDK and bypasses these rules). Admin can change anything.
+      // Update gate: authors can edit only the listed content fields.
+      // `options` is intentionally NOT in the allowlist — it embeds the
+      // denormalized `voteCount` per option, and option-list edits
+      // (which happen pre-vote) flow through `updateMyPoll` via Admin
+      // SDK, bypassing these rules. Leaving `options` out blocks a
+      // direct client write from tampering with the per-row counters
+      // even while `voterCount` looks unchanged. Admin can change
+      // anything; the freeze-while-voted invariant is enforced
+      // server-side inside `updateMyPoll`'s transaction.
       allow update: if isAdmin()
         || (
           isSignedIn()
@@ -448,7 +479,7 @@ service cloud.firestore {
             || request.resource.data.likeCount == resource.data.likeCount
           )
           && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['title', 'description', 'options', 'slug', 'updatedAt'])
+               .hasOnly(['title', 'description', 'slug', 'updatedAt'])
         );
 
       allow delete: if isAdmin()
@@ -460,13 +491,19 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
-      // Ballots. Reads are public so the UI can show "you voted for X"
-      // immediately on page load; the doc only contains the option-id
-      // selection, no PII beyond the uid in the path. All writes flow
-      // through `castPollVote` — direct client writes are denied so the
-      // denormalized counters can never desync from the ballot docs.
+      // Ballots. Reads are restricted to the ballot owner (and admins)
+      // — the doc id is the voter's uid, so a public-read rule would
+      // tie individual selections to specific accounts for anyone who
+      // enumerates the path. The UI loads the current user's ballot
+      // server-side via Admin SDK (`getMyPollVote`), which bypasses
+      // these rules; aggregate results stay readable via the parent
+      // doc's `options[].voteCount` and `voterCount`.
+      //
+      // All writes flow through `castPollVote` so direct client writes
+      // are denied — the denormalized counters can never desync from
+      // the ballot docs.
       match /votes/{uid} {
-        allow read: if true;
+        allow read: if isSelf(uid) || isAdmin();
         allow create, update, delete: if false;
       }
 

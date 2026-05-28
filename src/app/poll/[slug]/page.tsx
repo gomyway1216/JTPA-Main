@@ -123,6 +123,12 @@ export default async function PollDetailPage({
       )}
 
       <PollVoteForm
+        // key on poll.id forces a fresh mount when the route swaps to
+        // a different poll. Without it, Next.js client navigation keeps
+        // the existing component instance and its useState — leaking
+        // the previous poll's options/voterCount/draft into the new
+        // page until the user interacts.
+        key={poll.id}
         pollId={poll.id}
         pollSlug={poll.slug}
         initialOptions={poll.options}

@@ -104,6 +104,12 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
   // and a user may have deleted the contents of an option without
   // removing the row. We dedupe by trimmed lowercase label so "Claude"
   // and "claude " don't both make it through.
+  //
+  // Every option id is minted here, ignoring whatever `opt.id` the
+  // client sent. On create there are no existing ballots to preserve,
+  // and trusting caller-supplied ids would let a crafted request seed
+  // two options with the same id — `castPollVote` keys vote diffs by
+  // id, so a single ballot for that id would update both rows.
   const seen = new Set<string>();
   const cleanedOptions: PollOption[] = [];
   for (const opt of parsed.options) {
@@ -111,7 +117,7 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
     if (seen.has(key)) continue;
     seen.add(key);
     cleanedOptions.push({
-      id: opt.id ?? newOptionId(),
+      id: newOptionId(),
       label: opt.label,
       voteCount: 0,
     });
@@ -146,10 +152,15 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
 }
 
 /**
- * Edit a poll. Authors can only touch `title` / `description` once any
- * votes have come in — changing the option list after voting would
- * invalidate the denormalized counts (and the ballots that reference
- * those option ids). Before the first vote, the option list is editable.
+ * Edit a poll. The option list is editable only while there are zero
+ * active voters — once anyone has a ballot, rewriting options would
+ * orphan their ballot refs and invalidate the denormalized counts.
+ * Title/description/slug are always editable. The whole freeze check +
+ * write runs inside a Firestore transaction so an author edit can't
+ * race with an incoming vote (without it, `updateMyPoll` could read
+ * `voterCount == 0`, decide options are editable, then commit after a
+ * vote landed and overwrite the now-voted options with zero-count
+ * edits).
  */
 export async function updateMyPoll(
   pollId: string,
@@ -157,63 +168,89 @@ export async function updateMyPoll(
 ): Promise<void> {
   const user = await requireUser();
   const parsed = readableParse(PollFormSchema, input);
+  const isAdminCaller = user.isAdmin;
 
   const ref = adminDb().collection("polls").doc(pollId);
-  const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
-  const cur = snap.data() as PollDoc;
-  if (cur.authorUid !== user.uid && !user.isAdmin) {
+
+  // Resolve the slug change outside the transaction. `findFreePollSlug`
+  // hits the index a few times, which we don't want inside a txn (each
+  // read locks the doc and increases retry contention). The slug
+  // uniqueness check is best-effort regardless — two concurrent slug
+  // edits can still collide; the second one would overwrite the first.
+  // Acceptable: slugs aren't a security boundary, just a routing key.
+  let newSlug: string | null = null;
+  // Need the current slug to know whether the caller asked for a real
+  // change. Reading it twice (here + in the txn) is fine — the txn
+  // read is the authoritative one for the write.
+  const preReadSnap = await ref.get();
+  if (!preReadSnap.exists) throw new Error("NOT_FOUND");
+  const preRead = preReadSnap.data() as PollDoc;
+  if (preRead.authorUid !== user.uid && !isAdminCaller) {
     throw new Error("FORBIDDEN");
   }
-
-  let newSlug = cur.slug;
-  if (parsed.slug && parsed.slug !== cur.slug) {
+  if (parsed.slug && parsed.slug !== preRead.slug) {
     newSlug = await findFreePollSlug(parsed.slug);
   }
 
-  // Decide whether option-list edits are still safe. A poll with zero
-  // voters has no denormalized counts to preserve and no ballots to
-  // invalidate — we let the author rewrite options freely. After the
-  // first vote, we freeze the option list and ignore any incoming
-  // changes (we don't error so the form can show edits to title/desc
-  // without bouncing on an option-list mismatch).
-  const optionsFrozen = (cur.voterCount ?? 0) > 0;
-
-  let nextOptions: PollOption[] = cur.options;
-  if (!optionsFrozen) {
-    const seen = new Set<string>();
-    const cleaned: PollOption[] = [];
-    for (const opt of parsed.options) {
-      const key = opt.label.toLowerCase();
-      if (seen.has(key)) continue;
-      seen.add(key);
-      // Preserve the existing id when the form passes it back; otherwise
-      // mint a fresh one. voteCount is always 0 here because optionsFrozen
-      // is false (no voters yet).
-      cleaned.push({
-        id: opt.id ?? newOptionId(),
-        label: opt.label,
-        voteCount: 0,
-      });
+  const committed = await adminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (!snap.exists) throw new Error("NOT_FOUND");
+    const cur = snap.data() as PollDoc;
+    // Re-check ownership inside the txn in case the doc was reassigned
+    // between the pre-read and the txn start (paranoid but cheap).
+    if (cur.authorUid !== user.uid && !isAdminCaller) {
+      throw new Error("FORBIDDEN");
     }
-    if (cleaned.length < MIN_OPTIONS) {
-      throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
-    }
-    nextOptions = cleaned;
-  }
 
-  await ref.update({
-    slug: newSlug,
-    title: parsed.title,
-    description: parsed.description,
-    options: nextOptions,
-    updatedAt: Timestamp.now(),
+    const optionsFrozen = (cur.voterCount ?? 0) > 0;
+
+    let nextOptions: PollOption[] = cur.options;
+    if (!optionsFrozen) {
+      // Build the next option list with two independent dedupe sets:
+      //   - labels (lowercased) so "Claude" and "claude" can't both land
+      //   - ids so a crafted client can't seed two rows with the same id
+      // Existing ids that survive both checks are preserved (handy if
+      // we add label-edit-preserves-id semantics later); anything else
+      // gets a fresh server-minted id. voteCount is always 0 here
+      // because the freeze check above guarantees no voters.
+      const existingIds = new Set(cur.options.map((o) => o.id));
+      const seenLabels = new Set<string>();
+      const seenIds = new Set<string>();
+      const cleaned: PollOption[] = [];
+      for (const opt of parsed.options) {
+        const labelKey = opt.label.toLowerCase();
+        if (seenLabels.has(labelKey)) continue;
+        seenLabels.add(labelKey);
+        let id = opt.id;
+        if (!id || seenIds.has(id) || !existingIds.has(id)) {
+          id = newOptionId();
+        }
+        seenIds.add(id);
+        cleaned.push({ id, label: opt.label, voteCount: 0 });
+      }
+      if (cleaned.length < MIN_OPTIONS) {
+        throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
+      }
+      nextOptions = cleaned;
+    }
+
+    tx.update(ref, {
+      slug: newSlug ?? cur.slug,
+      title: parsed.title,
+      description: parsed.description,
+      options: nextOptions,
+      updatedAt: Timestamp.now(),
+    });
+
+    return { slug: newSlug ?? cur.slug, prevSlug: cur.slug };
   });
 
   revalidatePath("/poll");
-  revalidatePath(`/poll/${cur.slug}`);
-  if (newSlug !== cur.slug) revalidatePath(`/poll/${newSlug}`);
-  redirect(`/poll/${newSlug}`);
+  revalidatePath(`/poll/${committed.prevSlug}`);
+  if (committed.slug !== committed.prevSlug) {
+    revalidatePath(`/poll/${committed.slug}`);
+  }
+  redirect(`/poll/${committed.slug}`);
 }
 
 export async function deleteMyPoll(pollId: string): Promise<void> {
@@ -334,11 +371,16 @@ export async function castPollVote(
 
     const now = Timestamp.now();
     if (hasBallot) {
+      // Fall back to `now` when the existing ballot is missing
+      // `createdAt`. Shouldn't happen for docs written by this action
+      // (it always sets the field), but defending against legacy/manual
+      // edits is cheap and avoids writing `undefined` to Firestore.
+      const existingCreatedAt = voteSnap.exists
+        ? (voteSnap.data() as PollVoteDoc).createdAt
+        : null;
       tx.set(voteRef, {
         optionIds: [...newSet],
-        createdAt: voteSnap.exists
-          ? (voteSnap.data() as PollVoteDoc).createdAt
-          : now,
+        createdAt: existingCreatedAt ?? now,
         updatedAt: now,
       });
     } else if (voteSnap.exists) {
@@ -360,6 +402,11 @@ export async function castPollVote(
     };
   });
 
+  // Both pages display voterCount / option results, so revalidate the
+  // list as well as the detail. Without /poll the list page would keep
+  // showing the pre-vote totals until the next deploy or another
+  // unrelated revalidation.
+  revalidatePath("/poll");
   revalidatePath(`/poll/${result.slug}`);
   return {
     optionIds: result.optionIds,
