@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listPublishedPosts } from "@/lib/data/posts";
 import { formatDate } from "@/lib/utils";
 
@@ -49,14 +50,9 @@ export default async function BlogIndexPage() {
                 )}
                 <div className="flex-1 p-5">
                   <h2 className="text-lg font-semibold">{p.title}</h2>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    by {p.authorName}
-                    {p.publishedAt && (
-                      <>
-                        {" · "}
-                        {formatDate(p.publishedAt)}
-                      </>
-                    )}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                    <AuthorBadge name={p.authorName} photoURL={p.authorPhotoURL} />
+                    {p.publishedAt && <span>· {formatDate(p.publishedAt)}</span>}
                   </p>
                   {p.excerpt && (
                     <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PollVoteForm } from "@/app/poll/_components/PollVoteForm";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -85,15 +86,14 @@ export default async function PollDetailPage({
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{poll.title}</h1>
-        <p className="text-sm text-zinc-500">
-          by{" "}
-          <Link
-            href={`/u/${poll.authorUid}`}
-            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-          >
-            {poll.authorName}
-          </Link>{" "}
-          · {formatDate(poll.createdAt)}
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
+          <AuthorBadge
+            name={poll.authorName}
+            photoURL={poll.authorPhotoURL}
+            uid={poll.authorUid}
+            size="md"
+          />
+          <span>· {formatDate(poll.createdAt)}</span>
         </p>
         <div className="flex items-center gap-3">
           <LikeButton
