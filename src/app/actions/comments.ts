@@ -34,6 +34,8 @@ const DeleteSchema = z.object({
   parentType: z.enum(["post", "guide", "qa", "project"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
+  // Admin-only: actually remove the doc instead of soft-deleting.
+  hard: z.boolean().optional(),
 });
 
 export type CommentInput = z.input<typeof CommentSchema>;
@@ -109,24 +111,47 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
 
 // ---------- delete ----------
 
+// Soft-deletes by default: clears body and stamps `deletedAt` so the UI
+// can render a "削除されました" placeholder while keeping the slot in the
+// thread (replies stay attached to their parent). Hard delete — actually
+// removing the doc — is admin-only.
 export async function deleteComment(
   input: DeleteCommentInput,
-): Promise<void> {
+): Promise<CommentDoc | null> {
   const user = await requireUser();
   const parsed = readableParse(DeleteSchema, input);
+
+  if (parsed.hard && !user.isAdmin) {
+    throw new Error("FORBIDDEN");
+  }
 
   const parentRef = adminDb()
     .collection(parentCollection(parsed.parentType))
     .doc(parsed.parentId);
   const ref = parentRef.collection("comments").doc(parsed.commentId);
   const snap = await ref.get();
-  if (!snap.exists) return;
+  if (!snap.exists) return null;
   const cur = snap.data() as CommentDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
     throw new Error("FORBIDDEN");
   }
 
-  await ref.delete();
+  let result: CommentDoc | null;
+  if (parsed.hard) {
+    await ref.delete();
+    result = null;
+  } else {
+    const now = Timestamp.now();
+    await ref.update({ body: "", deletedAt: now, updatedAt: now });
+    result = plainify({
+      ...cur,
+      body: "",
+      deletedAt: now,
+      updatedAt: now,
+      id: ref.id,
+    });
+  }
+
   // Touch parent so cached pages with denormalized counters invalidate,
   // and pick the slug off the parent for the revalidate path (don't
   // trust caller for the route). Guard against the rare case where the
@@ -141,6 +166,7 @@ export async function deleteComment(
       `${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`,
     );
   }
+  return result;
 }
 
 // ---------- legacy aliases ----------
