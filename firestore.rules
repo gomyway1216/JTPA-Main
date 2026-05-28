@@ -108,6 +108,57 @@ service cloud.firestore {
       allow read: if isAdmin() || isEditor()
         || (resource != null && resource.data.status == 'published');
       allow create, update, delete: if isAdmin() || isEditor();
+
+      // Per-guide likes are read-only for clients. All toggles flow
+      // through the `toggleLikeRecord` Server Action (Admin SDK) so the
+      // denormalized `likeCount` on the parent doc stays in sync — direct
+      // client writes would create like docs without touching the counter
+      // and the next server-side toggle could drive it negative.
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
+
+      // Comments on guides. Mirror posts/{id}/comments. Reads gated on
+      // the parent guide being published (so draft guide comments don't
+      // leak via guessed ids); author and admin always see their own.
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (isSignedIn() && resource != null
+              && resource.data.authorUid == request.auth.uid)
+          || get(/databases/$(database)/documents/guides/$(guideId)).data.status == 'published';
+
+        // Schema invariants enforced on create so a malicious client
+        // can't write a doc whose `parentType` / `parentId` claim a
+        // different parent than the path the rule is matching.
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.parentType == 'guide'
+          && request.resource.data.parentId == guideId
+          && get(/databases/$(database)/documents/guides/$(guideId)).data.status == 'published';
+
+        // Authors can edit ONLY their comment body (plus the `updatedAt`
+        // timestamp). Without this allowlist, a client write could
+        // overwrite `likeCount`, `parentCommentId`, or `parentType` —
+        // bypassing the server-side validation our Server Actions do.
+        allow update: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['body', 'updatedAt'])
+          );
+
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        // Per-comment likes on a guide comment. Same Server-Action-only
+        // policy as the record-level likes above.
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, update, delete: if false;
+        }
+      }
     }
 
     // ----- blog posts -----
@@ -143,6 +194,16 @@ service cloud.firestore {
       allow delete: if isAdmin()
         || (isSignedIn() && resource.data.authorUid == request.auth.uid);
 
+      // Per-post likes are read-only for clients. All toggles flow
+      // through the `toggleLikeRecord` Server Action (Admin SDK) so the
+      // denormalized `likeCount` on the parent doc stays in sync — direct
+      // client writes would create like docs without touching the counter
+      // and the next server-side toggle could drive it negative.
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
+
       // Comments live under the post. Reads are gated on the parent post
       // being publicly readable — otherwise comments on a draft / rejected
       // post would leak metadata about its existence. Author and admin
@@ -153,22 +214,36 @@ service cloud.firestore {
               && resource.data.authorUid == request.auth.uid)
           || get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published';
 
+        // Schema invariants enforced on create so a malicious client
+        // can't write a doc whose `parentType` / `parentId` claim a
+        // different parent than the path the rule is matching.
         allow create: if isSignedIn()
           && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.parentType == 'post'
+          && request.resource.data.parentId == postId
           && get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published';
 
-        // Authors can edit body but NOT change authorUid (prevents
-        // impersonation by editing an existing comment to look like
-        // someone else).
+        // Authors can edit ONLY their comment body (plus the `updatedAt`
+        // timestamp). Without this allowlist, a client write could
+        // overwrite `likeCount`, `parentCommentId`, or `parentType` —
+        // bypassing the server-side validation our Server Actions do.
         allow update: if isAdmin()
           || (
             isSignedIn()
             && resource.data.authorUid == request.auth.uid
-            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['body', 'updatedAt'])
           );
 
         allow delete: if isAdmin()
           || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        // Per-comment likes. Same Server-Action-only policy as the
+        // record-level likes above.
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, update, delete: if false;
+        }
       }
     }
 
