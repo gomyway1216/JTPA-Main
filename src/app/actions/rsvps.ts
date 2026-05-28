@@ -78,6 +78,14 @@ export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
       surveyResponses: input.surveyResponses,
       presentationTitle: input.presentationTitle,
       presentationAbstract: input.presentationAbstract,
+      // Preserve check-in markers across RSVP edits. tx.set() overwrites
+      // the whole doc, so without forwarding these the attendee would
+      // appear "un-checked-in" after editing their answers while the
+      // event's attendanceCount still reflects them. Admin SDK strips
+      // undefined, so an attendee who never checked in still ends up
+      // with the fields absent.
+      attendedAt: prior?.attendedAt,
+      isGuest: prior?.isGuest,
       createdAt: prior?.createdAt ?? now,
       updatedAt: now,
     };

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { AttendanceToggle } from "@/app/admin/attendees/_components/AttendanceToggle";
 import { AttendeeExportBar } from "@/app/admin/attendees/_components/AttendeeExportBar";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
@@ -96,6 +97,7 @@ export default async function AdminAttendeesPage({
               <th className="py-2">メール</th>
               <th className="py-2">役割</th>
               <th className="py-2">ステータス</th>
+              <th className="py-2">出席</th>
               <th className="py-2">詳細</th>
             </tr>
           </thead>
@@ -108,13 +110,35 @@ export default async function AdminAttendeesPage({
                 !!r.presentationAbstract;
               return (
                 <tr key={r.uid} className="align-top">
-                  <td className="py-2 font-medium">{r.displayName}</td>
+                  <td className="py-2 font-medium">
+                    {r.displayName}
+                    {r.isGuest && (
+                      <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        ゲスト
+                      </span>
+                    )}
+                  </td>
                   <td className="py-2 text-zinc-500">{r.affiliation || "—"}</td>
                   <td className="py-2 text-zinc-500">{r.email}</td>
                   <td className="py-2">
                     {r.role === "presenter" ? "発表者" : "参加者"}
                   </td>
                   <td className="py-2">{r.status}</td>
+                  <td className="py-2">
+                    {selectedId && (
+                      // Key includes attendedAt so a server-side change
+                      // (another admin's toggle, or self check-in) resets
+                      // the local optimistic state on refresh, and so
+                      // switching events doesn't reuse a stale instance
+                      // for a uid that happens to RSVP for both events.
+                      <AttendanceToggle
+                        key={`${selectedId}-${r.uid}-${!!r.attendedAt}`}
+                        eventId={selectedId}
+                        rsvpUid={r.uid}
+                        initialAttended={!!r.attendedAt}
+                      />
+                    )}
+                  </td>
                   <td className="py-2">
                     {hasDetails ? (
                       <details>
