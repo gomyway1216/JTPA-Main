@@ -47,6 +47,15 @@ export default async function MyPage() {
           </p>
         </Link>
         <Link
+          href="/my/likes"
+          className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <h2 className="text-lg font-semibold">もらったいいね</h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            いいねを受け取った自分のコメント
+          </p>
+        </Link>
+        <Link
           href="/my/profile"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
