@@ -22,8 +22,11 @@ Then open <http://localhost:3000>. See [`docs/setup.md`](docs/setup.md) for the 
 - [`docs/setup.md`](docs/setup.md) — local dev environment, env vars, Admin SDK credentials
 - [`docs/architecture.md`](docs/architecture.md) — how the Next.js app, Server Actions, Firestore, Auth and Storage fit together
 - [`docs/data-model.md`](docs/data-model.md) — Firestore collections, indexes, and security rules
-- [`docs/admin.md`](docs/admin.md) — admin operations (granting admin, event lifecycle, project review, attendee export)
+- [`docs/features.md`](docs/features.md) — feature inventory: URL → data → action map across public / member / admin surfaces
+- [`docs/admin.md`](docs/admin.md) — admin operations (granting roles, event lifecycle, project/post review, attendee export, About edit)
 - [`docs/deployment.md`](docs/deployment.md) — App Hosting auto-deploy, rules CI, env var sources
+
+User-facing help (Japanese) lives in-app at `/help`; admin operational help (Japanese) at `/admin/help`. These are maintained separately from `docs/` — the in-app pages are hand-written JSX optimized for site visitors, while `docs/` targets contributors.
 
 ## Tech stack
 
