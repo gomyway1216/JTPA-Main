@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
@@ -47,18 +48,30 @@ export default async function QaListPage() {
       </header>
 
       {items.length === 0 ? (
-        <p className="text-zinc-500">まだ投稿はありません。最初の質問を投稿してみましょう！</p>
+        <EmptyState
+          message="まだ投稿はありません。"
+          hint="最初の質問を投稿してみましょう。"
+        />
       ) : (
         <ul className="space-y-3">
           {items.map((q) => (
             <li
               key={q.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+              className="group relative flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition focus-within:ring-2 focus-within:ring-blue-500 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
             >
-              <Link href={`/qa/${q.slug}`} className="block hover:underline">
-                <h2 className="text-lg font-semibold">{q.title}</h2>
-              </Link>
-              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+              <h2 className="text-lg font-semibold">
+                {/* Stretched-link pattern: the title is the only real
+                    link to /qa/[slug], but its ::after pseudo-element
+                    covers the whole card so clicking anywhere outside
+                    a nested interactive element still navigates. */}
+                <Link
+                  href={`/qa/${q.slug}`}
+                  className="after:absolute after:inset-0 focus:outline-none"
+                >
+                  {q.title}
+                </Link>
+              </h2>
+              <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
                 <AuthorBadge
                   name={q.authorName}
                   photoURL={q.authorPhotoURL}
@@ -69,11 +82,11 @@ export default async function QaListPage() {
                   <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
                 )}
               </p>
-              <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+              <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
                 {truncate(stripMarkdown(q.body), 200)}
               </p>
               {q.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
+                <div className="mt-3 flex flex-wrap gap-1">
                   {q.tags.map((t) => (
                     <span
                       key={t}
