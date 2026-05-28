@@ -209,6 +209,9 @@ export interface CommentDoc {
   parentCommentId?: string | null;
   // Denormalized like count. Missing = 0 on older docs.
   likeCount?: number;
+  // Set when soft-deleted. Body is also cleared at that point. Hard delete
+  // (admin-only) removes the doc entirely. Null/missing on live comments.
+  deletedAt?: TsLike | null;
   createdAt: TsLike;
   updatedAt: TsLike;
 }

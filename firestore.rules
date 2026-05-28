@@ -150,11 +150,13 @@ service cloud.firestore {
             isSignedIn()
             && resource.data.authorUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['body', 'updatedAt'])
+                 .hasOnly(['body', 'updatedAt', 'deletedAt'])
           );
 
-        allow delete: if isAdmin()
-          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+        // Hard delete is admin-only. Authors soft-delete via the Server
+        // Action (`deleteComment`), which sets `deletedAt` through the
+        // update rule above.
+        allow delete: if isAdmin();
 
         // Per-comment likes — same Server-Action-only policy.
         match /likes/{uid} {
@@ -212,11 +214,13 @@ service cloud.firestore {
             isSignedIn()
             && resource.data.authorUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['body', 'updatedAt'])
+                 .hasOnly(['body', 'updatedAt', 'deletedAt'])
           );
 
-        allow delete: if isAdmin()
-          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+        // Hard delete is admin-only. Authors soft-delete via the Server
+        // Action (`deleteComment`), which sets `deletedAt` through the
+        // update rule above.
+        allow delete: if isAdmin();
 
         // Per-comment likes on a guide comment. Same Server-Action-only
         // policy as the record-level likes above.
@@ -298,11 +302,13 @@ service cloud.firestore {
             isSignedIn()
             && resource.data.authorUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['body', 'updatedAt'])
+                 .hasOnly(['body', 'updatedAt', 'deletedAt'])
           );
 
-        allow delete: if isAdmin()
-          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+        // Hard delete is admin-only. Authors soft-delete via the Server
+        // Action (`deleteComment`), which sets `deletedAt` through the
+        // update rule above.
+        allow delete: if isAdmin();
 
         // Per-comment likes. Same Server-Action-only policy as the
         // record-level likes above.
@@ -382,11 +388,13 @@ service cloud.firestore {
             isSignedIn()
             && resource.data.authorUid == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys()
-                 .hasOnly(['body', 'updatedAt'])
+                 .hasOnly(['body', 'updatedAt', 'deletedAt'])
           );
 
-        allow delete: if isAdmin()
-          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+        // Hard delete is admin-only. Authors soft-delete via the Server
+        // Action (`deleteComment`), which sets `deletedAt` through the
+        // update rule above.
+        allow delete: if isAdmin();
 
         match /likes/{uid} {
           allow read: if true;

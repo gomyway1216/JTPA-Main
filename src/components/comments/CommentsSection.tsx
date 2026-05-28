@@ -125,13 +125,25 @@ export function CommentsSection({
     });
   }
 
-  async function handleDelete(commentId: string) {
-    if (!confirm("このコメントを削除しますか？")) return;
+  async function handleDelete(commentId: string, hard = false) {
+    const prompt = hard
+      ? "このコメントを完全に削除しますか？復元できません。"
+      : "このコメントを削除しますか？";
+    if (!confirm(prompt)) return;
     setError(null);
     startTransition(async () => {
       try {
-        await deleteComment({ parentType, parentId, commentId });
-        setComments((cur) => cur.filter((c) => c.id !== commentId));
+        const updated = await deleteComment({
+          parentType,
+          parentId,
+          commentId,
+          hard,
+        });
+        setComments((cur) =>
+          updated === null
+            ? cur.filter((c) => c.id !== commentId)
+            : cur.map((c) => (c.id === commentId ? updated : c)),
+        );
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "削除に失敗しました");
@@ -143,9 +155,41 @@ export function CommentsSection({
   const loginRedirect = `${parentRoutePrefix(parentType)}/${parentSlug}`;
 
   function renderComment(c: CommentDoc) {
+    const isDeleted = !!c.deletedAt;
+    const repliesTo = c.parentCommentId ? byId.get(c.parentCommentId) : null;
+
+    if (isDeleted) {
+      return (
+        <article className="rounded-md border border-dashed border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <header className="flex items-start justify-between gap-3">
+            <span className="text-xs text-zinc-500">
+              {formatDateTime(c.createdAt)}
+            </span>
+            {user?.isAdmin && (
+              <button
+                type="button"
+                onClick={() => handleDelete(c.id, true)}
+                disabled={pending}
+                className="text-xs text-red-600 hover:underline disabled:opacity-50"
+              >
+                完全に削除
+              </button>
+            )}
+          </header>
+          {repliesTo && (
+            <p className="mt-1 text-xs text-zinc-500">
+              Re: <span className="font-medium">@{repliesTo.authorName}</span>
+            </p>
+          )}
+          <p className="mt-2 text-sm italic text-zinc-500">
+            このコメントは削除されました
+          </p>
+        </article>
+      );
+    }
+
     const canDelete =
       !!user && (user.uid === c.authorUid || user.isAdmin);
-    const repliesTo = c.parentCommentId ? byId.get(c.parentCommentId) : null;
     const likeKey = `comment:${c.id}`;
     const isReplyOpen = replyingTo === c.id;
     return (
