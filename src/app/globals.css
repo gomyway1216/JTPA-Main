@@ -53,6 +53,21 @@
   --color-accent-to: var(--accent-to);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  /*
+   * Slow horizontal sweep of a 200%-wide gradient — used by the
+   * `animate-gradient-shimmer` utility on the hero "AI" text. Slow
+   * (~6s) and continuous so it reads as ambient rather than flashy.
+   */
+  --animate-gradient-shimmer: gradient-shimmer 6s linear infinite;
+}
+
+@keyframes gradient-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
 }
 
 body {
