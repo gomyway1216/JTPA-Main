@@ -13,8 +13,9 @@
  * containing the JSON inline.
  */
 
-import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
+
+import { initAdmin } from "./_lib/firebase-init.mjs";
 
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -24,19 +25,7 @@ if (args.length === 0) {
 const email = args[0];
 const revoke = args.includes("--revoke");
 
-const projectId =
-  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ??
-  process.env.FIREBASE_PROJECT_ID ??
-  process.env.GOOGLE_CLOUD_PROJECT;
-
-const inline = process.env.FIREBASE_SERVICE_ACCOUNT;
-if (!getApps().length) {
-  initializeApp(
-    inline
-      ? { credential: cert(JSON.parse(inline)), projectId }
-      : { projectId },
-  );
-}
+initAdmin();
 
 const auth = getAuth();
 const user = await auth.getUserByEmail(email);

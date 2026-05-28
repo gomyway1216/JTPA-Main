@@ -2,7 +2,6 @@
 
 import dynamic from "next/dynamic";
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -18,6 +17,7 @@ import {
   type PostFormInput,
 } from "@/app/actions/posts";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -104,13 +104,12 @@ export function PostForm({ mode, user, post }: Props) {
         (snap) =>
           onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
         (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            resolve({ path, url });
-          } catch (err) {
-            reject(err);
-          }
+        () => {
+          // posts/{uid}/ has `allow read: if true` in storage.rules, so we
+          // skip the getDownloadURL fetch entirely and build the URL from
+          // the upload ref. No second network round-trip, no token in the
+          // persisted Markdown body.
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
         },
       );
     });
@@ -181,8 +180,9 @@ export function PostForm({ mode, user, post }: Props) {
       }}
       className="space-y-4"
     >
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="post-title">
         <input
+          id="post-title"
           type="text"
           required
           value={title}
@@ -191,8 +191,13 @@ export function PostForm({ mode, user, post }: Props) {
         />
       </Field>
 
-      <Field label="抜粋 (一覧表示用・最大 300 字)" required>
+      <Field
+        label="抜粋 (一覧表示用・最大 300 字)"
+        required
+        htmlFor="post-excerpt"
+      >
         <textarea
+          id="post-excerpt"
           required
           rows={2}
           maxLength={300}
@@ -214,8 +219,9 @@ export function PostForm({ mode, user, post }: Props) {
         </div>
       </Field>
 
-      <Field label="タグ (カンマ区切り・最大 8)">
+      <Field label="タグ (カンマ区切り・最大 8)" htmlFor="post-tags">
         <input
+          id="post-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -305,22 +311,41 @@ export function PostForm({ mode, user, post }: Props) {
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the cover-image field
+// contains a `<input type="file">` alongside the preview, and a
+// `<label>` outer fired its implicit "click the first form control"
+// behavior on adjacent padding clicks and popped the native file picker.
+// See the same comment in GuideForm.tsx.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when an
+// `htmlFor` is supplied — simple inputs get a proper screen-reader
+// association, and the body/cover-image fields (which omit `htmlFor`)
+// fall back to a plain `<span>` so the implicit-label trap stays gone.
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

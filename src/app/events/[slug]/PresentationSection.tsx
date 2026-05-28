@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -13,6 +12,7 @@ import {
   updatePresentation,
 } from "@/app/actions/presentations";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PresentationDoc, RsvpDoc, SessionUser } from "@/lib/types";
 
 const MAX_FILE_BYTES = 50 * 1024 * 1024; // matches storage.rules
@@ -259,15 +259,16 @@ function PresentationForm({
           setProgress(null);
           reject(err);
         },
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            setProgress(null);
-            resolve({ filePath: path, fileUrl: url, fileName: safeName });
-          } catch (err) {
-            setProgress(null);
-            reject(err);
-          }
+        () => {
+          // presentations/{eventId}/{uid}/ is publicly readable per
+          // storage.rules; build the URL from the ref instead of doing a
+          // second round-trip to fetch a token. See uploads.ts.
+          setProgress(null);
+          resolve({
+            filePath: path,
+            fileUrl: publicDownloadUrl(task.snapshot.ref),
+            fileName: safeName,
+          });
         },
       );
     });

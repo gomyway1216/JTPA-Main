@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CommentsSection } from "@/components/comments/CommentsSection";
+import { LikeButton } from "@/components/likes/LikeButton";
+import { getSessionUser } from "@/lib/auth/session";
+import { listComments } from "@/lib/data/comments";
+import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getProjectBySlug } from "@/lib/data/projects";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +18,26 @@ export default async function ProjectDetailPage({
   const { slug } = await params;
   const project = await getProjectBySlug(slug);
   if (!project || project.status !== "approved") notFound();
+
+  // Session + comment listing are independent — kick them off together
+  // rather than serially. The like-state query depends on the comment
+  // ids so it stays after the join.
+  const [user, comments] = await Promise.all([
+    getSessionUser(),
+    listComments("project", project.id).catch((err) => {
+      console.error("Failed to list project comments:", err);
+      return [];
+    }),
+  ]);
+  const likedSet = await getMyLikesForParent({
+    parentType: "project",
+    parentId: project.id,
+    commentIds: comments.map((c) => c.id),
+    uid: user?.uid ?? null,
+  }).catch((err) => {
+    console.error("Failed to load project like state:", err);
+    return new Set<string>();
+  });
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -31,6 +56,17 @@ export default async function ProjectDetailPage({
             ))}
           </div>
         )}
+        <div className="pt-1">
+          <LikeButton
+            target="record"
+            parentType="project"
+            parentId={project.id}
+            parentSlug={project.slug}
+            initialLiked={likedSet.has(RECORD_LIKE_KEY)}
+            initialCount={project.likeCount ?? 0}
+            user={user}
+          />
+        </div>
       </header>
 
       {project.thumbnail && (
@@ -42,7 +78,10 @@ export default async function ProjectDetailPage({
         />
       )}
 
-      <section className="prose-jtpa">{project.description}</section>
+      {/* Plain-text description (not Markdown) — see events/[slug]/page.tsx. */}
+      <section className="whitespace-pre-wrap break-words leading-relaxed">
+        {project.description}
+      </section>
 
       {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">
@@ -99,6 +138,16 @@ export default async function ProjectDetailPage({
           </Link>
         )}
       </div>
+
+      <CommentsSection
+        key={project.id}
+        parentType="project"
+        parentId={project.id}
+        parentSlug={project.slug}
+        initialComments={comments}
+        initialLikedKeys={[...likedSet]}
+        user={user}
+      />
     </article>
   );
 }

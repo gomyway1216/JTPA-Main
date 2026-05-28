@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { CommentsSection } from "@/components/comments/CommentsSection";
+import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { getSessionUser } from "@/lib/auth/session";
+import { listComments } from "@/lib/data/comments";
+import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getGuideBySlug } from "@/lib/data/guides";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
@@ -40,6 +45,26 @@ export default async function GuideDetailPage({
 
   const tags = guide.tags ?? [];
 
+  // Session + comment listing are independent — kick them off together
+  // rather than serially. The like-state query depends on the comment
+  // ids so it stays after the join.
+  const [user, comments] = await Promise.all([
+    getSessionUser(),
+    listComments("guide", guide.id).catch((err) => {
+      console.error("Failed to list guide comments:", err);
+      return [];
+    }),
+  ]);
+  const likedSet = await getMyLikesForParent({
+    parentType: "guide",
+    parentId: guide.id,
+    commentIds: comments.map((c) => c.id),
+    uid: user?.uid ?? null,
+  }).catch((err) => {
+    console.error("Failed to load guide like state:", err);
+    return new Set<string>();
+  });
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/guide" className="text-xs text-zinc-500 hover:underline">
@@ -63,9 +88,30 @@ export default async function GuideDetailPage({
             ))}
           </div>
         )}
+        <div>
+          <LikeButton
+            target="record"
+            parentType="guide"
+            parentId={guide.id}
+            parentSlug={guide.slug}
+            initialLiked={likedSet.has(RECORD_LIKE_KEY)}
+            initialCount={guide.likeCount ?? 0}
+            user={user}
+          />
+        </div>
       </header>
 
       <MarkdownBody source={guide.body} />
+
+      <CommentsSection
+        key={guide.id}
+        parentType="guide"
+        parentId={guide.id}
+        parentSlug={guide.slug}
+        initialComments={comments}
+        initialLikedKeys={[...likedSet]}
+        user={user}
+      />
     </article>
   );
 }

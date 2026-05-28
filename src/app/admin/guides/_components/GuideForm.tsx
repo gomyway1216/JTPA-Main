@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -14,6 +15,7 @@ import {
   updateGuide,
   type GuideFormInput,
 } from "@/app/actions/guides";
+import { SaveFlash } from "@/components/forms/SaveFlash";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -80,6 +82,11 @@ export function GuideForm({
   const [order, setOrder] = useState(String(guide?.order ?? 100));
   const [body, setBody] = useState<string>(guide?.body ?? "");
   const [error, setError] = useState<string | null>(null);
+  // Bumped to `Date.now()` when save succeeds on the edit path —
+  // updateGuide doesn't redirect, so without this the user gets no
+  // confirmation that their click did anything. SaveFlash uses the
+  // value as a key to restart its visibility timer.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
@@ -248,7 +255,19 @@ export function GuideForm({
         } else if (guide) {
           await updateGuide(guide.id, payload);
         }
+        // Update path doesn't redirect (admin stays on the edit page);
+        // surface explicit "✓ 保存しました" feedback so the click feels
+        // acknowledged. Create path redirects via the Server Action, so
+        // this line only ever observably runs on update.
+        setSavedAt(Date.now());
       } catch (err) {
+        // Server-Action `redirect()` (and `notFound()`, etc.) signal
+        // navigation by throwing an internal Next.js error.
+        // `unstable_rethrow` is the documented way to let those
+        // propagate from a try/catch — it re-throws on internal errors
+        // and returns silently for anything else, which we then
+        // surface as a real save failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
@@ -269,8 +288,9 @@ export function GuideForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="guide-title">
         <input
+          id="guide-title"
           type="text"
           required
           value={title}
@@ -278,8 +298,9 @@ export function GuideForm({
           className={inputCls}
         />
       </Field>
-      <Field label="スラッグ (URL)">
+      <Field label="スラッグ (URL)" htmlFor="guide-slug">
         <input
+          id="guide-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
@@ -287,8 +308,9 @@ export function GuideForm({
           className={inputCls}
         />
       </Field>
-      <Field label="タグ (カンマ区切り)">
+      <Field label="タグ (カンマ区切り)" htmlFor="guide-tags">
         <input
+          id="guide-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -297,8 +319,9 @@ export function GuideForm({
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="ステータス">
+        <Field label="ステータス" htmlFor="guide-status">
           <select
+            id="guide-status"
             value={status}
             onChange={(e) =>
               setStatus(e.target.value as GuideFormInput["status"])
@@ -309,8 +332,9 @@ export function GuideForm({
             <option value="published">公開</option>
           </select>
         </Field>
-        <Field label="表示順 (小さいほど上)">
+        <Field label="表示順 (小さいほど上)" htmlFor="guide-order">
           <input
+            id="guide-order"
             type="number"
             min={0}
             value={order}
@@ -377,14 +401,17 @@ export function GuideForm({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex justify-between">
-        <button
-          type="submit"
-          disabled={pending || uploading}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
-        >
-          {pending ? "保存中..." : "保存"}
-        </button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={pending || uploading}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+          >
+            {pending ? "保存中..." : "保存"}
+          </button>
+          <SaveFlash savedAt={savedAt} />
+        </div>
         {mode === "edit" && (
           <button
             type="button"
@@ -403,22 +430,43 @@ export function GuideForm({
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the body field contains a
+// hidden `<input type="file">` (used as the target of the upload-button
+// click) alongside the Markdown editor. A `<label>` outer would fire
+// its implicit "click first associated form control" behavior when you
+// click any non-focusable area inside it — clicking on padding around
+// the editor would open the native file picker.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when
+// an `htmlFor` is supplied — that gives screen readers and click-to-
+// focus the proper association for simple inputs, without re-introducing
+// the file-picker bug on complex fields like the body editor (which omits
+// `htmlFor` and renders a `<span>` instead).
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

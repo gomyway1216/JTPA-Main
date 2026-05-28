@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -9,6 +8,7 @@ import { useState, useTransition } from "react";
 
 import { submitProject, updateMyProject } from "@/app/actions/projects";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // matches storage.rules
@@ -73,13 +73,10 @@ export function ProjectForm({ mode, user, project }: Props) {
         (snap) =>
           onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
         (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            resolve({ path, url });
-          } catch (err) {
-            reject(err);
-          }
+        () => {
+          // projects/{uid}/ is publicly readable per storage.rules; no
+          // token needed in the URL we hand back. See uploads.ts.
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
         },
       );
     });
@@ -164,8 +161,9 @@ export function ProjectForm({ mode, user, project }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="project-title">
         <input
+          id="project-title"
           type="text"
           required
           value={title}
@@ -173,8 +171,9 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputCls}
         />
       </Field>
-      <Field label="説明 (Markdown可)" required>
+      <Field label="説明 (Markdown可)" required htmlFor="project-description">
         <textarea
+          id="project-description"
           required
           rows={6}
           value={description}
@@ -182,8 +181,9 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputCls}
         />
       </Field>
-      <Field label="タグ (カンマ区切り)">
+      <Field label="タグ (カンマ区切り)" htmlFor="project-tags">
         <input
+          id="project-tags"
           type="text"
           value={tags}
           onChange={(e) => setTags(e.target.value)}
@@ -191,8 +191,9 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputCls}
         />
       </Field>
-      <Field label="アプリのURL" required>
+      <Field label="アプリのURL" required htmlFor="project-app-url">
         <input
+          id="project-app-url"
           type="url"
           required
           value={appUrl}
@@ -201,16 +202,18 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputCls}
         />
       </Field>
-      <Field label="リポジトリURL">
+      <Field label="リポジトリURL" htmlFor="project-repo-url">
         <input
+          id="project-repo-url"
           type="url"
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
           className={inputCls}
         />
       </Field>
-      <Field label="デモ動画URL (YouTube等)">
+      <Field label="デモ動画URL (YouTube等)" htmlFor="project-demo-url">
         <input
+          id="project-demo-url"
           type="url"
           value={demoVideoUrl}
           onChange={(e) => setDemoVideoUrl(e.target.value)}
@@ -321,22 +324,42 @@ export function ProjectForm({ mode, user, project }: Props) {
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the thumbnail / screenshots
+// fields contain `<input type="file">` alongside previews, and a
+// `<label>` outer fired its implicit "click the first form control"
+// behavior on adjacent padding clicks and popped the native file
+// picker. See the same comment in GuideForm.tsx.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when an
+// `htmlFor` is supplied — simple inputs get a proper screen-reader
+// association, and the thumbnail/screenshots fields (which omit
+// `htmlFor`) fall back to a plain `<span>` so the implicit-label trap
+// stays gone.
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import {
   deleteObject,
   getDownloadURL,
@@ -14,6 +15,7 @@ import {
   updateEvent,
   type EventFormInput,
 } from "@/app/actions/events";
+import { SaveFlash } from "@/components/forms/SaveFlash";
 import { clientStorage } from "@/lib/firebase/client";
 import type {
   EventDoc,
@@ -77,6 +79,11 @@ export function EventForm({
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Bumped to `Date.now()` when save succeeds on the edit path —
+  // updateEvent doesn't redirect, so without this the admin gets no
+  // confirmation that their click did anything. See SaveFlash for the
+  // visibility-timer logic.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   function uploadCover(
@@ -187,7 +194,20 @@ export function EventForm({
         } else if (event) {
           await updateEvent(event.id, payload);
         }
+        // Update path doesn't redirect (admin stays on /admin/events/
+        // [id]/edit); surface explicit "✓ 保存しました" feedback so the
+        // click feels acknowledged. Create path redirects via the
+        // Server Action, so this line only ever observably runs on
+        // update.
+        setSavedAt(Date.now());
       } catch (err) {
+        // Server-Action `redirect()` (and `notFound()`, etc.) signal
+        // navigation by throwing an internal Next.js error.
+        // `unstable_rethrow` is the documented way to let those
+        // propagate from a try/catch — it re-throws on internal errors
+        // and returns silently for anything else, which we then
+        // surface as a real save failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
@@ -229,8 +249,9 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="event-title">
         <input
+          id="event-title"
           type="text"
           required
           value={title}
@@ -238,8 +259,9 @@ export function EventForm({
           className={inputCls}
         />
       </Field>
-      <Field label="スラッグ (URL)">
+      <Field label="スラッグ (URL)" htmlFor="event-slug">
         <input
+          id="event-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
@@ -247,8 +269,9 @@ export function EventForm({
           className={inputCls}
         />
       </Field>
-      <Field label="説明" required>
+      <Field label="説明" required htmlFor="event-description">
         <textarea
+          id="event-description"
           required
           rows={6}
           value={description}
@@ -257,8 +280,9 @@ export function EventForm({
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="開始日時" required>
+        <Field label="開始日時" required htmlFor="event-start">
           <input
+            id="event-start"
             type="datetime-local"
             required
             value={startAt}
@@ -266,8 +290,9 @@ export function EventForm({
             className={inputCls}
           />
         </Field>
-        <Field label="終了日時" required>
+        <Field label="終了日時" required htmlFor="event-end">
           <input
+            id="event-end"
             type="datetime-local"
             required
             value={endAt}
@@ -276,8 +301,9 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="形式">
+      <Field label="形式" htmlFor="event-location-type">
         <select
+          id="event-location-type"
           value={locationType}
           onChange={(e) => setLocationType(e.target.value as EventFormInput["locationType"])}
           className={inputCls}
@@ -289,16 +315,18 @@ export function EventForm({
       </Field>
       {(locationType === "offline" || locationType === "hybrid") && (
         <>
-          <Field label="会場住所">
+          <Field label="会場住所" htmlFor="event-address">
             <input
+              id="event-address"
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className={inputCls}
             />
           </Field>
-          <Field label="地図URL">
+          <Field label="地図URL" htmlFor="event-map-url">
             <input
+              id="event-map-url"
               type="url"
               value={mapUrl}
               onChange={(e) => setMapUrl(e.target.value)}
@@ -308,8 +336,9 @@ export function EventForm({
         </>
       )}
       {(locationType === "online" || locationType === "hybrid") && (
-        <Field label="ミーティングURL (Zoom等)">
+        <Field label="ミーティングURL (Zoom等)" htmlFor="event-meeting-url">
           <input
+            id="event-meeting-url"
             type="url"
             value={meetingUrl}
             onChange={(e) => setMeetingUrl(e.target.value)}
@@ -318,8 +347,9 @@ export function EventForm({
         </Field>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="定員 (0=無制限)">
+        <Field label="定員 (0=無制限)" htmlFor="event-capacity">
           <input
+            id="event-capacity"
             type="number"
             min={0}
             value={capacity}
@@ -327,8 +357,9 @@ export function EventForm({
             className={inputCls}
           />
         </Field>
-        <Field label="発表者枠">
+        <Field label="発表者枠" htmlFor="event-presenter-capacity">
           <input
+            id="event-presenter-capacity"
             type="number"
             min={0}
             value={presenterCapacity}
@@ -337,8 +368,9 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="ステータス">
+      <Field label="ステータス" htmlFor="event-status">
         <select
+          id="event-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as EventFormInput["status"])}
           className={inputCls}
@@ -349,8 +381,9 @@ export function EventForm({
           <option value="cancelled">中止</option>
         </select>
       </Field>
-      <Field label="公開範囲">
+      <Field label="公開範囲" htmlFor="event-visibility">
         <select
+          id="event-visibility"
           value={visibility}
           onChange={(e) =>
             setVisibility(
@@ -506,14 +539,17 @@ export function EventForm({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex justify-between">
-        <button
-          type="submit"
-          disabled={pending || uploading}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
-        >
-          {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
-        </button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={pending || uploading}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+          >
+            {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
+          </button>
+          <SaveFlash savedAt={savedAt} />
+        </div>
         {mode === "edit" && (
           <button
             type="button"
@@ -531,22 +567,41 @@ export function EventForm({
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the cover-image field
+// contains a `<input type="file">`, and a `<label>` outer fires its
+// implicit "click the first form control" behavior on adjacent padding
+// clicks and pops the native file picker. See PR #53 / GuideForm.tsx for
+// the full story.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when an
+// `htmlFor` is supplied — simple inputs get a proper screen-reader
+// association, and the cover-image field (which omits `htmlFor`) falls
+// back to a plain `<span>` so the implicit-label trap stays gone.
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

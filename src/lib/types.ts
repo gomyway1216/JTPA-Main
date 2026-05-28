@@ -134,6 +134,8 @@ export interface ProjectDoc {
   status: ProjectStatus;
   reviewerUid: string | null;
   reviewNote?: string;
+  // Denormalized like count for the showcase. Missing = 0 on legacy docs.
+  likeCount?: number;
   submittedAt: TsLike;
   reviewedAt?: TsLike;
   createdAt: TsLike;
@@ -179,19 +181,46 @@ export interface PostDoc {
   publishedAt?: TsLike;
   submittedAt: TsLike;
   reviewedAt?: TsLike;
+  // Denormalized like count. Old docs may not have it; treat missing as 0.
+  likeCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
 }
 
-export interface PostCommentDoc {
+// ---------- comments + likes (shared across post + guide + qa + project) ----------
+// Comments and likes use parallel subcollections under `posts/`, `guides/`,
+// `qa/`, and `projects/`. The shapes are identical; only the parent
+// collection differs.
+export type CommentParentType = "post" | "guide" | "qa" | "project";
+
+export interface CommentDoc {
   id: string;
-  postId: string;
+  // Denormalized so the client doesn't have to re-derive from the parent
+  // path. Useful for cross-parent activity feeds later.
+  parentType: CommentParentType;
+  parentId: string;
   authorUid: string;
   authorName: string;
   authorPhotoURL: string | null;
   body: string;
+  // Null/missing = top-level comment. Otherwise references another comment
+  // in the same subcollection — we render this as a linear thread with a
+  // "Re: @author" prefix rather than a nested tree (per Jin/Yudai design).
+  parentCommentId?: string | null;
+  // Denormalized like count. Missing = 0 on older docs.
+  likeCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
+}
+
+// Legacy alias kept so existing callers compile during the refactor; new
+// code should use `CommentDoc` directly.
+export type PostCommentDoc = CommentDoc;
+
+// `likes/{uid}` subcollection doc. Existence == liked; we don't store the
+// uid in the body because it's already the doc id.
+export interface LikeDoc {
+  createdAt: TsLike;
 }
 
 // ---------- guides (AI setup / help content) ----------
@@ -211,8 +240,33 @@ export interface GuideDoc {
   tags: string[];
   status: GuideStatus;
   order: number;
+  // Denormalized like count. Old docs may not have it; treat missing as 0.
+  likeCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
   createdBy: GuideAuthorRef;
   updatedBy: GuideAuthorRef;
+}
+
+// ---------- Q&A (community-posted questions / tips) ----------
+// Open to any signed-in user, unlike `guides` (admin/editor-curated) or
+// `posts` (admin-moderated before publish). No review queue: anything
+// posted lands as `published` immediately. Admins can flip a Q&A to
+// `archived` to hide spam after the fact.
+export type QaStatus = "published" | "archived";
+
+export interface QaDoc {
+  id: string;
+  slug: string;
+  title: string;
+  body: string; // Markdown
+  tags: string[];
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  status: QaStatus;
+  // Denormalized like count. Missing = 0 on docs that predate the field.
+  likeCount?: number;
+  createdAt: TsLike;
+  updatedAt: TsLike;
 }
