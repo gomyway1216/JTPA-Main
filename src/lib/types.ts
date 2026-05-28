@@ -263,6 +263,19 @@ export interface GuideDoc {
   updatedBy: GuideAuthorRef;
 }
 
+// ---------- site pages (admin-edited static-ish content) ----------
+// One Firestore doc per slug under `sitePages/{slug}` — `/about` is the
+// only consumer today. The page renders fallback content when the doc is
+// absent, so a fresh deploy stays readable before an admin saves anything.
+export interface SitePageDoc {
+  id: string;
+  slug: string;
+  title: string;
+  body: string;
+  updatedAt: TsLike;
+  updatedBy: GuideAuthorRef;
+}
+
 // ---------- Q&A (community-posted questions / tips) ----------
 // Open to any signed-in user, unlike `guides` (admin/editor-curated) or
 // `posts` (admin-moderated before publish). No review queue: anything
