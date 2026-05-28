@@ -80,5 +80,17 @@ service firebase.storage {
         && isImage() && maxSize(5);
       allow delete: if isAdmin() || isEditor();
     }
+
+    // Q&A images (embedded in Markdown body). The path is
+    // `qa/{qaId}/{uid}/{filename}` so we can constrain writes to the
+    // uploader's own subfolder — a user can't drop files into someone
+    // else's Q&A on the client. Reads are public. Same 5MB cap as the
+    // other body-image endpoints.
+    match /qa/{qaId}/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if ((isSignedIn() && request.auth.uid == uid) || isAdmin())
+        && isImage() && maxSize(5);
+      allow delete: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
+    }
   }
 }

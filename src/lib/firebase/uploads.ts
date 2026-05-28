@@ -113,3 +113,30 @@ export async function uploadGuideImage(
   await uploadBytes(r, file, { contentType: file.type });
   return publicDownloadUrl(r);
 }
+
+/**
+ * Upload an inline-Markdown image for a Q&A post. Same allowlist /
+ * size limit as the guide editor; the only difference is the path
+ * prefix, which keeps `storage.rules` simple. The path includes the
+ * uploader's uid so a user can't drop files into someone else's Q&A
+ * folder via the client.
+ */
+export async function uploadQaImage(
+  qaId: string,
+  uid: string,
+  file: File,
+): Promise<string> {
+  if (!qaId) {
+    throw new Error("Q&A IDが取得できませんでした");
+  }
+  if (!isAllowedType(file.type)) {
+    throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
+  }
+  if (file.size > MAX_GUIDE_IMAGE_BYTES) {
+    throw new Error("画像サイズは 5MB 以下にしてください");
+  }
+  const path = `qa/${qaId}/${uid}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  const r = storageRef(clientStorage, path);
+  await uploadBytes(r, file, { contentType: file.type });
+  return publicDownloadUrl(r);
+}

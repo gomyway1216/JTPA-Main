@@ -182,10 +182,10 @@ export interface PostDoc {
   updatedAt: TsLike;
 }
 
-// ---------- comments + likes (shared across post + guide) ----------
-// Comments and likes use parallel subcollections under both `posts/` and
-// `guides/`. The shapes are identical; only the parent collection differs.
-export type CommentParentType = "post" | "guide";
+// ---------- comments + likes (shared across post + guide + qa) ----------
+// Comments and likes use parallel subcollections under `posts/`, `guides/`,
+// and `qa/`. The shapes are identical; only the parent collection differs.
+export type CommentParentType = "post" | "guide" | "qa";
 
 export interface CommentDoc {
   id: string;
@@ -240,4 +240,27 @@ export interface GuideDoc {
   updatedAt: TsLike;
   createdBy: GuideAuthorRef;
   updatedBy: GuideAuthorRef;
+}
+
+// ---------- Q&A (community-posted questions / tips) ----------
+// Open to any signed-in user, unlike `guides` (admin/editor-curated) or
+// `posts` (admin-moderated before publish). No review queue: anything
+// posted lands as `published` immediately. Admins can flip a Q&A to
+// `archived` to hide spam after the fact.
+export type QaStatus = "published" | "archived";
+
+export interface QaDoc {
+  id: string;
+  slug: string;
+  title: string;
+  body: string; // Markdown
+  tags: string[];
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  status: QaStatus;
+  // Denormalized like count. Missing = 0 on docs that predate the field.
+  likeCount?: number;
+  createdAt: TsLike;
+  updatedAt: TsLike;
 }

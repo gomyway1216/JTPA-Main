@@ -5,24 +5,17 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { requireUser } from "@/lib/auth/session";
+import { parentCollection, parentRoutePrefix } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
-import type { CommentParentType, GuideDoc, PostDoc } from "@/lib/types";
-
-function parentCollection(parentType: CommentParentType): string {
-  return parentType === "post" ? "posts" : "guides";
-}
-
-function parentRoutePrefix(parentType: CommentParentType): string {
-  return parentType === "post" ? "/blog" : "/guide";
-}
+import type { CommentParentType, GuideDoc, PostDoc, QaDoc } from "@/lib/types";
 
 const RecordSchema = z.object({
-  parentType: z.enum(["post", "guide"]),
+  parentType: z.enum(["post", "guide", "qa"]),
   parentId: z.string().min(1),
 });
 
 const CommentSchema = z.object({
-  parentType: z.enum(["post", "guide"]),
+  parentType: z.enum(["post", "guide", "qa"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
 });
@@ -73,7 +66,7 @@ export async function toggleLikeRecord(
       tx.get(parentRef),
     ]);
     if (!parentSnap.exists) throw new Error("NOT_FOUND");
-    const parent = parentSnap.data() as PostDoc | GuideDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
     // Only allow likes on publicly-visible records. Mirrors the comment
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
@@ -132,7 +125,7 @@ export async function toggleLikeComment(
     if (!parentSnap.exists || !commentSnap.exists) {
       throw new Error("NOT_FOUND");
     }
-    const parent = parentSnap.data() as PostDoc | GuideDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
     // Defense in depth: if the parent has been unpublished while the
     // comment is still visible to the author, refuse new likes. Existing
     // likes are left in place — flipping the parent's status back to

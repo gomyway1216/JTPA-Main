@@ -8,6 +8,7 @@ import {
   toggleLikeRecord,
   type LikeResult,
 } from "@/app/actions/likes";
+import { parentRoutePrefix } from "@/lib/comments-parent";
 import type { CommentParentType, SessionUser } from "@/lib/types";
 
 interface CommonProps {
@@ -87,7 +88,7 @@ export function LikeButton(props: Props) {
   if (!props.user) {
     // Anonymous visitors see the count but the button routes to login
     // with a return-to so they land back on the same page after auth.
-    const redirect = `${props.parentType === "post" ? "/blog" : "/guide"}/${props.parentSlug}`;
+    const redirect = `${parentRoutePrefix(props.parentType)}/${props.parentSlug}`;
     return (
       <Link
         href={`/login?redirect=${encodeURIComponent(redirect)}`}

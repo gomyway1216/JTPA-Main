@@ -247,6 +247,88 @@ service cloud.firestore {
       }
     }
 
+    // ----- Q&A (community-posted questions / tips) -----
+    // Any signed-in user can submit; no review queue. Admin can flip
+    // status to 'archived' to hide spam. Reads: 'published' is public;
+    // archived is admin + author only (so the author can see their own
+    // moderated post and ask why).
+    match /qa/{qaId} {
+      allow read: if isAdmin()
+        || (resource != null && resource.data.status == 'published')
+        || (isSignedIn() && resource != null
+            && resource.data.authorUid == request.auth.uid);
+
+      // Create gate: only the doc author can write a doc for themselves,
+      // it must start `published` with `likeCount == 0`, and the
+      // create-time timestamps must match `request.time`. Without these,
+      // a client could bypass the Server Action to seed a doc with an
+      // inflated `likeCount`, backdated timestamps, or someone else's
+      // `authorUid`/`authorName`.
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'published'
+        && (!('likeCount' in request.resource.data)
+            || request.resource.data.likeCount == 0)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Update gate: authors can edit only the listed content fields and
+      // must keep `authorUid` / `status` unchanged. Admin can change
+      // anything (incl. archiving). The `affectedKeys().hasOnly(...)`
+      // allowlist blocks a malicious client from punching `likeCount`,
+      // `createdAt`, `authorUid`, etc. via a raw Firestore write — the
+      // Server Action goes through Admin SDK and bypasses these rules
+      // anyway, so we lose nothing by being strict here.
+      allow update: if isAdmin()
+        || (
+          isSignedIn()
+          && resource.data.authorUid == request.auth.uid
+          && request.resource.data.authorUid == resource.data.authorUid
+          && request.resource.data.status == resource.data.status
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['title', 'body', 'tags', 'slug', 'updatedAt'])
+        );
+
+      allow delete: if isAdmin()
+        || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+      // Per-Q&A likes — server-action-only (matches posts/guides).
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
+
+      // Comments on Q&A. Same shape as posts/guides comments.
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (isSignedIn() && resource != null
+              && resource.data.authorUid == request.auth.uid)
+          || get(/databases/$(database)/documents/qa/$(qaId)).data.status == 'published';
+
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.parentType == 'qa'
+          && request.resource.data.parentId == qaId
+          && get(/databases/$(database)/documents/qa/$(qaId)).data.status == 'published';
+
+        allow update: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['body', 'updatedAt'])
+          );
+
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, update, delete: if false;
+        }
+      }
+    }
+
     // ----- mail (Trigger Email extension) -----
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {
