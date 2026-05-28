@@ -131,6 +131,8 @@ export interface ProjectDoc {
   status: ProjectStatus;
   reviewerUid: string | null;
   reviewNote?: string;
+  // Denormalized like count for the showcase. Missing = 0 on legacy docs.
+  likeCount?: number;
   submittedAt: TsLike;
   reviewedAt?: TsLike;
   createdAt: TsLike;
@@ -182,10 +184,11 @@ export interface PostDoc {
   updatedAt: TsLike;
 }
 
-// ---------- comments + likes (shared across post + guide + qa) ----------
+// ---------- comments + likes (shared across post + guide + qa + project) ----------
 // Comments and likes use parallel subcollections under `posts/`, `guides/`,
-// and `qa/`. The shapes are identical; only the parent collection differs.
-export type CommentParentType = "post" | "guide" | "qa";
+// `qa/`, and `projects/`. The shapes are identical; only the parent
+// collection differs.
+export type CommentParentType = "post" | "guide" | "qa" | "project";
 
 export interface CommentDoc {
   id: string;
