@@ -144,10 +144,13 @@ export async function deleteComment(
   await ref.delete();
   // Touch parent so cached pages with denormalized counters invalidate,
   // and pick the slug off the parent for the revalidate path (don't
-  // trust caller for the route).
+  // trust caller for the route). Guard against the rare case where the
+  // parent itself has already been deleted: calling `.update()` on a
+  // missing doc throws NOT_FOUND and would surface as a generic Server
+  // Action crash, even though the delete-comment work itself succeeded.
   const parentSnap = await parentRef.get();
-  await parentRef.update({ updatedAt: FieldValue.serverTimestamp() });
   if (parentSnap.exists) {
+    await parentRef.update({ updatedAt: FieldValue.serverTimestamp() });
     const parentData = parentSnap.data() as PostDoc | GuideDoc;
     revalidatePath(
       `${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`,

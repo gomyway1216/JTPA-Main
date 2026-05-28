@@ -1,6 +1,6 @@
 "use server";
 
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
@@ -81,17 +81,23 @@ export async function toggleLikeRecord(
       throw new Error("公開済みのコンテンツのみにいいねできます");
     }
     const wasLiked = likeSnap.exists;
+    // Compute the new count in memory and write it directly. The original
+    // implementation used `FieldValue.increment(-1)`, but on a legacy doc
+    // without an explicit `likeCount` field that drives the value to `-1`
+    // — meanwhile the UI clamps to 0, so the DB and the UI desync. The
+    // transaction already has the previous value in hand; using it
+    // sidesteps the issue and keeps DB / response identical.
+    const prevCount = (parent.likeCount as number | undefined) ?? 0;
+    const newCount = wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1;
     if (wasLiked) {
       tx.delete(likeRef);
-      tx.update(parentRef, { likeCount: FieldValue.increment(-1) });
     } else {
       tx.set(likeRef, { createdAt: Timestamp.now() });
-      tx.update(parentRef, { likeCount: FieldValue.increment(1) });
     }
-    const prevCount = (parent.likeCount as number | undefined) ?? 0;
+    tx.update(parentRef, { likeCount: newCount });
     return {
       liked: !wasLiked,
-      count: wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1,
+      count: newCount,
       slug: parent.slug,
     };
   });
@@ -135,18 +141,20 @@ export async function toggleLikeComment(
       throw new Error("公開済みのコンテンツのみにいいねできます");
     }
     const wasLiked = likeSnap.exists;
-    if (wasLiked) {
-      tx.delete(likeRef);
-      tx.update(commentRef, { likeCount: FieldValue.increment(-1) });
-    } else {
-      tx.set(likeRef, { createdAt: Timestamp.now() });
-      tx.update(commentRef, { likeCount: FieldValue.increment(1) });
-    }
+    // In-memory compute for the same reason as toggleLikeRecord — keeps
+    // DB and UI in sync on legacy comments without a `likeCount` field.
     const cur = commentSnap.data();
     const prevCount = (cur?.likeCount as number | undefined) ?? 0;
+    const newCount = wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1;
+    if (wasLiked) {
+      tx.delete(likeRef);
+    } else {
+      tx.set(likeRef, { createdAt: Timestamp.now() });
+    }
+    tx.update(commentRef, { likeCount: newCount });
     return {
       liked: !wasLiked,
-      count: wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1,
+      count: newCount,
       slug: parent.slug,
     };
   });

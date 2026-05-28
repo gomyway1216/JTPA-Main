@@ -45,11 +45,16 @@ export default async function GuideDetailPage({
 
   const tags = guide.tags ?? [];
 
-  const user = await getSessionUser();
-  const comments = await listComments("guide", guide.id).catch((err) => {
-    console.error("Failed to list guide comments:", err);
-    return [];
-  });
+  // Session + comment listing are independent — kick them off together
+  // rather than serially. The like-state query depends on the comment
+  // ids so it stays after the join.
+  const [user, comments] = await Promise.all([
+    getSessionUser(),
+    listComments("guide", guide.id).catch((err) => {
+      console.error("Failed to list guide comments:", err);
+      return [];
+    }),
+  ]);
   const likedSet = await getMyLikesForParent({
     parentType: "guide",
     parentId: guide.id,

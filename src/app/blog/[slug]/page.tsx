@@ -40,13 +40,16 @@ export default async function BlogPostPage({
   const post = await getPostBySlug(slug);
   if (!post || post.status !== "published") notFound();
 
-  const user = await getSessionUser();
-  // Comments are fetched first; the like-set query then needs the comment
-  // ids to do its batched read.
-  const comments = await listComments("post", post.id).catch((err) => {
-    console.error("Failed to list comments:", err);
-    return [];
-  });
+  // Session + comment listing are independent — kick them off together
+  // rather than serially. The like-state query depends on the comment
+  // ids so it stays after the join.
+  const [user, comments] = await Promise.all([
+    getSessionUser(),
+    listComments("post", post.id).catch((err) => {
+      console.error("Failed to list comments:", err);
+      return [];
+    }),
+  ]);
   const likedSet = await getMyLikesForParent({
     parentType: "post",
     parentId: post.id,

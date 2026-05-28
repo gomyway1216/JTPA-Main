@@ -15,14 +15,19 @@ function parentCollection(parentType: CommentParentType): string {
  *   - `comment:{commentId}` for every comment the user liked
  *
  * The caller passes the list of `commentIds` already fetched for the page
- * so we can do a single `getAll` batched read instead of N+1 round-trips.
- * That's the cheap option in terms of both Firestore document-read cost
- * (still N+1 docs read, but one network round-trip) and latency.
+ * so we can do batched BatchGet reads instead of N+1 round-trips.
  *
  * Returns an empty Set for anonymous visitors so the caller can use the
  * same code path either way.
  */
 export const RECORD_LIKE_KEY = "RECORD";
+
+// Firestore's BatchGet caps at 100 documents per request. We split refs
+// into chunks just under that ceiling so a busy comment thread (up to
+// `COMMENTS_PER_PAGE = 500` in `listComments`) doesn't silently break the
+// lookup. The chunk size is slightly under 100 so the record-level like
+// ref can always be appended to the first batch without spilling.
+const BATCH_GET_LIMIT = 99;
 
 export async function getMyLikesForParent({
   parentType,
@@ -46,15 +51,34 @@ export async function getMyLikesForParent({
     parentRef.collection("comments").doc(cid).collection("likes").doc(uid),
   );
 
-  // getAll is a batched read — single round-trip, N+1 doc reads. Cheaper
-  // than `await Promise.all(refs.map(r => r.get()))` which would issue
-  // one RPC per ref.
-  const snaps = await adminDb().getAll(recordLikeRef, ...commentLikeRefs);
+  // Pack the record-level ref into the first chunk; remaining comments
+  // get their own chunks under the BatchGet ceiling.
+  const refChunks: FirebaseFirestore.DocumentReference[][] = [];
+  refChunks.push([
+    recordLikeRef,
+    ...commentLikeRefs.slice(0, BATCH_GET_LIMIT - 1),
+  ]);
+  for (
+    let cursor = BATCH_GET_LIMIT - 1;
+    cursor < commentLikeRefs.length;
+    cursor += BATCH_GET_LIMIT
+  ) {
+    refChunks.push(commentLikeRefs.slice(cursor, cursor + BATCH_GET_LIMIT));
+  }
+
+  // Run chunked BatchGets in parallel — they're independent and the worst
+  // case (commentIds.length = COMMENTS_PER_PAGE = 500) is only a handful
+  // of chunks.
+  const chunkResults = await Promise.all(
+    refChunks.map((refs) => adminDb().getAll(...refs)),
+  );
+  const allSnaps = chunkResults.flat();
 
   const set = new Set<string>();
-  if (snaps[0]?.exists) set.add(RECORD_LIKE_KEY);
+  if (allSnaps[0]?.exists) set.add(RECORD_LIKE_KEY);
+  // allSnaps[0] is the record like; allSnaps[1..N] map 1:1 to commentIds.
   commentIds.forEach((cid, i) => {
-    if (snaps[i + 1]?.exists) set.add(`comment:${cid}`);
+    if (allSnaps[i + 1]?.exists) set.add(`comment:${cid}`);
   });
   return set;
 }
