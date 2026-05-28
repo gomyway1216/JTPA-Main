@@ -403,6 +403,17 @@ service cloud.firestore {
       }
     }
 
+    // ----- site pages (admin-edited static-ish content) -----
+    // One doc per slug under `sitePages/{slug}` (e.g. `about`). All writes
+    // flow through the `saveSitePage` Server Action (Admin SDK), which
+    // bypasses these rules; we deny client-side writes entirely so the
+    // Zod validation + updatedBy/updatedAt invariants can't be skipped by
+    // a direct client write (matches the `mail/` lockdown below).
+    match /sitePages/{slug} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // ----- mail (Trigger Email extension) -----
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {
