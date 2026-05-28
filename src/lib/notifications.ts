@@ -138,3 +138,36 @@ export async function enqueuePostDecisionNotification(opts: {
     category: `post_${opts.decision}`,
   });
 }
+
+// Sent when a confirmed attendee cancels and a waitlisted user gets
+// auto-promoted into the freed seat (see cancelRsvp in actions/rsvps.ts).
+// Best-effort — Trigger Email isn't configured yet (#15), so the doc
+// just sits in the `mail` collection until the extension is installed.
+// Once #15 lands the queued notification flushes through automatically.
+export async function enqueueWaitlistPromotionNotification(opts: {
+  to: string;
+  displayName: string;
+  eventTitle: string;
+  eventSlug: string;
+  role: "attendee" | "presenter";
+}): Promise<void> {
+  // Build the canonical event URL from NEXT_PUBLIC_SITE_URL when set,
+  // falling back to a relative path so the email is still useful even
+  // if the env var isn't wired up yet.
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "";
+  const eventUrl = `${base}/events/${opts.eventSlug}`;
+
+  await enqueueMail({
+    to: opts.to,
+    message: {
+      subject: `[JTPA] 繰り上げ参加のお知らせ: ${opts.eventTitle}`,
+      text:
+        `${opts.displayName} さん\n\n` +
+        `イベント「${opts.eventTitle}」のキャンセル待ちから繰り上げで参加が確定しました。` +
+        (opts.role === "presenter" ? "（発表者枠）" : "") +
+        `\n\n詳細はこちら: ${eventUrl}\n\n` +
+        `参加できなくなった場合は、イベントページから登録をキャンセルしてください。`,
+    },
+    category: "waitlist_promotion",
+  });
+}
