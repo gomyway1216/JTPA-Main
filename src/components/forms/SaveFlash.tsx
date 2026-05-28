@@ -24,19 +24,25 @@ export function SaveFlash({
   message?: string;
   hideAfterMs?: number;
 }) {
-  const [visible, setVisible] = useState(savedAt !== null);
+  // Track which savedAt value we've already let expire. Visibility is
+  // derived: we show whenever `savedAt` is non-null AND we haven't yet
+  // expired this particular value. We never call setState synchronously
+  // inside the effect body — only inside the `setTimeout` callback —
+  // which keeps `react-hooks/set-state-in-effect` happy and avoids the
+  // cascading-render trap it's guarding against.
+  const [expiredAt, setExpiredAt] = useState<number | null>(null);
 
   useEffect(() => {
-    if (savedAt === null) {
-      setVisible(false);
-      return;
-    }
-    setVisible(true);
-    const t = setTimeout(() => setVisible(false), hideAfterMs);
+    // Nothing showing → no timer to arm. The effect cleanup below is
+    // still wired in case a previous timer is still pending from a
+    // savedAt that just got swapped out.
+    if (savedAt === null) return;
+    if (savedAt === expiredAt) return;
+    const t = setTimeout(() => setExpiredAt(savedAt), hideAfterMs);
     return () => clearTimeout(t);
-  }, [savedAt, hideAfterMs]);
+  }, [savedAt, expiredAt, hideAfterMs]);
 
-  if (!visible) return null;
+  if (savedAt === null || savedAt === expiredAt) return null;
 
   return (
     <p

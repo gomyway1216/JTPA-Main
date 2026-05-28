@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
 import { useEffect, useRef, useState, useTransition } from "react";
 
@@ -260,13 +261,13 @@ export function GuideForm({
         // this line only ever observably runs on update.
         setSavedAt(Date.now());
       } catch (err) {
-        // `redirect()` throws an internal error to trigger navigation;
-        // let those propagate so Next.js can complete the redirect.
-        // Anything else is a real save failure.
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        // Server-Action `redirect()` (and `notFound()`, etc.) signal
+        // navigation by throwing an internal Next.js error.
+        // `unstable_rethrow` is the documented way to let those
+        // propagate from a try/catch — it re-throws on internal errors
+        // and returns silently for anything else, which we then
+        // surface as a real save failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
