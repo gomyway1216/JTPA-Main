@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -68,20 +69,14 @@ export default async function BlogPostPage({
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
-        <p className="text-sm text-zinc-500">
-          by{" "}
-          <Link
-            href={`/u/${post.authorUid}`}
-            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-          >
-            {post.authorName}
-          </Link>
-          {post.publishedAt && (
-            <>
-              {" · "}
-              {formatDate(post.publishedAt)}
-            </>
-          )}
+        <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
+          <AuthorBadge
+            name={post.authorName}
+            photoURL={post.authorPhotoURL}
+            uid={post.authorUid}
+            size="md"
+          />
+          {post.publishedAt && <span>· {formatDate(post.publishedAt)}</span>}
         </p>
         {post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">

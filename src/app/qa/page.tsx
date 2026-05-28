@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
@@ -57,15 +58,13 @@ export default async function QaListPage() {
               <Link href={`/qa/${q.slug}`} className="block hover:underline">
                 <h2 className="text-lg font-semibold">{q.title}</h2>
               </Link>
-              <p className="mt-1 text-xs text-zinc-500">
-                by{" "}
-                <Link
-                  href={`/u/${q.authorUid}`}
-                  className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-                >
-                  {q.authorName}
-                </Link>{" "}
-                · {formatDate(q.createdAt)}
+              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                <AuthorBadge
+                  name={q.authorName}
+                  photoURL={q.authorPhotoURL}
+                  uid={q.authorUid}
+                />
+                <span>· {formatDate(q.createdAt)}</span>
                 {(q.likeCount ?? 0) > 0 && (
                   <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
                 )}

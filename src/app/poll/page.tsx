@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPoll } from "@/lib/data/poll";
 import { formatDate, truncate } from "@/lib/utils";
@@ -65,15 +66,13 @@ export default async function PollListPage() {
                 <Link href={`/poll/${p.slug}`} className="block hover:underline">
                   <h2 className="text-lg font-semibold">{p.title}</h2>
                 </Link>
-                <p className="mt-1 text-xs text-zinc-500">
-                  by{" "}
-                  <Link
-                    href={`/u/${p.authorUid}`}
-                    className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-                  >
-                    {p.authorName}
-                  </Link>{" "}
-                  · {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票
+                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                  <AuthorBadge
+                    name={p.authorName}
+                    photoURL={p.authorPhotoURL}
+                    uid={p.authorUid}
+                  />
+                  <span>· {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票</span>
                   {(p.likeCount ?? 0) > 0 && (
                     <span className="ml-2 text-rose-600">♥ {p.likeCount}</span>
                   )}
