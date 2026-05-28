@@ -18,6 +18,7 @@ const PARENT_LABEL: Record<CommentParentType, string> = {
   guide: "ガイド",
   qa: "Q&A",
   project: "ショーケース",
+  poll: "投票",
 };
 
 export default async function MyLikesPage() {

@@ -14,6 +14,7 @@ const COMMENT_PARENT_TYPES: readonly CommentParentType[] = [
   "guide",
   "qa",
   "project",
+  "poll",
 ];
 
 function isCommentParentType(value: unknown): value is CommentParentType {
@@ -129,6 +130,8 @@ function parentColToType(col: string): CommentParentType | null {
       return "qa";
     case "projects":
       return "project";
+    case "polls":
+      return "poll";
     default:
       return null;
   }
