@@ -156,8 +156,9 @@ export function QaForm({ mode, user, qa }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="qa-title">
         <input
+          id="qa-title"
           type="text"
           required
           minLength={2}
@@ -202,8 +203,9 @@ export function QaForm({ mode, user, qa }: Props) {
         </div>
       </Field>
 
-      <Field label="タグ (カンマ区切り・最大 8)">
+      <Field label="タグ (カンマ区切り・最大 8)" htmlFor="qa-tags">
         <input
+          id="qa-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -246,22 +248,41 @@ export function QaForm({ mode, user, qa }: Props) {
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the body field contains a
+// hidden `<input type="file">` alongside the Markdown editor, and a
+// `<label>` outer would fire its implicit "click the first form control"
+// behavior on padding clicks and pop the native file picker open. See
+// the same comment in GuideForm.tsx.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when an
+// `htmlFor` is supplied — simple inputs get a proper screen-reader
+// association, and the body field (which omits `htmlFor`) falls back to
+// a plain `<span>` so the implicit-label trap stays gone.
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }
