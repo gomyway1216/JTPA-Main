@@ -6,7 +6,7 @@ Everything that moves code or rules into production.
 
 The app runs on **Firebase App Hosting** (Cloud Run under the hood) in `us-central1`. The backend is named `jtpa-main`.
 
-- Live URL: <https://jtpa-main--jtpa-main.us-central1.hosted.app>
+- Live URL: <https://bayarea-ai.com> (apex; also reachable at the App Hosting default `https://jtpa-main--jtpa-main.us-central1.hosted.app`)
 - Console: <https://console.firebase.google.com/u/0/project/jtpa-main/apphosting/backends/jtpa-main/locations/us-central1/overview>
 - Rollouts: <https://console.firebase.google.com/u/0/project/jtpa-main/apphosting/backends/jtpa-main/locations/us-central1/rollouts>
 
@@ -85,9 +85,9 @@ Required status check before merging to `main`.
 Google sign-in only works from domains explicitly whitelisted in Firebase Auth:
 
 - Console → Authentication → Settings → Authorized domains
-- Currently allowed: `localhost`, `jtpa-main.firebaseapp.com`, `jtpa-main.web.app`, `jtpa-main--jtpa-main.us-central1.hosted.app`
+- Currently allowed: `localhost`, `jtpa-main.firebaseapp.com`, `jtpa-main.web.app`, `jtpa-main--jtpa-main.us-central1.hosted.app`, `bayarea-ai.com`
 
-If we add a custom domain (e.g. `jtpa.org`), add it here too or sign-in will throw `auth/unauthorized-domain`.
+If we add another custom domain, add it here too or sign-in will throw `auth/unauthorized-domain`. The matching change is also needed on the GCP API key referrer allow-list (`NEXT_PUBLIC_FIREBASE_API_KEY` in **APIs & Services → Credentials**) — Firebase Auth verifies the API key with its own referrer check, so a domain missing from there throws `auth/api-key-not-valid` even when the Authorized-domains list is right.
 
 ## Things to wire up that aren't done yet
 
