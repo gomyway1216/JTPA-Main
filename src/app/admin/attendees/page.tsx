@@ -126,7 +126,13 @@ export default async function AdminAttendeesPage({
                   <td className="py-2">{r.status}</td>
                   <td className="py-2">
                     {selectedId && (
+                      // Key includes attendedAt so a server-side change
+                      // (another admin's toggle, or self check-in) resets
+                      // the local optimistic state on refresh, and so
+                      // switching events doesn't reuse a stale instance
+                      // for a uid that happens to RSVP for both events.
                       <AttendanceToggle
+                        key={`${selectedId}-${r.uid}-${!!r.attendedAt}`}
                         eventId={selectedId}
                         rsvpUid={r.uid}
                         initialAttended={!!r.attendedAt}

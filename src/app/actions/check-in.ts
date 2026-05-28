@@ -133,6 +133,16 @@ export async function selfCheckIn(
       eventPatch.rsvpCount = FieldValue.increment(1);
       eventPatch.waitlistCount = FieldValue.increment(-1);
     }
+    // presenterCount tracks confirmed presenters. New doc is always
+    // confirmed; prior might have been waitlist-presenter or
+    // cancelled-presenter, both of which were excluded from the count.
+    // Bumping here keeps the denormalized counter consistent.
+    const newIsConfirmedPresenter = doc.role === "presenter";
+    const priorWasConfirmedPresenter =
+      prior?.status === "confirmed" && prior.role === "presenter";
+    if (newIsConfirmedPresenter && !priorWasConfirmedPresenter) {
+      eventPatch.presenterCount = FieldValue.increment(1);
+    }
     if (!alreadyCheckedIn) {
       eventPatch.attendanceCount = FieldValue.increment(1);
     }

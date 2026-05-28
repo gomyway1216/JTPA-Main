@@ -1,4 +1,5 @@
 import QRCode from "qrcode";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
@@ -22,13 +23,22 @@ export default async function AdminCheckInPage({
   if (!event) notFound();
 
   // The public origin is required to build the absolute QR URL since the
-  // QR is meant to be scanned from a phone external to the server. Fall
-  // back to a relative URL — phones will fail to scan it, but at least the
-  // admin can copy the path and prepend the right host manually.
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  const checkInUrl = event.checkInToken
-    ? `${baseUrl}/events/${event.slug}/checkin?t=${event.checkInToken}`
+  // QR is meant to be scanned from a phone external to the server. Prefer
+  // the explicit `NEXT_PUBLIC_SITE_URL` env var (correct behind reverse
+  // proxies that rewrite Host), fall back to the request's own host so
+  // preview / dev environments work without configuration.
+  const explicitOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  const headerStore = await headers();
+  const host = headerStore.get("host");
+  const forwardedProto = headerStore.get("x-forwarded-proto");
+  const requestOrigin = host
+    ? `${forwardedProto ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`
     : null;
+  const baseUrl = explicitOrigin || requestOrigin;
+  const checkInUrl =
+    baseUrl && event.checkInToken
+      ? `${baseUrl}/events/${event.slug}/checkin?t=${event.checkInToken}`
+      : null;
   const qrSvg = checkInUrl
     ? await QRCode.toString(checkInUrl, {
         type: "svg",
@@ -54,7 +64,19 @@ export default async function AdminCheckInPage({
       </div>
 
       <section className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
-        {event.checkInToken && qrSvg && checkInUrl ? (
+        {!event.checkInToken ? (
+          <p className="text-center text-sm text-zinc-500">
+            まだトークンが発行されていません。下のボタンで生成してください。
+          </p>
+        ) : !baseUrl ? (
+          // Defensive: the request-header fallback should always work, so
+          // this path only fires in unusual setups (e.g. the server is
+          // misconfigured to strip Host). Surface it so the admin doesn't
+          // print an unscannable QR.
+          <p className="text-center text-sm text-red-600">
+            QRコードを生成できません: ホスト名を解決できませんでした。<code>NEXT_PUBLIC_SITE_URL</code> を設定してください。
+          </p>
+        ) : qrSvg && checkInUrl ? (
           <div className="flex flex-col items-center gap-4">
             <div
               className="bg-white p-3 rounded"
@@ -67,11 +89,7 @@ export default async function AdminCheckInPage({
               トークン: <code className="font-mono">{event.checkInToken}</code>
             </p>
           </div>
-        ) : (
-          <p className="text-center text-sm text-zinc-500">
-            まだトークンが発行されていません。下のボタンで生成してください。
-          </p>
-        )}
+        ) : null}
       </section>
 
       <TokenControls eventId={event.id} hasToken={!!event.checkInToken} />

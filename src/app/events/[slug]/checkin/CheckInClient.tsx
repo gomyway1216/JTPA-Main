@@ -101,8 +101,12 @@ export function CheckInClient({
           ご参加ありがとうございます。
         </p>
         {wasGuest && (
+          // Honest copy: the anonymous uid for this guest is per-device
+          // and never linked to a future Google account, so we cannot
+          // claim history migration. Just point them at what they'd
+          // *gain* by signing in next time.
           <p className="text-xs text-emerald-700 dark:text-emerald-300">
-            次回からはGoogleでログインすると、過去の参加履歴が引き継がれます。
+            次回はGoogleでログインすると、マイページでRSVPや発表履歴を管理できます。
           </p>
         )}
         <a
@@ -196,7 +200,7 @@ export function CheckInClient({
             ゲストで続ける
           </button>
           <p className="text-center text-xs text-zinc-500">
-            Googleでログインすると、参加履歴が次回以降に引き継がれます。
+            Googleでログインすると、マイページでRSVPや発表履歴を管理できます。
           </p>
         </div>
       )}
