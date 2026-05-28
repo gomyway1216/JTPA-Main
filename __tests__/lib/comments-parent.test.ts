@@ -7,7 +7,13 @@ import {
 } from "@/lib/comments-parent";
 import type { CommentParentType } from "@/lib/types";
 
-const PARENT_TYPES: CommentParentType[] = ["post", "guide", "qa", "project"];
+const PARENT_TYPES: CommentParentType[] = [
+  "post",
+  "guide",
+  "qa",
+  "project",
+  "poll",
+];
 
 describe("parentCollection", () => {
   it.each([
@@ -15,6 +21,7 @@ describe("parentCollection", () => {
     ["guide", "guides"],
     ["qa", "qa"],
     ["project", "projects"],
+    ["poll", "polls"],
   ] as const)("maps %s → %s", (parent, expected) => {
     expect(parentCollection(parent)).toBe(expected);
   });
@@ -33,6 +40,7 @@ describe("parentRoutePrefix", () => {
     ["guide", "/guide"],
     ["qa", "/qa"],
     ["project", "/showcase"],
+    ["poll", "/poll"],
   ] as const)("maps %s → %s", (parent, expected) => {
     expect(parentRoutePrefix(parent)).toBe(expected);
   });
@@ -67,7 +75,7 @@ describe("isParentPubliclyVisible", () => {
     );
   });
 
-  it.each(["post", "guide", "qa"] as const)(
+  it.each(["post", "guide", "qa", "poll"] as const)(
     "treats %s as visible only when status === 'published'",
     (type) => {
       expect(isParentPubliclyVisible(type, { status: "published" })).toBe(true);

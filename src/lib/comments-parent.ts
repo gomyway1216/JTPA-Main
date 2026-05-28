@@ -17,6 +17,8 @@ export function parentCollection(parentType: CommentParentType): string {
       return "qa";
     case "project":
       return "projects";
+    case "poll":
+      return "polls";
   }
 }
 
@@ -36,6 +38,8 @@ export function parentRoutePrefix(parentType: CommentParentType): string {
       return "/qa";
     case "project":
       return "/showcase";
+    case "poll":
+      return "/poll";
   }
 }
 
@@ -64,6 +68,7 @@ export function isParentPubliclyVisible(
     case "post":
     case "guide":
     case "qa":
+    case "poll":
       return data.status === "published";
   }
 }

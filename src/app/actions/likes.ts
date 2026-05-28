@@ -11,15 +11,21 @@ import {
   parentRoutePrefix,
 } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
-import type { GuideDoc, PostDoc, ProjectDoc, QaDoc } from "@/lib/types";
+import type {
+  GuideDoc,
+  PollDoc,
+  PostDoc,
+  ProjectDoc,
+  QaDoc,
+} from "@/lib/types";
 
 const RecordSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa", "project"]),
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
   parentId: z.string().min(1),
 });
 
 const CommentSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa", "project"]),
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
 });
@@ -70,7 +76,7 @@ export async function toggleLikeRecord(
       tx.get(parentRef),
     ]);
     if (!parentSnap.exists) throw new Error("NOT_FOUND");
-    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Only allow likes on publicly-visible records. Mirrors the comment
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
@@ -129,7 +135,7 @@ export async function toggleLikeComment(
     if (!parentSnap.exists || !commentSnap.exists) {
       throw new Error("NOT_FOUND");
     }
-    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Defense in depth: if the parent has been unpublished while the
     // comment is still visible to the author, refuse new likes. Existing
     // likes are left in place — flipping the parent's status back to

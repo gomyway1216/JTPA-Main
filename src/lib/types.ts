@@ -75,6 +75,14 @@ export interface EventDoc {
   rsvpCount: number;
   presenterCount: number;
   waitlistCount: number;
+  // Opaque random token used as the QR-code query param for self check-in.
+  // Missing until an admin generates one. Admin can regenerate at any time
+  // to invalidate a leaked code. Pair with the event date window so a leaked
+  // token can't be used outside the actual event.
+  checkInToken?: string;
+  // Denormalized count of RSVPs with `attendedAt` set. Maintained
+  // transactionally with each check-in. Missing = 0 on older docs.
+  attendanceCount?: number;
   createdBy: string;
   createdAt: TsLike;
   updatedAt: TsLike;
@@ -94,6 +102,12 @@ export interface RsvpDoc {
   surveyResponses: Record<string, string | string[] | boolean>;
   presentationTitle?: string;
   presentationAbstract?: string;
+  // Set when the attendee checks in at the venue. Missing = not checked in.
+  attendedAt?: TsLike;
+  // True for walk-in guests who came via the anonymous-auth check-in flow
+  // (no Google account, no `users/{uid}` profile). For those docs, the
+  // `displayName` and `email` here are the only identity we have for them.
+  isGuest?: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;
 }
@@ -199,11 +213,11 @@ export interface PostDoc {
   updatedAt: TsLike;
 }
 
-// ---------- comments + likes (shared across post + guide + qa + project) ----------
+// ---------- comments + likes (shared across post + guide + qa + project + poll) ----------
 // Comments and likes use parallel subcollections under `posts/`, `guides/`,
-// `qa/`, and `projects/`. The shapes are identical; only the parent
-// collection differs.
-export type CommentParentType = "post" | "guide" | "qa" | "project";
+// `qa/`, `projects/`, and `polls/`. The shapes are identical; only the
+// parent collection differs.
+export type CommentParentType = "post" | "guide" | "qa" | "project" | "poll";
 
 export interface CommentDoc {
   id: string;
@@ -295,6 +309,58 @@ export interface QaDoc {
   status: QaStatus;
   // Denormalized like count. Missing = 0 on docs that predate the field.
   likeCount?: number;
+  createdAt: TsLike;
+  updatedAt: TsLike;
+}
+
+// ---------- polls (community-posted polls / votes) ----------
+// Polls are multi-select by design: a voter picks any subset of the
+// `options` array, and can change that selection at any time. Options are
+// fixed at creation; the author can edit title/description later but the
+// option list is frozen so denormalized counts stay meaningful.
+export type PollStatus = "published" | "archived";
+
+export interface PollOption {
+  // Stable id assigned at creation. Used as the key in `PollVoteDoc.optionIds`
+  // and to address option count updates transactionally, so renaming an
+  // option label later doesn't reshuffle the vote tallies.
+  id: string;
+  label: string;
+  // Denormalized count of voters who selected this option. Updated
+  // transactionally alongside `polls/{id}/votes/{uid}` writes.
+  voteCount: number;
+}
+
+export interface PollDoc {
+  id: string;
+  slug: string;
+  title: string;
+  // Optional Markdown context for the poll (e.g. "Reply 'other' in the
+  // comments"). Body is short by convention — polls aren't long-form.
+  description: string;
+  options: PollOption[];
+  authorUid: string;
+  authorName: string;
+  authorPhotoURL: string | null;
+  status: PollStatus;
+  // Denormalized count of distinct voters (NOT total selections — a voter
+  // who picks 3 options counts as 1). Used for "X 人が投票" UI and to
+  // gate "options can no longer be edited" once the first vote arrives.
+  voterCount: number;
+  // Denormalized like count on the poll itself. Missing = 0 on legacy docs.
+  likeCount?: number;
+  createdAt: TsLike;
+  updatedAt: TsLike;
+}
+
+// `polls/{pollId}/votes/{uid}` — doc id is the voter uid so a user can
+// only have a single ballot per poll. Stores the full set of selected
+// option ids; updating the vote is a single doc write + transactional
+// per-option count delta.
+export interface PollVoteDoc {
+  // Mirrors the `id` field on the parent doc for convenience. Doc id ===
+  // uid; we don't store it in the body because the path already encodes it.
+  optionIds: string[];
   createdAt: TsLike;
   updatedAt: TsLike;
 }
