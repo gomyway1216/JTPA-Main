@@ -18,8 +18,15 @@ export default async function MyProfilePage() {
   // the form is still editable. The first save will (via Firestore
   // `update`) error if the doc genuinely doesn't exist — sign-out /
   // sign-in resolves it by re-running the bootstrap.
+  //
+  // Visibility flags default to false (private) — older docs that
+  // pre-date these fields land here as `undefined` and get the same
+  // conservative default.
   const initial = {
     affiliation: profile?.affiliation ?? "",
+    bio: profile?.bio ?? "",
+    affiliationPublic: profile?.affiliationPublic ?? false,
+    bioPublic: profile?.bioPublic ?? false,
     emailOptIn: profile?.emailOptIn ?? true,
   };
 
@@ -28,7 +35,7 @@ export default async function MyProfilePage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">アカウント設定</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          所属とメール通知の設定を編集できます。表示名・メールアドレス・アイコンは Google アカウント側で管理されています。
+          所属・紹介文・通知設定を編集できます。各項目は個別に公開/非公開を切り替えられます。表示名・メールアドレス・アイコンは Google アカウント側で管理され、メールは常に非公開です。
         </p>
       </header>
 
@@ -57,7 +64,7 @@ export default async function MyProfilePage() {
         </dl>
       </section>
 
-      <ProfileForm initial={initial} />
+      <ProfileForm uid={user.uid} initial={initial} />
     </div>
   );
 }
