@@ -23,12 +23,20 @@ export function Field({ label, required, htmlFor, hint, children }: Props) {
       {htmlFor ? (
         <label htmlFor={htmlFor} className="text-sm font-medium">
           {label}
-          {required && <span className="text-red-600"> *</span>}
+          {required && (
+            <span aria-hidden="true" className="text-red-600">
+              {" *"}
+            </span>
+          )}
         </label>
       ) : (
         <span className="text-sm font-medium">
           {label}
-          {required && <span className="text-red-600"> *</span>}
+          {required && (
+            <span aria-hidden="true" className="text-red-600">
+              {" *"}
+            </span>
+          )}
         </span>
       )}
       <div className="mt-1">{children}</div>

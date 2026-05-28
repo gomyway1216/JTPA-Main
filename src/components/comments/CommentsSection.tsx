@@ -9,6 +9,7 @@ import {
   errorTextClass,
   inputClass,
   primaryButtonClass,
+  primaryButtonClassSm,
 } from "@/components/forms/styles";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { parentRoutePrefix } from "@/lib/comments-parent";
@@ -307,7 +308,7 @@ export function CommentsSection({
               <button
                 type="submit"
                 disabled={pending || !replyBody.trim()}
-                className={`${primaryButtonClass} px-3 py-1.5 text-xs`}
+                className={primaryButtonClassSm}
               >
                 {pending ? "送信中..." : "返信する"}
               </button>

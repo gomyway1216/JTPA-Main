@@ -19,7 +19,7 @@ import {
   errorTextClass,
   inputClass,
   primaryButtonClass,
-  secondaryButtonClass,
+  secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { clientDb } from "@/lib/firebase/client";
 import {
@@ -185,7 +185,7 @@ export function QaForm({ mode, user, qa }: Props) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={pending || uploading}
-              className={`${secondaryButtonClass} px-3 py-1.5 text-xs`}
+              className={secondaryButtonClassSm}
             >
               {uploading ? "アップロード中…" : "📷 画像を追加"}
             </button>

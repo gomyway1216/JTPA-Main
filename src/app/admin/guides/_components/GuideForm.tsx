@@ -22,7 +22,7 @@ import {
   errorTextClass,
   inputClass,
   primaryButtonClass,
-  secondaryButtonClass,
+  secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { clientDb } from "@/lib/firebase/client";
 import {
@@ -359,7 +359,7 @@ export function GuideForm({
               type="button"
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              className={`${secondaryButtonClass} px-2 py-1 text-xs`}
+              className={secondaryButtonClassSm}
             >
               {uploading ? "アップロード中..." : "📷 画像をアップロード"}
             </button>
