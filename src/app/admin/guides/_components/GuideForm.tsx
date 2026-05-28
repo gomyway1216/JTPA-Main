@@ -288,8 +288,9 @@ export function GuideForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="guide-title">
         <input
+          id="guide-title"
           type="text"
           required
           value={title}
@@ -297,8 +298,9 @@ export function GuideForm({
           className={inputCls}
         />
       </Field>
-      <Field label="スラッグ (URL)">
+      <Field label="スラッグ (URL)" htmlFor="guide-slug">
         <input
+          id="guide-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
@@ -306,8 +308,9 @@ export function GuideForm({
           className={inputCls}
         />
       </Field>
-      <Field label="タグ (カンマ区切り)">
+      <Field label="タグ (カンマ区切り)" htmlFor="guide-tags">
         <input
+          id="guide-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
@@ -316,8 +319,9 @@ export function GuideForm({
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="ステータス">
+        <Field label="ステータス" htmlFor="guide-status">
           <select
+            id="guide-status"
             value={status}
             onChange={(e) =>
               setStatus(e.target.value as GuideFormInput["status"])
@@ -328,8 +332,9 @@ export function GuideForm({
             <option value="published">公開</option>
           </select>
         </Field>
-        <Field label="表示順 (小さいほど上)">
+        <Field label="表示順 (小さいほど上)" htmlFor="guide-order">
           <input
+            id="guide-order"
             type="number"
             min={0}
             value={order}
@@ -425,30 +430,42 @@ export function GuideForm({
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
-// `<div>` rather than `<label>`: the body field contains a hidden
-// `<input type="file">` (used as the target of the upload-button click)
-// alongside the Markdown editor. Wrapping that in a `<label>` makes the
-// browser fire the label's implicit "click first associated form
-// control" behavior when you click any non-focusable area inside it —
-// which means clicking on padding around the editor would open the
-// native file picker. The label's nicety (click-on-label-text focuses
-// the first input) only matters for simple text fields, and we lose
-// nothing observable by dropping it.
+// Outer wrapper is `<div>`, not `<label>`: the body field contains a
+// hidden `<input type="file">` (used as the target of the upload-button
+// click) alongside the Markdown editor. A `<label>` outer would fire
+// its implicit "click first associated form control" behavior when you
+// click any non-focusable area inside it — clicking on padding around
+// the editor would open the native file picker.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when
+// an `htmlFor` is supplied — that gives screen readers and click-to-
+// focus the proper association for simple inputs, without re-introducing
+// the file-picker bug on complex fields like the body editor (which omits
+// `htmlFor` and renders a `<span>` instead).
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
     </div>
   );
