@@ -37,27 +37,39 @@ export default async function EventsPage() {
             {upcoming.map((e) => (
               <li
                 key={e.id}
-                className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
+                className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
               >
                 <Link
                   href={`/events/${e.slug}`}
-                  className="flex flex-col gap-2 p-5 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 sm:flex-row"
                 >
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-zinc-500">
-                      {formatDateTime(e.startAt)}
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold">{e.title}</h2>
-                    <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      {e.location.type === "online"
-                        ? "オンライン"
-                        : e.location.type === "hybrid"
-                          ? "ハイブリッド"
-                          : e.location.address || "会場あり"}
-                    </p>
-                  </div>
-                  <div className="text-sm text-zinc-500">
-                    {e.rsvpCount} / {e.capacity || "—"} 参加予定
+                  {e.coverImage?.url && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img
+                      src={e.coverImage.url}
+                      alt={`${e.title} のカバー画像`}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-40 w-full object-cover sm:w-48 sm:shrink-0"
+                    />
+                  )}
+                  <div className="flex flex-1 flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-zinc-500">
+                        {formatDateTime(e.startAt)}
+                      </p>
+                      <h2 className="mt-1 text-lg font-semibold">{e.title}</h2>
+                      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        {e.location.type === "online"
+                          ? "オンライン"
+                          : e.location.type === "hybrid"
+                            ? "ハイブリッド"
+                            : e.location.address || "会場あり"}
+                      </p>
+                    </div>
+                    <div className="text-sm text-zinc-500">
+                      {e.rsvpCount} / {e.capacity || "—"} 参加予定
+                    </div>
                   </div>
                 </Link>
               </li>
