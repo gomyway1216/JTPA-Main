@@ -80,9 +80,14 @@ export async function listLikedCommentsByAuthor(
   authorUid: string,
   limit = 50,
 ): Promise<CommentDoc[]> {
+  // `likeCount > 0` is pushed into Firestore so the `limit` budget isn't
+  // burned on unliked comments. The composite index has `likeCount` as
+  // the second (and only inequality-eligible) ordered field, so this is
+  // satisfied by the same index we already require for the orderBy.
   const snap = await adminDb()
     .collectionGroup("comments")
     .where("authorUid", "==", authorUid)
+    .where("likeCount", ">", 0)
     .orderBy("likeCount", "desc")
     .limit(limit)
     .get();
@@ -90,7 +95,6 @@ export async function listLikedCommentsByAuthor(
   for (const d of snap.docs) {
     const data = d.data() as Omit<CommentDoc, "id">;
     if (data.deletedAt) continue;
-    if (!data.likeCount || data.likeCount <= 0) continue;
     // The collection-group query doesn't know which parent path a doc came
     // from, so re-derive parentType/parentId from the ref ancestry. This
     // also defends against legacy docs that lack the denormalized fields.
@@ -143,17 +147,24 @@ export type CommentParentMeta = {
 export async function fetchCommentParentMetas(
   parents: { parentType: CommentParentType; parentId: string }[],
 ): Promise<Map<string, CommentParentMeta>> {
-  const refs = parents.map(({ parentType, parentId }) =>
-    adminDb().collection(parentCollection(parentType)).doc(parentId),
+  // Dedupe by (parentType, parentId): if the same blog post has three
+  // liked comments on it, we only need to read that doc once.
+  const uniqueParents = Array.from(
+    new Map(
+      parents.map((p) => [`${p.parentType}:${p.parentId}`, p] as const),
+    ).values(),
   );
   const out = new Map<string, CommentParentMeta>();
-  if (refs.length === 0) return out;
+  if (uniqueParents.length === 0) return out;
+  const refs = uniqueParents.map(({ parentType, parentId }) =>
+    adminDb().collection(parentCollection(parentType)).doc(parentId),
+  );
   const snaps = await adminDb().getAll(...refs);
   snaps.forEach((s, i) => {
     if (!s.exists) return;
     const data = s.data() as { title?: string; slug?: string };
     if (!data.title || !data.slug) return;
-    const { parentType, parentId } = parents[i];
+    const { parentType, parentId } = uniqueParents[i];
     if (!isCommentParentType(parentType)) return;
     out.set(`${parentType}:${parentId}`, {
       parentType,
