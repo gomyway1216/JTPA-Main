@@ -13,6 +13,14 @@ import {
   updateMyQa,
   type QaFormInput,
 } from "@/app/actions/qa";
+import { Field } from "@/components/forms/Field";
+import {
+  dangerButtonClass,
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/forms/styles";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -166,7 +174,7 @@ export function QaForm({ mode, user, qa }: Props) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="例: Claude Code でテスト書かせるコツは？"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -177,7 +185,7 @@ export function QaForm({ mode, user, qa }: Props) {
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={pending || uploading}
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className={`${secondaryButtonClass} px-3 py-1.5 text-xs`}
             >
               {uploading ? "アップロード中…" : "📷 画像を追加"}
             </button>
@@ -210,17 +218,17 @@ export function QaForm({ mode, user, qa }: Props) {
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder="Claude Code, テスト, バグ"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={pending || uploading || !title.trim() || !body.trim()}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={primaryButtonClass}
         >
           {pending
             ? "送信中…"
@@ -235,7 +243,7 @@ export function QaForm({ mode, user, qa }: Props) {
             type="button"
             disabled={pending}
             onClick={handleDelete}
-            className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            className={`ml-auto ${dangerButtonClass}`}
           >
             削除
           </button>
@@ -245,44 +253,3 @@ export function QaForm({ mode, user, qa }: Props) {
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
-
-// Outer wrapper is `<div>`, not `<label>`: the body field contains a
-// hidden `<input type="file">` alongside the Markdown editor, and a
-// `<label>` outer would fire its implicit "click the first form control"
-// behavior on padding clicks and pop the native file picker open. See
-// the same comment in GuideForm.tsx.
-//
-// For a11y we render the label text as a `<label htmlFor={...}>` when an
-// `htmlFor` is supplied — simple inputs get a proper screen-reader
-// association, and the body field (which omits `htmlFor`) falls back to
-// a plain `<span>` so the implicit-label trap stays gone.
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}

@@ -7,6 +7,12 @@ import {
 import { useState, useTransition } from "react";
 
 import { submitProject, updateMyProject } from "@/app/actions/projects";
+import { Field } from "@/components/forms/Field";
+import {
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+} from "@/components/forms/styles";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
@@ -168,7 +174,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="説明 (Markdown可)" required htmlFor="project-description">
@@ -178,7 +184,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           rows={6}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="タグ (カンマ区切り)" htmlFor="project-tags">
@@ -188,7 +194,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           value={tags}
           onChange={(e) => setTags(e.target.value)}
           placeholder="LLM, RAG, Agent"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="アプリのURL (任意)" htmlFor="project-app-url">
@@ -198,7 +204,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           value={appUrl}
           onChange={(e) => setAppUrl(e.target.value)}
           placeholder="https://your-app.example.com (CLI / ローカル専用なら空欄でOK)"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="リポジトリURL" htmlFor="project-repo-url">
@@ -207,7 +213,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           type="url"
           value={repoUrl}
           onChange={(e) => setRepoUrl(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="デモ動画URL (YouTube等)" htmlFor="project-demo-url">
@@ -216,7 +222,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           type="url"
           value={demoVideoUrl}
           onChange={(e) => setDemoVideoUrl(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -296,7 +302,7 @@ export function ProjectForm({ mode, user, project }: Props) {
         </div>
       </Field>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && (
         <p className="text-xs text-zinc-500">
           編集すると再度「審査中」となり、管理者の承認後に再掲載されます。
@@ -306,7 +312,7 @@ export function ProjectForm({ mode, user, project }: Props) {
       <button
         type="submit"
         disabled={pending || uploading}
-        className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+        className={primaryButtonClass}
       >
         {pending
           ? "送信中..."
@@ -320,45 +326,3 @@ export function ProjectForm({ mode, user, project }: Props) {
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
-
-// Outer wrapper is `<div>`, not `<label>`: the thumbnail / screenshots
-// fields contain `<input type="file">` alongside previews, and a
-// `<label>` outer fired its implicit "click the first form control"
-// behavior on adjacent padding clicks and popped the native file
-// picker. See the same comment in GuideForm.tsx.
-//
-// For a11y we render the label text as a `<label htmlFor={...}>` when an
-// `htmlFor` is supplied — simple inputs get a proper screen-reader
-// association, and the thumbnail/screenshots fields (which omit
-// `htmlFor`) fall back to a plain `<span>` so the implicit-label trap
-// stays gone.
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}

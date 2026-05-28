@@ -16,6 +16,14 @@ import {
   updateMyPost,
   type PostFormInput,
 } from "@/app/actions/posts";
+import { Field } from "@/components/forms/Field";
+import {
+  dangerButtonClass,
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClass,
+} from "@/components/forms/styles";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
@@ -187,7 +195,7 @@ export function PostForm({ mode, user, post }: Props) {
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -203,7 +211,7 @@ export function PostForm({ mode, user, post }: Props) {
           maxLength={300}
           value={excerpt}
           onChange={(e) => setExcerpt(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
         <p className="mt-1 text-xs text-zinc-500">{excerpt.length} / 300</p>
       </Field>
@@ -226,7 +234,7 @@ export function PostForm({ mode, user, post }: Props) {
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder="お知らせ、勉強会, レポート"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -264,7 +272,7 @@ export function PostForm({ mode, user, post }: Props) {
         </div>
       </Field>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && !user.isAdmin && (
         <p className="text-xs text-zinc-500">
           編集すると再度「審査中」となり、管理者の承認後に再掲載されます。
@@ -276,14 +284,14 @@ export function PostForm({ mode, user, post }: Props) {
           type="button"
           disabled={pending || uploading}
           onClick={() => submit("draft")}
-          className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className={secondaryButtonClass}
         >
           下書き保存
         </button>
         <button
           type="submit"
           disabled={pending || uploading}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={primaryButtonClass}
         >
           {pending
             ? "送信中..."
@@ -298,7 +306,7 @@ export function PostForm({ mode, user, post }: Props) {
             type="button"
             disabled={pending}
             onClick={handleDelete}
-            className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            className={`ml-auto ${dangerButtonClass}`}
           >
             削除
           </button>
@@ -308,44 +316,3 @@ export function PostForm({ mode, user, post }: Props) {
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
-
-// Outer wrapper is `<div>`, not `<label>`: the cover-image field
-// contains a `<input type="file">` alongside the preview, and a
-// `<label>` outer fired its implicit "click the first form control"
-// behavior on adjacent padding clicks and popped the native file picker.
-// See the same comment in GuideForm.tsx.
-//
-// For a11y we render the label text as a `<label htmlFor={...}>` when an
-// `htmlFor` is supplied — simple inputs get a proper screen-reader
-// association, and the body/cover-image fields (which omit `htmlFor`)
-// fall back to a plain `<span>` so the implicit-label trap stays gone.
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}

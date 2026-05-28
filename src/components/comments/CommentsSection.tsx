@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { deleteComment, postComment } from "@/app/actions/comments";
+import {
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+} from "@/components/forms/styles";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { parentRoutePrefix } from "@/lib/comments-parent";
 import type {
@@ -293,7 +298,7 @@ export function CommentsSection({
               disabled={pending}
               autoFocus
               placeholder={`@${c.authorName} への返信 (最大 2000 文字)`}
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-50"
+              className={inputClass}
             />
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-zinc-500">
@@ -302,7 +307,7 @@ export function CommentsSection({
               <button
                 type="submit"
                 disabled={pending || !replyBody.trim()}
-                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                className={`${primaryButtonClass} px-3 py-1.5 text-xs`}
               >
                 {pending ? "送信中..." : "返信する"}
               </button>
@@ -356,7 +361,7 @@ export function CommentsSection({
               onChange={(e) => setBody(e.target.value)}
               disabled={pending}
               placeholder="コメントを入力 (最大 2000 文字)"
-              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-50"
+              className={inputClass}
             />
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs text-zinc-500">
@@ -365,12 +370,12 @@ export function CommentsSection({
               <button
                 type="submit"
                 disabled={pending || !body.trim()}
-                className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+                className={primaryButtonClass}
               >
                 {pending ? "送信中..." : "コメントする"}
               </button>
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className={errorTextClass}>{error}</p>}
           </form>
         ) : (
           <div className="rounded-md border border-zinc-200 p-4 text-center text-sm dark:border-zinc-800">

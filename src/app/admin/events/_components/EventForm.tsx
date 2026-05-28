@@ -14,7 +14,14 @@ import {
   updateEvent,
   type EventFormInput,
 } from "@/app/actions/events";
+import { Field } from "@/components/forms/Field";
 import { SaveFlash } from "@/components/forms/SaveFlash";
+import {
+  dangerButtonClass,
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+} from "@/components/forms/styles";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type {
@@ -256,7 +263,7 @@ export function EventForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="スラッグ (URL)" htmlFor="event-slug">
@@ -266,7 +273,7 @@ export function EventForm({
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           placeholder="自動生成 (英小文字/数字/ハイフン)"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="説明" required htmlFor="event-description">
@@ -276,7 +283,7 @@ export function EventForm({
           rows={6}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -287,7 +294,7 @@ export function EventForm({
             required
             value={startAt}
             onChange={(e) => setStartAt(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
         <Field label="終了日時" required htmlFor="event-end">
@@ -297,7 +304,7 @@ export function EventForm({
             required
             value={endAt}
             onChange={(e) => setEndAt(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
       </div>
@@ -306,7 +313,7 @@ export function EventForm({
           id="event-location-type"
           value={locationType}
           onChange={(e) => setLocationType(e.target.value as EventFormInput["locationType"])}
-          className={inputCls}
+          className={inputClass}
         >
           <option value="offline">オフライン</option>
           <option value="online">オンライン</option>
@@ -321,7 +328,7 @@ export function EventForm({
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className={inputCls}
+              className={inputClass}
             />
           </Field>
           <Field label="地図URL" htmlFor="event-map-url">
@@ -330,7 +337,7 @@ export function EventForm({
               type="url"
               value={mapUrl}
               onChange={(e) => setMapUrl(e.target.value)}
-              className={inputCls}
+              className={inputClass}
             />
           </Field>
         </>
@@ -342,7 +349,7 @@ export function EventForm({
             type="url"
             value={meetingUrl}
             onChange={(e) => setMeetingUrl(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
       )}
@@ -354,7 +361,7 @@ export function EventForm({
             min={0}
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
         <Field label="発表者枠" htmlFor="event-presenter-capacity">
@@ -364,7 +371,7 @@ export function EventForm({
             min={0}
             value={presenterCapacity}
             onChange={(e) => setPresenterCapacity(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
       </div>
@@ -373,7 +380,7 @@ export function EventForm({
           id="event-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as EventFormInput["status"])}
-          className={inputCls}
+          className={inputClass}
         >
           <option value="draft">下書き</option>
           <option value="published">公開</option>
@@ -390,7 +397,7 @@ export function EventForm({
               e.target.value as NonNullable<EventFormInput["visibility"]>,
             )
           }
-          className={inputCls}
+          className={inputClass}
         >
           <option value="public">全員 (ログインなしでも閲覧可)</option>
           <option value="members_only">メンバー限定 (要ログイン)</option>
@@ -462,14 +469,14 @@ export function EventForm({
                     placeholder="key (英数字)"
                     value={f.key}
                     onChange={(e) => updateField(i, { key: e.target.value })}
-                    className={inputCls}
+                    className={inputClass}
                   />
                   <input
                     type="text"
                     placeholder="表示ラベル"
                     value={f.label}
                     onChange={(e) => updateField(i, { label: e.target.value })}
-                    className={inputCls}
+                    className={inputClass}
                   />
                   <select
                     value={f.type}
@@ -478,7 +485,7 @@ export function EventForm({
                         type: e.target.value as SurveyField["type"],
                       })
                     }
-                    className={inputCls}
+                    className={inputClass}
                   >
                     <option value="text">テキスト</option>
                     <option value="textarea">複数行</option>
@@ -492,7 +499,7 @@ export function EventForm({
                         audience: e.target.value as SurveyField["audience"],
                       })
                     }
-                    className={inputCls}
+                    className={inputClass}
                   >
                     <option value="all">全員</option>
                     <option value="presenter">発表者のみ</option>
@@ -511,7 +518,7 @@ export function EventForm({
                           .filter(Boolean),
                       })
                     }
-                    className={`${inputCls} mt-2`}
+                    className={`${inputClass} mt-2`}
                   />
                 )}
                 <div className="mt-2 flex items-center justify-between">
@@ -537,14 +544,14 @@ export function EventForm({
         )}
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={pending || uploading}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+            className={primaryButtonClass}
           >
             {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
           </button>
@@ -554,7 +561,7 @@ export function EventForm({
           <button
             type="button"
             onClick={handleDelete}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            className={dangerButtonClass}
           >
             イベントを削除
           </button>
@@ -564,44 +571,3 @@ export function EventForm({
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
-
-// Outer wrapper is `<div>`, not `<label>`: the cover-image field
-// contains a `<input type="file">`, and a `<label>` outer fires its
-// implicit "click the first form control" behavior on adjacent padding
-// clicks and pops the native file picker. See PR #53 / GuideForm.tsx for
-// the full story.
-//
-// For a11y we render the label text as a `<label htmlFor={...}>` when an
-// `htmlFor` is supplied — simple inputs get a proper screen-reader
-// association, and the cover-image field (which omits `htmlFor`) falls
-// back to a plain `<span>` so the implicit-label trap stays gone.
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}
