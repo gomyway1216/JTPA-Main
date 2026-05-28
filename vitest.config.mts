@@ -18,5 +18,12 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
+    // Pin TZ so the ja-JP date/time formatters in src/lib/utils.ts produce
+    // identical strings across local machines and CI. The app is JST-only
+    // (Asia/Tokyo) and the formatters render JST regardless of host TZ, so
+    // tests assert against JST clock values.
+    env: {
+      TZ: "Asia/Tokyo",
+    },
   },
 });

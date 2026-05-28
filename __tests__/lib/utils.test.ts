@@ -52,10 +52,10 @@ describe("toDate", () => {
 });
 
 describe("formatDate / formatDateTime / formatTime", () => {
-  // The formatters use ja-JP locale; on Node these come from full-icu and
-  // are deterministic. Assert via includes rather than exact strings so a
-  // node-version locale tweak doesn't break the suite.
-  const d = new Date("2025-03-15T05:30:00Z"); // 2025-03-15 14:30 JST
+  // vitest.config.mts pins TZ=Asia/Tokyo, so the ja-JP formatters in
+  // src/lib/utils.ts produce deterministic JST clock values. 05:30 UTC →
+  // 14:30 JST on 2025-03-15 (a Saturday).
+  const d = new Date("2025-03-15T05:30:00Z");
 
   it("formatDate returns empty string for missing input", () => {
     expect(formatDate(undefined)).toBe("");
@@ -70,20 +70,21 @@ describe("formatDate / formatDateTime / formatTime", () => {
     expect(formatDateTime(null)).toBe("");
   });
 
-  it("formatDate produces a non-empty string for a real date", () => {
+  it("formatDate renders the JST y/m/d (+ weekday)", () => {
     const result = formatDate(d);
-    expect(result).not.toBe("");
-    expect(result).toMatch(/2025/);
+    expect(result).toContain("2025年3月15日");
+    // weekday: "short" → "土" somewhere in the output
+    expect(result).toContain("土");
   });
 
-  it("formatTime produces an HH:MM-ish string for a real date", () => {
-    const result = formatTime(d);
-    expect(result).toMatch(/^\d{2}:\d{2}$/);
+  it("formatTime renders HH:MM in JST", () => {
+    expect(formatTime(d)).toBe("14:30");
   });
 
-  it("formatDateTime joins date and time with a space", () => {
+  it("formatDateTime joins the JST date and time with a space", () => {
     const result = formatDateTime(d);
-    expect(result).toMatch(/2025.* \d{2}:\d{2}$/);
+    expect(result).toContain("2025年3月15日");
+    expect(result.endsWith(" 14:30")).toBe(true);
   });
 });
 
@@ -234,5 +235,20 @@ describe("truncate", () => {
     const out = truncate(input, 25);
     expect([...out].length).toBeLessThanOrEqual(25);
     expect(out.endsWith("…")).toBe(true);
+  });
+
+  // Boundary cases for tiny budgets. Without the `max <= 0` guard, max=0
+  // would slice with budget=-1 (text.slice(0, -1)) and silently exceed
+  // the cap. max=1 must fit only the ellipsis.
+  it("returns empty string when max=0 (cannot fit even an ellipsis)", () => {
+    expect(truncate("hello", 0)).toBe("");
+  });
+
+  it("returns just the ellipsis when max=1", () => {
+    expect(truncate("hello", 1)).toBe("…");
+  });
+
+  it("handles negative max as 'no room for output'", () => {
+    expect(truncate("hello", -3)).toBe("");
   });
 });
