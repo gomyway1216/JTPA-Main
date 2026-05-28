@@ -78,7 +78,7 @@ export default async function HomePage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={e.coverImage.url}
-                      alt=""
+                      alt={`${e.title} のカバー画像`}
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}
@@ -87,7 +87,7 @@ export default async function HomePage() {
                       <p className="text-xs uppercase tracking-wide text-zinc-500">
                         {formatDateTime(e.startAt)}
                       </p>
-                      <LocationPill type={e.location.type} />
+                      <LocationPill type={e.location?.type} />
                     </div>
                     <h3 className="mt-2 line-clamp-2 text-lg font-semibold">
                       {e.title}
@@ -143,7 +143,7 @@ export default async function HomePage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={p.thumbnail.url}
-                      alt=""
+                      alt={`${p.title} のサムネイル`}
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}
@@ -175,7 +175,8 @@ export default async function HomePage() {
   );
 }
 
-function LocationPill({ type }: { type: LocationType }) {
+function LocationPill({ type }: { type?: LocationType }) {
+  if (!type) return null;
   const label =
     type === "online" ? "オンライン" : type === "hybrid" ? "ハイブリッド" : "対面";
   const classes =
