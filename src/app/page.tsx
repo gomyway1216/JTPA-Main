@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { primaryButtonClass } from "@/components/forms/styles";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { listEvents } from "@/lib/data/events";
 import { listProjects } from "@/lib/data/projects";
@@ -40,10 +41,7 @@ export default async function HomePage() {
           オンライン/オフラインのイベント、メンバーが作ったAIプロジェクトのショーケースをお楽しみください。
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
-          <Link
-            href="/events"
-            className="inline-flex items-center justify-center rounded-md bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-4 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:hover:shadow-indigo-400/30"
-          >
+          <Link href="/events" className={primaryButtonClass}>
             イベント一覧
           </Link>
           <Link
@@ -65,7 +63,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/events"
-            className="shrink-0 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
             すべて見る →
           </Link>
@@ -122,7 +120,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/showcase"
-            className="shrink-0 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+            className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
             すべて見る →
           </Link>
@@ -133,7 +131,7 @@ export default async function HomePage() {
             hint={
               <>
                 あなたの AI プロジェクトを{" "}
-                <Link href="/projects/new" className="font-medium text-indigo-600 underline dark:text-indigo-400">
+                <Link href="/projects/new" className="font-medium text-accent underline">
                   投稿
                 </Link>
                 してみませんか？

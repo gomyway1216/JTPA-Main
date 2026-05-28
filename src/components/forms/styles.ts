@@ -21,12 +21,16 @@ const buttonSizeMd = "px-4 py-2 text-sm";
 const buttonSizeSm = "px-3 py-1.5 text-xs";
 
 // Primary uses the indigo accent gradient (blue-600 → violet-600 in
-// light; blue-400 → violet-400 in dark). `bg-size`/`bg-position` give
-// hover a subtle "shift" by sliding the gradient instead of recoloring
-// — keeps the AI accent identity without a flat color change. Soft
-// shadow (`shadow-indigo-500/30`) reads as a quiet glow on the page.
+// light; blue-500 → violet-500 in dark — kept one stop darker than the
+// hero text gradient so white button text stays readable against the
+// gradient fill). `bg-size`/`bg-position` give hover a subtle "shift"
+// by sliding the gradient instead of recoloring — keeps the AI accent
+// identity without a flat color change. `transition-all` is required:
+// the plain `transition` utility does NOT animate `background-position`,
+// so the slide would otherwise be instant. Soft shadow
+// (`shadow-indigo-500/30`) reads as a quiet glow on the page.
 const primaryButtonBase =
-  "inline-flex items-center justify-center rounded-md font-medium text-white transition bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left hover:bg-right shadow-sm shadow-indigo-500/30 hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] disabled:opacity-50 dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:hover:shadow-indigo-400/30 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950";
+  "inline-flex items-center justify-center rounded-md font-medium text-white transition-all bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left hover:bg-right shadow-sm shadow-indigo-500/30 hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] disabled:opacity-50 dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:hover:shadow-indigo-400/30 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950";
 
 const secondaryButtonBase =
   "inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white font-medium transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900 dark:focus:ring-zinc-400 dark:focus:ring-offset-zinc-950";

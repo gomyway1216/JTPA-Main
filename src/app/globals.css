@@ -23,11 +23,14 @@
   --background: #fafafa;
   --foreground: #0a0a0a;
   /*
-   * Accent system: a single solid color plus matching gradient endpoints.
-   * Used by markdown link colors, primary-button gradient, hero backdrop,
-   * and the "AI" gradient in the hero h1. Indigo sits between the blue
-   * and violet stops so a solid `--accent` works alongside the gradient
-   * without feeling like a different family.
+   * Accent system. `--accent` is consumed by `.prose-jtpa a` and the
+   * `text-accent` Tailwind utility (exposed via @theme below); it backs
+   * the "すべて見る" / "投稿" inline links on /. `--accent-from` and
+   * `--accent-to` are declared for callers that want to compose a
+   * gradient from CSS — at present the primary button and hero
+   * decorations use literal Tailwind color classes (blue-600 →
+   * violet-600 in light, blue-500/400 in dark) tuned for contrast on
+   * their specific backgrounds, so the vars sit unused there for now.
    */
   --accent: #4f46e5; /* indigo-600 */
   --accent-from: #2563eb; /* blue-600 */
