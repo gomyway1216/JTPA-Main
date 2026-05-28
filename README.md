@@ -26,7 +26,7 @@ Then open <http://localhost:3000>. See [`docs/setup.md`](docs/setup.md) for the 
 - [`docs/admin.md`](docs/admin.md) — admin operations (granting roles, event lifecycle, project/post review, attendee export, About edit)
 - [`docs/deployment.md`](docs/deployment.md) — App Hosting auto-deploy, rules CI, env var sources
 
-User-facing help (Japanese) lives in-app at `/help`; admin operational help (Japanese) at `/admin/help`. Both are rendered from the same source files as the docs above when feasible.
+User-facing help (Japanese) lives in-app at `/help`; admin operational help (Japanese) at `/admin/help`. These are maintained separately from `docs/` — the in-app pages are hand-written JSX optimized for site visitors, while `docs/` targets contributors.
 
 ## Tech stack
 

@@ -193,7 +193,7 @@ export default function HelpPage() {
           <Row cells={[<Link key="r" href="/my/rsvps" className="text-blue-600 hover:underline">参加履歴</Link>, "イベントRSVPの一覧、キャンセル"]} />
           <Row cells={[<Link key="p" href="/my/projects" className="text-blue-600 hover:underline">自分の投稿</Link>, "ショーケースに投稿したプロジェクト"]} />
           <Row cells={[<Link key="b" href="/my/posts" className="text-blue-600 hover:underline">自分の記事</Link>, "ブログ記事 (下書き含む)"]} />
-          <Row cells={[<Link key="q" href="/my/qa" className="text-blue-600 hover:underline">自分のQ&amp;A</Link>, "投稿した質問・回答"]} />
+          <Row cells={[<Link key="q" href="/my/qa" className="text-blue-600 hover:underline">自分のQ&amp;A</Link>, "自分が投稿したQ&Aの質問 (回答コメントはここには出ません)"]} />
           <Row cells={[<Link key="l" href="/my/likes" className="text-blue-600 hover:underline">もらったいいね</Link>, "自分のコメントに付いたいいね一覧"]} />
           <Row cells={[<Link key="pr" href="/my/profile" className="text-blue-600 hover:underline">アカウント設定</Link>, "プロフィール・公開設定・メール通知"]} />
         </Table>

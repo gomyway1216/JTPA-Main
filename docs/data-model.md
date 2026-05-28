@@ -57,7 +57,7 @@ The public profile loader (`getPublicProfile` in `src/lib/data/users.ts`)
 goes through Admin SDK and only returns the fields the user has flagged
 public; it does **not** rely on rules.
 
-**`admin: true` and `editor: true` live on Firebase Auth Custom Claims, NOT here.** See [`admin.md`](admin.md#granting-admin) for why.
+**`admin: true` and `editor: true` live on Firebase Auth Custom Claims, NOT here.** See [`admin.md`](admin.md#granting-roles-preferred-admin-ui) for why.
 
 ## `events/{eventId}`
 
@@ -338,12 +338,13 @@ All paths are public-read so direct download URLs work without auth. Write rules
 
 Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules.yml`). Add new indexes there when a query throws the "create index" link — copy the spec from the URL Firestore generates.
 
-Current indexes cover:
-- `events` queries with status + startAt sort
-- `projects` by status + submittedAt
-- `posts` by status + submittedAt / publishedAt
-- `qa` by status + createdAt
-- **`comments` collectionGroup** by `authorUid` + `likeCount` — powers `/my/likes` (PR #46)
-- Per-parent comment listing by `createdAt`
+Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
+- `events`: `status + startAt` (both directions), `status + endAt` (both directions)
+- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`
+- `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`
+- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`
+- `guides`: `status + order + updatedAt`
+- `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
+- **`comments` collection-group**: `authorUid + likeCount DESC` — powers `/my/likes`
 
 If you add a new sort/filter combination, prefer adding it locally + pushing rather than waiting for production to hit the missing-index error.

@@ -1,18 +1,14 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
-import { getSessionUser } from "@/lib/auth/session";
-
-export const dynamic = "force-dynamic";
 export const metadata = { title: "管理者ヘルプ" };
 
-export default async function AdminHelpPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/admin/help");
-  // Editors can read this page too — most of it concerns roles they touch
-  // (guides, About when admins ask them to draft copy) and the rest helps
-  // them understand the boundary between editor and admin permissions.
+// Auth is enforced one level up in `src/app/admin/layout.tsx`, which
+// redirects unauthenticated visitors to login and non-admin/non-editor
+// users to `/`. Editors are intentionally allowed on this page so they
+// can read about role boundaries, guide editing, and the bits of admin
+// work they collaborate on.
 
+export default function AdminHelpPage() {
   return (
     <div className="space-y-10">
       <header className="space-y-2">
@@ -62,7 +58,8 @@ export default async function AdminHelpPage() {
         <Callout>
           editor は admin の部分集合です。editor が <code>/admin</code> 配下の
           管理画面を直接開いた場合は <code>/admin/guides</code> に
-          リダイレクトされます (例外: ガイド管理画面のみ閲覧可)。
+          リダイレクトされます (例外: ガイド管理画面とこのヘルプページのみ
+          editor も閲覧可)。
         </Callout>
       </Section>
 

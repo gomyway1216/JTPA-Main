@@ -56,6 +56,7 @@ Same sign-out-and-back-in rule applies.
 | `/admin/guides` | Guide list (create, edit, publish, delete) | admin + editor |
 | `/admin/about` | Edit the `/about` page (title + Markdown body, stored in `sitePages/about`) | admin |
 | `/admin/users` | User list with role grant/revoke | admin |
+| `/admin/help` | In-app admin operations guide (Japanese, mirrors this doc at a high level) | admin + editor |
 
 The `/admin/*` layout admits admins or editors; admin-only pages each add a one-line redirect (to `/admin/guides`) for editors hitting them directly. Server actions re-check with `requireAdmin()` or `requireEditor()` so the page-level guard isn't load-bearing for security.
 

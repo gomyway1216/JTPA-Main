@@ -19,6 +19,7 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 | Q&A list | `/qa` | `qa` where `status == published` | No review queue — anyone can post |
 | Q&A detail | `/qa/[slug]` | `qa`, `comments`, `likes` | |
 | Public profile | `/u/[uid]` | `users/{uid}` (only fields with `*Public: true`) | Email never shown publicly |
+| Help | `/help` | (none — static JSX) | Japanese user guide, linked from header + footer |
 
 ## Signed-in member
 
@@ -58,6 +59,7 @@ Gated by `requireAdmin()` or `requireEditor()` in every Server Action; the `/adm
 | Guides | `/admin/guides` | admin + editor | Create, edit, publish, delete curated articles |
 | About | `/admin/about` | admin | Edit `sitePages/about` |
 | Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims |
+| Admin help | `/admin/help` | admin + editor | In-app operations guide, linked from `/admin` sidebar |
 
 ## Cross-cutting helpers
 
