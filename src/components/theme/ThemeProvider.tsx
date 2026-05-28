@@ -12,11 +12,22 @@ const STORAGE_KEY = "jtpa-theme";
 // layout.tsx already set the actual `.dark` class before hydration.
 
 const listeners = new Set<() => void>();
+// Cached localStorage read. `useSyncExternalStore` calls getSnapshot
+// frequently (every render of every consumer), and `localStorage.getItem`
+// is a synchronous DOM API that can show up in profiling under heavy use.
+// Invalidated to `null` whenever the underlying value might have changed
+// (setMode, cross-tab storage event).
+let cachedMode: ThemeMode | null = null;
+// One pair of DOM listeners shared across all subscribers, attached only
+// while at least one consumer is mounted.
+let detachGlobal: (() => void) | null = null;
 
 function readStored(): ThemeMode {
   if (typeof window === "undefined") return "system";
+  if (cachedMode !== null) return cachedMode;
   const v = window.localStorage.getItem(STORAGE_KEY);
-  return v === "light" || v === "dark" || v === "system" ? v : "system";
+  cachedMode = v === "light" || v === "dark" || v === "system" ? v : "system";
+  return cachedMode;
 }
 
 function systemPrefersDark(): boolean {
@@ -35,30 +46,44 @@ function applyClass(resolved: "light" | "dark") {
   else root.classList.remove("dark");
 }
 
-function subscribe(cb: () => void): () => void {
-  listeners.add(cb);
-  // Cross-tab sync: when localStorage changes from another tab.
+function notify() {
+  for (const cb of listeners) cb();
+}
+
+function attachGlobalListeners(): () => void {
+  // Cross-tab sync: another tab wrote a new theme preference.
   const storageHandler = (e: StorageEvent) => {
-    if (e.key === STORAGE_KEY) {
-      applyClass(resolveFor(readStored()));
-      cb();
-    }
+    if (e.key !== STORAGE_KEY) return;
+    cachedMode = null;
+    applyClass(resolveFor(readStored()));
+    notify();
   };
-  // System theme change — only matters when mode is "system", but we
-  // recompute resolved on every fire anyway and let consumers re-render.
+  // OS-level theme change — only matters while we're in "system" mode.
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const mqHandler = () => {
-    if (readStored() === "system") {
-      applyClass(resolveFor("system"));
-      cb();
-    }
+    if (readStored() !== "system") return;
+    applyClass(resolveFor("system"));
+    notify();
   };
   window.addEventListener("storage", storageHandler);
   mq.addEventListener("change", mqHandler);
   return () => {
-    listeners.delete(cb);
     window.removeEventListener("storage", storageHandler);
     mq.removeEventListener("change", mqHandler);
+  };
+}
+
+function subscribe(cb: () => void): () => void {
+  listeners.add(cb);
+  if (listeners.size === 1) {
+    detachGlobal = attachGlobalListeners();
+  }
+  return () => {
+    listeners.delete(cb);
+    if (listeners.size === 0 && detachGlobal) {
+      detachGlobal();
+      detachGlobal = null;
+    }
   };
 }
 
@@ -70,10 +95,19 @@ function getServerSnapshot(): ThemeMode {
   return "system";
 }
 
+function getResolvedSnapshot(): "light" | "dark" {
+  return resolveFor(readStored());
+}
+
+function getServerResolvedSnapshot(): "light" | "dark" {
+  return "light";
+}
+
 export function setMode(next: ThemeMode) {
+  cachedMode = next;
   window.localStorage.setItem(STORAGE_KEY, next);
   applyClass(resolveFor(next));
-  for (const cb of listeners) cb();
+  notify();
 }
 
 export function useTheme(): {
@@ -84,8 +118,8 @@ export function useTheme(): {
   const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const resolved = useSyncExternalStore(
     subscribe,
-    () => resolveFor(readStored()),
-    () => "light" as const,
+    getResolvedSnapshot,
+    getServerResolvedSnapshot,
   );
   return { mode, setMode, resolved };
 }

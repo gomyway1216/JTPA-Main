@@ -83,6 +83,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 onClick={() => setUserMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
+                aria-label={user.displayName || user.email || "ユーザーメニュー"}
                 className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 {user.photoURL ? (
