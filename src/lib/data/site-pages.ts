@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { adminDb } from "@/lib/firebase/admin";
 import { plainify } from "@/lib/data/serialize";
 import type { SitePageDoc } from "@/lib/types";
@@ -31,13 +33,16 @@ export const SITE_PAGE_DEFAULTS: Record<
   },
 };
 
-export async function getSitePage(
-  slug: SitePageSlug,
-): Promise<SitePageDoc | null> {
-  const snap = await adminDb().collection("sitePages").doc(slug).get();
-  if (!snap.exists) return null;
-  return plainify({
-    ...(snap.data() as Omit<SitePageDoc, "id">),
-    id: snap.id,
-  });
-}
+// Wrapped in React `cache` so a single request hits Firestore once even when
+// both `generateMetadata` and the page component call this with the same
+// slug. Matches the pattern used by `getSessionUser` in src/lib/auth/session.ts.
+export const getSitePage = cache(
+  async (slug: SitePageSlug): Promise<SitePageDoc | null> => {
+    const snap = await adminDb().collection("sitePages").doc(slug).get();
+    if (!snap.exists) return null;
+    return plainify({
+      ...(snap.data() as Omit<SitePageDoc, "id">),
+      id: snap.id,
+    });
+  },
+);
