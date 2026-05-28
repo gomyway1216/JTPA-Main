@@ -110,6 +110,10 @@ export function stripMarkdown(body: string): string {
 // on a word boundary; falls back to a hard cut (CJK has no spaces).
 export function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
+  // max=0 can't fit even the ellipsis. Without this guard the
+  // `text.slice(0, -1)` below silently drops the cap and returns
+  // `text.slice(0, -1) + "…"`, which exceeds the budget.
+  if (max <= 0) return "";
   // Reserve one char for the ellipsis so we honor the cap.
   const budget = max - 1;
   const cut = text.slice(0, budget);
