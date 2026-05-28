@@ -135,9 +135,13 @@ export async function cancelRsvp({
       if (!rsvpSnap.exists) return null;
       const prior = rsvpSnap.data() as RsvpDoc;
       if (prior.status === "cancelled") return null;
-      const event = eventSnap.exists
-        ? (eventSnap.data() as { title?: string; slug?: string })
-        : null;
+      // Defensive check, mirrors submitRsvp: if the event doc was
+      // deleted between the original RSVP and this cancel, the later
+      // `tx.update(eventRef, …)` would fail with a cryptic Firestore
+      // error. Throw the same EVENT_NOT_FOUND sentinel so callers see
+      // a consistent message (per PR #61 Gemini review).
+      if (!eventSnap.exists) throw new Error("EVENT_NOT_FOUND");
+      const event = eventSnap.data() as { title: string; slug: string };
 
       // Only confirmed cancellations free a real seat — a waitlist
       // cancel just removes someone from the queue, no promotion
@@ -193,7 +197,9 @@ export async function cancelRsvp({
         updatedAt: now,
       });
 
-      if (promoteeDoc && event?.title && event?.slug) {
+      // `event` is guaranteed non-null + properly typed after the
+      // EVENT_NOT_FOUND guard above, so no optional-chaining needed.
+      if (promoteeDoc) {
         return {
           to: promoteeDoc.data.email,
           displayName: promoteeDoc.data.displayName,
