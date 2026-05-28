@@ -1,12 +1,9 @@
 import "server-only";
 
+import { parentCollection } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
 import { plainify } from "@/lib/data/serialize";
 import type { CommentDoc, CommentParentType, PostCommentDoc } from "@/lib/types";
-
-function parentCollection(parentType: CommentParentType): string {
-  return parentType === "post" ? "posts" : "guides";
-}
 
 function fromSnap(
   doc: FirebaseFirestore.QueryDocumentSnapshot,

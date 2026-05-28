@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 
 import { deleteComment, postComment } from "@/app/actions/comments";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { parentRoutePrefix } from "@/lib/comments-parent";
 import type {
   CommentDoc,
   CommentParentType,
@@ -104,7 +105,7 @@ export function CommentsSection({
   }
 
   const bodyId = `comment-body-${parentId}`;
-  const loginRedirect = `${parentType === "post" ? "/blog" : "/guide"}/${parentSlug}`;
+  const loginRedirect = `${parentRoutePrefix(parentType)}/${parentSlug}`;
 
   return (
     <section

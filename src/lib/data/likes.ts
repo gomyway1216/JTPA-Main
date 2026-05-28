@@ -1,11 +1,8 @@
 import "server-only";
 
+import { parentCollection } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
 import type { CommentParentType } from "@/lib/types";
-
-function parentCollection(parentType: CommentParentType): string {
-  return parentType === "post" ? "posts" : "guides";
-}
 
 /**
  * For the given signed-in user, return the set of "like targets" the user
