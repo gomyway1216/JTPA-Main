@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -108,34 +107,42 @@ export default async function ProjectDetailPage({
         </section>
       )}
 
+      {/*
+        External links use plain `<a>` rather than next/link — next/link is
+        built for client-side internal navigation (prefetching, the App
+        Router's transition machinery, etc.) and just adds noise for
+        outbound URLs. Per Gemini review on PR #56.
+      */}
       <div className="flex flex-wrap gap-3">
-        <Link
-          href={project.appUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          アプリを開く →
-        </Link>
+        {project.appUrl && (
+          <a
+            href={project.appUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            アプリを開く →
+          </a>
+        )}
         {project.repoUrl && (
-          <Link
+          <a
             href={project.repoUrl}
             target="_blank"
             rel="noreferrer noopener"
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
           >
             ソースコード
-          </Link>
+          </a>
         )}
         {project.demoVideoUrl && (
-          <Link
+          <a
             href={project.demoVideoUrl}
             target="_blank"
             rel="noreferrer noopener"
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
           >
             デモ動画
-          </Link>
+          </a>
         )}
       </div>
 
