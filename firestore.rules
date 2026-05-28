@@ -108,6 +108,49 @@ service cloud.firestore {
       allow read: if isAdmin() || isEditor()
         || (resource != null && resource.data.status == 'published');
       allow create, update, delete: if isAdmin() || isEditor();
+
+      // Per-guide likes. Same shape as posts/{id}/likes — existence of the
+      // doc == liked, indexed by the liking user's uid. Mutations go
+      // through the toggleLikeRecord Server Action (Admin SDK, bypasses
+      // rules) but we still allow client writes here so a future
+      // real-time-listening UI is possible without rule changes.
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, delete: if isSelf(uid)
+          && get(/databases/$(database)/documents/guides/$(guideId)).data.status == 'published';
+        allow update: if false;
+      }
+
+      // Comments on guides. Mirror posts/{id}/comments. Reads gated on
+      // the parent guide being published (so draft guide comments don't
+      // leak via guessed ids); author and admin always see their own.
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (isSignedIn() && resource != null
+              && resource.data.authorUid == request.auth.uid)
+          || get(/databases/$(database)/documents/guides/$(guideId)).data.status == 'published';
+
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && get(/databases/$(database)/documents/guides/$(guideId)).data.status == 'published';
+
+        allow update: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == resource.data.authorUid
+          );
+
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        // Per-comment likes on a guide comment.
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, delete: if isSelf(uid);
+          allow update: if false;
+        }
+      }
     }
 
     // ----- blog posts -----
@@ -143,6 +186,14 @@ service cloud.firestore {
       allow delete: if isAdmin()
         || (isSignedIn() && resource.data.authorUid == request.auth.uid);
 
+      // Per-post likes. See guides/{id}/likes for the same shape.
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, delete: if isSelf(uid)
+          && get(/databases/$(database)/documents/posts/$(postId)).data.status == 'published';
+        allow update: if false;
+      }
+
       // Comments live under the post. Reads are gated on the parent post
       // being publicly readable — otherwise comments on a draft / rejected
       // post would leak metadata about its existence. Author and admin
@@ -169,6 +220,13 @@ service cloud.firestore {
 
         allow delete: if isAdmin()
           || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        // Per-comment likes.
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, delete: if isSelf(uid);
+          allow update: if false;
+        }
       }
     }
 

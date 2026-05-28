@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { CommentsSection } from "@/app/blog/[slug]/CommentsSection";
+import { CommentsSection } from "@/components/comments/CommentsSection";
+import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getSessionUser } from "@/lib/auth/session";
-import { listPostComments } from "@/lib/data/comments";
+import { listComments } from "@/lib/data/comments";
+import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPostBySlug } from "@/lib/data/posts";
 import { formatDate } from "@/lib/utils";
 
@@ -38,20 +40,26 @@ export default async function BlogPostPage({
   const post = await getPostBySlug(slug);
   if (!post || post.status !== "published") notFound();
 
-  const [user, comments] = await Promise.all([
-    getSessionUser(),
-    listPostComments(post.id).catch((err) => {
-      console.error("Failed to list comments:", err);
-      return [];
-    }),
-  ]);
+  const user = await getSessionUser();
+  // Comments are fetched first; the like-set query then needs the comment
+  // ids to do its batched read.
+  const comments = await listComments("post", post.id).catch((err) => {
+    console.error("Failed to list comments:", err);
+    return [];
+  });
+  const likedSet = await getMyLikesForParent({
+    parentType: "post",
+    parentId: post.id,
+    commentIds: comments.map((c) => c.id),
+    uid: user?.uid ?? null,
+  }).catch((err) => {
+    console.error("Failed to load like state:", err);
+    return new Set<string>();
+  });
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link
-        href="/blog"
-        className="text-xs text-zinc-500 hover:underline"
-      >
+      <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
         ← ブログ一覧
       </Link>
 
@@ -78,6 +86,17 @@ export default async function BlogPostPage({
             ))}
           </div>
         )}
+        <div>
+          <LikeButton
+            target="record"
+            parentType="post"
+            parentId={post.id}
+            parentSlug={post.slug}
+            initialLiked={likedSet.has(RECORD_LIKE_KEY)}
+            initialCount={post.likeCount ?? 0}
+            user={user}
+          />
+        </div>
       </header>
 
       {post.coverImage?.url && (
@@ -96,9 +115,11 @@ export default async function BlogPostPage({
           user navigates between two posts via the soft router. */}
       <CommentsSection
         key={post.id}
-        postId={post.id}
-        postSlug={post.slug}
+        parentType="post"
+        parentId={post.id}
+        parentSlug={post.slug}
         initialComments={comments}
+        initialLikedKeys={[...likedSet]}
         user={user}
       />
     </article>
