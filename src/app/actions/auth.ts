@@ -22,6 +22,14 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
       displayName: decoded.name ?? decoded.email?.split("@")[0] ?? "User",
       photoURL: decoded.picture ?? null,
       affiliation: "",
+      bio: "",
+      // Default-private for affiliation/bio so signup doesn't silently
+      // expose anything until the user explicitly opts in on
+      // /my/profile. emailOptIn defaults to true because that's the
+      // long-standing onboarding behavior — users get JTPA
+      // announcements and can opt out from the profile page.
+      affiliationPublic: false,
+      bioPublic: false,
       emailOptIn: true,
       createdAt: now,
       updatedAt: now,
