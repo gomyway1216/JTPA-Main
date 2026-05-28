@@ -33,6 +33,9 @@ export function Header({ user }: { user: SessionUser | null }) {
             <Link href="/about" className="hover:text-zinc-950 dark:hover:text-white">
               JTPAとは
             </Link>
+            <Link href="/help" className="hover:text-zinc-950 dark:hover:text-white">
+              ヘルプ
+            </Link>
           </nav>
         </div>
         <div className="flex items-center gap-3 text-sm">

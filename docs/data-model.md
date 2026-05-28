@@ -10,10 +10,31 @@ events/{eventId}
   ├─ rsvps/{uid}
   └─ presentations/{autoId}
 projects/{projectId}
+  ├─ comments/{commentId}
+  │   └─ likes/{uid}
+  └─ likes/{uid}
 posts/{postId}
-  └─ comments/{commentId}
-mail/{autoId}      ← Trigger Email extension (writes only via Admin SDK)
+  ├─ comments/{commentId}
+  │   └─ likes/{uid}
+  └─ likes/{uid}
+guides/{guideId}
+  ├─ comments/{commentId}
+  │   └─ likes/{uid}
+  └─ likes/{uid}
+qa/{qaId}
+  ├─ comments/{commentId}
+  │   └─ likes/{uid}
+  └─ likes/{uid}
+sitePages/{slug}      ← admin-edited static-ish content (currently just `about`)
+mail/{autoId}         ← Trigger Email extension (writes only via Admin SDK)
 ```
+
+Comments and likes use the same shape across all four "content parent" types
+(`post` / `guide` / `qa` / `project`). The shared helpers live in
+`src/lib/comments-parent.ts` (URL prefix mapping + visibility check) and
+`src/lib/data/comments.ts` (queries). `CommentDoc.parentType` is denormalized
+into every comment so we can build cross-parent activity feeds (e.g.
+`/my/likes`) without re-deriving from the doc path.
 
 ## `users/{uid}`
 
@@ -25,13 +46,18 @@ Bootstrapped on first sign-in by `signInWithIdToken` (`src/app/actions/auth.ts`)
 | `email` | string | From Google OAuth |
 | `displayName` | string | From Google OAuth (falls back to email prefix) |
 | `photoURL` | string \| null | From Google OAuth |
-| `affiliation` | string | Free text. Currently captured per-RSVP; no profile UI yet (issue #16) |
-| `emailOptIn` | boolean | Defaults to `true`; no UI to change yet (issue #16) |
+| `affiliation` | string? | Free text. Edited by the user on `/my/profile` and visible on `/u/[uid]` iff `affiliationPublic === true`. |
+| `bio` | string? | Plain-text self-introduction (multi-line; rendered with `whitespace-pre-wrap`). Visible on `/u/[uid]` iff `bioPublic === true`. |
+| `affiliationPublic`, `bioPublic` | boolean? | Per-field public/private toggles. Default `false` on older docs (opt-in migration). Email is **never** publicly toggleable. |
+| `emailOptIn` | boolean | Defaults to `true`; gate for future notification opt-out. |
 | `createdAt`, `updatedAt` | Timestamp | |
 
 **Rules**: self-read, self-write (uid + email immutable). Admins can read all.
+The public profile loader (`getPublicProfile` in `src/lib/data/users.ts`)
+goes through Admin SDK and only returns the fields the user has flagged
+public; it does **not** rely on rules.
 
-**`admin: true` lives on Firebase Auth Custom Claims, NOT here.** See [`admin.md`](admin.md#granting-admin) for why.
+**`admin: true` and `editor: true` live on Firebase Auth Custom Claims, NOT here.** See [`admin.md`](admin.md#granting-roles-preferred-admin-ui) for why.
 
 ## `events/{eventId}`
 
@@ -171,6 +197,117 @@ Community blog entries. Distinct from `guides` (admin/editor curated help docs w
 
 UI lands in a follow-up PR.
 
+## `qa/{qaId}` (Community Q&A)
+
+Open-mic question/tip board. Any signed-in member can post; there's **no review queue** (unlike `posts` and `projects`). Admins can flip status to `archived` to hide spam after the fact. Comments + likes live in the same subcollection pattern as `posts`.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Unique URL slug, auto-generated from title |
+| `title` | string | |
+| `body` | string | Markdown source |
+| `tags` | string[] | Up to 8 |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth |
+| `status` | enum | `"published" \| "archived"` |
+| `likeCount` | number? | Denormalized; missing = 0 |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Read: public if `status == "published"`, plus author / admin for archived
+- Create: signed-in user; `authorUid` must match caller; lands directly as `published`
+- Update: author can edit `title` / `body` / `tags`; `authorUid` immutable. Admin can change anything (including `status`).
+- Delete: author or admin
+
+UI: `/qa` list, `/qa/[slug]` detail, `/qa/new` + `/qa/[slug]/edit` (signed-in), `/my/qa` (author dashboard).
+
+## `guides/{guideId}` (Curated help articles)
+
+Admin- and editor-curated reference docs. Distinct from `qa` (open community) and `posts` (community blog with review queue).
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Unique URL slug |
+| `title` | string | |
+| `body` | string | Markdown |
+| `tags` | string[] | |
+| `status` | enum | `"draft" \| "published"` |
+| `order` | number | Manual sort key for the `/guide` list; lower = earlier |
+| `likeCount` | number? | |
+| `createdBy`, `updatedBy` | `{ uid, displayName, email }` | Last editor identity, denormalized |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**: public read on `published`; write restricted to admin + editor.
+
+Comments + likes subcollections behave the same as posts.
+
+## Comment + like subcollections (shared shape)
+
+These collections live under each of `posts`, `guides`, `qa`, and `projects`:
+
+```
+{parent}/{parentId}/comments/{commentId}
+{parent}/{parentId}/comments/{commentId}/likes/{uid}
+{parent}/{parentId}/likes/{uid}
+```
+
+The doc shape and rules are identical across parent types; the URL prefix
+(post→`/blog`, guide→`/guide`, qa→`/qa`, project→`/showcase`) is derived
+via `parentRoutePrefix` in `src/lib/comments-parent.ts`.
+
+### `comments/{commentId}`
+
+| Field | Type | Notes |
+|---|---|---|
+| `parentType` | `"post" \| "guide" \| "qa" \| "project"` | Denormalized for cross-parent activity feeds |
+| `parentId` | string | |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | |
+| `body` | string | Capped at 2000 chars in the Server Action (`src/app/actions/comments.ts`) |
+| `parentCommentId` | string \| null | One-level reply (rendered linearly as "Re: @author", not a nested tree) |
+| `likeCount` | number? | Denormalized; updated transactionally in `toggleLike` |
+| `deletedAt` | Timestamp \| null | Set on soft-delete; body cleared at the same time. Admin can hard-delete. |
+| `createdAt`, `updatedAt` | Timestamp | |
+
+**Rules**:
+- Read: visible if parent is publicly visible OR caller is the comment author OR admin
+- Create: signed-in user on a publicly visible parent; `authorUid` must match caller
+- Update: author can edit `body`; `authorUid` immutable. Admin can change anything.
+- Delete: author (soft) or admin (hard)
+
+### `likes/{uid}` (record + comment)
+
+The doc body is just `{ createdAt }` — existence == liked, doc id == liker's uid. Two layers:
+
+- `{parent}/{parentId}/likes/{uid}` — like on the record itself (post / guide / qa / project)
+- `{parent}/{parentId}/comments/{commentId}/likes/{uid}` — like on an individual comment
+
+Both are toggled via `toggleLike` in `src/app/actions/likes.ts`, which keeps the denormalized `likeCount` on the parent doc in sync inside a transaction.
+
+`/my/likes` queries `comments` with `where("authorUid", "==", uid).where("likeCount", ">", 0)` via a collectionGroup — see `firestore.indexes.json` for the matching composite index.
+
+## `sitePages/{slug}` (Admin-edited static content)
+
+Catch-all for admin-editable static pages. Currently only `about` is wired
+up; the editor at `/admin/about` writes to `sitePages/about` and the
+public page at `/about` reads it via `getSitePage("about")`. The page
+renders fallback content (defined in `SITE_PAGE_DEFAULTS` in
+`src/lib/data/site-pages.ts`) when the doc doesn't exist yet, so a fresh
+deploy is never blank.
+
+| Field | Type | Notes |
+|---|---|---|
+| `slug` | string | Same as the doc id; redundant for clarity |
+| `title` | string | Used as page H1 and `<title>` |
+| `body` | string | Markdown, rendered through the same `MarkdownBody` as blog/guides |
+| `updatedBy` | `{ uid, displayName, email }` | |
+| `updatedAt` | Timestamp | |
+
+**Rules**: public read; write admin-only.
+
+Allowed slugs are pinned in `SITE_PAGE_SLUGS` in `src/lib/data/site-pages.ts` —
+adding a new sitePage means: (1) add the slug there, (2) add it to
+`SITE_PAGE_DEFAULTS`, (3) build the public page that calls `getSitePage("<slug>")`,
+(4) add a route under `/admin/<slug>` reusing `AboutForm`-style UI.
+
 ## `mail/{autoId}` (Trigger Email)
 
 Written by `src/lib/notifications.ts` via the Admin SDK. Once the Firebase Trigger Email extension is installed (issue #15), it watches this collection and sends via the configured SMTP provider.
@@ -199,4 +336,15 @@ All paths are public-read so direct download URLs work without auth. Write rules
 
 ## Composite indexes
 
-Currently none beyond the auto-created ones. If you add a query like `.where(...).orderBy(...)`, Firestore will surface a "create index" link in the error message at first call — capture that index spec and check in via `firestore.indexes.json` (not currently present; create when needed).
+Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules.yml`). Add new indexes there when a query throws the "create index" link — copy the spec from the URL Firestore generates.
+
+Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
+- `events`: `status + startAt` (both directions), `status + endAt` (both directions)
+- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`
+- `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`
+- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`
+- `guides`: `status + order + updatedAt`
+- `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
+- **`comments` collection-group**: `authorUid + likeCount DESC` — powers `/my/likes`
+
+If you add a new sort/filter combination, prefer adding it locally + pushing rather than waiting for production to hit the missing-index error.
