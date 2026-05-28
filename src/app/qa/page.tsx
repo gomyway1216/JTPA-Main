@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
@@ -47,43 +48,42 @@ export default async function QaListPage() {
       </header>
 
       {items.length === 0 ? (
-        <p className="text-zinc-500">まだ投稿はありません。最初の質問を投稿してみましょう！</p>
+        <EmptyState
+          message="まだ投稿はありません。"
+          hint="最初の質問を投稿してみましょう。"
+        />
       ) : (
         <ul className="space-y-3">
           {items.map((q) => (
-            <li
-              key={q.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <Link href={`/qa/${q.slug}`} className="block hover:underline">
+            <li key={q.id}>
+              <Link
+                href={`/qa/${q.slug}`}
+                className="group flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+              >
                 <h2 className="text-lg font-semibold">{q.title}</h2>
-              </Link>
-              <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                <AuthorBadge
-                  name={q.authorName}
-                  photoURL={q.authorPhotoURL}
-                  uid={q.authorUid}
-                />
-                <span>· {formatDate(q.createdAt)}</span>
-                {(q.likeCount ?? 0) > 0 && (
-                  <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
+                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                  <AuthorBadge name={q.authorName} photoURL={q.authorPhotoURL} />
+                  <span>· {formatDate(q.createdAt)}</span>
+                  {(q.likeCount ?? 0) > 0 && (
+                    <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
+                  )}
+                </p>
+                <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
+                  {truncate(stripMarkdown(q.body), 200)}
+                </p>
+                {q.tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {q.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                 )}
-              </p>
-              <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-                {truncate(stripMarkdown(q.body), 200)}
-              </p>
-              {q.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {q.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
+              </Link>
             </li>
           ))}
         </ul>

@@ -211,7 +211,7 @@ export function CommentsSection({
                 <img
                   src={c.authorPhotoURL}
                   alt=""
-                  className="h-6 w-6 rounded-full"
+                  className="h-6 w-6 rounded-full object-cover"
                 />
               )}
               <span className="font-medium">{c.authorName}</span>

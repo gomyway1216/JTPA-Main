@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listPublishedPosts } from "@/lib/data/posts";
 import { formatDate } from "@/lib/utils";
@@ -28,17 +29,17 @@ export default async function BlogIndexPage() {
       </header>
 
       {posts.length === 0 ? (
-        <p className="text-zinc-500">まだ公開済みの記事はありません。</p>
+        <EmptyState
+          message="まだ公開済みの記事はありません。"
+          hint="最初の記事を投稿してみましょう。"
+        />
       ) : (
         <ul className="space-y-4">
           {posts.map((p) => (
-            <li
-              key={p.id}
-              className="overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
-            >
+            <li key={p.id}>
               <Link
                 href={`/blog/${p.slug}`}
-                className="flex flex-col gap-0 sm:flex-row"
+                className="group flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:flex-row dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
               >
                 {p.coverImage?.url && (
                   /* eslint-disable-next-line @next/next/no-img-element */

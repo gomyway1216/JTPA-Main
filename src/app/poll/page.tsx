@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPoll } from "@/lib/data/poll";
@@ -47,9 +48,10 @@ export default async function PollListPage() {
       </header>
 
       {items.length === 0 ? (
-        <p className="text-zinc-500">
-          まだ投票はありません。最初の投票を作ってみましょう！
-        </p>
+        <EmptyState
+          message="まだ投票はありません。"
+          hint="最初の投票を作ってみましょう。"
+        />
       ) : (
         <ul className="space-y-3">
           {items.map((p) => {
@@ -59,35 +61,33 @@ export default async function PollListPage() {
               .sort((a, b) => (b.voteCount ?? 0) - (a.voteCount ?? 0))
               .slice(0, 2);
             return (
-              <li
-                key={p.id}
-                className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-              >
-                <Link href={`/poll/${p.slug}`} className="block hover:underline">
+              <li key={p.id}>
+                <Link
+                  href={`/poll/${p.slug}`}
+                  className="group flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                >
                   <h2 className="text-lg font-semibold">{p.title}</h2>
-                </Link>
-                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge
-                    name={p.authorName}
-                    photoURL={p.authorPhotoURL}
-                    uid={p.authorUid}
-                  />
-                  <span>· {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票</span>
-                  {(p.likeCount ?? 0) > 0 && (
-                    <span className="ml-2 text-rose-600">♥ {p.likeCount}</span>
-                  )}
-                </p>
-                {p.description && (
-                  <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-                    {truncate(p.description, 160)}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                    <AuthorBadge name={p.authorName} photoURL={p.authorPhotoURL} />
+                    <span>
+                      · {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票
+                    </span>
+                    {(p.likeCount ?? 0) > 0 && (
+                      <span className="ml-2 text-rose-600">♥ {p.likeCount}</span>
+                    )}
                   </p>
-                )}
-                <p className="mt-2 text-xs text-zinc-500">
-                  {p.options.length}つの選択肢
-                  {topOptions.length > 0 && (
-                    <> · {topOptions.map((o) => o.label).join(" / ")}…</>
+                  {p.description && (
+                    <p className="mt-2 line-clamp-2 text-sm text-zinc-700 dark:text-zinc-300">
+                      {truncate(p.description, 160)}
+                    </p>
                   )}
-                </p>
+                  <p className="mt-2 text-xs text-zinc-500">
+                    {p.options.length}つの選択肢
+                    {topOptions.length > 0 && (
+                      <> · {topOptions.map((o) => o.label).join(" / ")}…</>
+                    )}
+                  </p>
+                </Link>
               </li>
             );
           })}
