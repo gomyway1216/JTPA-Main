@@ -62,6 +62,8 @@ export function CommentsSection({
   // One-level thread tree: each root keeps its replies as children. A
   // reply-to-a-reply collapses up to the same root so nesting never
   // exceeds one level; the direct parent is still shown via "Re: @author".
+  // A reply whose parent is missing (root was deleted — deleteComment
+  // does not cascade) is promoted to a root so it stays visible.
   const threads = useMemo(() => {
     const rootIdOf = (c: CommentDoc): string => {
       let cur: CommentDoc | undefined = c;
@@ -78,7 +80,9 @@ export function CommentsSection({
     const roots: CommentDoc[] = [];
     const children = new Map<string, CommentDoc[]>();
     for (const c of comments) {
-      if (!c.parentCommentId) {
+      const hasResolvedParent =
+        !!c.parentCommentId && byId.has(c.parentCommentId);
+      if (!hasResolvedParent) {
         roots.push(c);
       } else {
         const rid = rootIdOf(c);
