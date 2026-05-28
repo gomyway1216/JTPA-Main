@@ -59,6 +59,37 @@ export function CommentsSection({
     return m;
   }, [comments]);
 
+  // One-level thread tree: each root keeps its replies as children. A
+  // reply-to-a-reply collapses up to the same root so nesting never
+  // exceeds one level; the direct parent is still shown via "Re: @author".
+  const threads = useMemo(() => {
+    const rootIdOf = (c: CommentDoc): string => {
+      let cur: CommentDoc | undefined = c;
+      const seen = new Set<string>();
+      while (cur?.parentCommentId) {
+        if (seen.has(cur.id)) break;
+        seen.add(cur.id);
+        const next = byId.get(cur.parentCommentId);
+        if (!next) break;
+        cur = next;
+      }
+      return cur?.id ?? c.id;
+    };
+    const roots: CommentDoc[] = [];
+    const children = new Map<string, CommentDoc[]>();
+    for (const c of comments) {
+      if (!c.parentCommentId) {
+        roots.push(c);
+      } else {
+        const rid = rootIdOf(c);
+        const list = children.get(rid) ?? [];
+        list.push(c);
+        children.set(rid, list);
+      }
+    }
+    return roots.map((r) => ({ root: r, replies: children.get(r.id) ?? [] }));
+  }, [comments, byId]);
+
   async function handleSubmit(
     e: React.FormEvent,
     opts: { parentCommentId: string | null },
@@ -107,6 +138,116 @@ export function CommentsSection({
   const bodyId = `comment-body-${parentId}`;
   const loginRedirect = `${parentRoutePrefix(parentType)}/${parentSlug}`;
 
+  function renderComment(c: CommentDoc) {
+    const canDelete =
+      !!user && (user.uid === c.authorUid || user.isAdmin);
+    const repliesTo = c.parentCommentId ? byId.get(c.parentCommentId) : null;
+    const likeKey = `comment:${c.id}`;
+    const isReplyOpen = replyingTo === c.id;
+    return (
+      <article className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <header className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2">
+            {c.authorPhotoURL && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={c.authorPhotoURL}
+                alt=""
+                className="h-6 w-6 rounded-full"
+              />
+            )}
+            <span className="font-medium">{c.authorName}</span>
+            <span className="text-xs text-zinc-500">
+              {formatDateTime(c.createdAt)}
+            </span>
+          </div>
+          {canDelete && (
+            <button
+              type="button"
+              onClick={() => handleDelete(c.id)}
+              disabled={pending}
+              className="text-xs text-red-600 hover:underline disabled:opacity-50"
+            >
+              削除
+            </button>
+          )}
+        </header>
+
+        {repliesTo && (
+          <p className="mt-1 text-xs text-zinc-500">
+            Re: <span className="font-medium">@{repliesTo.authorName}</span>
+          </p>
+        )}
+
+        <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+          {c.body}
+        </p>
+
+        <footer className="mt-3 flex items-center gap-3">
+          <LikeButton
+            target="comment"
+            parentType={parentType}
+            parentId={parentId}
+            parentSlug={parentSlug}
+            commentId={c.id}
+            initialLiked={likedSet.has(likeKey)}
+            initialCount={c.likeCount ?? 0}
+            user={user}
+            size="sm"
+          />
+          {user && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isReplyOpen) {
+                  setReplyingTo(null);
+                  setReplyBody("");
+                } else {
+                  setReplyingTo(c.id);
+                  setReplyBody("");
+                }
+              }}
+              disabled={pending}
+              className="text-xs text-zinc-600 hover:underline disabled:opacity-50 dark:text-zinc-400"
+            >
+              {isReplyOpen ? "返信をやめる" : "返信"}
+            </button>
+          )}
+        </footer>
+
+        {isReplyOpen && (
+          <form
+            onSubmit={(e) => handleSubmit(e, { parentCommentId: c.id })}
+            className="mt-3 space-y-2"
+          >
+            <textarea
+              rows={2}
+              maxLength={MAX_BODY}
+              value={replyBody}
+              onChange={(e) => setReplyBody(e.target.value)}
+              disabled={pending}
+              autoFocus
+              placeholder={`@${c.authorName} への返信 (最大 2000 文字)`}
+              className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-50"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs text-zinc-500">
+                {replyBody.length} / {MAX_BODY}
+              </p>
+              <button
+                type="submit"
+                disabled={pending || !replyBody.trim()}
+                className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+              >
+                {pending ? "送信中..." : "返信する"}
+              </button>
+            </div>
+          </form>
+        )}
+      </article>
+    );
+  }
+
   return (
     <section
       aria-label="コメント"
@@ -118,125 +259,18 @@ export function CommentsSection({
         <p className="mt-3 text-sm text-zinc-500">まだコメントはありません。</p>
       ) : (
         <ul className="mt-4 space-y-4">
-          {comments.map((c) => {
-            const canDelete =
-              !!user && (user.uid === c.authorUid || user.isAdmin);
-            const repliesTo = c.parentCommentId
-              ? byId.get(c.parentCommentId)
-              : null;
-            const likeKey = `comment:${c.id}`;
-            const isReplyOpen = replyingTo === c.id;
-            return (
-              <li
-                key={c.id}
-                className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900"
-              >
-                <header className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    {c.authorPhotoURL && (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={c.authorPhotoURL}
-                        alt=""
-                        className="h-6 w-6 rounded-full"
-                      />
-                    )}
-                    <span className="font-medium">{c.authorName}</span>
-                    <span className="text-xs text-zinc-500">
-                      {formatDateTime(c.createdAt)}
-                    </span>
-                  </div>
-                  {canDelete && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(c.id)}
-                      disabled={pending}
-                      className="text-xs text-red-600 hover:underline disabled:opacity-50"
-                    >
-                      削除
-                    </button>
-                  )}
-                </header>
-
-                {repliesTo && (
-                  // "Re: @author" header for replies. We render this as a
-                  // mention rather than indenting the comment because Jin
-                  // and Yudai picked a linear thread over a nested tree.
-                  <p className="mt-1 text-xs text-zinc-500">
-                    Re: <span className="font-medium">@{repliesTo.authorName}</span>
-                  </p>
-                )}
-
-                <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-                  {c.body}
-                </p>
-
-                <footer className="mt-3 flex items-center gap-3">
-                  <LikeButton
-                    target="comment"
-                    parentType={parentType}
-                    parentId={parentId}
-                    parentSlug={parentSlug}
-                    commentId={c.id}
-                    initialLiked={likedSet.has(likeKey)}
-                    initialCount={c.likeCount ?? 0}
-                    user={user}
-                    size="sm"
-                  />
-                  {user && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isReplyOpen) {
-                          setReplyingTo(null);
-                          setReplyBody("");
-                        } else {
-                          setReplyingTo(c.id);
-                          setReplyBody("");
-                        }
-                      }}
-                      disabled={pending}
-                      className="text-xs text-zinc-600 hover:underline disabled:opacity-50 dark:text-zinc-400"
-                    >
-                      {isReplyOpen ? "返信をやめる" : "返信"}
-                    </button>
-                  )}
-                </footer>
-
-                {isReplyOpen && (
-                  <form
-                    onSubmit={(e) =>
-                      handleSubmit(e, { parentCommentId: c.id })
-                    }
-                    className="mt-3 space-y-2"
-                  >
-                    <textarea
-                      rows={2}
-                      maxLength={MAX_BODY}
-                      value={replyBody}
-                      onChange={(e) => setReplyBody(e.target.value)}
-                      disabled={pending}
-                      autoFocus
-                      placeholder={`@${c.authorName} への返信 (最大 2000 文字)`}
-                      className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-50"
-                    />
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-xs text-zinc-500">
-                        {replyBody.length} / {MAX_BODY}
-                      </p>
-                      <button
-                        type="submit"
-                        disabled={pending || !replyBody.trim()}
-                        className="rounded-md bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-                      >
-                        {pending ? "送信中..." : "返信する"}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </li>
-            );
-          })}
+          {threads.map(({ root, replies }) => (
+            <li key={root.id} className="space-y-3">
+              {renderComment(root)}
+              {replies.length > 0 && (
+                <ul className="ml-6 space-y-3 border-l border-zinc-200 pl-4 dark:border-zinc-800">
+                  {replies.map((r) => (
+                    <li key={r.id}>{renderComment(r)}</li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
         </ul>
       )}
 
