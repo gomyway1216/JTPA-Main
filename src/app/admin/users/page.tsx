@@ -1,8 +1,12 @@
 import { redirect } from "next/navigation";
 
+import { EmailRecipientsExportBar } from "@/app/admin/users/_components/EmailRecipientsExportBar";
 import { UserTable } from "@/app/admin/users/_components/UserTable";
 import { getSessionUser } from "@/lib/auth/session";
-import { listAllUsersForAdmin } from "@/lib/data/users-admin";
+import {
+  listAllUsersForAdmin,
+  listOptedInRecipients,
+} from "@/lib/data/users-admin";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +14,13 @@ export default async function AdminUsersPage() {
   const me = await getSessionUser();
   if (!me?.isAdmin) redirect("/admin/guides");
 
-  const { users, truncated } = await listAllUsersForAdmin();
+  // Auth list (for the table) and opt-in list (for the export) are read in
+  // parallel — they hit different backends (Firebase Auth vs Firestore) so
+  // there's no contention.
+  const [{ users, truncated }, recipients] = await Promise.all([
+    listAllUsersForAdmin(),
+    listOptedInRecipients(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -30,6 +40,11 @@ export default async function AdminUsersPage() {
           別途追加実装が必要です。
         </p>
       )}
+
+      <EmailRecipientsExportBar
+        recipients={recipients}
+        totalUsers={users.length}
+      />
 
       <UserTable users={users} currentUid={me.uid} truncated={truncated} />
     </div>
