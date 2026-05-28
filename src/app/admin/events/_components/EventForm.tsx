@@ -8,6 +8,7 @@ import {
   updateEvent,
   type EventFormInput,
 } from "@/app/actions/events";
+import { SaveFlash } from "@/components/forms/SaveFlash";
 import type { EventDoc, SurveyField } from "@/lib/types";
 import { toDate } from "@/lib/utils";
 
@@ -47,6 +48,11 @@ export function EventForm({
   >(event?.visibility ?? "public");
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
   const [error, setError] = useState<string | null>(null);
+  // Bumped to `Date.now()` when save succeeds on the edit path —
+  // updateEvent doesn't redirect, so without this the admin gets no
+  // confirmation that their click did anything. See SaveFlash for the
+  // visibility-timer logic.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -75,7 +81,20 @@ export function EventForm({
         } else if (event) {
           await updateEvent(event.id, payload);
         }
+        // Update path doesn't redirect (admin stays on /admin/events/
+        // [id]/edit); surface explicit "✓ 保存しました" feedback so the
+        // click feels acknowledged. Create path redirects via the
+        // Server Action, so this line only ever observably runs on
+        // update.
+        setSavedAt(Date.now());
       } catch (err) {
+        // `redirect()` throws an internal error to trigger navigation;
+        // let those propagate so Next.js can complete the redirect.
+        // Anything else is a real save failure.
+        const digest = (err as { digest?: unknown })?.digest;
+        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
+          throw err;
+        }
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
@@ -352,14 +371,17 @@ export function EventForm({
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <div className="flex justify-between">
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
-        >
-          {pending ? "保存中..." : "保存"}
-        </button>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={pending}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+          >
+            {pending ? "保存中..." : "保存"}
+          </button>
+          <SaveFlash savedAt={savedAt} />
+        </div>
         {mode === "edit" && (
           <button
             type="button"
