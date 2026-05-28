@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { BackLink } from "@/components/ui/BackLink";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
@@ -63,9 +63,7 @@ export default async function BlogPostPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
-        ← ブログ一覧
-      </Link>
+      <BackLink href="/blog" label="ブログ一覧" />
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
