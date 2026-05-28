@@ -109,6 +109,11 @@ export function QaForm({ mode, user, qa }: Props) {
     e.preventDefault();
     setError(null);
     const payload: QaFormInput = {
+      // Pass the pre-generated qaId on create so the doc lands at
+      // exactly the id we used for `qa/{qaId}/...` image uploads.
+      // Without this, submitQa would assign a different random id and
+      // images would orphan under the wrong prefix.
+      ...(mode === "create" ? { id: qaId } : {}),
       title: title.trim(),
       body: body.trim(),
       tags: stringToTags(tagsInput),

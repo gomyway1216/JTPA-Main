@@ -10,7 +10,22 @@ import { adminDb } from "@/lib/firebase/admin";
 import type { QaDoc, QaStatus } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
+// Same shape Firestore auto-ids use; QaForm pre-generates one via
+// `doc(collection(clientDb, "qa")).id` so it can upload images to
+// `qa/{qaId}/...` before the doc itself is saved. Validating it
+// against the same regex Firestore uses on auto-ids (20 chars, no
+// special punctuation) keeps anything weirder out of doc().set().
+const FIRESTORE_AUTO_ID = /^[A-Za-z0-9_-]{1,40}$/;
+
 const QaFormSchema = z.object({
+  // Pre-generated client-side id. When present, `submitQa` writes the
+  // doc at exactly that id so images uploaded under `qa/{id}/...` line
+  // up with the Firestore doc. Optional so future non-image callers
+  // can still hit the action without owning an id ahead of time.
+  id: z
+    .string()
+    .regex(FIRESTORE_AUTO_ID, "不正なIDが指定されました")
+    .optional(),
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(1).max(20000),
   // Tags arrive as a CSV from the form; the action normalizes them. Cap
@@ -85,7 +100,31 @@ export async function submitQa(input: QaFormInput): Promise<string> {
     createdAt: now,
     updatedAt: now,
   };
-  const ref = await adminDb().collection("qa").add(payload);
+
+  // Honor the client-supplied id when present so image uploads under
+  // `qa/{id}/...` resolve to the actual Firestore doc later. `create()`
+  // is atomic (fails with ALREADY_EXISTS on collision) so we avoid the
+  // read-then-write race a `get()` + `set()` would have. Falling back
+  // to a fresh `doc()` is fine — that's the no-image-upload path where
+  // there's nothing in Storage to be orphaned by a different id.
+  const collectionRef = adminDb().collection("qa");
+  if (parsed.id) {
+    const ref = collectionRef.doc(parsed.id);
+    try {
+      await ref.create(payload);
+    } catch (err) {
+      // ALREADY_EXISTS — extremely unlikely (Firestore auto-id space is
+      // huge) but possible if a client retries the submit. Treat it the
+      // same as a slug collision and surface a useful error.
+      const code = (err as { code?: number | string }).code;
+      if (code === 6 || code === "already-exists") {
+        throw new Error("投稿の保存に失敗しました。もう一度やり直してください。");
+      }
+      throw err;
+    }
+  } else {
+    await collectionRef.add(payload);
+  }
 
   revalidatePath("/qa");
   revalidatePath(`/qa/${slug}`);

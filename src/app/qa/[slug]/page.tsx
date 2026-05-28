@@ -34,21 +34,24 @@ export default async function QaDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const qa = await getQaBySlug(slug);
-  // Drafts/archived are not reachable from public — same treatment as
-  // unpublished posts/guides.
-  if (!qa || qa.status !== "published") notFound();
+  // Fetch session in parallel with the Q&A doc so the archived-status
+  // check below can read the user immediately. Anonymous visitors and
+  // non-owners hit the same 404 path; only the author and admins can
+  // open archived items.
+  const [user, qa] = await Promise.all([getSessionUser(), getQaBySlug(slug)]);
+  if (!qa) notFound();
+  const isAuthorOrAdmin =
+    !!user && (user.uid === qa.authorUid || user.isAdmin);
+  if (qa.status !== "published" && !isAuthorOrAdmin) {
+    // Don't leak whether the slug exists — return the same 404 we'd
+    // give to a slug that was never written.
+    notFound();
+  }
 
-  // Session + comment listing are independent — kick them off together
-  // rather than serially. The like-state query depends on the comment
-  // ids so it stays after the join.
-  const [user, comments] = await Promise.all([
-    getSessionUser(),
-    listComments("qa", qa.id).catch((err) => {
-      console.error("Failed to list Q&A comments:", err);
-      return [];
-    }),
-  ]);
+  const comments = await listComments("qa", qa.id).catch((err) => {
+    console.error("Failed to list Q&A comments:", err);
+    return [];
+  });
   const likedSet = await getMyLikesForParent({
     parentType: "qa",
     parentId: qa.id,
@@ -59,13 +62,21 @@ export default async function QaDetailPage({
     return new Set<string>();
   });
 
-  const canEdit = !!user && (user.uid === qa.authorUid || user.isAdmin);
+  const canEdit = isAuthorOrAdmin;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/qa" className="text-xs text-zinc-500 hover:underline">
         ← Q&amp;A 一覧
       </Link>
+
+      {qa.status === "archived" && (
+        // Owner/admin landed here — surface the reason the post no
+        // longer appears publicly so they know it's not just gone.
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          この投稿は管理者によって <strong>アーカイブ</strong> されています。あなた以外には表示されません。
+        </div>
+      )}
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{qa.title}</h1>
