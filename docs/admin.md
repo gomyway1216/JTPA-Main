@@ -54,7 +54,9 @@ Same sign-out-and-back-in rule applies.
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
 | `/admin/guides` | Guide list (create, edit, publish, delete) | admin + editor |
+| `/admin/about` | Edit the `/about` page (title + Markdown body, stored in `sitePages/about`) | admin |
 | `/admin/users` | User list with role grant/revoke | admin |
+| `/admin/help` | In-app admin operations guide (Japanese, mirrors this doc at a high level) | admin + editor |
 
 The `/admin/*` layout admits admins or editors; admin-only pages each add a one-line redirect (to `/admin/guides`) for editors hitting them directly. Server actions re-check with `requireAdmin()` or `requireEditor()` so the page-level guard isn't load-bearing for security.
 
@@ -127,6 +129,21 @@ The CSV approach was chosen instead of an in-app mass-mail UI because JTPA alrea
 For one-off blasts to event attendees, the export → Gmail BCC flow is fine up to ~500 recipients (Gmail webmail limit) or ~2000 (Workspace limit). For larger broadcasts use the existing Google Group address instead.
 
 Per-event reminders, "you're in!" promotion notices, and per-recipient personalization are out of scope until issue #15 is done.
+
+## Editing the `/about` page
+
+The `/about` page reads from `sitePages/about` in Firestore; before any admin saves it, the public page falls back to copy hardcoded in `SITE_PAGE_DEFAULTS` (`src/lib/data/site-pages.ts`). To edit:
+
+1. Open `/admin/about`
+2. Edit the title + Markdown body (same renderer as guides/blog: GFM tables, syntax-highlighted code, `## headings` get demoted one level so the page H1 stays unique)
+3. Save — public `/about` updates on the next request
+
+To add another admin-edited page (e.g. `/contact`):
+
+1. Add the slug to `SITE_PAGE_SLUGS` in `src/lib/data/site-pages.ts`
+2. Add a default `{ title, body }` entry to `SITE_PAGE_DEFAULTS`
+3. Create the public route (`src/app/<slug>/page.tsx`) — copy `src/app/about/page.tsx`
+4. Create the admin route (`src/app/admin/<slug>/page.tsx`) — copy `src/app/admin/about/page.tsx` + its `AboutForm`
 
 ## Watching the deployment
 
