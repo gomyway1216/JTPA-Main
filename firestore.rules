@@ -64,12 +64,19 @@ service cloud.firestore {
 
       // ----- rsvps subcollection -----
       // User can manage own RSVP doc. Admin can read/write all.
+      // `attendedAt` and `isGuest` are server-managed (check-in Server
+      // Actions via Admin SDK) — clients cannot set them directly even
+      // on their own doc, so a malicious user can't spoof attendance.
       match /rsvps/{uid} {
         allow read: if isSelf(uid) || isAdmin();
         allow create: if isSelf(uid)
-          && request.resource.data.uid == uid;
+          && request.resource.data.uid == uid
+          && !('attendedAt' in request.resource.data)
+          && !('isGuest' in request.resource.data);
         allow update: if (isSelf(uid)
-          && request.resource.data.uid == resource.data.uid)
+          && request.resource.data.uid == resource.data.uid
+          && !request.resource.data.diff(resource.data).affectedKeys()
+               .hasAny(['attendedAt', 'isGuest']))
           || isAdmin();
         allow delete: if isSelf(uid) || isAdmin();
       }

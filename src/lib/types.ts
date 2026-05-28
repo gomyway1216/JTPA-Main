@@ -75,6 +75,14 @@ export interface EventDoc {
   rsvpCount: number;
   presenterCount: number;
   waitlistCount: number;
+  // Opaque random token used as the QR-code query param for self check-in.
+  // Missing until an admin generates one. Admin can regenerate at any time
+  // to invalidate a leaked code. Pair with the event date window so a leaked
+  // token can't be used outside the actual event.
+  checkInToken?: string;
+  // Denormalized count of RSVPs with `attendedAt` set. Maintained
+  // transactionally with each check-in. Missing = 0 on older docs.
+  attendanceCount?: number;
   createdBy: string;
   createdAt: TsLike;
   updatedAt: TsLike;
@@ -94,6 +102,12 @@ export interface RsvpDoc {
   surveyResponses: Record<string, string | string[] | boolean>;
   presentationTitle?: string;
   presentationAbstract?: string;
+  // Set when the attendee checks in at the venue. Missing = not checked in.
+  attendedAt?: TsLike;
+  // True for walk-in guests who came via the anonymous-auth check-in flow
+  // (no Google account, no `users/{uid}` profile). For those docs, the
+  // `displayName` and `email` here are the only identity we have for them.
+  isGuest?: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;
 }

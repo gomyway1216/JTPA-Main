@@ -67,6 +67,12 @@ export default async function AdminEventsPage() {
                     >
                       編集
                     </Link>
+                    <Link
+                      href={`/admin/events/${e.id}/checkin`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      チェックイン
+                    </Link>
                     <CloneEventButton eventId={e.id} eventTitle={e.title} />
                   </div>
                 </td>
