@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { adminDb } from "@/lib/firebase/admin";
 import type { UserProfile } from "@/lib/types";
 
@@ -54,10 +56,15 @@ export function projectPublicProfile(data: UserProfile): PublicProfile {
 // user doesn't exist at all — distinct from "exists but everything is
 // private", which returns a record with affiliation/bio = null but a
 // real displayName.
-export async function getPublicProfile(
-  uid: string,
-): Promise<PublicProfile | null> {
-  const snap = await adminDb().collection("users").doc(uid).get();
-  if (!snap.exists) return null;
-  return projectPublicProfile(snap.data() as UserProfile);
-}
+//
+// Wrapped in React's `cache()` so `generateMetadata` and the page body
+// share a single Firestore read per request — without this they'd
+// each fetch independently (per PR #59 Gemini review). The cache key
+// is the uid and the cache lifetime is one request.
+export const getPublicProfile = cache(
+  async (uid: string): Promise<PublicProfile | null> => {
+    const snap = await adminDb().collection("users").doc(uid).get();
+    if (!snap.exists) return null;
+    return projectPublicProfile(snap.data() as UserProfile);
+  },
+);

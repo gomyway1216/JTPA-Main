@@ -38,18 +38,28 @@ export function ProfileForm({ uid, initial }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await updateMyProfile({
+        // updateMyProfile returns a status object rather than throwing
+        // for validation errors — Next.js Server Actions mask thrown
+        // messages with a generic string in production, so `err.message`
+        // would never carry the actual validation text (per PR #59
+        // Gemini review). Real exceptions (auth failure, redirect()
+        // signals) still flow through the catch.
+        const result = await updateMyProfile({
           affiliation,
           bio,
           affiliationPublic,
           bioPublic,
           emailOptIn,
         });
-        setSavedAt(Date.now());
+        if (result.ok) {
+          setSavedAt(Date.now());
+        } else {
+          setError(result.error);
+        }
       } catch (err) {
-        // Server-Action `redirect()` (and `notFound()`) signal navigation
-        // by throwing an internal Next.js error — let those propagate;
-        // surface anything else as a real save failure.
+        // Server-Action `redirect()` (and `notFound()`) signal
+        // navigation by throwing an internal Next.js error — let those
+        // propagate; surface anything else as a real save failure.
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }

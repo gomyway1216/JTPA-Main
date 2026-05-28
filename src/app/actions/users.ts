@@ -36,35 +36,55 @@ const ProfileInputSchema = z.object({
 
 export type ProfileFormInput = z.input<typeof ProfileInputSchema>;
 
-function parseProfileInput(
-  input: ProfileFormInput,
-): z.infer<typeof ProfileInputSchema> {
-  const result = ProfileInputSchema.safeParse(input);
-  if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
-}
+// Returned by the server action. Errors are surfaced via this object
+// rather than as thrown exceptions because Next.js Server Actions mask
+// unhandled-error messages with a generic "Internal Server Error" in
+// production builds — `err.message` on the client would never reach the
+// user (per PR #59 Gemini review). The form uses `result.error` to
+// render the actual validation text.
+export type UpdateProfileResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 export async function updateMyProfile(
   input: ProfileFormInput,
-): Promise<void> {
+): Promise<UpdateProfileResult> {
+  // requireUser() throws if the session cookie is missing/invalid; let
+  // that propagate as an actual exception (the form catches it, but it
+  // also pre-empts every other failure mode below).
   const user = await requireUser();
-  const parsed = parseProfileInput(input);
+
+  const parsed = ProfileInputSchema.safeParse(input);
+  if (!parsed.success) {
+    const message = parsed.error.issues
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    return { ok: false, error: `入力エラー: ${message}` };
+  }
 
   // `update` (not `set`) so we only touch the editable fields plus
   // updatedAt — leaves uid/email/displayName/photoURL/createdAt
   // untouched, and won't accidentally recreate a doc that the user
   // somehow lost.
-  await adminDb().collection("users").doc(user.uid).update({
-    affiliation: parsed.affiliation,
-    bio: parsed.bio,
-    affiliationPublic: parsed.affiliationPublic,
-    bioPublic: parsed.bioPublic,
-    emailOptIn: parsed.emailOptIn,
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+  try {
+    await adminDb().collection("users").doc(user.uid).update({
+      affiliation: parsed.data.affiliation,
+      bio: parsed.data.bio,
+      affiliationPublic: parsed.data.affiliationPublic,
+      bioPublic: parsed.data.bioPublic,
+      emailOptIn: parsed.data.emailOptIn,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+  } catch (err) {
+    // Most plausible cause: the users/{uid} doc doesn't exist (user
+    // session predates the bootstrap, or someone manually deleted it).
+    // Surface a recoverable message rather than a generic 500.
+    console.error("updateMyProfile failed:", err);
+    return {
+      ok: false,
+      error: "保存に失敗しました。一度ログアウトして再ログインしてください。",
+    };
+  }
 
   // Affiliation pre-fills the RSVP form on each event DETAIL page
   // (`/events/[slug]`), so revalidating the static `/events` list isn't
@@ -75,4 +95,6 @@ export async function updateMyProfile(
   revalidatePath("/my/profile");
   revalidatePath("/events/[slug]", "page");
   revalidatePath(`/u/${user.uid}`);
+
+  return { ok: true };
 }

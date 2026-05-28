@@ -14,7 +14,10 @@ export async function generateMetadata({
   if (!profile) return { title: "ユーザーが見つかりません" };
   return {
     title: `${profile.displayName} のプロフィール`,
-    description: profile.bio ?? undefined,
+    // `||` not `??` — an empty published bio ("") would otherwise emit
+    // `<meta name="description" content="" />`, suboptimal for SEO
+    // (per PR #59 Gemini review).
+    description: profile.bio || undefined,
   };
 }
 
@@ -43,7 +46,16 @@ export default async function PublicProfilePage({
             // visual weight of the photo path so the layout doesn't
             // jump between users.
             <div className="flex h-16 w-16 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-lg font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300">
-              {profile.displayName.slice(0, 1).toUpperCase()}
+              {/*
+                `[...str][0]` splits on Unicode code points instead of
+                UTF-16 code units. `slice(0, 1)` would tear a surrogate
+                pair in half for emoji / non-BMP display names (e.g.
+                "🥑Avo" → "\uD83E", a broken character). The "?"
+                fallback handles a (theoretical) empty displayName so
+                the badge always shows something. Per PR #59 Gemini +
+                Copilot reviews.
+              */}
+              {([...profile.displayName][0] ?? "?").toUpperCase()}
             </div>
           )}
           <div>

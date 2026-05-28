@@ -64,10 +64,13 @@ describe("projectPublicProfile (privacy boundary)", () => {
   });
 
   it("treats missing visibility flags (older docs) as false", () => {
-    // Cast through `unknown` because the fields are optional on the type
-    // but we want the JS-level absence, not `undefined` explicitly. The
-    // `?? false` defaulting in the projection should treat both the same.
-    const stripped = baseProfile() as UserProfile;
+    // Simulate a doc that pre-dates the visibility-flag fields: the
+    // properties are absent (not just `false`). The projection uses a
+    // truthy check (`data.affiliationPublic ? ... : null`), so absent
+    // and `false` collapse to the same private-by-default behavior —
+    // per PR #59 Copilot review (comment was previously misleading
+    // about a `?? false` defaulting that the code doesn't actually do).
+    const stripped = baseProfile();
     delete (stripped as { affiliationPublic?: boolean }).affiliationPublic;
     delete (stripped as { bioPublic?: boolean }).bioPublic;
     const out = projectPublicProfile(stripped);
