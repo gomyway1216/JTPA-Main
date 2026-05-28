@@ -15,7 +15,15 @@ import {
   updateGuide,
   type GuideFormInput,
 } from "@/app/actions/guides";
+import { Field } from "@/components/forms/Field";
 import { SaveFlash } from "@/components/forms/SaveFlash";
+import {
+  dangerButtonClass,
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+  secondaryButtonClassSm,
+} from "@/components/forms/styles";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -295,7 +303,7 @@ export function GuideForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="スラッグ (URL)" htmlFor="guide-slug">
@@ -305,7 +313,7 @@ export function GuideForm({
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
           placeholder="自動生成 (英小文字/数字/ハイフン)"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <Field label="タグ (カンマ区切り)" htmlFor="guide-tags">
@@ -315,7 +323,7 @@ export function GuideForm({
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
           placeholder="Claude, 環境構築, 初心者向け"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
@@ -326,7 +334,7 @@ export function GuideForm({
             onChange={(e) =>
               setStatus(e.target.value as GuideFormInput["status"])
             }
-            className={inputCls}
+            className={inputClass}
           >
             <option value="draft">下書き</option>
             <option value="published">公開</option>
@@ -339,7 +347,7 @@ export function GuideForm({
             min={0}
             value={order}
             onChange={(e) => setOrder(e.target.value)}
-            className={inputCls}
+            className={inputClass}
           />
         </Field>
       </div>
@@ -351,7 +359,7 @@ export function GuideForm({
               type="button"
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+              className={secondaryButtonClassSm}
             >
               {uploading ? "アップロード中..." : "📷 画像をアップロード"}
             </button>
@@ -399,14 +407,14 @@ export function GuideForm({
         </div>
       </Field>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
 
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <button
             type="submit"
             disabled={pending || uploading}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
+            className={primaryButtonClass}
           >
             {pending ? "保存中..." : "保存"}
           </button>
@@ -417,7 +425,7 @@ export function GuideForm({
             type="button"
             onClick={handleDelete}
             disabled={pending || uploading}
-            className="rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            className={dangerButtonClass}
           >
             ガイドを削除
           </button>
@@ -427,46 +435,3 @@ export function GuideForm({
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
-
-// Outer wrapper is `<div>`, not `<label>`: the body field contains a
-// hidden `<input type="file">` (used as the target of the upload-button
-// click) alongside the Markdown editor. A `<label>` outer would fire
-// its implicit "click first associated form control" behavior when you
-// click any non-focusable area inside it — clicking on padding around
-// the editor would open the native file picker.
-//
-// For a11y we render the label text as a `<label htmlFor={...}>` when
-// an `htmlFor` is supplied — that gives screen readers and click-to-
-// focus the proper association for simple inputs, without re-introducing
-// the file-picker bug on complex fields like the body editor (which omits
-// `htmlFor` and renders a `<span>` instead).
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}

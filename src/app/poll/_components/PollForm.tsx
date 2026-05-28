@@ -8,6 +8,13 @@ import {
   updateMyPoll,
   type PollFormInput,
 } from "@/app/actions/poll";
+import { Field } from "@/components/forms/Field";
+import {
+  dangerButtonClass,
+  errorTextClass,
+  inputClass,
+  primaryButtonClass,
+} from "@/components/forms/styles";
 import type { PollDoc } from "@/lib/types";
 
 const MAX_OPTIONS = 8;
@@ -126,7 +133,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="例: 普段どのAIを一番使ってる？"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -138,7 +145,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="補足や「その他はコメントで」などの注記"
-          className={inputCls}
+          className={inputClass}
         />
       </Field>
 
@@ -162,7 +169,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
                 onChange={(e) => setOptionLabel(idx, e.target.value)}
                 placeholder={`選択肢 ${idx + 1}`}
                 disabled={optionsLocked}
-                className={inputCls}
+                className={inputClass}
               />
               <button
                 type="button"
@@ -190,13 +197,13 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
         </div>
       </Field>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className={errorTextClass}>{error}</p>}
 
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={pending || !canSubmit}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={primaryButtonClass}
         >
           {pending ? "送信中…" : mode === "create" ? "投稿する" : "更新する"}
         </button>
@@ -205,7 +212,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
             type="button"
             disabled={pending}
             onClick={handleDelete}
-            className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+            className={`ml-auto ${dangerButtonClass}`}
           >
             削除
           </button>
@@ -215,34 +222,3 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
   );
 }
 
-const inputCls =
-  "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950 disabled:opacity-60";
-
-function Field({
-  label,
-  required,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="block">
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </label>
-      ) : (
-        <span className="text-sm font-medium">
-          {label}
-          {required && <span className="text-red-600"> *</span>}
-        </span>
-      )}
-      <div className="mt-1">{children}</div>
-    </div>
-  );
-}
