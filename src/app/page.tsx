@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { primaryButtonClass } from "@/components/forms/styles";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { listEvents } from "@/lib/data/events";
 import { listProjects } from "@/lib/data/projects";
@@ -16,13 +17,21 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-20 px-4 py-12 sm:py-16">
-      <section className="space-y-5">
+      <section className="relative isolate space-y-5">
+        {/* Decorative blue/indigo/violet blur behind the hero text. `isolate`
+            scopes its negative z-index to this section so it can't slip
+            behind the header. `pointer-events-none` keeps it from
+            stealing clicks; `aria-hidden` keeps it out of the a11y tree. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[480px] w-[680px] max-w-full -translate-x-1/2 rounded-full bg-gradient-to-br from-blue-500/15 via-indigo-500/10 to-violet-500/15 blur-3xl dark:from-blue-500/25 dark:via-indigo-500/20 dark:to-violet-500/25"
+        />
         <span className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           Bay Area テックコミュニティ
         </span>
         <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-          <span className="bg-gradient-to-r from-blue-600 to-violet-600 bg-clip-text text-transparent dark:from-blue-400 dark:to-violet-400">
+          <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-clip-text text-transparent dark:from-blue-400 dark:via-indigo-400 dark:to-violet-400">
             AI
           </span>
           で集まる、つくる、共有する。
@@ -32,15 +41,12 @@ export default async function HomePage() {
           オンライン/オフラインのイベント、メンバーが作ったAIプロジェクトのショーケースをお楽しみください。
         </p>
         <div className="flex flex-wrap gap-3 pt-2">
-          <Link
-            href="/events"
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
+          <Link href="/events" className={primaryButtonClass}>
             イベント一覧
           </Link>
           <Link
             href="/showcase"
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
           >
             ショーケースを見る
           </Link>
@@ -57,7 +63,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/events"
-            className="shrink-0 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+            className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
             すべて見る →
           </Link>
@@ -114,7 +120,7 @@ export default async function HomePage() {
           </div>
           <Link
             href="/showcase"
-            className="shrink-0 text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+            className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
             すべて見る →
           </Link>
@@ -125,7 +131,7 @@ export default async function HomePage() {
             hint={
               <>
                 あなたの AI プロジェクトを{" "}
-                <Link href="/projects/new" className="font-medium text-blue-600 underline dark:text-blue-400">
+                <Link href="/projects/new" className="font-medium text-accent underline">
                   投稿
                 </Link>
                 してみませんか？
