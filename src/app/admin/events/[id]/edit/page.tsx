@@ -21,7 +21,7 @@ export default async function EditEventPage({
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">イベント編集</h1>
-      <EventForm mode="edit" event={event} />
+      <EventForm mode="edit" user={user} event={event} />
     </div>
   );
 }

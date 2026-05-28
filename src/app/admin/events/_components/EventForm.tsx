@@ -1,6 +1,11 @@
 "use client";
 
 import { unstable_rethrow } from "next/navigation";
+import {
+  deleteObject,
+  ref as storageRef,
+  uploadBytesResumable,
+} from "firebase/storage";
 import { useState, useTransition } from "react";
 
 import {
@@ -10,8 +15,27 @@ import {
   type EventFormInput,
 } from "@/app/actions/events";
 import { SaveFlash } from "@/components/forms/SaveFlash";
-import type { EventDoc, SurveyField } from "@/lib/types";
+import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
+import type {
+  EventDoc,
+  ProjectAsset,
+  SessionUser,
+  SurveyField,
+} from "@/lib/types";
 import { toDate } from "@/lib/utils";
+
+// Matches the events/{eventId}/{**} storage rule (admin write, image only,
+// 10MB cap). Cover images get a slightly larger budget than project /
+// post thumbnails because they're the hero asset on /events cards.
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+const ALLOWED_MIME = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
+const ACCEPT = ALLOWED_MIME.join(",");
 
 function toLocalInput(d: Date | null): string {
   if (!d) return "";
@@ -21,9 +45,11 @@ function toLocalInput(d: Date | null): string {
 
 export function EventForm({
   mode,
+  user,
   event,
 }: {
   mode: "create" | "edit";
+  user: SessionUser;
   event?: EventDoc;
 }) {
   const [title, setTitle] = useState(event?.title ?? "");
@@ -48,6 +74,10 @@ export function EventForm({
     NonNullable<EventFormInput["visibility"]>
   >(event?.visibility ?? "public");
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
+  const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
+    event?.coverImage,
+  );
+  const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Bumped to `Date.now()` when save succeeds on the edit path —
   // updateEvent doesn't redirect, so without this the admin gets no
@@ -55,6 +85,87 @@ export function EventForm({
   // visibility-timer logic.
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function uploadCover(
+    file: File,
+    onProgress: (pct: number) => void,
+  ): Promise<ProjectAsset> {
+    if (file.size > MAX_IMAGE_BYTES) {
+      return Promise.reject(new Error("画像サイズは 10MB 以下にしてください"));
+    }
+    if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
+      return Promise.reject(
+        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
+      );
+    }
+    const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
+    // events/{eventId-or-admin-uid}/... — the rule matches any first
+    // segment with admin write, so for both create (no event id yet) and
+    // edit we just root under the admin's uid and let the doc reference
+    // the resulting URL.
+    const path = `events/${user.uid}/${Date.now()}-${safeName}`;
+    const objectRef = storageRef(clientStorage, path);
+    return new Promise<ProjectAsset>((resolve, reject) => {
+      const task = uploadBytesResumable(objectRef, file, {
+        contentType: file.type,
+      });
+      task.on(
+        "state_changed",
+        (snap) =>
+          onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
+        (err) => reject(err),
+        () => {
+          // events/{...} has `allow read: if true` in storage.rules, so
+          // build a token-less public URL from the upload ref instead of
+          // calling getDownloadURL(). Skips a round-trip and avoids
+          // persisting a Storage access token into Firestore — same
+          // pattern as PostForm / ProjectForm (PR #47).
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
+        },
+      );
+    });
+  }
+
+  // True if the path on the current state was uploaded during this session
+  // (different from whatever the form was initialized with). The previous
+  // image lives only because the picker eagerly uploads; if the user
+  // replaces or deletes it without saving, we should drop the orphaned
+  // Storage object instead of relying on a hypothetical cleanup cron.
+  function isUnsavedUpload(path: string | undefined): boolean {
+    return !!path && path !== event?.coverImage?.path;
+  }
+
+  async function discardUnsavedUpload(path: string | undefined): Promise<void> {
+    if (!isUnsavedUpload(path)) return;
+    try {
+      await deleteObject(storageRef(clientStorage, path!));
+    } catch (err) {
+      // Best-effort — the file might already be gone, or perms shifted.
+      // Don't block the UI on this.
+      console.warn("Failed to clean up unsaved cover image:", err);
+    }
+  }
+
+  async function handleCoverPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setCoverProgress(0);
+      // Replacing an unsaved upload: drop the previous file first so we
+      // don't leak a Storage object the doc never references.
+      await discardUnsavedUpload(coverImage?.path);
+      const asset = await uploadCover(file, setCoverProgress);
+      setCoverImage(asset);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "アップロード失敗");
+    } finally {
+      setCoverProgress(null);
+      e.target.value = "";
+    }
+  }
+
+  const uploading = coverProgress !== null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,6 +186,7 @@ export function EventForm({
           presenterCapacity,
           status,
           visibility,
+          coverImage,
           surveyFields: fields,
         };
         if (mode === "create") {
@@ -137,8 +249,9 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required>
+      <Field label="タイトル" required htmlFor="event-title">
         <input
+          id="event-title"
           type="text"
           required
           value={title}
@@ -146,8 +259,9 @@ export function EventForm({
           className={inputCls}
         />
       </Field>
-      <Field label="スラッグ (URL)">
+      <Field label="スラッグ (URL)" htmlFor="event-slug">
         <input
+          id="event-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
@@ -155,8 +269,9 @@ export function EventForm({
           className={inputCls}
         />
       </Field>
-      <Field label="説明" required>
+      <Field label="説明" required htmlFor="event-description">
         <textarea
+          id="event-description"
           required
           rows={6}
           value={description}
@@ -165,8 +280,9 @@ export function EventForm({
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="開始日時" required>
+        <Field label="開始日時" required htmlFor="event-start">
           <input
+            id="event-start"
             type="datetime-local"
             required
             value={startAt}
@@ -174,8 +290,9 @@ export function EventForm({
             className={inputCls}
           />
         </Field>
-        <Field label="終了日時" required>
+        <Field label="終了日時" required htmlFor="event-end">
           <input
+            id="event-end"
             type="datetime-local"
             required
             value={endAt}
@@ -184,8 +301,9 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="形式">
+      <Field label="形式" htmlFor="event-location-type">
         <select
+          id="event-location-type"
           value={locationType}
           onChange={(e) => setLocationType(e.target.value as EventFormInput["locationType"])}
           className={inputCls}
@@ -197,16 +315,18 @@ export function EventForm({
       </Field>
       {(locationType === "offline" || locationType === "hybrid") && (
         <>
-          <Field label="会場住所">
+          <Field label="会場住所" htmlFor="event-address">
             <input
+              id="event-address"
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               className={inputCls}
             />
           </Field>
-          <Field label="地図URL">
+          <Field label="地図URL" htmlFor="event-map-url">
             <input
+              id="event-map-url"
               type="url"
               value={mapUrl}
               onChange={(e) => setMapUrl(e.target.value)}
@@ -216,8 +336,9 @@ export function EventForm({
         </>
       )}
       {(locationType === "online" || locationType === "hybrid") && (
-        <Field label="ミーティングURL (Zoom等)">
+        <Field label="ミーティングURL (Zoom等)" htmlFor="event-meeting-url">
           <input
+            id="event-meeting-url"
             type="url"
             value={meetingUrl}
             onChange={(e) => setMeetingUrl(e.target.value)}
@@ -226,8 +347,9 @@ export function EventForm({
         </Field>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="定員 (0=無制限)">
+        <Field label="定員 (0=無制限)" htmlFor="event-capacity">
           <input
+            id="event-capacity"
             type="number"
             min={0}
             value={capacity}
@@ -235,8 +357,9 @@ export function EventForm({
             className={inputCls}
           />
         </Field>
-        <Field label="発表者枠">
+        <Field label="発表者枠" htmlFor="event-presenter-capacity">
           <input
+            id="event-presenter-capacity"
             type="number"
             min={0}
             value={presenterCapacity}
@@ -245,8 +368,9 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="ステータス">
+      <Field label="ステータス" htmlFor="event-status">
         <select
+          id="event-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as EventFormInput["status"])}
           className={inputCls}
@@ -257,8 +381,9 @@ export function EventForm({
           <option value="cancelled">中止</option>
         </select>
       </Field>
-      <Field label="公開範囲">
+      <Field label="公開範囲" htmlFor="event-visibility">
         <select
+          id="event-visibility"
           value={visibility}
           onChange={(e) =>
             setVisibility(
@@ -270,6 +395,48 @@ export function EventForm({
           <option value="public">全員 (ログインなしでも閲覧可)</option>
           <option value="members_only">メンバー限定 (要ログイン)</option>
         </select>
+      </Field>
+
+      <Field label="カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)">
+        <div className="space-y-2">
+          {coverImage && (
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={coverImage.url}
+                alt={`${title || "イベント"} のカバー画像プレビュー`}
+                className="h-24 w-40 rounded border border-zinc-200 object-cover dark:border-zinc-800"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  // Same orphan-cleanup as replace: if this image was
+                  // uploaded during the current session and the user is
+                  // backing out of it, drop the Storage object now. The
+                  // original saved image (if any) stays in Storage and
+                  // gets cleaned up server-side when the form submits.
+                  await discardUnsavedUpload(coverImage.path);
+                  setCoverImage(undefined);
+                }}
+                className="text-xs text-red-600 hover:underline"
+              >
+                削除
+              </button>
+            </div>
+          )}
+          <input
+            type="file"
+            accept={ACCEPT}
+            disabled={pending || uploading}
+            onChange={handleCoverPick}
+            className="block w-full text-sm disabled:opacity-50"
+          />
+          {coverProgress !== null && (
+            <p className="text-xs text-zinc-500">
+              アップロード中… {coverProgress.toFixed(0)}%
+            </p>
+          )}
+        </div>
       </Field>
 
       <div className="space-y-3 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
@@ -376,10 +543,10 @@ export function EventForm({
         <div className="flex items-center gap-3">
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || uploading}
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
           >
-            {pending ? "保存中..." : "保存"}
+            {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
           </button>
           <SaveFlash savedAt={savedAt} />
         </div>
@@ -400,22 +567,41 @@ export function EventForm({
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// Outer wrapper is `<div>`, not `<label>`: the cover-image field
+// contains a `<input type="file">`, and a `<label>` outer fires its
+// implicit "click the first form control" behavior on adjacent padding
+// clicks and pops the native file picker. See PR #53 / GuideForm.tsx for
+// the full story.
+//
+// For a11y we render the label text as a `<label htmlFor={...}>` when an
+// `htmlFor` is supplied — simple inputs get a proper screen-reader
+// association, and the cover-image field (which omits `htmlFor`) falls
+// back to a plain `<span>` so the implicit-label trap stays gone.
 function Field({
   label,
   required,
+  htmlFor,
   children,
 }: {
   label: string;
   required?: boolean;
+  htmlFor?: string;
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
-      <span className="text-sm font-medium">
-        {label}
-        {required && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="block">
+      {htmlFor ? (
+        <label htmlFor={htmlFor} className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </label>
+      ) : (
+        <span className="text-sm font-medium">
+          {label}
+          {required && <span className="text-red-600"> *</span>}
+        </span>
+      )}
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

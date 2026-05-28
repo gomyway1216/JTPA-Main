@@ -55,7 +55,10 @@ export interface EventDoc {
   presenterCapacity: number;
   status: EventStatus;
   visibility?: EventVisibility;
-  coverImagePath?: string;
+  // Cover image shown on /events cards + at the top of /events/[slug].
+  // Uses the same {path, url} shape as ProjectDoc.thumbnail and
+  // PostDoc.coverImage so the upload helpers in those forms transfer.
+  coverImage?: ProjectAsset;
   surveyFields: SurveyField[];
   rsvpCount: number;
   presenterCount: number;

@@ -45,7 +45,7 @@ Bootstrapped on first sign-in by `signInWithIdToken` (`src/app/actions/auth.ts`)
 | `presenterCapacity` | number | `0` = unlimited |
 | `status` | enum | `"draft" \| "published" \| "past" \| "cancelled"` |
 | `visibility` | enum? | `"public" \| "members_only"` (optional; missing = public for back-compat) |
-| `coverImagePath` | string? | Storage path; UI not built yet (issue #18) |
+| `coverImage` | `{ path, url }?` | Optional cover image. Same `{path, url}` shape as `ProjectDoc.thumbnail` / `PostDoc.coverImage`. Shown on `/events` cards and at the top of `/events/[slug]`. Files live at `events/{adminUid}/<ts>-<file>` and are best-effort deleted on event delete or cover replacement. Older docs may carry a legacy `coverImagePath: string`; `updateEvent` removes it on next save. |
 | `surveyFields` | `SurveyField[]` | See below |
 | `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions |
 | `createdBy` | string (uid) | |
@@ -188,13 +188,14 @@ Written by `src/lib/notifications.ts` via the Admin SDK. Once the Firebase Trigg
 ## Storage layout
 
 ```
-events/{eventId}/...                    cover images (admin write, public read)
+events/{anything}/...                   cover images (admin write, public read; in practice we use the admin uid for the first segment since the rule's {eventId} is a wildcard)
 presentations/{eventId}/{uid}/...       slide files (presenter or admin write, public read)
-projects/{uid}/...                      project thumbnails (owner write, public read)
+projects/{uid}/...                      project thumbnails + screenshots (owner write, public read)
+posts/{uid}/...                         blog cover images (author write, public read)
 users/{uid}/...                         avatars (self write, public read)
 ```
 
-All paths are public-read so direct download URLs work without auth. Write rules enforce ownership + max size (10MB events, 50MB presentations, 5MB projects, 2MB avatars). See `storage.rules`.
+All paths are public-read so direct download URLs work without auth. Write rules enforce ownership + max size (10MB events, 50MB presentations, 5MB projects/posts, 2MB avatars). See `storage.rules`.
 
 ## Composite indexes
 
