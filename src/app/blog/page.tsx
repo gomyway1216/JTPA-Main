@@ -36,44 +36,53 @@ export default async function BlogIndexPage() {
       ) : (
         <ul className="space-y-4">
           {posts.map((p) => (
-            <li key={p.id}>
-              <Link
-                href={`/blog/${p.slug}`}
-                className="group flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:flex-row dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-              >
-                {p.coverImage?.url && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={p.coverImage.url}
-                    alt={`${p.title} のカバー画像`}
-                    className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
+            <li
+              key={p.id}
+              className="group relative flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition focus-within:ring-2 focus-within:ring-blue-500 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md sm:flex-row dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+            >
+              {p.coverImage?.url && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={p.coverImage.url}
+                  alt={`${p.title} のカバー画像`}
+                  className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
+                />
+              )}
+              <div className="flex-1 p-5">
+                <h2 className="text-lg font-semibold">
+                  <Link
+                    href={`/blog/${p.slug}`}
+                    className="after:absolute after:inset-0 focus:outline-none"
+                  >
+                    {p.title}
+                  </Link>
+                </h2>
+                <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                  <AuthorBadge
+                    name={p.authorName}
+                    photoURL={p.authorPhotoURL}
+                    uid={p.authorUid}
                   />
-                )}
-                <div className="flex-1 p-5">
-                  <h2 className="text-lg font-semibold">{p.title}</h2>
-                  <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                    <AuthorBadge name={p.authorName} photoURL={p.authorPhotoURL} />
-                    {p.publishedAt && <span>· {formatDate(p.publishedAt)}</span>}
+                  {p.publishedAt && <span>· {formatDate(p.publishedAt)}</span>}
+                </p>
+                {p.excerpt && (
+                  <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
+                    {p.excerpt}
                   </p>
-                  {p.excerpt && (
-                    <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                      {p.excerpt}
-                    </p>
-                  )}
-                  {p.tags.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {p.tags.slice(0, 4).map((t) => (
-                        <span
-                          key={t}
-                          className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </Link>
+                )}
+                {p.tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {p.tags.slice(0, 4).map((t) => (
+                      <span
+                        key={t}
+                        className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </li>
           ))}
         </ul>

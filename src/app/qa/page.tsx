@@ -55,35 +55,48 @@ export default async function QaListPage() {
       ) : (
         <ul className="space-y-3">
           {items.map((q) => (
-            <li key={q.id}>
-              <Link
-                href={`/qa/${q.slug}`}
-                className="group flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
-              >
-                <h2 className="text-lg font-semibold">{q.title}</h2>
-                <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge name={q.authorName} photoURL={q.authorPhotoURL} />
-                  <span>· {formatDate(q.createdAt)}</span>
-                  {(q.likeCount ?? 0) > 0 && (
-                    <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
-                  )}
-                </p>
-                <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
-                  {truncate(stripMarkdown(q.body), 200)}
-                </p>
-                {q.tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {q.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+            <li
+              key={q.id}
+              className="group relative flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition focus-within:ring-2 focus-within:ring-blue-500 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+            >
+              <h2 className="text-lg font-semibold">
+                {/* Stretched-link pattern: the title is the only real
+                    link to /qa/[slug], but its ::after pseudo-element
+                    covers the whole card so clicking anywhere outside
+                    a nested interactive element still navigates. */}
+                <Link
+                  href={`/qa/${q.slug}`}
+                  className="after:absolute after:inset-0 focus:outline-none"
+                >
+                  {q.title}
+                </Link>
+              </h2>
+              <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                <AuthorBadge
+                  name={q.authorName}
+                  photoURL={q.authorPhotoURL}
+                  uid={q.authorUid}
+                />
+                <span>· {formatDate(q.createdAt)}</span>
+                {(q.likeCount ?? 0) > 0 && (
+                  <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
                 )}
-              </Link>
+              </p>
+              <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
+                {truncate(stripMarkdown(q.body), 200)}
+              </p>
+              {q.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {q.tags.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
             </li>
           ))}
         </ul>
