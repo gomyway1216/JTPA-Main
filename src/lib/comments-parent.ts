@@ -54,6 +54,16 @@ export function isParentPubliclyVisible(
   parentType: CommentParentType,
   data: { status: string },
 ): boolean {
-  if (parentType === "project") return data.status === "approved";
-  return data.status === "published";
+  // Switch over the union (rather than `if/else`) so adding a new
+  // parent type to `CommentParentType` becomes a compile-time error
+  // here until the new case is handled. Matches the structure of
+  // `parentCollection` / `parentRoutePrefix` above.
+  switch (parentType) {
+    case "project":
+      return data.status === "approved";
+    case "post":
+    case "guide":
+    case "qa":
+      return data.status === "published";
+  }
 }

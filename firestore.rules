@@ -81,16 +81,30 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'pending'
-        && request.resource.data.reviewerUid == null;
+        && request.resource.data.reviewerUid == null
+        // `likeCount` must be absent or zero on create. Without this, a
+        // client could seed an inflated like count that surfaces once
+        // admin approves the project — the denormalized counter is only
+        // ever supposed to grow via the `toggleLikeRecord` Server Action.
+        && (!('likeCount' in request.resource.data)
+            || request.resource.data.likeCount == 0);
 
       // Owner can edit metadata but cannot change status/reviewer fields.
-      // Editing flips status back to 'pending' for re-review.
+      // Editing flips status back to 'pending' for re-review. `likeCount`
+      // is denormalized and only the Server Action should touch it, so
+      // owners can't update it via a direct client write either —
+      // pinning it to its current value blocks that path.
       allow update: if (
         isSignedIn()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.reviewerUid == resource.data.reviewerUid
         && request.resource.data.status == 'pending'
+        && (
+          (!('likeCount' in request.resource.data)
+            && !('likeCount' in resource.data))
+          || request.resource.data.likeCount == resource.data.likeCount
+        )
       ) || isAdmin();
 
       allow delete: if (isSignedIn()
@@ -106,14 +120,19 @@ service cloud.firestore {
       }
 
       // Comments on showcase projects. Reads gated on the project
-      // being publicly approved (or the user is the owner / admin).
-      // Note projects use `status == 'approved'` rather than
-      // `'published'` like posts/guides/qa do.
+      // being publicly approved (or the user is the owner / admin /
+      // comment author). Note projects use `status == 'approved'`
+      // rather than `'published'` like posts/guides/qa do. Owner is
+      // explicitly allowed because a project in pending / rejected
+      // status still has a moderation queue, and the owner should be
+      // able to see what people commented during that window.
       match /comments/{commentId} {
         allow read: if isAdmin()
           || (isSignedIn() && resource != null
               && resource.data.authorUid == request.auth.uid)
-          || get(/databases/$(database)/documents/projects/$(projectId)).data.status == 'approved';
+          || get(/databases/$(database)/documents/projects/$(projectId)).data.status == 'approved'
+          || (isSignedIn()
+              && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == request.auth.uid);
 
         // Schema invariants enforced on create so a malicious client
         // can't write a doc whose `parentType` / `parentId` claim a
