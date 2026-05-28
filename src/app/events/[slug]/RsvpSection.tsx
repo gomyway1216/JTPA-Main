@@ -9,10 +9,16 @@ export function RsvpSection({
   event,
   initialRsvp,
   user,
+  profileAffiliation = "",
 }: {
   event: EventDoc;
   initialRsvp: RsvpDoc | null;
   user: SessionUser;
+  // Profile-level affiliation from /my/profile. Used to pre-fill the
+  // affiliation field on first-time RSVP only — once an RSVP exists,
+  // its own value wins (the user may have intentionally typed a
+  // different one for this specific event).
+  profileAffiliation?: string;
 }) {
   const [rsvp, setRsvp] = useState<RsvpDoc | null>(initialRsvp);
   const [role, setRole] = useState<"attendee" | "presenter">(
@@ -27,7 +33,9 @@ export function RsvpSection({
   const [presentationAbstract, setPresentationAbstract] = useState(
     initialRsvp?.presentationAbstract ?? "",
   );
-  const [affiliation, setAffiliation] = useState(initialRsvp?.affiliation ?? "");
+  const [affiliation, setAffiliation] = useState(
+    initialRsvp?.affiliation ?? profileAffiliation,
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

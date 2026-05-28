@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
+import { getMyProfile } from "@/lib/data/users";
 import { formatDateTime, isEventEnded } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -26,9 +27,15 @@ export default async function EventDetailPage({
   if (event.visibility === "members_only" && !user) {
     redirect(`/login?redirect=/events/${slug}`);
   }
-  const [myRsvp, presentations] = await Promise.all([
+  // Profile load is parallel with RSVP/presentations so it doesn't add
+  // latency on the warm path. Only needed to pre-fill the affiliation
+  // field on first-time RSVP — once the user has an existing RSVP doc,
+  // RsvpSection prefers that value (it's the most recent confirmation
+  // of what they want associated with this specific event).
+  const [myRsvp, presentations, profile] = await Promise.all([
     user ? getMyRsvp(event.id, user.uid) : Promise.resolve(null),
     listPresentations(event.id).catch(() => []),
+    user ? getMyProfile(user.uid).catch(() => null) : Promise.resolve(null),
   ]);
 
   return (
@@ -125,7 +132,12 @@ export default async function EventDetailPage({
           </p>
         </div>
       ) : user ? (
-        <RsvpSection event={event} initialRsvp={myRsvp} user={user} />
+        <RsvpSection
+          event={event}
+          initialRsvp={myRsvp}
+          user={user}
+          profileAffiliation={profile?.affiliation ?? ""}
+        />
       ) : (
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-700 dark:text-zinc-300 mb-3">
