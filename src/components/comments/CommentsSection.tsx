@@ -234,7 +234,13 @@ export function CommentsSection({
 
         {repliesTo && (
           <p className="mt-1 text-xs text-zinc-500">
-            Re: <span className="font-medium">@{repliesTo.authorName}</span>
+            Re:{" "}
+            <Link
+              href={`/u/${repliesTo.authorUid}`}
+              className="font-medium hover:underline"
+            >
+              @{repliesTo.authorName}
+            </Link>
           </p>
         )}
 
