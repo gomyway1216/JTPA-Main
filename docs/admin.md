@@ -1,6 +1,6 @@
 # Admin operations
 
-How to run JTPA-Main as an admin. Covers granting admin, granting the lighter editor role, managing events, reviewing project submissions, exporting attendee data, and the email notification setup.
+How to run JTPA-Main as an admin. Covers granting admin / editor, managing events (including check-in), reviewing project + blog submissions, exporting attendee data, editing the About page, archiving spam Q&A / polls, and the email notification setup.
 
 The repo is public, so this doc is also public. Nothing here is a secret — admin authorization is enforced in code (`requireAdmin()` + Firebase Auth Custom Claim), not by hiding URLs.
 
@@ -8,11 +8,14 @@ The repo is public, so this doc is also public. Nothing here is a secret — adm
 
 | Role | What it can do | What it can't |
 |---|---|---|
-| `admin` (`admin: true`) | Everything below + manage roles | — |
-| `editor` (`editor: true`) | Create / edit / publish / delete guides | Touch events, projects, attendees, roles |
-| (none) | RSVP events, submit projects | Anything admin-only |
+| `admin` (`admin: true`) | Everything below + manage roles, review/approve project + blog submissions, archive Q&A or polls, edit `/about`, manage events + attendees, run event check-in | — |
+| `editor` (`editor: true`) | Create / edit / publish / delete guides | Touch events, projects, posts, Q&A or poll moderation, attendees, About page, roles |
+| signed-in user (no role) | RSVP events, self check-in at events, submit projects (admin review), submit blog posts (admin review), post Q&A (auto-published), create polls (auto-published), vote in polls, comment on any published guide / blog / Q&A / poll / approved project, like records and comments | Anything admin/editor-only |
+| anonymous | Read public content (published events, approved projects, published blog posts + guides + Q&A + polls, including poll results); walk-in check-in via the QR code at the door (uses anonymous Firebase Auth + creates a guest RSVP) | Anything that requires sign-in (RSVP, post, vote, comment, like) |
 
 Editors are strictly less privileged than admins. An editor visiting any admin-only URL is redirected to `/admin/guides`.
+
+Q&A, comments, and polls go live immediately (no review queue) — admins can hard-delete abusive comments or flip a Q&A / poll doc to `archived` after the fact. Authors can soft-delete their own comments.
 
 ## Granting roles (preferred: admin UI)
 
@@ -50,6 +53,7 @@ Same sign-out-and-back-in rule applies.
 | `/admin/events` | Event list (with chips for メンバー限定, status badges, RSVP counts) | admin |
 | `/admin/events/new` | Create event | admin |
 | `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) | admin |
+| `/admin/events/[id]/checkin` | Generate / rotate the check-in token, render the QR code for the door kiosk, and manually toggle attendance per RSVP | admin |
 | `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
@@ -111,6 +115,22 @@ Submitters can edit their own projects from `/my/projects`; editing flips the st
 6. Author notification email goes out automatically — same as projects, **gated on issue #15** for actual delivery.
 
 Authors can edit their own posts from `/my/posts`; non-admin edits can land in either `draft` (save without resubmitting) or `pending` (resubmit for review). Admins can also edit any post via the same form (handy for typo fixes).
+
+## Event check-in (day-of)
+
+The check-in flow lets attendees mark themselves "attended" by scanning a QR code at the door — no admin desk work required for the common case, with a manual fallback for edge cases.
+
+1. **Generate the token** (once per event): open `/admin/events/[id]/checkin` → click **トークンを発行** (or **再発行** if rotating after a leak). This writes a 16-char alphanumeric `checkInToken` onto the event doc. The page renders a QR code embedding `https://<site>/events/<slug>/checkin?t=<token>`.
+2. **Print or display** the QR. Same page → 「印刷」 prints a kiosk-friendly poster; for an iPad / TV at the door, just leave the page open.
+3. **At the event** attendees scan and land on `/events/[slug]/checkin?t=<token>`:
+   - **Already signed in (pre-registered RSVP)**: `selfCheckIn` records `attendedAt: now` on their RSVP doc. Idempotent — second scan does nothing.
+   - **Already signed in, no RSVP yet**: same Server Action also creates a confirmed RSVP transparently before stamping `attendedAt`.
+   - **Walk-in, not signed in**: the page offers a "ゲストとして入場" form (name + email). On submit, the client signs in anonymously via Firebase Auth, `guestCheckIn` verifies the ID token, creates an RSVP with `isGuest: true`, and stamps `attendedAt`. No `users/{uid}` profile is created — guest identity lives only on the RSVP.
+4. **Token validity window**: 4 hours before `startAt` to 6 hours after `endAt` (constants in `src/lib/check-in.ts`). Outside that window the page rejects the token with a clear error so a leaked QR can't be replayed weeks later.
+5. **Manual toggle**: `/admin/events/[id]/checkin` shows the live attendee list with a checkbox per RSVP — flip it to set/clear `attendedAt` directly. Useful when someone forgets to scan or when reversing a mistake.
+6. **Counter**: `events/{id}.attendanceCount` is maintained transactionally by all three flows, so the admin page's "X / Y attended" number stays accurate without recomputing.
+
+If a token is leaked or accidentally shared early, click **再発行** — the old token instantly stops working (event doc only holds one token at a time).
 
 ## Exporting attendees
 

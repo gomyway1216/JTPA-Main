@@ -1,6 +1,6 @@
 # JTPA-Main
 
-Community website for the Japanese Technology Professionals Association (JTPA): event scheduling + RSVP, presenter material sharing, and an AI project showcase with admin moderation.
+Community website for the Japanese Technology Professionals Association (JTPA): event scheduling + RSVP + QR check-in, presenter material sharing, an AI project showcase (admin-moderated), member blog (admin-moderated), open Q&A, multi-select community polls, and admin/editor-curated help guides. All content collections support per-record likes and threaded comments from signed-in members.
 
 Built with **Next.js 16** (App Router) on **Firebase App Hosting**, backed by **Firestore**, **Firebase Auth (Google OAuth)** and **Firebase Storage**.
 
@@ -36,29 +36,41 @@ User-facing help (Japanese) lives in-app at `/help`; admin operational help (Jap
 | Data | Firestore (us-west1), Firebase Auth, Firebase Storage |
 | Server | React Server Components + Server Actions, Firebase Admin SDK via ADC |
 | Client | React 19, Tailwind, Firebase Web SDK (Auth + Storage only) |
-| CI | GitHub Actions: lint+build on PR, auto-deploy firestore/storage rules on main |
+| CI | GitHub Actions: lint+test+build on PR, auto-deploy firestore/storage rules+indexes on main |
 
 ## Repo layout
 
 ```
 src/
 ├── app/             Next.js App Router pages, Server Actions, route segments
-│   ├── actions/     "use server" entry points (events, rsvps, projects, auth, presentations)
-│   ├── admin/       Admin-only pages (gated by requireAdmin)
-│   ├── events/      Public event list + detail (with RSVP + presentation upload)
+│   ├── actions/     "use server" entry points (auth, check-in, comments, events, guides, likes,
+│   │                poll, posts, presentations, projects, qa, roles, rsvps, site-pages, users)
+│   ├── admin/       Admin-only pages (gated by requireAdmin / requireEditor at action level)
+│   ├── events/      Public event list + detail (with RSVP + presentation upload + /[slug]/checkin)
 │   ├── showcase/    Public AI project gallery
-│   ├── my/          Per-user dashboards (RSVPs, projects)
-│   └── projects/    Project submission flow
+│   ├── projects/    Project submission flow
+│   ├── blog/        Member blog (list + detail + comments + submit)
+│   ├── posts/       Blog redirects (legacy /posts → /blog)
+│   ├── guide/       Help articles (list + detail + comments)
+│   ├── qa/          Community Q&A (list + detail + comments + submit)
+│   ├── poll/        Multi-select community polls (list + detail + vote + submit)
+│   ├── about/       Editable About page (sitePages/about)
+│   ├── help/        User-facing help (Japanese)
+│   ├── u/           Public user profiles
+│   ├── login/       Sign-in
+│   └── my/          Per-user dashboards (RSVPs, projects, posts, qa, polls, likes, profile)
 ├── lib/
-│   ├── auth/        Session cookie + requireUser/requireAdmin helpers
+│   ├── auth/        Session cookie + requireUser / requireEditor / requireAdmin helpers
+│   ├── check-in.ts  Check-in token generator + validity window
 │   ├── data/        Firestore read paths (admin SDK), with plainify for SC→CC handoff
 │   ├── firebase/    Admin + client SDK initialization
 │   └── notifications.ts  Trigger Email enqueueing
 └── components/      Shared UI
 
-firestore.rules     Public-readable events, owner-only RSVPs, admin-only mutations
-storage.rules       Per-presenter upload paths, public-readable assets
-.github/workflows/  ci.yml (PR lint+build), deploy-rules.yml (main → rules deploy)
+firestore.rules         Per-collection read/write rules (owner + role gates; comments + likes + check-in patterns)
+firestore.indexes.json  Composite indexes (events, projects, posts, guides, qa, polls, rsvps, comments)
+storage.rules           Per-uploader paths with image-only + size caps
+.github/workflows/      ci.yml (PR lint+test+build), deploy-rules.yml (main → rules + indexes deploy)
 ```
 
 ## Contributing
@@ -66,7 +78,7 @@ storage.rules       Per-presenter upload paths, public-readable assets
 Branch + PR workflow (see [`docs/architecture.md`](docs/architecture.md) for code conventions):
 
 1. `git checkout -b feature/<short-name>` off `main`
-2. Make changes, run `npm run typecheck` and `npm run lint` locally
+2. Make changes, run `npm run typecheck`, `npm run lint`, and `npm test` locally
 3. `git push -u origin <branch>` then `gh pr create`
 4. Wait for CI green, merge via the GitHub UI
 5. App Hosting auto-deploys on merge to `main` (~2-3 min build)

@@ -94,6 +94,8 @@ npm run dev         # next dev (Turbopack)
 npm run build       # next build (used by CI and App Hosting)
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint
+npm test            # vitest run (single pass; also runs in CI)
+npm run test:watch  # vitest watch mode
 ```
 
 ## Troubleshooting

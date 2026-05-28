@@ -18,8 +18,11 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 | Guide detail | `/guide/[slug]` | `guides`, `comments`, `likes` | |
 | Q&A list | `/qa` | `qa` where `status == published` | No review queue — anyone can post |
 | Q&A detail | `/qa/[slug]` | `qa`, `comments`, `likes` | |
+| Poll list | `/poll` | `polls` where `status == published` | Multi-select voting; anyone can browse, signed-in to vote |
+| Poll detail | `/poll/[slug]` | `polls`, `polls/{id}/votes`, `comments`, `likes` | Results visible to everyone; individual ballots private |
 | Public profile | `/u/[uid]` | `users/{uid}` (only fields with `*Public: true`) | Email never shown publicly |
 | Help | `/help` | (none — static JSX) | Japanese user guide, linked from header + footer |
+| Event check-in (QR) | `/events/[slug]/checkin?t=<token>` | `events`, `rsvps` | Self check-in for signed-in attendees; walk-ins use anonymous auth → guest RSVP. 4h-before / 6h-after window enforced server-side. |
 
 ## Signed-in member
 
@@ -38,6 +41,9 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 | Manage own posts | `/my/posts`, `/my/posts/[id]/edit` | Save as draft or resubmit for review |
 | Post Q&A | `/qa/new` | Lands directly as `published` (no review) |
 | Manage own Q&A | `/my/qa`, `/qa/[slug]/edit` | |
+| Create poll | `/poll/new` | Lands directly as `published`; option list frozen once `voterCount > 0` |
+| Manage own polls | `/my/poll`, `/poll/[slug]/edit` | Author can edit title/description/slug; option list frozen after first vote |
+| Vote in poll | `/poll/[slug]` (form) | `castPollVote` — multi-select, can change/clear vote; transactional `voterCount` + per-option counters |
 | Account / profile | `/my/profile` | Edit `affiliation`, `bio`, public toggles, email opt-in |
 | Comment | inline on detail pages | `postComment` — 2000 char cap, replies are linear ("Re: @author") |
 | Like | inline on records + comments | `toggleLike` — transactional `likeCount` update |
@@ -55,11 +61,13 @@ Gated by `requireAdmin()` or `requireEditor()` in every Server Action; the `/adm
 | Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, define survey fields |
 | Project review | `/admin/projects` | admin | Approve / reject pending submissions |
 | Post review | `/admin/posts` | admin | Approve / reject pending blog posts |
-| Attendee export | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses |
+| Attendee export | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list |
+| Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view QR for kiosk, manually toggle attendance per RSVP |
 | Guides | `/admin/guides` | admin + editor | Create, edit, publish, delete curated articles |
 | About | `/admin/about` | admin | Edit `sitePages/about` |
-| Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims |
+| Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims; opt-in-only email CSV export |
 | Admin help | `/admin/help` | admin + editor | In-app operations guide, linked from `/admin` sidebar |
+| Poll archive | (no dedicated UI) | admin | `setPollStatus` Server Action flips a poll to `archived` to hide from `/poll` |
 
 ## Cross-cutting helpers
 
@@ -67,6 +75,7 @@ Gated by `requireAdmin()` or `requireEditor()` in every Server Action; the `/adm
 |---|---|
 | `src/lib/auth/session.ts` | `getSessionUser` / `requireUser` / `requireAdmin` / `requireEditor` — single source of truth for authn/authz |
 | `src/lib/comments-parent.ts` | Maps `parentType` → Firestore collection name, public URL prefix, and "is this parent publicly visible?" check |
+| `src/lib/check-in.ts` | Check-in token generation (16 chars from a confusable-free alphabet), validity window (4h before / 6h after the event), QR-payload URL builder |
 | `src/lib/data/serialize.ts` | `plainify()` — converts Admin SDK Timestamps to plain objects so Server → Client component handoff doesn't throw |
 | `src/lib/notifications.ts` | Enqueues docs into `mail/{autoId}` for the Trigger Email extension (no-op until issue #15 lands) |
 | `src/lib/rsvp-counters.ts` | Pure-function RSVP counter math, unit-tested separately from `cancelRsvp` |
