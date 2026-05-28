@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
+import { enqueueWaitlistPromotionNotification } from "@/lib/notifications";
+import { cancellationDeltas } from "@/lib/rsvp-counters";
 import type { RsvpDoc } from "@/lib/types";
 
 interface SubmitRsvpInput {
@@ -109,29 +111,117 @@ export async function cancelRsvp({
   const eventRef = adminDb().collection("events").doc(eventId);
   const rsvpRef = eventRef.collection("rsvps").doc(user.uid);
 
-  await adminDb().runTransaction(async (tx) => {
-    const snap = await tx.get(rsvpRef);
-    if (!snap.exists) return;
-    const prior = snap.data() as RsvpDoc;
-    if (prior.status === "cancelled") return;
+  // Notification info bubbles up out of the transaction as its return
+  // value — assigning to outer `let`s from within the callback works at
+  // runtime but TS can't track closure mutations, so the post-commit
+  // narrowing breaks. Returning from the callback keeps TS happy AND
+  // ensures we enqueue mail only ONCE per logical cancel (transactions
+  // can retry; the callback may run multiple times, but the return
+  // value reflects the committed state).
+  type PromotionInfo = {
+    to: string;
+    displayName: string;
+    eventTitle: string;
+    eventSlug: string;
+    role: RsvpDoc["role"];
+  };
 
-    const rsvpDelta = prior.status === "confirmed" ? -1 : 0;
-    const presenterDelta =
-      prior.status === "confirmed" && prior.role === "presenter" ? -1 : 0;
-    const waitlistDelta = prior.status === "waitlist" ? -1 : 0;
+  const promotion = await adminDb().runTransaction<PromotionInfo | null>(
+    async (tx) => {
+      const [rsvpSnap, eventSnap] = await Promise.all([
+        tx.get(rsvpRef),
+        tx.get(eventRef),
+      ]);
+      if (!rsvpSnap.exists) return null;
+      const prior = rsvpSnap.data() as RsvpDoc;
+      if (prior.status === "cancelled") return null;
+      // Defensive check, mirrors submitRsvp: if the event doc was
+      // deleted between the original RSVP and this cancel, the later
+      // `tx.update(eventRef, …)` would fail with a cryptic Firestore
+      // error. Throw the same EVENT_NOT_FOUND sentinel so callers see
+      // a consistent message (per PR #61 Gemini review).
+      if (!eventSnap.exists) throw new Error("EVENT_NOT_FOUND");
+      const event = eventSnap.data() as { title: string; slug: string };
 
-    tx.update(rsvpRef, {
-      status: "cancelled" as const,
-      updatedAt: Timestamp.now(),
-    });
-    tx.update(eventRef, {
-      rsvpCount: FieldValue.increment(rsvpDelta),
-      presenterCount: FieldValue.increment(presenterDelta),
-      waitlistCount: FieldValue.increment(waitlistDelta),
-      updatedAt: Timestamp.now(),
-    });
-  });
+      // Only confirmed cancellations free a real seat — a waitlist
+      // cancel just removes someone from the queue, no promotion
+      // needed.
+      const wasConfirmed = prior.status === "confirmed";
+
+      // Inside the transaction we get a consistent read of the oldest
+      // waitlist doc. The Admin SDK supports `tx.get(query)` with a
+      // limit, which is exactly the FIFO promotion this needs.
+      let promoteeDoc:
+        | {
+            ref: FirebaseFirestore.DocumentReference;
+            data: RsvpDoc;
+          }
+        | null = null;
+      if (wasConfirmed) {
+        const waitlistQuery = eventRef
+          .collection("rsvps")
+          .where("status", "==", "waitlist")
+          .orderBy("createdAt", "asc")
+          .limit(1);
+        const waitlistSnap = await tx.get(waitlistQuery);
+        if (!waitlistSnap.empty) {
+          const doc = waitlistSnap.docs[0];
+          promoteeDoc = { ref: doc.ref, data: doc.data() as RsvpDoc };
+        }
+      }
+
+      // Counter deltas live in cancellationDeltas() so the bucket
+      // arithmetic gets its own unit-test surface — see
+      // __tests__/lib/rsvp-counters.test.ts.
+      const { rsvpDelta, waitlistDelta, presenterDelta } = cancellationDeltas({
+        priorStatus: prior.status,
+        priorRole: prior.role,
+        promoteeRole: promoteeDoc ? promoteeDoc.data.role : null,
+      });
+
+      const now = Timestamp.now();
+      tx.update(rsvpRef, {
+        status: "cancelled" as const,
+        updatedAt: now,
+      });
+      if (promoteeDoc) {
+        tx.update(promoteeDoc.ref, {
+          status: "confirmed" as const,
+          updatedAt: now,
+        });
+      }
+      tx.update(eventRef, {
+        rsvpCount: FieldValue.increment(rsvpDelta),
+        presenterCount: FieldValue.increment(presenterDelta),
+        waitlistCount: FieldValue.increment(waitlistDelta),
+        updatedAt: now,
+      });
+
+      // `event` is guaranteed non-null + properly typed after the
+      // EVENT_NOT_FOUND guard above, so no optional-chaining needed.
+      if (promoteeDoc) {
+        return {
+          to: promoteeDoc.data.email,
+          displayName: promoteeDoc.data.displayName,
+          eventTitle: event.title,
+          eventSlug: event.slug,
+          role: promoteeDoc.data.role,
+        };
+      }
+      return null;
+    },
+  );
+
+  // Post-commit notification. enqueueMail itself swallows its own
+  // errors (see notifications.ts), so this won't block the cancel even
+  // if Firestore mail-collection writes fail. Trigger Email is not
+  // configured yet (#15), so the doc just sits queued — once #15
+  // lands, the queued notification flushes through automatically.
+  if (promotion) {
+    await enqueueWaitlistPromotionNotification(promotion);
+  }
 
   revalidatePath(`/events`);
+  revalidatePath(`/events/[slug]`, "page");
   revalidatePath(`/my/rsvps`);
 }
