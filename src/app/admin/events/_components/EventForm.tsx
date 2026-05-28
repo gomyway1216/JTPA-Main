@@ -3,7 +3,6 @@
 import { unstable_rethrow } from "next/navigation";
 import {
   deleteObject,
-  getDownloadURL,
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
@@ -17,6 +16,7 @@ import {
 } from "@/app/actions/events";
 import { SaveFlash } from "@/components/forms/SaveFlash";
 import { clientStorage } from "@/lib/firebase/client";
+import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type {
   EventDoc,
   ProjectAsset,
@@ -114,13 +114,13 @@ export function EventForm({
         (snap) =>
           onProgress((snap.bytesTransferred / snap.totalBytes) * 100),
         (err) => reject(err),
-        async () => {
-          try {
-            const url = await getDownloadURL(task.snapshot.ref);
-            resolve({ path, url });
-          } catch (err) {
-            reject(err);
-          }
+        () => {
+          // events/{...} has `allow read: if true` in storage.rules, so
+          // build a token-less public URL from the upload ref instead of
+          // calling getDownloadURL(). Skips a round-trip and avoids
+          // persisting a Storage access token into Firestore — same
+          // pattern as PostForm / ProjectForm (PR #47).
+          resolve({ path, url: publicDownloadUrl(task.snapshot.ref) });
         },
       );
     });
