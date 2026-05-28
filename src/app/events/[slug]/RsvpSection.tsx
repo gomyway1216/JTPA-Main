@@ -34,7 +34,11 @@ export function RsvpSection({
     initialRsvp?.presentationAbstract ?? "",
   );
   const [affiliation, setAffiliation] = useState(
-    initialRsvp?.affiliation ?? profileAffiliation,
+    // Only fall back to the profile-level value on a TRULY new RSVP
+    // (initialRsvp === null). If the user has an existing RSVP doc but
+    // intentionally cleared the affiliation, `?? profileAffiliation`
+    // would silently revert their edit — per PR #57 Gemini review.
+    initialRsvp ? (initialRsvp.affiliation ?? "") : profileAffiliation,
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();

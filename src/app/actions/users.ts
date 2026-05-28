@@ -7,15 +7,23 @@ import * as z from "zod";
 import { requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 
-// Affiliation: trim and bound to a reasonable length. Empty string is the
-// "no affiliation" sentinel (same shape signInWithIdToken bootstraps in
-// src/app/actions/auth.ts), so we accept "" rather than requiring
-// undefined.
+// Affiliation: trim FIRST, then bound to a reasonable length. Empty
+// string is the "no affiliation" sentinel (same shape signInWithIdToken
+// bootstraps in src/app/actions/auth.ts), so we accept "" rather than
+// requiring undefined.
+//
+// `preprocess`-then-`max` ordering matters: a `.transform(trim)` chained
+// after `.max(200)` would let a 250-char string of mostly whitespace
+// fail validation even though the trimmed value is well within the cap
+// (per PR #57 Copilot review).
+const trimmedString = (max: number, message: string) =>
+  z.preprocess(
+    (v) => (typeof v === "string" ? v.trim() : v),
+    z.string().max(max, message),
+  );
+
 const ProfileInputSchema = z.object({
-  affiliation: z
-    .string()
-    .max(200, "所属は200文字以内で入力してください")
-    .transform((s) => s.trim()),
+  affiliation: trimmedString(200, "所属は200文字以内で入力してください"),
   emailOptIn: z.boolean(),
 });
 
@@ -48,9 +56,10 @@ export async function updateMyProfile(
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // Affiliation also pre-fills the RSVP form on each event detail page,
-  // so revalidate /events too. Cheap because the App Router only
-  // re-renders pages actually visited.
+  // Affiliation pre-fills the RSVP form on each event DETAIL page
+  // (`/events/[slug]`), so revalidating the static `/events` list isn't
+  // enough — pass the dynamic-route template + `"page"` so all cached
+  // slug entries get cleared (per PR #57 Gemini review).
   revalidatePath("/my/profile");
-  revalidatePath("/events");
+  revalidatePath("/events/[slug]", "page");
 }
