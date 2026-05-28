@@ -22,19 +22,32 @@
 :root {
   --background: #fafafa;
   --foreground: #0a0a0a;
-  --accent: #2563eb;
+  /*
+   * Accent system: a single solid color plus matching gradient endpoints.
+   * Used by markdown link colors, primary-button gradient, hero backdrop,
+   * and the "AI" gradient in the hero h1. Indigo sits between the blue
+   * and violet stops so a solid `--accent` works alongside the gradient
+   * without feeling like a different family.
+   */
+  --accent: #4f46e5; /* indigo-600 */
+  --accent-from: #2563eb; /* blue-600 */
+  --accent-to: #7c3aed; /* violet-600 */
 }
 
 .dark {
   --background: #0a0a0a;
   --foreground: #fafafa;
-  --accent: #60a5fa;
+  --accent: #818cf8; /* indigo-400 */
+  --accent-from: #60a5fa; /* blue-400 */
+  --accent-to: #a78bfa; /* violet-400 */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-accent: var(--accent);
+  --color-accent-from: var(--accent-from);
+  --color-accent-to: var(--accent-to);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
