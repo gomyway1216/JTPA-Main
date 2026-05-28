@@ -1,6 +1,6 @@
 import "server-only";
 
-import { adminAuth } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
 export interface AdminUserListEntry {
   uid: string;
@@ -74,6 +74,54 @@ export async function listAllUsersForAdmin(
   });
 
   return { users: out, truncated };
+}
+
+// Minimal projection of a user for the email-recipient CSV export.
+// Deliberately narrow — we only surface what an external mailer (Mailchimp,
+// loops, etc.) needs to address a recipient and segment them. No uid, no
+// timestamps, no role flags.
+export interface OptedInRecipient {
+  email: string;
+  displayName: string;
+  affiliation: string;
+}
+
+// Lists users who have opted IN to JTPA announcement emails, for admins
+// exporting a recipient list to an external bulk-mailer. The query is
+// driven by Firestore (not Firebase Auth) because `emailOptIn` lives on
+// the `users/{uid}` profile doc and not on the Auth record — and because
+// the privacy-correct default is "only include explicit opt-ins":
+// users without a profile doc (never bootstrapped) are excluded.
+//
+// Rows missing an email string are filtered out client-side as a belt-and-
+// suspenders check; in practice the bootstrap in signInWithIdToken always
+// writes a non-empty email.
+export async function listOptedInRecipients(): Promise<OptedInRecipient[]> {
+  const snap = await adminDb()
+    .collection("users")
+    .where("emailOptIn", "==", true)
+    .get();
+
+  const out: OptedInRecipient[] = [];
+  for (const doc of snap.docs) {
+    const data = doc.data() as {
+      email?: string;
+      displayName?: string;
+      affiliation?: string;
+    };
+    const email = (data.email ?? "").trim();
+    if (!email) continue;
+    out.push({
+      email,
+      displayName: data.displayName ?? "",
+      affiliation: data.affiliation ?? "",
+    });
+  }
+
+  // Sort by email so the CSV is deterministic across exports — admins
+  // diffing two exports to spot newly-opted-in users get a clean diff.
+  out.sort((a, b) => a.email.localeCompare(b.email));
+  return out;
 }
 
 // Counts admins across the whole user base. Used to refuse revoking the
