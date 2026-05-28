@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { BackLink } from "@/components/ui/BackLink";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
@@ -67,9 +68,7 @@ export default async function QaDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/qa" className="text-xs text-zinc-500 hover:underline">
-        ← Q&amp;A 一覧
-      </Link>
+      <BackLink href="/qa" label="Q&A 一覧" />
 
       {qa.status === "archived" && (
         // Owner/admin landed here — surface the reason the post no
@@ -115,7 +114,7 @@ export default async function QaDetailPage({
           {canEdit && (
             <Link
               href={`/qa/${qa.slug}/edit`}
-              className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
+              className="text-sm text-accent hover:underline"
             >
               編集
             </Link>

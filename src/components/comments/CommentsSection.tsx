@@ -385,7 +385,7 @@ export function CommentsSection({
             </p>
             <Link
               href={`/login?redirect=${encodeURIComponent(loginRedirect)}`}
-              className="inline-flex rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className={primaryButtonClassSm}
             >
               Googleでログイン
             </Link>

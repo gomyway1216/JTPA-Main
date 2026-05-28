@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 
 import { PresentationSection } from "@/app/events/[slug]/PresentationSection";
 import { RsvpSection } from "@/app/events/[slug]/RsvpSection";
+import { primaryButtonClass } from "@/components/forms/styles";
+import { BackLink } from "@/components/ui/BackLink";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
@@ -40,6 +42,7 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
+      <BackLink href="/events" label="イベント一覧" />
       {event.coverImage?.url && (
         // aspect-[21/9] keeps the hero a cinematic-ish banner regardless of
         // the source aspect ratio — without this, a portrait upload would
@@ -97,7 +100,7 @@ export default async function EventDetailPage({
                     {" "}
                     <a
                       href={event.location.mapUrl}
-                      className="text-blue-600 hover:underline"
+                      className="text-accent hover:underline"
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -145,7 +148,7 @@ export default async function EventDetailPage({
           </p>
           <Link
             href={`/login?redirect=${encodeURIComponent(`/events/${event.slug}`)}`}
-            className="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+            className={primaryButtonClass}
           >
             Googleでログイン
           </Link>

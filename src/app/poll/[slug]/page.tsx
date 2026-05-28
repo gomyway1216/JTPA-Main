@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PollVoteForm } from "@/app/poll/_components/PollVoteForm";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { BackLink } from "@/components/ui/BackLink";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
@@ -74,9 +75,7 @@ export default async function PollDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/poll" className="text-xs text-zinc-500 hover:underline">
-        ← 投票一覧
-      </Link>
+      <BackLink href="/poll" label="投票一覧" />
 
       {poll.status === "archived" && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
@@ -108,7 +107,7 @@ export default async function PollDetailPage({
           {canEdit && (
             <Link
               href={`/poll/${poll.slug}/edit`}
-              className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
+              className="text-sm text-accent hover:underline"
             >
               編集
             </Link>
