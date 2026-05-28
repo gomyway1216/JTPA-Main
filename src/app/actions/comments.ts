@@ -6,31 +6,22 @@ import * as z from "zod";
 
 import { plainify } from "@/lib/data/serialize";
 import { requireUser } from "@/lib/auth/session";
-import { parentCollection, parentRoutePrefix } from "@/lib/comments-parent";
+import {
+  isParentPubliclyVisible,
+  parentCollection,
+  parentRoutePrefix,
+} from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
 import type {
   CommentDoc,
-  CommentParentType,
   GuideDoc,
   PostDoc,
+  ProjectDoc,
   QaDoc,
 } from "@/lib/types";
 
-// ---------- helpers ----------
-
-// All comment parent types currently treat `status === "published"` as
-// the gate for accepting new comments. Wrapping the check here keeps
-// the per-type literal in one place even though the string is the same
-// for everyone today.
-function parentIsPubliclyVisible(
-  parentType: CommentParentType,
-  data: PostDoc | GuideDoc | QaDoc,
-): boolean {
-  return data.status === "published";
-}
-
 const CommentSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa"]),
+  parentType: z.enum(["post", "guide", "qa", "project"]),
   parentId: z.string().min(1),
   body: z.string().trim().min(1).max(2000),
   // Top-level comment when omitted/null. When provided, must reference
@@ -40,7 +31,7 @@ const CommentSchema = z.object({
 });
 
 const DeleteSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa"]),
+  parentType: z.enum(["post", "guide", "qa", "project"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
 });
@@ -74,8 +65,8 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
     .doc(parsed.parentId);
   const parentSnap = await parentRef.get();
   if (!parentSnap.exists) throw new Error("NOT_FOUND");
-  const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
-  if (!parentIsPubliclyVisible(parsed.parentType, parentData)) {
+  const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
+  if (!isParentPubliclyVisible(parsed.parentType, parentData)) {
     throw new Error("コメントは公開済みのコンテンツにのみ投稿できます");
   }
 
@@ -145,7 +136,7 @@ export async function deleteComment(
   const parentSnap = await parentRef.get();
   if (parentSnap.exists) {
     await parentRef.update({ updatedAt: FieldValue.serverTimestamp() });
-    const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
+    const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
     revalidatePath(
       `${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`,
     );

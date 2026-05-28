@@ -15,6 +15,8 @@ export function parentCollection(parentType: CommentParentType): string {
       return "guides";
     case "qa":
       return "qa";
+    case "project":
+      return "projects";
   }
 }
 
@@ -32,5 +34,36 @@ export function parentRoutePrefix(parentType: CommentParentType): string {
       return "/guide";
     case "qa":
       return "/qa";
+    case "project":
+      return "/showcase";
+  }
+}
+
+/**
+ * `true` when a parent record is in the publicly-readable status. Used
+ * by the comment / like Server Actions to refuse new writes against an
+ * unpublished parent.
+ *
+ * `posts`, `guides`, `qa` all use `"published"` as the visible status.
+ * `projects` use `"approved"` instead (they go through a moderation
+ * queue rather than a draft/publish toggle), so the predicate has to be
+ * parent-type aware. The caller passes the doc shape so we can read the
+ * status without re-fetching.
+ */
+export function isParentPubliclyVisible(
+  parentType: CommentParentType,
+  data: { status: string },
+): boolean {
+  // Switch over the union (rather than `if/else`) so adding a new
+  // parent type to `CommentParentType` becomes a compile-time error
+  // here until the new case is handled. Matches the structure of
+  // `parentCollection` / `parentRoutePrefix` above.
+  switch (parentType) {
+    case "project":
+      return data.status === "approved";
+    case "post":
+    case "guide":
+    case "qa":
+      return data.status === "published";
   }
 }

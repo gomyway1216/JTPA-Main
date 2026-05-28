@@ -81,21 +81,87 @@ service cloud.firestore {
       allow create: if isSignedIn()
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'pending'
-        && request.resource.data.reviewerUid == null;
+        && request.resource.data.reviewerUid == null
+        // `likeCount` must be absent or zero on create. Without this, a
+        // client could seed an inflated like count that surfaces once
+        // admin approves the project — the denormalized counter is only
+        // ever supposed to grow via the `toggleLikeRecord` Server Action.
+        && (!('likeCount' in request.resource.data)
+            || request.resource.data.likeCount == 0);
 
       // Owner can edit metadata but cannot change status/reviewer fields.
-      // Editing flips status back to 'pending' for re-review.
+      // Editing flips status back to 'pending' for re-review. `likeCount`
+      // is denormalized and only the Server Action should touch it, so
+      // owners can't update it via a direct client write either —
+      // pinning it to its current value blocks that path.
       allow update: if (
         isSignedIn()
         && resource.data.ownerUid == request.auth.uid
         && request.resource.data.ownerUid == resource.data.ownerUid
         && request.resource.data.reviewerUid == resource.data.reviewerUid
         && request.resource.data.status == 'pending'
+        && (
+          (!('likeCount' in request.resource.data)
+            && !('likeCount' in resource.data))
+          || request.resource.data.likeCount == resource.data.likeCount
+        )
       ) || isAdmin();
 
       allow delete: if (isSignedIn()
         && resource.data.ownerUid == request.auth.uid)
         || isAdmin();
+
+      // Per-project likes — server-action-only (matches posts/guides/qa).
+      // Toggling goes through `toggleLikeRecord` Server Action so the
+      // denormalized `likeCount` on the parent stays coherent.
+      match /likes/{uid} {
+        allow read: if true;
+        allow create, update, delete: if false;
+      }
+
+      // Comments on showcase projects. Reads gated on the project
+      // being publicly approved (or the user is the owner / admin /
+      // comment author). Note projects use `status == 'approved'`
+      // rather than `'published'` like posts/guides/qa do. Owner is
+      // explicitly allowed because a project in pending / rejected
+      // status still has a moderation queue, and the owner should be
+      // able to see what people commented during that window.
+      match /comments/{commentId} {
+        allow read: if isAdmin()
+          || (isSignedIn() && resource != null
+              && resource.data.authorUid == request.auth.uid)
+          || get(/databases/$(database)/documents/projects/$(projectId)).data.status == 'approved'
+          || (isSignedIn()
+              && get(/databases/$(database)/documents/projects/$(projectId)).data.ownerUid == request.auth.uid);
+
+        // Schema invariants enforced on create so a malicious client
+        // can't write a doc whose `parentType` / `parentId` claim a
+        // different parent than the path the rule is matching.
+        allow create: if isSignedIn()
+          && request.resource.data.authorUid == request.auth.uid
+          && request.resource.data.parentType == 'project'
+          && request.resource.data.parentId == projectId
+          && get(/databases/$(database)/documents/projects/$(projectId)).data.status == 'approved';
+
+        // Authors can edit ONLY their comment body (plus the
+        // `updatedAt` timestamp).
+        allow update: if isAdmin()
+          || (
+            isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                 .hasOnly(['body', 'updatedAt'])
+          );
+
+        allow delete: if isAdmin()
+          || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+
+        // Per-comment likes — same Server-Action-only policy.
+        match /likes/{uid} {
+          allow read: if true;
+          allow create, update, delete: if false;
+        }
+      }
     }
 
     // ----- guides (AI setup / help content) -----

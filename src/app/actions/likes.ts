@@ -5,17 +5,21 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { parentCollection, parentRoutePrefix } from "@/lib/comments-parent";
+import {
+  isParentPubliclyVisible,
+  parentCollection,
+  parentRoutePrefix,
+} from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
-import type { CommentParentType, GuideDoc, PostDoc, QaDoc } from "@/lib/types";
+import type { GuideDoc, PostDoc, ProjectDoc, QaDoc } from "@/lib/types";
 
 const RecordSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa"]),
+  parentType: z.enum(["post", "guide", "qa", "project"]),
   parentId: z.string().min(1),
 });
 
 const CommentSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa"]),
+  parentType: z.enum(["post", "guide", "qa", "project"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
 });
@@ -66,11 +70,11 @@ export async function toggleLikeRecord(
       tx.get(parentRef),
     ]);
     if (!parentSnap.exists) throw new Error("NOT_FOUND");
-    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
     // Only allow likes on publicly-visible records. Mirrors the comment
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
-    if (parent.status !== "published") {
+    if (!isParentPubliclyVisible(parsed.parentType, parent)) {
       throw new Error("公開済みのコンテンツのみにいいねできます");
     }
     const wasLiked = likeSnap.exists;
@@ -125,12 +129,12 @@ export async function toggleLikeComment(
     if (!parentSnap.exists || !commentSnap.exists) {
       throw new Error("NOT_FOUND");
     }
-    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc;
+    const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
     // Defense in depth: if the parent has been unpublished while the
     // comment is still visible to the author, refuse new likes. Existing
     // likes are left in place — flipping the parent's status back to
     // published shouldn't lose them.
-    if (parent.status !== "published") {
+    if (!isParentPubliclyVisible(parsed.parentType, parent)) {
       throw new Error("公開済みのコンテンツのみにいいねできます");
     }
     const wasLiked = likeSnap.exists;
