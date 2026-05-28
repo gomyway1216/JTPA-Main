@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -42,7 +43,15 @@ export default async function ProjectDetailPage({
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{project.title}</h1>
-        <p className="text-sm text-zinc-500">投稿者: {project.ownerName}</p>
+        <p className="text-sm text-zinc-500">
+          投稿者:{" "}
+          <Link
+            href={`/u/${project.ownerUid}`}
+            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+          >
+            {project.ownerName}
+          </Link>
+        </p>
         {project.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {project.tags.map((t) => (

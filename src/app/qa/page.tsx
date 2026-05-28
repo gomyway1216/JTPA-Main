@@ -58,7 +58,14 @@ export default async function QaListPage() {
                 <h2 className="text-lg font-semibold">{q.title}</h2>
               </Link>
               <p className="mt-1 text-xs text-zinc-500">
-                by {q.authorName} · {formatDate(q.createdAt)}
+                by{" "}
+                <Link
+                  href={`/u/${q.authorUid}`}
+                  className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+                >
+                  {q.authorName}
+                </Link>{" "}
+                · {formatDate(q.createdAt)}
                 {(q.likeCount ?? 0) > 0 && (
                   <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
                 )}
