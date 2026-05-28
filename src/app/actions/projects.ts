@@ -30,7 +30,11 @@ const ProjectInputSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(10).max(5000),
   tags: z.array(z.string().min(1).max(30)).max(10).default([]),
-  appUrl: z.string().url(),
+  // appUrl optional: per #38, projects can be CLI tools, local-only
+  // experiments, hardware demos, etc. — not every project has a public
+  // app URL. Empty string from the form is preprocessed to undefined by
+  // optionalUrl, same as repoUrl/demoVideoUrl.
+  appUrl: optionalUrl,
   repoUrl: optionalUrl,
   demoVideoUrl: optionalUrl,
   thumbnail: AssetSchema.optional(),
@@ -109,7 +113,7 @@ export async function submitProject(input: ProjectFormInput): Promise<string> {
     title: parsed.title,
     description: parsed.description,
     tags: parsed.tags,
-    appUrl: parsed.appUrl,
+    appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",
     demoVideoUrl: parsed.demoVideoUrl || "",
     thumbnail: parsed.thumbnail,
@@ -165,7 +169,7 @@ export async function updateMyProject(
     title: parsed.title,
     description: parsed.description,
     tags: parsed.tags,
-    appUrl: parsed.appUrl,
+    appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",
     demoVideoUrl: parsed.demoVideoUrl || "",
     thumbnail: parsed.thumbnail ?? FieldValue.delete(),

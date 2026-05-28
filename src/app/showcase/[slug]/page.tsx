@@ -109,14 +109,16 @@ export default async function ProjectDetailPage({
       )}
 
       <div className="flex flex-wrap gap-3">
-        <Link
-          href={project.appUrl}
-          target="_blank"
-          rel="noreferrer noopener"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          アプリを開く →
-        </Link>
+        {project.appUrl && (
+          <Link
+            href={project.appUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            アプリを開く →
+          </Link>
+        )}
         {project.repoUrl && (
           <Link
             href={project.repoUrl}

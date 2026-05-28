@@ -31,15 +31,20 @@ export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
         <div>
           <h3 className="text-lg font-semibold">{project.title}</h3>
           <p className="text-xs text-zinc-500">
-            {project.ownerName} ·{" "}
-            <a
-              href={project.appUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="text-blue-600 hover:underline"
-            >
-              アプリを開く
-            </a>
+            {project.ownerName}
+            {project.appUrl && (
+              <>
+                {" · "}
+                <a
+                  href={project.appUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-blue-600 hover:underline"
+                >
+                  アプリを開く
+                </a>
+              </>
+            )}
             {project.repoUrl && (
               <>
                 {" · "}

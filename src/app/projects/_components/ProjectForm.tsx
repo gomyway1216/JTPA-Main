@@ -191,14 +191,13 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputCls}
         />
       </Field>
-      <Field label="アプリのURL" required htmlFor="project-app-url">
+      <Field label="アプリのURL (任意)" htmlFor="project-app-url">
         <input
           id="project-app-url"
           type="url"
-          required
           value={appUrl}
           onChange={(e) => setAppUrl(e.target.value)}
-          placeholder="https://your-app.example.com"
+          placeholder="https://your-app.example.com (CLI / ローカル専用なら空欄でOK)"
           className={inputCls}
         />
       </Field>
