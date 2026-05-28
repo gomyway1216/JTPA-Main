@@ -17,6 +17,18 @@ export interface UserProfile {
   displayName: string;
   photoURL?: string;
   affiliation?: string;
+  // Plain-text self-introduction shown on the public /u/[uid] page when
+  // `bioPublic` is true. Multi-line; newlines are rendered with
+  // whitespace-pre-wrap.
+  bio?: string;
+  // Per-field public/private toggles. Default-false (private) on older
+  // docs that pre-date these fields — opt-in is the safer migration.
+  // email itself is intentionally NEVER user-toggleable (PII / spam
+  // surface); the public profile page only ever shows displayName,
+  // photoURL, and whichever of affiliation/bio the user has opted to
+  // publish.
+  affiliationPublic?: boolean;
+  bioPublic?: boolean;
   emailOptIn: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;
