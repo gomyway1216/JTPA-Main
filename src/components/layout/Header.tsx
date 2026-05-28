@@ -27,6 +27,9 @@ export function Header({ user }: { user: SessionUser | null }) {
             <Link href="/qa" className="hover:text-zinc-950 dark:hover:text-white">
               Q&amp;A
             </Link>
+            <Link href="/poll" className="hover:text-zinc-950 dark:hover:text-white">
+              投票
+            </Link>
             <Link href="/about" className="hover:text-zinc-950 dark:hover:text-white">
               JTPAとは
             </Link>

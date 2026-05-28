@@ -15,13 +15,14 @@ import { adminDb } from "@/lib/firebase/admin";
 import type {
   CommentDoc,
   GuideDoc,
+  PollDoc,
   PostDoc,
   ProjectDoc,
   QaDoc,
 } from "@/lib/types";
 
 const CommentSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa", "project"]),
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
   parentId: z.string().min(1),
   body: z.string().trim().min(1).max(2000),
   // Top-level comment when omitted/null. When provided, must reference
@@ -31,7 +32,7 @@ const CommentSchema = z.object({
 });
 
 const DeleteSchema = z.object({
-  parentType: z.enum(["post", "guide", "qa", "project"]),
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
   parentId: z.string().min(1),
   commentId: z.string().min(1),
   // Admin-only: actually remove the doc instead of soft-deleting.
@@ -67,7 +68,7 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
     .doc(parsed.parentId);
   const parentSnap = await parentRef.get();
   if (!parentSnap.exists) throw new Error("NOT_FOUND");
-  const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
+  const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
   if (!isParentPubliclyVisible(parsed.parentType, parentData)) {
     throw new Error("コメントは公開済みのコンテンツにのみ投稿できます");
   }
@@ -161,7 +162,7 @@ export async function deleteComment(
   const parentSnap = await parentRef.get();
   if (parentSnap.exists) {
     await parentRef.update({ updatedAt: FieldValue.serverTimestamp() });
-    const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc;
+    const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     revalidatePath(
       `${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`,
     );
