@@ -425,6 +425,15 @@ export function GuideForm({
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// `<div>` rather than `<label>`: the body field contains a hidden
+// `<input type="file">` (used as the target of the upload-button click)
+// alongside the Markdown editor. Wrapping that in a `<label>` makes the
+// browser fire the label's implicit "click first associated form
+// control" behavior when you click any non-focusable area inside it —
+// which means clicking on padding around the editor would open the
+// native file picker. The label's nicety (click-on-label-text focuses
+// the first input) only matters for simple text fields, and we lose
+// nothing observable by dropping it.
 function Field({
   label,
   required,
@@ -435,12 +444,12 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="text-sm font-medium">
         {label}
         {required && <span className="text-red-600"> *</span>}
       </span>
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }

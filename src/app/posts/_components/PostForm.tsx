@@ -304,6 +304,10 @@ export function PostForm({ mode, user, post }: Props) {
 const inputCls =
   "w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
 
+// `<div>` rather than `<label>`: the cover-image field contains a
+// `<input type="file">` alongside the preview, and wrapping that in a
+// `<label>` made clicks on adjacent padding pop the native file picker.
+// See the same comment in GuideForm.tsx.
 function Field({
   label,
   required,
@@ -314,12 +318,12 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <div className="block">
       <span className="text-sm font-medium">
         {label}
         {required && <span className="text-red-600"> *</span>}
       </span>
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }
