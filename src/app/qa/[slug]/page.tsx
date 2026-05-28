@@ -81,7 +81,14 @@ export default async function QaDetailPage({
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{qa.title}</h1>
         <p className="text-sm text-zinc-500">
-          by {qa.authorName} · {formatDate(qa.createdAt)}
+          by{" "}
+          <Link
+            href={`/u/${qa.authorUid}`}
+            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+          >
+            {qa.authorName}
+          </Link>{" "}
+          · {formatDate(qa.createdAt)}
         </p>
         {qa.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">

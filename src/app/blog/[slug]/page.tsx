@@ -69,7 +69,13 @@ export default async function BlogPostPage({
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
         <p className="text-sm text-zinc-500">
-          by {post.authorName}
+          by{" "}
+          <Link
+            href={`/u/${post.authorUid}`}
+            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
+          >
+            {post.authorName}
+          </Link>
           {post.publishedAt && (
             <>
               {" · "}

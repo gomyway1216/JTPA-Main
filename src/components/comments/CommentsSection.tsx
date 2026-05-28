@@ -178,7 +178,13 @@ export function CommentsSection({
           </header>
           {repliesTo && (
             <p className="mt-1 text-xs text-zinc-500">
-              Re: <span className="font-medium">@{repliesTo.authorName}</span>
+              Re:{" "}
+              <Link
+                href={`/u/${repliesTo.authorUid}`}
+                className="font-medium hover:underline"
+              >
+                @{repliesTo.authorName}
+              </Link>
             </p>
           )}
           <p className="mt-2 text-sm italic text-zinc-500">
@@ -196,15 +202,20 @@ export function CommentsSection({
       <article className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            {c.authorPhotoURL && (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={c.authorPhotoURL}
-                alt=""
-                className="h-6 w-6 rounded-full"
-              />
-            )}
-            <span className="font-medium">{c.authorName}</span>
+            <Link
+              href={`/u/${c.authorUid}`}
+              className="flex items-center gap-2 hover:underline"
+            >
+              {c.authorPhotoURL && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={c.authorPhotoURL}
+                  alt=""
+                  className="h-6 w-6 rounded-full"
+                />
+              )}
+              <span className="font-medium">{c.authorName}</span>
+            </Link>
             <span className="text-xs text-zinc-500">
               {formatDateTime(c.createdAt)}
             </span>
