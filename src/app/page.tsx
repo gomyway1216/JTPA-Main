@@ -17,7 +17,7 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-20 px-4 py-12 sm:py-16">
-      <section className="relative isolate flex min-h-[calc(100vh-12rem)] flex-col justify-center gap-6 sm:gap-8">
+      <section className="relative isolate flex min-h-[calc(100vh-12rem)] flex-col justify-center gap-6 overflow-hidden sm:gap-8">
         {/*
          * Three decorative layers, all `pointer-events-none` +
          * `aria-hidden`, scoped under `isolate` so their negative
@@ -31,7 +31,7 @@ export default async function HomePage() {
          */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_1px_1px,rgb(99_102_241_/_0.2)_1px,transparent_0)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(129_140_248_/_0.28)_1px,transparent_0)]"
+          className="hero-dot-grid pointer-events-none absolute inset-0 -z-20"
         />
         <div
           aria-hidden="true"
@@ -57,9 +57,7 @@ export default async function HomePage() {
             "AI" glyphs — the loop is seamless because the gradient
             starts and ends on blue. */}
         <h1 className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
-          <span
-            className="bg-clip-text text-transparent [background-image:linear-gradient(90deg,#2563eb_0%,#4f46e5_25%,#7c3aed_50%,#4f46e5_75%,#2563eb_100%)] [background-size:200%_auto] animate-gradient-shimmer dark:[background-image:linear-gradient(90deg,#60a5fa_0%,#818cf8_25%,#a78bfa_50%,#818cf8_75%,#60a5fa_100%)]"
-          >
+          <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
             AI
           </span>
           で集まる、つくる、共有する。
