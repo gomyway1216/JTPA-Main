@@ -81,6 +81,7 @@ describe("listAllUsersForAdmin", () => {
         photoURL: "https://x/a.png",
         isAdmin: true,
         isEditor: false,
+        isContributor: false,
         disabled: false,
         lastSignInAt: "2024-01-01T12:00:00.000Z",
         createdAt: "2023-12-31T00:00:00.000Z",

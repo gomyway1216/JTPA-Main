@@ -10,8 +10,8 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
 import {
-  createGuide,
   deleteGuide,
+  submitGuide,
   updateGuide,
   type GuideFormInput,
 } from "@/app/actions/guides";
@@ -22,6 +22,7 @@ import {
   errorTextClass,
   inputClass,
   primaryButtonClass,
+  secondaryButtonClass,
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { clientDb } from "@/lib/firebase/client";
@@ -32,7 +33,7 @@ import {
   MAX_GUIDE_IMAGE_BYTES,
   uploadGuideImage,
 } from "@/lib/firebase/uploads";
-import type { GuideDoc } from "@/lib/types";
+import type { GuideDoc, SessionUser } from "@/lib/types";
 
 // `@uiw/react-md-editor` reads `window` during evaluation, so it has to
 // load on the client only.
@@ -76,17 +77,22 @@ function escapeAlt(s: string): string {
 
 export function GuideForm({
   mode,
+  user,
   guide,
 }: {
   mode: "create" | "edit";
+  user: SessionUser;
   guide?: GuideDoc;
 }) {
+  // Admin / editor / contributor — anyone trusted to self-publish without
+  // going through the admin review queue. Plain signed-in users see the
+  // "審査に出す" button instead of "公開する".
+  const canPublishDirectly =
+    user.isAdmin || user.isEditor || user.isContributor;
+
   const [title, setTitle] = useState(guide?.title ?? "");
   const [slug, setSlug] = useState(guide?.slug ?? "");
   const [tagsInput, setTagsInput] = useState(tagsToString(guide?.tags ?? []));
-  const [status, setStatus] = useState<GuideFormInput["status"]>(
-    guide?.status ?? "draft",
-  );
   const [order, setOrder] = useState(String(guide?.order ?? 100));
   const [body, setBody] = useState<string>(guide?.body ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -101,9 +107,9 @@ export function GuideForm({
   const [isDragging, setIsDragging] = useState(false);
 
   // Pre-generate a Firestore auto-id on create so images can be uploaded
-  // to `guides/{guideId}/...` BEFORE the doc is saved — same id is then
-  // handed back to the server action so the doc lives at exactly that
-  // location. On edit we use the existing guide.id. useState's lazy
+  // to `guides/{guideId}/{uid}/...` BEFORE the doc is saved — same id is
+  // then handed back to the server action so the doc lives at exactly
+  // that location. On edit we use the existing guide.id. useState's lazy
   // initializer keeps the id stable across re-renders.
   const [guideId] = useState<string>(() => {
     if (guide?.id) return guide.id;
@@ -140,9 +146,7 @@ export function GuideForm({
   async function uploadAndInsert(files: File[]) {
     if (files.length === 0) return;
     if (uploadingRef.current) {
-      setError(
-        "前のアップロードが完了するまでお待ちください",
-      );
+      setError("前のアップロードが完了するまでお待ちください");
       return;
     }
     uploadingRef.current = true;
@@ -162,7 +166,12 @@ export function GuideForm({
     try {
       const inserts: string[] = [];
       for (const file of files) {
-        const url = await uploadGuideImage(guideId, file);
+        // Pass the uid so the upload lands under the per-user subfolder
+        // `guides/{guideId}/{uid}/...` — Storage rules constrain writes
+        // there to the uploader, which lets non-admin contributors
+        // attach body images without granting them access to anyone
+        // else's guide assets.
+        const url = await uploadGuideImage(guideId, user.uid, file);
         const altRaw = file.name.replace(/\.[^.]+$/, "");
         inserts.push(`\n![${escapeAlt(altRaw)}](${url})\n`);
       }
@@ -245,8 +254,15 @@ export function GuideForm({
     uploadAndInsert(files);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Mirror of PostForm: the form has two save buttons, one per intent.
+  // - "draft"     : save without asking for review (or unpublishing)
+  // - "pending"   : (re)submit for admin review
+  // - "published" : self-publish (only enabled when `canPublishDirectly`)
+  // For non-trusted authors a server-side guard in `submitGuide` /
+  // `updateGuide` also downgrades any sneaky `published` payload back to
+  // `pending`, so the gate isn't load-bearing for security — it's a UX
+  // hint.
+  function submit(intent: "draft" | "pending" | "published") {
     setError(null);
     startTransition(async () => {
       try {
@@ -255,18 +271,18 @@ export function GuideForm({
           slug: slug || undefined,
           body,
           tags: stringToTags(tagsInput),
-          status,
+          status: intent,
           order,
         };
         if (mode === "create") {
-          await createGuide(payload, guideId);
+          await submitGuide(payload, guideId);
         } else if (guide) {
           await updateGuide(guide.id, payload);
         }
-        // Update path doesn't redirect (admin stays on the edit page);
-        // surface explicit "✓ 保存しました" feedback so the click feels
-        // acknowledged. Create path redirects via the Server Action, so
-        // this line only ever observably runs on update.
+        // Update path doesn't redirect; surface explicit "✓ 保存しました"
+        // feedback so the click feels acknowledged. Create path
+        // redirects via the Server Action, so this line only ever
+        // observably runs on update.
         setSavedAt(Date.now());
       } catch (err) {
         // Server-Action `redirect()` (and `notFound()`, etc.) signal
@@ -287,7 +303,12 @@ export function GuideForm({
     startTransition(async () => {
       try {
         await deleteGuide(guide.id);
-        window.location.href = "/admin/guides";
+        // Trusted authors land on the admin guides list; plain authors
+        // bounce back to /my/guides where they can see the rest of
+        // their submissions.
+        window.location.href = canPublishDirectly
+          ? "/admin/guides"
+          : "/my/guides";
       } catch (err) {
         setError(err instanceof Error ? err.message : "削除に失敗しました");
       }
@@ -295,7 +316,16 @@ export function GuideForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        // Default submit (Enter in a text field) goes through the most
+        // common intent for this caller: "published" for trusted authors,
+        // "pending" for plain users.
+        submit(canPublishDirectly ? "published" : "pending");
+      }}
+      className="space-y-4"
+    >
       <Field label="タイトル" required htmlFor="guide-title">
         <input
           id="guide-title"
@@ -326,20 +356,10 @@ export function GuideForm({
           className={inputClass}
         />
       </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="ステータス" htmlFor="guide-status">
-          <select
-            id="guide-status"
-            value={status}
-            onChange={(e) =>
-              setStatus(e.target.value as GuideFormInput["status"])
-            }
-            className={inputClass}
-          >
-            <option value="draft">下書き</option>
-            <option value="published">公開</option>
-          </select>
-        </Field>
+      {/* Admin/editor see the order knob; plain contributors don't —
+          admin sets the order during review so community guides slot
+          in without authors stepping on the curated set. */}
+      {(user.isAdmin || user.isEditor) && (
         <Field label="表示順 (小さいほど上)" htmlFor="guide-order">
           <input
             id="guide-order"
@@ -350,7 +370,7 @@ export function GuideForm({
             className={inputClass}
           />
         </Field>
-      </div>
+      )}
 
       <Field label="本文 (Markdown)" required>
         <div className="space-y-2">
@@ -408,16 +428,44 @@ export function GuideForm({
       </Field>
 
       {error && <p className={errorTextClass}>{error}</p>}
+      {mode === "edit" && !canPublishDirectly && (
+        <p className="text-xs text-zinc-500">
+          編集して「審査に出す」を押すと再度「審査中」となり、
+          管理者の承認後に再掲載されます。
+        </p>
+      )}
 
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <button
-            type="submit"
+            type="button"
             disabled={pending || uploading}
-            className={primaryButtonClass}
+            onClick={() => submit("draft")}
+            className={secondaryButtonClass}
           >
-            {pending ? "保存中..." : "保存"}
+            下書き保存
           </button>
+          {canPublishDirectly ? (
+            <button
+              type="submit"
+              disabled={pending || uploading}
+              className={primaryButtonClass}
+            >
+              {pending ? "保存中..." : "公開する"}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={pending || uploading}
+              className={primaryButtonClass}
+            >
+              {pending
+                ? "送信中..."
+                : mode === "create"
+                  ? "審査に出す"
+                  : "審査に出し直す"}
+            </button>
+          )}
           <SaveFlash savedAt={savedAt} />
         </div>
         {mode === "edit" && (
@@ -434,4 +482,3 @@ export function GuideForm({
     </form>
   );
 }
-

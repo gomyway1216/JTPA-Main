@@ -39,7 +39,7 @@ export default function HelpPage() {
         </p>
         <ul className="list-disc pl-5 space-y-1">
           <li>初回ログイン時にプロフィール (氏名・アイコン・メール) が自動作成されます。</li>
-          <li>イベントRSVP、プロジェクト/記事/Q&amp;Aの投稿、コメント・いいねにはログインが必要です。</li>
+          <li>イベントRSVP、プロジェクト/記事/Q&amp;A/ガイド/投票の投稿、コメント・いいねにはログインが必要です。</li>
           <li>ログアウトしたい時は画面右上の自分の名前を選び、「サインアウト」をクリック。</li>
         </ul>
       </Section>
@@ -140,13 +140,45 @@ export default function HelpPage() {
         </ul>
       </Section>
 
-      <Section id="guide" title="ガイドを読む">
+      <Section id="guide" title="ガイドを読む・書く">
         <p>
           <Link href="/guide" className="text-blue-600 hover:underline">/guide</Link>{" "}
-          には JTPA が公式にキュレーションした AI ツールのセットアップガイド・
-          解説記事が並んでいます。コミュニティ投稿のブログ/Q&amp;Aと違い、
-          内容は管理者・エディタが管理します。
+          には AI ツールのセットアップやノウハウをまとめた手引き集が並んでいます。
         </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>
+            <strong>誰でも投稿できます。</strong> 右上の「ガイドを投稿」または{" "}
+            <Link
+              href="/guide/new"
+              className="text-blue-600 hover:underline"
+            >
+              /guide/new
+            </Link>{" "}
+            から執筆できます。
+          </li>
+          <li>
+            初回のガイドは <strong>管理者の承認後</strong> に公開されます。
+            承認されると <code>contributor</code>{" "}
+            権限が自動付与され、 2 本目以降は審査なしで直接公開できるようになります
+            (権限反映には一度サインアウト → 再ログインが必要)。
+          </li>
+          <li>
+            自分の投稿状況は{" "}
+            <Link
+              href="/my/guides"
+              className="text-blue-600 hover:underline"
+            >
+              /my/guides
+            </Link>{" "}
+            で確認できます。下書き保存・編集・削除もここから。
+          </li>
+          <li>
+            <strong>ブログとガイドの使い分け:</strong>{" "}
+            ブログ は日記・お知らせ・体験談など時系列に並べる読み物、 ガイドは
+            ハウツー・チュートリアル・リファレンスなど後から探しやすい資料、
+            という棲み分けで運用しています。
+          </li>
+        </ul>
       </Section>
 
       <Section id="comments" title="コメント・いいね">

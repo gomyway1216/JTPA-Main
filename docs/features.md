@@ -14,7 +14,7 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 | Showcase detail | `/showcase/[slug]` | `projects`, `comments`, `likes` | Comments visible to all; only signed-in can post |
 | Blog list | `/blog` | `posts` where `status == published` | |
 | Blog detail | `/blog/[slug]` | `posts`, `comments`, `likes` | |
-| Guide list | `/guide` | `guides` where `status == published` (sorted by `order`) | Curated articles |
+| Guide list | `/guide` | `guides` where `status == published` (sorted by `order`) | Community + curated; signed-in users see a 「ガイドを投稿」 CTA |
 | Guide detail | `/guide/[slug]` | `guides`, `comments`, `likes` | |
 | Q&A list | `/qa` | `qa` where `status == published` | No review queue — anyone can post |
 | Q&A detail | `/qa/[slug]` | `qa`, `comments`, `likes` | |
@@ -41,6 +41,8 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 | Manage own posts | `/my/posts`, `/my/posts/[id]/edit` | Save as draft or resubmit for review |
 | Post Q&A | `/qa/new` | Lands directly as `published` (no review) |
 | Manage own Q&A | `/my/qa`, `/qa/[slug]/edit` | |
+| Submit guide | `/guide/new` | Creates `guides/{id}` with status `pending` for plain users (admin review queue); `published` directly for admin / editor / `contributor` |
+| Manage own guides | `/my/guides`, `/my/guides/[id]/edit` | Edit drafts or resubmit; rejected guides surface the admin's review note |
 | Create poll | `/poll/new` | Lands directly as `published`; option list frozen once `voterCount > 0` |
 | Manage own polls | `/my/poll`, `/poll/[slug]/edit` | Author can edit title/description/slug; option list frozen after first vote |
 | Vote in poll | `/poll/[slug]` (form) | `castPollVote` — multi-select, can change/clear vote; transactional `voterCount` + per-option counters |
@@ -51,7 +53,7 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 
 ## Admin / editor
 
-Gated by `requireAdmin()` or `requireEditor()` in every Server Action; the `/admin/*` layout admits both roles, individual pages redirect editors to `/admin/guides` when they're not allowed.
+Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every Server Action; the `/admin/*` layout admits both admin and editor roles, individual pages redirect editors to `/admin/guides` when they're not allowed. `contributor` is the lightweight tier auto-granted on first guide approval — it lets users skip the admin review queue for *their own* guides but doesn't unlock any `/admin/*` route.
 
 | Feature | URL | Role | What |
 |---|---|---|---|
@@ -63,7 +65,7 @@ Gated by `requireAdmin()` or `requireEditor()` in every Server Action; the `/adm
 | Post review | `/admin/posts` | admin | Approve / reject pending blog posts |
 | Attendee export | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list |
 | Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view QR for kiosk, manually toggle attendance per RSVP |
-| Guides | `/admin/guides` | admin + editor | Create, edit, publish, delete curated articles |
+| Guides | `/admin/guides` | admin + editor | Review queue for pending community guides (approve auto-promotes the author to `contributor`); plus create / edit / publish / delete any guide |
 | About | `/admin/about` | admin | Edit `sitePages/about` |
 | Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims; opt-in-only email CSV export |
 | Admin help | `/admin/help` | admin + editor | In-app operations guide, linked from `/admin` sidebar |

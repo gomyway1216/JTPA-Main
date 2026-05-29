@@ -5,9 +5,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as z from "zod";
 
-import { requireEditor } from "@/lib/auth/session";
-import { adminDb, adminStorage } from "@/lib/firebase/admin";
-import type { GuideAuthorRef } from "@/lib/types";
+import {
+  isTrustedAuthor,
+  requireAdmin,
+  requireEditor,
+  requireUser,
+} from "@/lib/auth/session";
+import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
+import {
+  enqueueAdminNewGuideNotification,
+  enqueueGuideDecisionNotification,
+} from "@/lib/notifications";
+import type { GuideAuthorRef, GuideDoc, GuideStatus } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
 // Firestore auto-IDs are 20 alphanumeric chars; we accept the same shape
@@ -18,12 +27,22 @@ const FIRESTORE_AUTO_ID = /^[A-Za-z0-9]{20}$/;
 const optionalNonEmpty = (schema: z.ZodTypeAny) =>
   z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
 
+// Author-facing intents. Mirrors the blog post form:
+//   - draft   : keep working on it, not asking for review
+//   - pending : submit (or resubmit) for admin approval
+//   - published : only honored when the caller is admin/editor/contributor
+//     — plain users get downgraded to `pending` server-side.
+// The Zod enum allows all three because the same form is shared between
+// privileged callers (admin / editor / contributor) and plain users; the
+// permission gate lives below in `resolveStatus`.
+const StatusInputSchema = z.enum(["draft", "pending", "published"]);
+
 const GuideInputSchema = z.object({
   title: z.string().min(2).max(200),
   slug: optionalNonEmpty(z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)),
   body: z.string().min(1).max(50000),
   tags: z.array(z.string().min(1).max(40)).max(20).default([]),
-  status: z.enum(["draft", "published"]),
+  status: StatusInputSchema,
   order: z.coerce.number().int().min(0).max(99999).default(100),
 });
 
@@ -52,56 +71,112 @@ function authorRef(user: {
   };
 }
 
-function revalidate() {
+function revalidate(slug?: string) {
   revalidatePath("/guide");
   revalidatePath("/admin/guides");
+  revalidatePath("/my/guides");
+  if (slug) revalidatePath(`/guide/${slug}`);
 }
 
-export async function createGuide(
+async function uniqueSlug(base: string, existingId?: string): Promise<string> {
+  const slug = slugify(base, "guide");
+  for (let i = 0; i < 20; i++) {
+    const candidate = i === 0 ? slug : `${slug}-${i}`;
+    const snap = await adminDb()
+      .collection("guides")
+      .where("slug", "==", candidate)
+      .limit(1)
+      .get();
+    if (snap.empty || snap.docs[0].id === existingId) return candidate;
+  }
+  return `${slug}-${Date.now().toString(36)}`;
+}
+
+// Caller-status → resolved status. Privileged authors (admin / editor /
+// contributor) get whatever they asked for. Plain signed-in users can
+// only land in `draft` or `pending`; an attempt to publish gets
+// silently downgraded to `pending` so a hand-crafted client form payload
+// can't bypass the review queue.
+function resolveStatus(
+  user: { isAdmin: boolean; isEditor: boolean; isContributor: boolean },
+  requested: z.infer<typeof StatusInputSchema>,
+): GuideStatus {
+  const trusted = user.isAdmin || user.isEditor || user.isContributor;
+  if (trusted) return requested;
+  return requested === "published" ? "pending" : requested;
+}
+
+// ---------- create ----------
+
+// Replaces the legacy `createGuide` admin-only Server Action. Any
+// signed-in user can call this; the resolved status decides whether the
+// guide lands publicly (admin/editor/contributor) or in the admin
+// review queue (plain user). Form callers should still pass a stable
+// `draftId` so client-side image uploads land under the correct
+// storage prefix before the Firestore doc exists.
+export async function submitGuide(
   input: GuideFormInput,
   draftId?: string,
 ): Promise<string> {
-  const user = await requireEditor();
+  const user = await requireUser();
   const parsed = parseGuideInput(input);
+  const resolvedStatus = resolveStatus(user, parsed.status);
 
-  const slug = parsed.slug || slugify(parsed.title, "guide");
-  const existing = await adminDb()
-    .collection("guides")
-    .where("slug", "==", slug)
-    .limit(1)
-    .get();
-  if (!existing.empty) {
-    throw new Error(`スラッグ "${slug}" は既に使用されています`);
+  // `optionalNonEmpty` uses `z.preprocess` which widens the inferred
+  // type to `unknown` — cast through the explicit shape so the result
+  // type stays narrow downstream (revalidate, payload, etc).
+  const requestedSlug = parsed.slug as string | undefined;
+  const slug: string = requestedSlug ?? (await uniqueSlug(parsed.title));
+  if (requestedSlug) {
+    const existing = await adminDb()
+      .collection("guides")
+      .where("slug", "==", slug)
+      .limit(1)
+      .get();
+    if (!existing.empty) {
+      throw new Error(`スラッグ "${slug}" は既に使用されています`);
+    }
   }
 
   const now = Timestamp.now();
   const author = authorRef(user);
-  const payload = {
+  // Privileged authors skip the review queue, so their published guides
+  // never went through "pending" — set `publishedAt` immediately when
+  // they land directly in `published`. Plain users always go through
+  // pending → admin approve, which sets `publishedAt` in `decideGuide`.
+  const publishedAt = resolvedStatus === "published" ? now : null;
+  const submittedAt = resolvedStatus === "pending" ? now : null;
+  const payload: Record<string, unknown> = {
     slug,
     title: parsed.title,
     body: parsed.body,
     tags: parsed.tags,
-    status: parsed.status,
+    status: resolvedStatus,
     order: parsed.order,
+    authorUid: user.uid,
+    authorName: user.displayName || null,
+    authorPhotoURL: user.photoURL,
+    reviewerUid: null,
     createdAt: now,
     updatedAt: now,
     createdBy: author,
     updatedBy: author,
   };
+  if (publishedAt) payload.publishedAt = publishedAt;
+  if (submittedAt) payload.submittedAt = submittedAt;
 
   let guideId: string;
   if (draftId !== undefined) {
     // Client supplied an id ahead of time so it could upload images to
-    // `guides/{guideId}/...` before saving. Validate the shape to keep
-    // anything else out of doc().set().
+    // `guides/{guideId}/{uid}/...` before saving. Validate the shape so
+    // arbitrary strings don't slip into doc().set().
     if (!FIRESTORE_AUTO_ID.test(draftId)) {
       throw new Error("不正な下書きIDが指定されました");
     }
     const ref = adminDb().collection("guides").doc(draftId);
     // `create()` is atomic — fails with ALREADY_EXISTS instead of
     // clobbering — so we avoid the read-then-write race that a
-    // `get()` + `set()` pair would have. Auto-id collisions are
-    // astronomical but we want correctness, not a near-miss.
+    // `get()` + `set()` pair would have.
     try {
       await ref.create(payload);
     } catch (err) {
@@ -117,50 +192,137 @@ export async function createGuide(
     guideId = ref.id;
   }
 
-  revalidate();
-  redirect(`/admin/guides/${guideId}/edit`);
+  // Notify admins on first pending submission so they know to review.
+  if (resolvedStatus === "pending") {
+    try {
+      await enqueueAdminNewGuideNotification({
+        guideId,
+        title: parsed.title,
+        authorName: user.displayName || user.email || user.uid,
+        authorEmail: user.email,
+      });
+    } catch (err) {
+      // Best-effort — log and continue. A queued mail doc just means
+      // the admin notification didn't ship; the guide submission
+      // itself is fine.
+      console.warn("Failed to enqueue admin guide notification:", err);
+    }
+  }
+
+  revalidate(slug);
+
+  // Privileged authors land back on the edit page (so they can refine
+  // and re-save). Community submissions go to /my/guides where they can
+  // track the review status.
+  if (isTrustedAuthor(user)) {
+    redirect(`/admin/guides/${guideId}/edit`);
+  }
+  redirect("/my/guides");
 }
 
+// Legacy alias kept so existing admin/editor form callers compile during
+// the refactor. New code should call `submitGuide` directly.
+export const createGuide = submitGuide;
+
+// ---------- update ----------
+
+// Author-facing update. Plain users can save their own guide in
+// `draft` / `pending` only; contributors can additionally self-publish.
+// Admin/editor edits flow through here too (they're trusted authors)
+// but they typically use `decideGuide` / `publishGuide` for status
+// transitions and this form for content edits — see `updateGuideAdmin`
+// for the cross-author edit path used by /admin/guides/[id]/edit.
 export async function updateGuide(
   guideId: string,
   input: GuideFormInput,
 ): Promise<void> {
-  const user = await requireEditor();
+  const user = await requireUser();
   const parsed = parseGuideInput(input);
   const ref = adminDb().collection("guides").doc(guideId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as GuideDoc;
 
-  if (parsed.slug) {
+  // Privileged tiers (admin / editor) can edit any guide. Contributors
+  // and plain authors can only touch their own.
+  const ownerUid = cur.authorUid ?? cur.createdBy?.uid;
+  const isAdminOrEditor = user.isAdmin || user.isEditor;
+  if (!isAdminOrEditor && ownerUid !== user.uid) {
+    throw new Error("FORBIDDEN");
+  }
+
+  // Same `unknown`-widening hazard from `optionalNonEmpty` as in
+  // `submitGuide` above — narrow once for the rest of the function.
+  const requestedSlug = parsed.slug as string | undefined;
+  if (requestedSlug && requestedSlug !== cur.slug) {
     const conflict = await adminDb()
       .collection("guides")
-      .where("slug", "==", parsed.slug)
+      .where("slug", "==", requestedSlug)
       .limit(2)
       .get();
     if (conflict.docs.some((d) => d.id !== guideId)) {
-      throw new Error(`スラッグ "${parsed.slug}" は既に使用されています`);
+      throw new Error(`スラッグ "${requestedSlug}" は既に使用されています`);
     }
   }
 
+  // Same intent → status resolution as `submitGuide`. Admin/editor can
+  // freely change status; contributors can self-publish their own;
+  // plain users are clamped to draft/pending. For admin/editor we
+  // preserve the existing status when they didn't explicitly request a
+  // change (they normally drive status via decideGuide / publishGuide,
+  // not the form save button).
+  const requestedStatus = isAdminOrEditor
+    ? parsed.status
+    : resolveStatus(user, parsed.status);
+
+  // First-publish detection — anchored on `publishedAt`, like posts —
+  // so re-publishing an edited guide that was already public doesn't
+  // overwrite the original publish date.
+  const becomesPublished =
+    requestedStatus === "published" && !cur.publishedAt;
+  const becomesPending =
+    requestedStatus === "pending" && cur.status !== "pending";
+
   await ref.update({
-    ...(parsed.slug ? { slug: parsed.slug } : {}),
+    ...(requestedSlug ? { slug: requestedSlug } : {}),
     title: parsed.title,
     body: parsed.body,
     tags: parsed.tags,
-    status: parsed.status,
+    status: requestedStatus,
     order: parsed.order,
+    ...(becomesPublished ? { publishedAt: Timestamp.now() } : {}),
+    ...(becomesPending ? { submittedAt: Timestamp.now() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
     updatedBy: authorRef(user),
   });
 
-  revalidate();
+  revalidate(requestedSlug ?? cur.slug);
 }
 
+// ---------- delete ----------
+
 export async function deleteGuide(guideId: string): Promise<void> {
-  await requireEditor();
-  await adminDb().collection("guides").doc(guideId).delete();
+  const user = await requireUser();
+  const ref = adminDb().collection("guides").doc(guideId);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    // Idempotent — silent success if the guide is already gone.
+    return;
+  }
+  const cur = snap.data() as GuideDoc;
+  const ownerUid = cur.authorUid ?? cur.createdBy?.uid;
+  const isAdminOrEditor = user.isAdmin || user.isEditor;
+  if (!isAdminOrEditor && ownerUid !== user.uid) {
+    throw new Error("FORBIDDEN");
+  }
+
+  await ref.delete();
 
   // Best-effort cleanup of any uploaded images. Logged and swallowed so a
   // Storage hiccup can't leave a half-deleted guide in Firestore; an
   // orphaned image is recoverable, a phantom Firestore doc is worse.
+  // The prefix sweep catches both the new `guides/{id}/{uid}/...` layout
+  // and the legacy flat `guides/{id}/...` layout.
   try {
     await adminStorage()
       .bucket()
@@ -169,5 +331,134 @@ export async function deleteGuide(guideId: string): Promise<void> {
     console.warn(`Failed to clean up Storage for guide ${guideId}:`, err);
   }
 
-  revalidate();
+  revalidate(cur.slug);
+}
+
+// ---------- admin review queue ----------
+
+// Approve or reject a pending guide. Mirrors `decidePost`.
+//
+// On the first approval for a given author, we also flip on the
+// `contributor: true` custom claim so the author's subsequent guides
+// skip the review queue. The promotion is idempotent — re-approving a
+// guide from someone who is already admin/editor/contributor doesn't
+// re-grant or notify about the role change.
+export async function decideGuide(
+  guideId: string,
+  decision: "published" | "rejected",
+  note?: string,
+): Promise<void> {
+  const admin = await requireAdmin();
+  const ref = adminDb().collection("guides").doc(guideId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as GuideDoc;
+
+  const isFirstPublish = decision === "published" && !cur.publishedAt;
+  const isRejection = decision === "rejected";
+
+  await ref.update({
+    status: decision,
+    reviewerUid: admin.uid,
+    // Clear any stale rejection note on approval so the previous round's
+    // critique doesn't follow an approved guide forever.
+    reviewNote: isRejection ? (note ?? "") : "",
+    ...(isFirstPublish ? { publishedAt: Timestamp.now() } : {}),
+    reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+
+  // Auto-promote the author on first approval, if they aren't already
+  // an admin / editor / contributor. The claim only takes effect after
+  // the author signs out and back in, but we surface that in the
+  // notification email below.
+  let promoted = false;
+  const authorUid = cur.authorUid ?? cur.createdBy?.uid;
+  if (decision === "published" && authorUid && authorUid !== admin.uid) {
+    try {
+      const target = await adminAuth().getUser(authorUid);
+      const claims = (target.customClaims ?? {}) as Record<string, unknown>;
+      const alreadyTrusted =
+        claims.admin === true ||
+        claims.editor === true ||
+        claims.contributor === true;
+      if (!alreadyTrusted) {
+        await adminAuth().setCustomUserClaims(authorUid, {
+          ...claims,
+          contributor: true,
+        });
+        promoted = true;
+      }
+    } catch (err) {
+      // Promotion is best-effort — the guide approval already landed,
+      // and admins can flip the claim manually from /admin/users if
+      // this silently fails. Log so it's recoverable.
+      console.warn(
+        `Failed to auto-promote contributor for guide ${guideId} (uid: ${authorUid}):`,
+        err,
+      );
+    }
+  }
+
+  // Notify author on first publish OR any rejection. The note only
+  // travels with rejection mails, same shape as posts.
+  const notifyOnDecision = isRejection || isFirstPublish;
+  if (notifyOnDecision && authorUid) {
+    try {
+      const ownerSnap = await adminDb()
+        .collection("users")
+        .doc(authorUid)
+        .get();
+      const ownerEmail = ownerSnap.exists
+        ? (ownerSnap.data()?.email as string)
+        : null;
+      if (ownerEmail) {
+        await enqueueGuideDecisionNotification({
+          to: ownerEmail,
+          title: cur.title,
+          decision,
+          note: isRejection ? note : undefined,
+          promoted,
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to enqueue guide decision notification:", err);
+    }
+  }
+
+  revalidate(cur.slug);
+}
+
+// Admin-only shortcut: publish a draft directly, without going through
+// the pending → review handshake. Used for guides admins authored
+// themselves (or for republishing an archived guide).
+export async function publishGuide(guideId: string): Promise<void> {
+  await requireEditor();
+  const ref = adminDb().collection("guides").doc(guideId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as GuideDoc;
+  const isFirstPublish = !cur.publishedAt;
+  await ref.update({
+    status: "published" as const,
+    ...(isFirstPublish ? { publishedAt: Timestamp.now() } : {}),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  revalidate(cur.slug);
+}
+
+// Admin-only retire. Same shape as `archivePost`. Not wired into the UI
+// yet — kept ready for an "アーカイブ" button on the published guides
+// list so guides can be retired without losing the doc.
+export async function archiveGuide(guideId: string): Promise<void> {
+  await requireAdmin();
+  const ref = adminDb().collection("guides").doc(guideId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new Error("NOT_FOUND");
+  const cur = snap.data() as GuideDoc;
+  await ref.update({
+    status: "archived" as const,
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  revalidate(cur.slug);
 }

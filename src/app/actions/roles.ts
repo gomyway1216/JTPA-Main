@@ -7,9 +7,13 @@ import { requireAdmin } from "@/lib/auth/session";
 import { countAdmins } from "@/lib/data/users-admin";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
-export type ManagedRole = "admin" | "editor";
+export type ManagedRole = "admin" | "editor" | "contributor";
 
-const VALID_ROLES: ReadonlySet<ManagedRole> = new Set(["admin", "editor"]);
+const VALID_ROLES: ReadonlySet<ManagedRole> = new Set([
+  "admin",
+  "editor",
+  "contributor",
+]);
 
 interface SetRoleArgs {
   uid: string;

@@ -97,10 +97,14 @@ function sanitizeFilename(name: string): string {
 
 export async function uploadGuideImage(
   guideId: string,
+  uid: string,
   file: File,
 ): Promise<string> {
   if (!guideId) {
     throw new Error("ガイドIDが取得できませんでした");
+  }
+  if (!uid) {
+    throw new Error("ユーザーIDが取得できませんでした");
   }
   if (!isAllowedType(file.type)) {
     throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
@@ -108,7 +112,11 @@ export async function uploadGuideImage(
   if (file.size > MAX_GUIDE_IMAGE_BYTES) {
     throw new Error("画像サイズは 5MB 以下にしてください");
   }
-  const path = `guides/${guideId}/${Date.now()}-${sanitizeFilename(file.name)}`;
+  // Path is `guides/{guideId}/{uid}/{filename}` so Storage rules can
+  // constrain writes to the uploader's own sub-folder — mirrors the Q&A
+  // layout and replaces the legacy flat `guides/{guideId}/{filename}`
+  // path that was admin/editor-only.
+  const path = `guides/${guideId}/${uid}/${Date.now()}-${sanitizeFilename(file.name)}`;
   const r = storageRef(clientStorage, path);
   await uploadBytes(r, file, { contentType: file.type });
   return publicDownloadUrl(r);

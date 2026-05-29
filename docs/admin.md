@@ -1,6 +1,6 @@
 # Admin operations
 
-How to run JTPA-Main as an admin. Covers granting admin / editor, managing events (including check-in), reviewing project + blog submissions, exporting attendee data, editing the About page, archiving spam Q&A / polls, and the email notification setup.
+How to run JTPA-Main as an admin. Covers granting admin / editor / contributor, managing events (including check-in), reviewing project + blog + guide submissions, exporting attendee data, editing the About page, archiving spam Q&A / polls, and the email notification setup.
 
 The repo is public, so this doc is also public. Nothing here is a secret — admin authorization is enforced in code (`requireAdmin()` + Firebase Auth Custom Claim), not by hiding URLs.
 
@@ -8,20 +8,24 @@ The repo is public, so this doc is also public. Nothing here is a secret — adm
 
 | Role | What it can do | What it can't |
 |---|---|---|
-| `admin` (`admin: true`) | Everything below + manage roles, review/approve project + blog submissions, archive Q&A or polls, edit `/about`, manage events + attendees, run event check-in | — |
-| `editor` (`editor: true`) | Create / edit / publish / delete guides | Touch events, projects, posts, Q&A or poll moderation, attendees, About page, roles |
-| signed-in user (no role) | RSVP events, self check-in at events, submit projects (admin review), submit blog posts (admin review), post Q&A (auto-published), create polls (auto-published), vote in polls, comment on any published guide / blog / Q&A / poll / approved project, like records and comments | Anything admin/editor-only |
+| `admin` (`admin: true`) | Everything below + manage roles, review/approve project + blog + guide submissions, archive Q&A or polls, edit `/about`, manage events + attendees, run event check-in | — |
+| `editor` (`editor: true`) | Create / edit / publish / delete **any** guide (cross-author curation) | Touch events, projects, posts, Q&A or poll moderation, attendees, About page, roles |
+| `contributor` (`contributor: true`) | Self-publish their **own** guides without admin review | Edit other people's guides; everything in admin |
+| signed-in user (no role) | RSVP events, self check-in at events, submit projects (admin review), submit blog posts (admin review), **submit guides (admin review on first one, then auto-promoted to `contributor`)**, post Q&A (auto-published), create polls (auto-published), vote in polls, comment on any published guide / blog / Q&A / poll / approved project, like records and comments | Anything admin/editor-only |
 | anonymous | Read public content (published events, approved projects, published blog posts + guides + Q&A + polls, including poll results); walk-in check-in via the QR code at the door (uses anonymous Firebase Auth + creates a guest RSVP) | Anything that requires sign-in (RSVP, post, vote, comment, like) |
 
-Editors are strictly less privileged than admins. An editor visiting any admin-only URL is redirected to `/admin/guides`.
+The three role claims compose independently — a user can hold `editor` without `contributor`, or both. `editor` is strictly more powerful than `contributor` (editor can edit any guide; contributor can only touch their own). Editor / contributor are both strictly less privileged than admin. An editor or contributor visiting an admin-only URL is redirected to `/admin/guides`.
 
-Q&A, comments, and polls go live immediately (no review queue) — admins can hard-delete abusive comments or flip a Q&A / poll doc to `archived` after the fact. Authors can soft-delete their own comments.
+`contributor` is auto-granted on a user's first admin-approved guide so subsequent guide submissions skip the review queue — see [Reviewing guide submissions](#reviewing-guide-submissions) below. Admins can grant or revoke it manually from `/admin/users` at any time.
+
+Q&A, polls, comments, and guides authored by admin/editor/contributor go live immediately (no review queue). Admins can hard-delete abusive comments or flip a Q&A / poll doc to `archived` after the fact. Authors can soft-delete their own comments.
 
 ## Granting roles (preferred: admin UI)
 
 `/admin/users` lists every user with their current roles and last-login time. Admins can:
 
-- Grant or revoke `editor` on any user.
+- Grant or revoke `contributor` on any user. Lower stakes than editor — contributor only affects the user's own guides — so admins can hand it out liberally to anyone showing up to write.
+- Grant or revoke `editor` on any user. Editor is a curation role: editors can edit + publish + delete *anyone's* guide. Reserve for community members who have agreed to keep the guide list tidy.
 - Grant or revoke `admin` on any other user. The page refuses to remove `admin` from yourself or from the last remaining admin, so it's safe to click around.
 
 Role changes only take effect after the target user signs out and back in (the claim has to flow into a freshly minted session cookie).
@@ -33,11 +37,15 @@ A user has to sign in once before they show up in the list — there's no way to
 For bootstrap (the very first admin) or recovery when the UI is unreachable:
 
 ```bash
-node scripts/set-admin.mjs <email>           # grant admin
-node scripts/set-admin.mjs <email> --revoke  # revoke admin
-node scripts/set-editor.mjs <email>          # grant editor
-node scripts/set-editor.mjs <email> --revoke # revoke editor
+node scripts/set-admin.mjs <email>            # grant admin
+node scripts/set-admin.mjs <email> --revoke   # revoke admin
+node scripts/set-editor.mjs <email>           # grant editor
+node scripts/set-editor.mjs <email> --revoke  # revoke editor
+node scripts/set-contributor.mjs <email>           # grant contributor
+node scripts/set-contributor.mjs <email> --revoke  # revoke contributor
 ```
+
+Each script is idempotent — re-running with the same arguments is a no-op.
 
 Requirements:
 - ADC set up (`gcloud auth application-default login` with a Firebase IAM Editor or Owner)
@@ -57,7 +65,7 @@ Same sign-out-and-back-in rule applies.
 | `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
-| `/admin/guides` | Guide list (create, edit, publish, delete) | admin + editor |
+| `/admin/guides` | Guide review queue (pending community submissions) + published / drafts / rejected sections, with approve/reject actions and the create button. Approval auto-promotes the author to `contributor`. | admin + editor |
 | `/admin/about` | Edit the `/about` page (title + Markdown body, stored in `sitePages/about`) | admin |
 | `/admin/users` | User list with role grant/revoke | admin |
 | `/admin/help` | In-app admin operations guide (Japanese, mirrors this doc at a high level) | admin + editor |
@@ -104,6 +112,22 @@ You land on the new event's edit page to adjust dates and publish.
 5. Submitter notification email goes out automatically — **once issue #15 (Trigger Email setup) is done**. Until then, the mail doc is enqueued but nothing sends it.
 
 Submitters can edit their own projects from `/my/projects`; editing flips the status back to `pending` for re-review.
+
+## Reviewing guide submissions
+
+Anyone signed in can submit a guide from `/guide/new`. The first one lands in the admin review queue (`status: pending`); after approval the author is auto-promoted to `contributor` and follow-up guides skip the queue.
+
+1. Open `/admin/guides` — the **審査待ち** section at the top lists pending community submissions. Each card shows title, author, tags, an excerpt of the body, and **プレビュー** / **内容を編集** links so you can read the full guide or fix typos before approving.
+2. Optionally type a コメント (shown to the author on rejection — not on approval).
+3. Click **公開 (+ contributor 付与)** or **却下**.
+4. Approved guides immediately appear on `/guide`. The same action also grants the `contributor: true` custom claim to the author **if they don't already hold admin / editor / contributor** — that's the promotion that lets their next guide skip review.
+5. Author notification email goes out automatically — same `mail/` queue as project + post decisions, **gated on issue #15** for actual delivery. The publish notice gets an extra paragraph explaining the contributor promotion when applicable.
+
+Authors can edit their own guides from `/my/guides`; a non-trusted author's edit (no admin/editor/contributor claim) flips the status back to `pending` or stays in `draft`. Contributors and above can edit + republish their own guides directly without re-review.
+
+Editors hold the cross-author edit power: they can edit, publish, or delete *anyone's* guide. Use editor sparingly — it's the right role for someone you trust to keep the curated guide list tidy.
+
+If a contributor abuses the trust, demote them at `/admin/users` → **contributor 剥奪**. Their existing guides stay up; future submissions go back through the pending queue.
 
 ## Reviewing blog post submissions
 

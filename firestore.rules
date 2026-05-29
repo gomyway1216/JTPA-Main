@@ -15,6 +15,17 @@ service cloud.firestore {
       return isSignedIn() && request.auth.token.editor == true;
     }
 
+    // Contributor tier sits BETWEEN signed-in user and editor: trusted to
+    // self-publish their own guides (after being vetted on a first
+    // submission by admin) but NOT trusted to touch other people's
+    // guides. Use alongside `isAdmin()` / `isEditor()`, never instead of
+    // them — the OR ladder `isAdmin() || isEditor() || isContributor()`
+    // matches the `requireContributor()` helper in
+    // `src/lib/auth/session.ts`.
+    function isContributor() {
+      return isSignedIn() && request.auth.token.contributor == true;
+    }
+
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
@@ -192,15 +203,67 @@ service cloud.firestore {
     }
 
     // ----- guides (AI setup / help content) -----
-    // Published guides are public. Drafts only readable by admin/editor.
-    // Editors and admins can write.
-    // Note: privileged checks run first so `resource` (null when the doc
-    // doesn't exist) isn't dereferenced for admins/editors who must still
-    // be able to probe missing docs without hitting a null-eval failure.
+    // Three author tiers can write here:
+    //   - admin / editor : may create with any status, edit anyone's
+    //     guide, change anyone's status. Editor's broad cross-author
+    //     power is deliberate — that's the whole point of the role
+    //     (curating community submissions).
+    //   - contributor    : may create their own guides with status
+    //     `draft` / `pending` / `published`, and edit their own. May
+    //     NOT touch other authors' guides.
+    //   - plain signed-in user : may create their own guides with
+    //     status `draft` / `pending` only (waits for admin review),
+    //     and edit their own back to those same states. Auto-promoted
+    //     to `contributor` on first admin approval (see
+    //     `decideGuide` in src/app/actions/guides.ts).
+    // Reads: published is public; everything else is visible to
+    // admin/editor/author. Privileged checks run first so `resource`
+    // (null when the doc doesn't exist) isn't dereferenced for
+    // admins/editors who must still be able to probe missing docs
+    // without hitting a null-eval failure.
     match /guides/{guideId} {
       allow read: if isAdmin() || isEditor()
-        || (resource != null && resource.data.status == 'published');
-      allow create, update, delete: if isAdmin() || isEditor();
+        || (resource != null && resource.data.status == 'published')
+        || (isSignedIn() && resource != null
+            && resource.data.authorUid == request.auth.uid);
+
+      // Create: privileged tiers can land in any status. Contributors
+      // can self-publish their own. Plain users can only seed `draft` /
+      // `pending`. `reviewerUid` must start null for non-admin/editor
+      // writes so the author can't fake a reviewer; admins/editors
+      // overwrite it explicitly via `decideGuide`.
+      allow create: if isAdmin() || isEditor()
+        || (isSignedIn()
+            && request.resource.data.authorUid == request.auth.uid
+            && (
+              !('reviewerUid' in request.resource.data)
+              || request.resource.data.reviewerUid == null
+            )
+            && (
+              request.resource.data.status in ['draft', 'pending']
+              || (isContributor()
+                  && request.resource.data.status == 'published')
+            ));
+
+      // Update: admin/editor change anything. Otherwise the caller must
+      // own the doc, can't reassign authorUid or fake a reviewer, and
+      // the target status is constrained the same way as create.
+      // (Server Actions go through Admin SDK and bypass this; the rule
+      // is defense-in-depth for direct client writes.)
+      allow update: if isAdmin() || isEditor()
+        || (isSignedIn()
+            && resource.data.authorUid == request.auth.uid
+            && request.resource.data.authorUid == resource.data.authorUid
+            && request.resource.data.reviewerUid == resource.data.reviewerUid
+            && (
+              request.resource.data.status in ['draft', 'pending']
+              || (isContributor()
+                  && request.resource.data.status == 'published')
+            ));
+
+      // Delete: admin/editor anyone's; authors only their own.
+      allow delete: if isAdmin() || isEditor()
+        || (isSignedIn() && resource.data.authorUid == request.auth.uid);
 
       // Per-guide likes are read-only for clients. All toggles flow
       // through the `toggleLikeRecord` Server Action (Admin SDK) so the
