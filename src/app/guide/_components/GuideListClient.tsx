@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import { FadeUp } from "@/components/ui/FadeUp";
+import { interactiveCardClass } from "@/components/ui/surface";
 import type { GuideDoc } from "@/lib/types";
 import { stripMarkdown, truncate } from "@/lib/utils";
 
@@ -118,14 +120,11 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
         </p>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((g) => {
+          {filtered.map((g, i) => {
             const tags = g.tags ?? [];
             return (
-              <li
-                key={g.id}
-                className="rounded-lg border border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
-              >
-                <Link href={`/guide/${g.slug}`} className="block p-5">
+              <FadeUp key={g.id} as="li" delay={i} className="block">
+                <Link href={`/guide/${g.slug}`} className={`${interactiveCardClass} block p-5`}>
                   <h2 className="text-lg font-semibold">{g.title}</h2>
                   {tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -143,7 +142,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
                     {truncate(stripMarkdown(g.body), 140)}
                   </p>
                 </Link>
-              </li>
+              </FadeUp>
             );
           })}
         </ul>

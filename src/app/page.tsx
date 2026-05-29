@@ -1,7 +1,8 @@
 import Link from "next/link";
 
-import { primaryButtonClass } from "@/components/forms/styles";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FadeUp } from "@/components/ui/FadeUp";
+import { interactiveCardClass } from "@/components/ui/surface";
 import { listEvents } from "@/lib/data/events";
 import { listProjects } from "@/lib/data/projects";
 import type { LocationType } from "@/lib/types";
@@ -16,7 +17,7 @@ export default async function HomePage() {
   ]);
 
   return (
-    <div className="space-y-20 pb-12 sm:pb-16">
+    <div className="space-y-24 pb-20 sm:space-y-32 sm:pb-24">
       {/* Hero is full-bleed so the decorative blobs + dot grid can fill
           the whole viewport width. The content inside re-applies
           `mx-auto max-w-6xl` so the text and CTAs stay aligned with the
@@ -57,28 +58,41 @@ export default async function HomePage() {
             Bay Area テックコミュニティ
           </span>
 
-          {/* Bigger heading. `animate-gradient-shimmer` (defined in
-              globals.css) slides a wider-than-text gradient across the
-              "AI" glyphs — the loop is seamless because the gradient
-              starts and ends on blue. */}
-          <h1 className="text-5xl font-bold tracking-tight sm:text-6xl lg:text-7xl">
+          {/* Display headline. `font-semibold` (not bold) + tighter
+              tracking + a bigger size scale gives the type the
+              "confident but quiet" weight characteristic of an Apple
+              hero — bold at this size starts to feel heavy.
+              `animate-gradient-shimmer` (defined in globals.css)
+              slides a wider-than-text gradient across the "AI" glyphs;
+              the loop is seamless because the gradient starts and ends
+              on blue. `leading-[1.05]` packs the lines a touch tighter
+              so the multi-line headline reads as one phrase. */}
+          <h1 className="text-6xl font-semibold leading-[1.05] tracking-tighter sm:text-7xl lg:text-8xl">
             <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
               AI
             </span>
-            で集まる、つくる、共有する。
+            で集まる、<br className="hidden sm:inline" />つくる、共有する。
           </h1>
 
-          <p className="max-w-2xl text-lg text-zinc-600 sm:text-xl dark:text-zinc-300">
+          <p className="max-w-2xl text-lg text-zinc-600 sm:text-xl sm:leading-relaxed dark:text-zinc-300">
             JTPAは、Bay AreaのテックコミュニティでAI関連のイベント運営・知識共有を行っています。
             オンライン/オフラインのイベント、メンバーが作ったAIプロジェクトのショーケースをお楽しみください。
           </p>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Link href="/events" className={primaryButtonClass}>
+          <div className="flex flex-wrap gap-3 pt-4">
+            {/* Hero-only pill variant of the primary CTA — keep the
+                shared `primaryButtonClass` (rounded-md) for forms but
+                lean into a pill here so it matches the rounded
+                secondary CTA next to it. Same gradient + hover slide
+                as the shared primary, just resized for the hero. */}
+            <Link
+              href="/events"
+              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition-all hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950"
+            >
               イベント一覧
             </Link>
             <Link
               href="/showcase"
-              className="rounded-md border border-zinc-300 bg-white/70 px-4 py-2 text-sm font-medium backdrop-blur transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
+              className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
             >
               ショーケースを見る
             </Link>
@@ -88,11 +102,11 @@ export default async function HomePage() {
 
       <div className="mx-auto max-w-6xl space-y-20 px-4">
 
-      <section className="space-y-5">
+      <FadeUp as="section" className="space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">直近のイベント</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">直近のイベント</h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               オンラインも対面も。気になる回に気軽に参加してください。
             </p>
           </div>
@@ -109,12 +123,12 @@ export default async function HomePage() {
             hint="次回の告知をお楽しみに。"
           />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((e) => (
-              <li key={e.id}>
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {events.map((e, i) => (
+              <FadeUp key={e.id} as="li" delay={i} className="flex">
                 <Link
                   href={`/events/${e.slug}`}
-                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                  className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
                 >
                   {e.coverImage?.url && (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -139,17 +153,17 @@ export default async function HomePage() {
                     </p>
                   </div>
                 </Link>
-              </li>
+              </FadeUp>
             ))}
           </ul>
         )}
-      </section>
+      </FadeUp>
 
-      <section className="space-y-5">
+      <FadeUp as="section" className="space-y-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight">注目のプロジェクト</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">注目のプロジェクト</h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               JTPA メンバーが手がけた AI プロジェクト。
             </p>
           </div>
@@ -174,12 +188,12 @@ export default async function HomePage() {
             }
           />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p) => (
-              <li key={p.id}>
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((p, i) => (
+              <FadeUp key={p.id} as="li" delay={i} className="flex">
                 <Link
                   href={`/showcase/${p.slug}`}
-                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+                  className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
                 >
                   {p.thumbnail?.url && (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -208,11 +222,11 @@ export default async function HomePage() {
                     )}
                   </div>
                 </Link>
-              </li>
+              </FadeUp>
             ))}
           </ul>
         )}
-      </section>
+      </FadeUp>
       </div>
     </div>
   );

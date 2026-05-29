@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { EmptyState } from "@/components/ui/EmptyState";
+import { FadeUp } from "@/components/ui/FadeUp";
+import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
@@ -26,25 +28,25 @@ export default async function QaListPage() {
   );
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
+    <div className="mx-auto max-w-4xl px-4 py-12 space-y-8">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Q&amp;A</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Q&amp;A</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             気軽に質問やTipsを投稿しましょう。コメント・返信・いいねで反応できます。
           </p>
         </div>
         {user ? (
           <Link
             href="/qa/new"
-            className="shrink-0 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+            className="shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
           >
             投稿する
           </Link>
         ) : (
           <Link
             href="/login?redirect=/qa/new"
-            className="shrink-0 rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            className="shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
             ログインして投稿
           </Link>
@@ -58,10 +60,12 @@ export default async function QaListPage() {
         />
       ) : (
         <ul className="space-y-3">
-          {items.map((q) => (
-            <li
+          {items.map((q, i) => (
+            <FadeUp
               key={q.id}
-              className="group relative flex flex-col rounded-lg border border-zinc-200 bg-white p-4 transition focus-within:ring-2 focus-within:ring-blue-500 hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700"
+              as="li"
+              delay={i}
+              className={`${interactiveCardClass} relative flex flex-col p-5 focus-within:ring-2 focus-within:ring-indigo-500`}
             >
               <h2 className="text-lg font-semibold">
                 {/* Stretched-link pattern: the title is the only real
@@ -97,7 +101,7 @@ export default async function QaListPage() {
                   ))}
                 </div>
               )}
-            </li>
+            </FadeUp>
           ))}
         </ul>
       )}

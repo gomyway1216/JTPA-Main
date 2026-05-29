@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { FadeUp } from "@/components/ui/FadeUp";
+import { interactiveCardClass } from "@/components/ui/surface";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents, listPastEvents } from "@/lib/data/events";
 import type { EventDoc } from "@/lib/types";
@@ -27,21 +29,18 @@ export default async function EventsPage() {
   const past = pastRaw.filter(visibleTo(signedIn));
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10 space-y-12">
+    <div className="mx-auto max-w-5xl px-4 py-12 space-y-16">
       <section>
-        <h1 className="text-3xl font-bold mb-6">予定されているイベント</h1>
+        <h1 className="mb-8 text-4xl font-semibold tracking-tight sm:text-5xl">予定されているイベント</h1>
         {upcoming.length === 0 ? (
           <p className="text-zinc-500">現在予定されているイベントはありません。</p>
         ) : (
-          <ul className="space-y-3">
-            {upcoming.map((e) => (
-              <li
-                key={e.id}
-                className="overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
-              >
+          <ul className="space-y-4">
+            {upcoming.map((e, i) => (
+              <FadeUp key={e.id} as="li" delay={i} className="block">
                 <Link
                   href={`/events/${e.slug}`}
-                  className="flex flex-col gap-0 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 sm:flex-row"
+                  className={`${interactiveCardClass} flex flex-col gap-0 overflow-hidden sm:flex-row`}
                 >
                   {e.coverImage?.url && (
                     /* eslint-disable-next-line @next/next/no-img-element */
@@ -72,7 +71,7 @@ export default async function EventsPage() {
                     </div>
                   </div>
                 </Link>
-              </li>
+              </FadeUp>
             ))}
           </ul>
         )}

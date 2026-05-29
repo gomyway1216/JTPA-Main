@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { FadeUp } from "@/components/ui/FadeUp";
+import { interactiveCardClass } from "@/components/ui/surface";
 import { listProjects } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 
@@ -16,17 +18,17 @@ export default async function ShowcasePage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="mx-auto max-w-6xl px-4 py-12 space-y-8">
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">ショーケース</h1>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ショーケース</h1>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             JTPAコミュニティのメンバーが作ったAIプロジェクト
           </p>
         </div>
         <Link
           href="/projects/new"
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+          className="shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
           プロジェクトを投稿
         </Link>
@@ -35,12 +37,12 @@ export default async function ShowcasePage() {
       {projects.length === 0 ? (
         <p className="text-zinc-500">まだ承認済みプロジェクトはありません。</p>
       ) : (
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <li key={p.id}>
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {projects.map((p, i) => (
+            <FadeUp key={p.id} as="li" delay={i} className="flex">
               <Link
                 href={`/showcase/${p.slug}`}
-                className="block h-full overflow-hidden rounded-lg border border-zinc-200 bg-white hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-600"
+                className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
               >
                 {(p.thumbnail?.url || p.screenshots?.[0]?.url) && (
                   // Cover image. Falls back to the first screenshot when the
@@ -49,10 +51,10 @@ export default async function ShowcasePage() {
                   <img
                     src={p.thumbnail?.url || p.screenshots?.[0]?.url}
                     alt={`${p.title} のカバー画像`}
-                    className="h-40 w-full object-cover"
+                    className="aspect-[16/9] w-full object-cover"
                   />
                 )}
-                <div className="p-5">
+                <div className="flex flex-1 flex-col p-5">
                   <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
                   <p className="mt-1 text-xs text-zinc-500">
                     by @{ownerProfiles.get(p.ownerUid)?.username ?? "unknown"}
@@ -74,7 +76,7 @@ export default async function ShowcasePage() {
                   )}
                 </div>
               </Link>
-            </li>
+            </FadeUp>
           ))}
         </ul>
       )}
