@@ -302,6 +302,159 @@ describe("enqueueAdminNewProjectNotification", () => {
     const payload = addMock.mock.calls[0][0] as { to: string[] };
     expect(payload.to).toEqual(["real@example.com"]);
   });
+
+  it("dedups case-insensitively across env var and Auth (lowercase normalize)", async () => {
+    // SMTP addresses are case-insensitive, but Set comparisons are not.
+    // Without normalizing we'd happily include both casings and the
+    // user would receive duplicate copies of every alert.
+    process.env.ADMIN_NOTIFICATION_EMAILS = "Admin@Example.com, OPS@example.com";
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        // Same address as env, different casing — must dedup.
+        authUser({
+          uid: "u1",
+          email: "admin@example.com",
+          claims: { admin: true },
+        }),
+        // New address but uppercase — must land in lowercase.
+        authUser({
+          uid: "u2",
+          email: "Editor@Example.com",
+          claims: { editor: true },
+        }),
+      ],
+      pageToken: undefined,
+    });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    expect(payload.to).toEqual([
+      "admin@example.com",
+      "ops@example.com",
+      "editor@example.com",
+    ]);
+  });
+
+  it("discards partial Auth pages when listUsers fails mid-walk", async () => {
+    // Page 1 succeeds with one editor, page 2 throws. The fallback
+    // contract is "env var only on Auth failure" — we must NOT leak
+    // the page-1 editor into the result alongside env entries, since
+    // a caller can't distinguish a partial walk from a complete one.
+    process.env.ADMIN_NOTIFICATION_EMAILS = "ops@example.com";
+    listUsersMock
+      .mockResolvedValueOnce({
+        users: [
+          authUser({
+            uid: "u1",
+            email: "page1@example.com",
+            claims: { editor: true },
+          }),
+        ],
+        pageToken: "next-page",
+      })
+      .mockRejectedValueOnce(new Error("page 2 down"));
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {});
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    // page1@example.com must NOT appear — partial walk discarded.
+    expect(payload.to).toEqual(["ops@example.com"]);
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("caches the resolved recipient list across consecutive calls", async () => {
+    // Notification bursts (admin approves 5 pending guides in a row)
+    // would otherwise hit listUsers() 5 times. The cache amortizes to
+    // 1 call — second call returns the memoized list without touching
+    // Auth.
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        authUser({
+          uid: "u1",
+          email: "admin@example.com",
+          claims: { admin: true },
+        }),
+      ],
+      pageToken: undefined,
+    });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    await enqueueAdminNewProjectNotification({
+      projectId: "p2",
+      title: "T2",
+      ownerName: "Bob",
+      ownerEmail: "b@b",
+    });
+    // Two enqueues, one listUsers call — cache hit on the second.
+    expect(addMock).toHaveBeenCalledTimes(2);
+    expect(listUsersMock).toHaveBeenCalledTimes(1);
+    // Both payloads got the same recipients.
+    const p1 = addMock.mock.calls[0][0] as { to: string[] };
+    const p2 = addMock.mock.calls[1][0] as { to: string[] };
+    expect(p1.to).toEqual(["admin@example.com"]);
+    expect(p2.to).toEqual(["admin@example.com"]);
+  });
+
+  it("does not cache a degraded Auth-failure result", async () => {
+    // If listUsers fails on the first call, we fall back to env var.
+    // That degraded result must NOT be cached — the next call should
+    // re-attempt the Auth walk in case the transient outage cleared.
+    process.env.ADMIN_NOTIFICATION_EMAILS = "ops@example.com";
+    listUsersMock
+      .mockRejectedValueOnce(new Error("transient"))
+      .mockResolvedValueOnce({
+        users: [
+          authUser({
+            uid: "u1",
+            email: "admin@example.com",
+            claims: { admin: true },
+          }),
+        ],
+        pageToken: undefined,
+      });
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {});
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    await enqueueAdminNewProjectNotification({
+      projectId: "p2",
+      title: "T2",
+      ownerName: "Bob",
+      ownerEmail: "b@b",
+    });
+    expect(listUsersMock).toHaveBeenCalledTimes(2);
+    const p1 = addMock.mock.calls[0][0] as { to: string[] };
+    const p2 = addMock.mock.calls[1][0] as { to: string[] };
+    // First call: env var only (Auth threw).
+    expect(p1.to).toEqual(["ops@example.com"]);
+    // Second call: env var + admin (Auth recovered, picked up fresh).
+    expect(p2.to).toEqual(["ops@example.com", "admin@example.com"]);
+    consoleWarnSpy.mockRestore();
+  });
 });
 
 describe("enqueueProjectDecisionNotification", () => {
