@@ -65,7 +65,7 @@ export default async function QaListPage() {
               key={q.id}
               as="li"
               delay={i}
-              className={`${interactiveCardClass} group relative flex flex-col p-5 focus-within:ring-2 focus-within:ring-indigo-500`}
+              className={`${interactiveCardClass} relative flex flex-col p-5 focus-within:ring-2 focus-within:ring-indigo-500`}
             >
               <h2 className="text-lg font-semibold">
                 {/* Stretched-link pattern: the title is the only real

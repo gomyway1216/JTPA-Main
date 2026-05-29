@@ -44,7 +44,21 @@ export const cardClass =
 // whole effect set. Keep on a `<Link>` / `<button>` / `<article>` that
 // the user can actually click; for a static container, use `cardClass`
 // directly so the cursor doesn't suggest interactivity.
-export const interactiveCardClass = `${cardClass} group block transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgb(0_0_0/0.05),0_18px_40px_-12px_rgb(0_0_0/0.15)] hover:border-zinc-300/60 dark:hover:border-zinc-700/60 dark:hover:shadow-[0_2px_4px_rgb(0_0_0/0.5),0_18px_40px_-12px_rgb(0_0_0/0.6)]`;
+//
+// Display + group are intentionally NOT in this string:
+//   - Adding `block` would collide with `flex` callers (Tailwind picks
+//     the later utility from generated-CSS order, not template-string
+//     order, so the conflict is silent). Each consumer adds its own
+//     display utility.
+//   - `group` is added by the consumer too so a card that wraps a
+//     `<FadeUp>` doesn't accidentally promote the FadeUp itself to a
+//     group root.
+//
+// Per PR #88 review (Gemini + Copilot): both flagged the `block`
+// conflict and `group` redundancy. Same review also called out the
+// missing `hover:rounded-3xl` that the docstring promised — fixed
+// here too so docstring and behavior line up.
+export const interactiveCardClass = `${cardClass} transition duration-200 ease-out hover:-translate-y-0.5 hover:rounded-3xl hover:shadow-[0_2px_4px_rgb(0_0_0/0.05),0_18px_40px_-12px_rgb(0_0_0/0.15)] hover:border-zinc-300/60 dark:hover:border-zinc-700/60 dark:hover:shadow-[0_2px_4px_rgb(0_0_0/0.5),0_18px_40px_-12px_rgb(0_0_0/0.6)]`;
 
 // Inset / quiet variant for content panels that sit inside a page (not
 // a top-level card). Skips the gradient and softens the shadow so the

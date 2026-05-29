@@ -27,27 +27,37 @@ interface Props {
   as?: WrapperTag;
 }
 
-// Scroll-triggered fade-up animation. The child mounts hidden + nudged
-// down a few pixels, and the IntersectionObserver flips it to opacity:1
-// + translate:0 the first time it enters the viewport. After the
-// transition lands we tear down the observer — there's no point
-// re-observing a node we never want to re-animate, and keeping
-// observers around for a page full of cards is wasted work.
+// Scroll-triggered fade-up animation. Mounts each child hidden + nudged
+// down a few pixels, then IntersectionObserver flips it to opacity:1 +
+// translate:0 the first time it enters the viewport. Once the
+// transition lands we wipe ALL inline styles and tear down the
+// observer — so the host element's class-based hover transitions
+// (e.g. the `interactiveCardClass` lift) work uninterrupted afterwards,
+// no compositor layer is retained, and the transform doesn't shadow
+// hover-translate utilities.
 //
 // The motion is deliberately small (no spring, no parallax) so it reads
 // as "this section just settled into place" rather than a flashy
-// reveal. That tone matches what the rest of the visual system is
-// trying to do.
+// reveal — tone-matched with the rest of the visual system.
 //
-// SSR / prefers-reduced-motion behavior:
-//   - Server renders the hidden state. On hydration we read
-//     `matchMedia('(prefers-reduced-motion: reduce)')` and immediately
-//     mark the node visible (no animation) if the user opted out.
-//   - On the first paint after hydration the IntersectionObserver
-//     catches the in-viewport elements and animates them in. Anything
-//     already past the fold animates as the user scrolls.
-//   - There is no JS-disabled fallback — without JS the children stay
-//     hidden. Acceptable trade-off; the rest of the app needs JS too.
+// Behavior matrix:
+//
+//   prefers-reduced-motion: reduce  → no animation, render in final
+//   state, no inline transition (so the OS preference is fully honored,
+//   not just "the start state was skipped"). Per PR #89 Gemini + Copilot
+//   reviews — the earlier version still ran the 600ms transition.
+//
+//   No IntersectionObserver (SSR test envs, very old browsers)  → same
+//   path as reduced-motion. Without this guard the test environment's
+//   `new IntersectionObserver(...)` throws and crashes every page that
+//   renders any list under FadeUp.
+//
+//   Normal case  → start hidden + translated, animate to visible on
+//   intersection, then `onTransitionEnd` wipes the inline styles so
+//   the consumer's hover-translate-y and shadow transitions take over
+//   cleanly. While invisible the subtree is `aria-hidden` + has
+//   `pointer-events: none` so keyboard focus doesn't land on a card
+//   the reader can't see.
 export function FadeUp({
   children,
   delay = 0,
@@ -62,21 +72,29 @@ export function FadeUp({
   // lint rule that flags `ref.current` access patterns in render.
   const [node, setNode] = useState<HTMLElement | null>(null);
   const [visible, setVisible] = useState(false);
+  // True once we either (a) finished the transition or (b) decided not
+  // to animate at all (reduced-motion / no-IO). In either case we
+  // render with no inline animation styles, so the consumer's hover
+  // utilities own the element's transform/transition/opacity afterwards.
+  const [settled, setSettled] = useState(false);
 
   useEffect(() => {
-    // Respect the OS-level reduced-motion preference. Skip the animation
-    // entirely and mount in the final state. The matchMedia query is
-    // safe here because this hook only runs after hydration.
-    //
-    // `requestAnimationFrame` defers the setVisible() call out of the
-    // effect-flush phase so the React-hooks "no synchronous setState in
-    // effect" lint stays happy. Functionally equivalent: the next
-    // paint immediately latches the new state.
+    // Two "skip the animation" paths land in the same final state. Both
+    // are checked here rather than in the render body so the matchMedia
+    // / `typeof IntersectionObserver` reads only happen client-side
+    // (matchMedia is undefined on the server and would throw during SSR
+    // serialization). `requestAnimationFrame` defers the state flush
+    // out of the effect commit, which keeps the React-hooks "no sync
+    // setState in effect" lint quiet.
     const prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    if (prefersReducedMotion) {
-      const id = requestAnimationFrame(() => setVisible(true));
+    const noObserver = typeof IntersectionObserver === "undefined";
+    if (prefersReducedMotion || noObserver) {
+      const id = requestAnimationFrame(() => {
+        setVisible(true);
+        setSettled(true);
+      });
       return () => cancelAnimationFrame(id);
     }
 
@@ -101,17 +119,44 @@ export function FadeUp({
   // 75ms per step, max ~675ms — enough stagger to feel rhythmic on a
   // 6-column grid without making the last card visibly lag.
   const staggerMs = Math.min(delay * 75, 675);
-  const style: React.CSSProperties = {
-    transitionDelay: visible ? `${staggerMs}ms` : "0ms",
-    transform: visible ? "translateY(0)" : `translateY(${distance}px)`,
-    opacity: visible ? 1 : 0,
-    transition: "opacity 600ms ease-out, transform 600ms ease-out",
-    // `will-change` opts the node into a compositor layer so the
-    // transition doesn't repaint the surrounding content. We strip it
-    // once the animation lands to avoid permanently retaining the
-    // layer (which costs memory + can blur subpixel text rendering).
-    willChange: visible ? undefined : "opacity, transform",
-  };
+
+  // Settled: drop the entire inline-style object so nothing — no
+  // transform, no transition, no opacity, no will-change — competes
+  // with the host element's class-based hover transitions. That's the
+  // fix the reviewers (Gemini + Copilot) flagged: the earlier version
+  // kept `transform: translateY(0)` and the 600ms `transition` shorthand
+  // pinned on the element forever, which shadowed `hover:-translate-y-0.5`
+  // and `transition duration-200 ease-out` from `interactiveCardClass`.
+  const style: React.CSSProperties = settled
+    ? {}
+    : {
+        transitionDelay: visible ? `${staggerMs}ms` : "0ms",
+        transform: visible ? "translateY(0)" : `translateY(${distance}px)`,
+        opacity: visible ? 1 : 0,
+        transition: "opacity 600ms ease-out, transform 600ms ease-out",
+        // `will-change` opts the node into a compositor layer so the
+        // transition doesn't repaint the surrounding content. The
+        // earlier impl stripped this at the moment `visible` became
+        // true — i.e. when the transition was about to START. We now
+        // strip it (along with everything else) only after
+        // `onTransitionEnd` fires, which is when the layer is actually
+        // safe to free.
+        willChange: "opacity, transform",
+        // Keep the subtree non-interactive while it's invisible — avoids
+        // keyboard focus landing on an opacity-0 card the user can't
+        // see, and matches the visual state with the input semantics.
+        pointerEvents: visible ? undefined : "none",
+      };
+
+  // `onTransitionEnd` fires once per transitioning property (opacity AND
+  // transform here), so we guard on the originating element to ignore
+  // bubbled events from children with their own transitions. After the
+  // last of our properties lands, set `settled` and the next render
+  // drops every inline style — restoring the consumer's hover behavior.
+  function onTransitionEnd(e: React.TransitionEvent) {
+    if (e.target !== e.currentTarget) return;
+    setSettled(true);
+  }
 
   // Use `createElement` rather than `<Tag>` JSX. The JSX path makes TS
   // try to type-check the props against every member of the tag union
@@ -120,7 +165,13 @@ export function FadeUp({
   // every tag in our small WrapperTag set without that explosion.
   return createElement(
     as ?? "div",
-    { ref: setNode, className, style },
+    {
+      ref: setNode,
+      className,
+      style,
+      onTransitionEnd: settled ? undefined : onTransitionEnd,
+      "aria-hidden": !visible ? true : undefined,
+    },
     children,
   );
 }

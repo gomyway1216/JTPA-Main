@@ -50,7 +50,7 @@ export default async function BlogIndexPage() {
               key={p.id}
               as="li"
               delay={i}
-              className={`${interactiveCardClass} group relative flex flex-col overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
+              className={`${interactiveCardClass} relative flex flex-col overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
             >
               {p.coverImage?.url && (
                 /* eslint-disable-next-line @next/next/no-img-element */
