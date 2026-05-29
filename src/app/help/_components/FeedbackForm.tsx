@@ -128,8 +128,8 @@ export function FeedbackForm({ user }: Props) {
         </p>
       )}
       <p className="text-xs text-zinc-500">
-        送信内容は admin / editor 権限のメンバーに公開されます。
-        メールアドレスは社外には共有しません。
+        送信内容は admin / editor 権限のメンバーだけが閲覧できます。
+        他のメンバーや一般公開はされません。
       </p>
     </form>
   );
