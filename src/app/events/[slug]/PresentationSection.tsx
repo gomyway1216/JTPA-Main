@@ -11,6 +11,7 @@ import {
   deletePresentation,
   updatePresentation,
 } from "@/app/actions/presentations";
+import type { PublicProfile } from "@/lib/data/users";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PresentationDoc, RsvpDoc, SessionUser } from "@/lib/types";
@@ -50,12 +51,17 @@ export function PresentationSection({
   user,
   myRsvp,
   initialPresentations,
+  presenterProfiles,
 }: {
   eventId: string;
   eventSlug: string;
   user: SessionUser | null;
   myRsvp: RsvpDoc | null;
   initialPresentations: PresentationDoc[];
+  // Prefetched on the server so each row can show the presenter's
+  // current @username without hitting Firestore per row. Plain object
+  // (not Map) so the prop survives the RSC→Client serialization.
+  presenterProfiles: Record<string, PublicProfile>;
 }) {
   const [presentations, setPresentations] =
     useState<PresentationDoc[]>(initialPresentations);
@@ -131,7 +137,9 @@ export function PresentationSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{p.title || "(タイトル未設定)"}</p>
-                  <p className="text-xs text-zinc-500">{p.presenterName}</p>
+                  <p className="text-xs text-zinc-500">
+                    @{presenterProfiles[p.presenterUid]?.username ?? "unknown"}
+                  </p>
                   {p.abstract && (
                     <p className="mt-1 whitespace-pre-wrap text-xs text-zinc-600 dark:text-zinc-400">
                       {p.abstract}

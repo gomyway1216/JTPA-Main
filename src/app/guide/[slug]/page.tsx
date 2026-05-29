@@ -8,6 +8,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getGuideBySlug } from "@/lib/data/guides";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -74,6 +75,12 @@ export default async function GuideDetailPage({
     console.error("Failed to load guide like state:", err);
     return new Set<string>();
   });
+  // Guides have no rendered author surface (admin/editor-curated, see
+  // the GuideDoc type), but the comments thread does, so batch-fetch
+  // for every commenter the same way the post/qa/poll pages do.
+  const profilesByUid = await getPublicProfilesByUids(
+    comments.map((c) => c.authorUid),
+  );
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -136,6 +143,7 @@ export default async function GuideDetailPage({
         parentSlug={guide.slug}
         initialComments={comments}
         initialLikedKeys={[...likedSet]}
+        profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}
       />
     </article>

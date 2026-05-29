@@ -3,7 +3,8 @@ import "server-only";
 import { cache } from "react";
 
 import { adminDb } from "@/lib/firebase/admin";
-import type { UserProfile } from "@/lib/types";
+import type { UserLinks, UserProfile } from "@/lib/types";
+import { defaultUsernameFor } from "@/lib/users-shared";
 
 import { plainify } from "./serialize";
 
@@ -22,16 +23,29 @@ export async function getMyProfile(uid: string): Promise<UserProfile | null> {
   return plainify(snap.data() as UserProfile);
 }
 
-// Shape returned to logged-out / cross-user readers of /u/[uid]. The
-// public profile NEVER includes email, the visibility flags themselves,
-// `emailOptIn`, or timestamps — only the fields the user has explicitly
-// opted to publish (or that are always public: displayName/photoURL).
+// Shape returned to logged-out / cross-user readers of /u/[uid] AND to
+// every list/detail surface that renders a name + avatar. NEVER
+// includes email, the visibility flags themselves, `emailOptIn`, or
+// timestamps — only the always-public handles (username/photoURL) plus
+// whatever the user has explicitly opted to publish.
 export interface PublicProfile {
   uid: string;
-  displayName: string;
+  // Always present after the bootstrap migration. The empty string is
+  // returned for the (theoretical) case where a doc is missing both a
+  // username and a uid we can derive one from — every render path treats
+  // an empty username the same as a deleted user.
+  username: string;
+  // The Google-account real name. Only populated when the user opted
+  // into `fullNamePublic`; null otherwise. The /u/[uid] page renders
+  // this as a secondary label under the username; list/detail surfaces
+  // ignore it.
+  fullName: string | null;
   photoURL: string | null;
   affiliation: string | null; // null when `affiliationPublic` is false
   bio: string | null; // null when `bioPublic` is false
+  // Always-public when set. Empty/undefined slots are stripped so the
+  // /u/[uid] icon row only renders inhabited links.
+  links: UserLinks;
 }
 
 // Pure projection: apply per-field visibility flags to a stored
@@ -41,21 +55,36 @@ export interface PublicProfile {
 // boundary and shouldn't regress silently.
 //
 // Treats missing/undefined visibility flags as `false` so docs that
-// pre-date the flags don't accidentally leak.
+// pre-date the flags don't accidentally leak. Backfills `username` from
+// the uid if the field hasn't been written yet (read-side belt-and-
+// suspenders against the bootstrap not having run for some accounts);
+// the value matches what the server-side migration would write.
 export function projectPublicProfile(data: UserProfile): PublicProfile {
+  const links: UserLinks = {};
+  if (data.links) {
+    // Drop empty strings so the icon row doesn't render a bare <a> with
+    // no href. The write path already normalizes empty → undefined, but
+    // we re-check on read because older docs may have stored "".
+    if (data.links.portfolio) links.portfolio = data.links.portfolio;
+    if (data.links.github) links.github = data.links.github;
+    if (data.links.linkedin) links.linkedin = data.links.linkedin;
+    if (data.links.sns) links.sns = data.links.sns;
+  }
   return {
     uid: data.uid,
-    displayName: data.displayName,
+    username: data.username || defaultUsernameFor(data.uid),
+    fullName: data.fullNamePublic ? data.displayName : null,
     photoURL: data.photoURL ?? null,
     affiliation: data.affiliationPublic ? (data.affiliation ?? "") : null,
     bio: data.bioPublic ? (data.bio ?? "") : null,
+    links,
   };
 }
 
 // Read /u/[uid]'s public-safe view of a profile. Returns `null` if the
 // user doesn't exist at all — distinct from "exists but everything is
 // private", which returns a record with affiliation/bio = null but a
-// real displayName.
+// real username.
 //
 // Wrapped in React's `cache()` so `generateMetadata` and the page body
 // share a single Firestore read per request — without this they'd
@@ -68,3 +97,72 @@ export const getPublicProfile = cache(
     return projectPublicProfile(snap.data() as UserProfile);
   },
 );
+
+// Inner cached implementation, keyed by a normalized sorted-string.
+// React's `cache()` matches arguments by reference identity (===), so
+// wrapping a function that takes an array would never hit on a
+// second call — every caller builds a fresh array literal. The string
+// key collapses two calls with the same uid set (in any order) to
+// one Firestore round-trip per request.
+//
+// `key` is "" for an empty uid set so the public wrapper can
+// short-circuit before even calling in.
+//
+// Why a single `getAll` per call:
+//   - one Firestore round-trip per page instead of N
+//   - keeps the rules path identical (Admin SDK, server-only)
+const _getPublicProfilesByKey = cache(
+  async (key: string): Promise<Map<string, PublicProfile>> => {
+    const out = new Map<string, PublicProfile>();
+    if (!key) return out;
+    const unique = key.split(",");
+    const refs = unique.map((u) => adminDb().collection("users").doc(u));
+    // `getAll(...refs)` is the Admin SDK batch read — single RPC for the
+    // whole set. Result order matches `refs`, so we can zip with `unique`.
+    const snaps = await adminDb().getAll(...refs);
+    for (let i = 0; i < snaps.length; i++) {
+      const snap = snaps[i];
+      if (!snap.exists) continue;
+      out.set(unique[i], projectPublicProfile(snap.data() as UserProfile));
+    }
+    return out;
+  },
+);
+
+// Batch-fetch public profiles for the set of uids that a single page
+// will render (post + comment authors, list rows, etc.). Returns a Map
+// keyed by uid; missing uids (deleted accounts, walk-in guests whose
+// uids never had a users/{uid} doc) are simply absent from the map so
+// the caller can render a "@unknown" fallback.
+//
+// Two different surfaces in the same render that ask for overlapping
+// uid sets share a single round-trip via `_getPublicProfilesByKey`'s
+// `cache()`. The normalization here (dedup + sort + join) builds a
+// stable string key so the memo hits regardless of caller-side
+// ordering or duplicates — per PR #79 Copilot review (the previous
+// version handed an array to cache(), which keys by identity, so
+// equivalent calls didn't dedupe).
+export async function getPublicProfilesByUids(
+  uids: readonly string[],
+): Promise<Map<string, PublicProfile>> {
+  // De-dup, drop empties / non-strings, and sort so two callers that
+  // pass `[a, b]` and `[b, a, a]` collapse to the same cache key.
+  const unique = Array.from(
+    new Set(uids.filter((u): u is string => !!u && typeof u === "string")),
+  ).sort();
+  // Uids never contain commas (Firebase uids are base62-ish), so a bare
+  // comma join is unambiguous. Empty set short-circuits before hitting
+  // the cache so we don't pollute it with a useless "" entry.
+  if (unique.length === 0) return new Map();
+  return _getPublicProfilesByKey(unique.join(","));
+}
+
+// Convenience helper for the single-author case. Wraps the batch helper
+// so a one-uid call still hits the same per-request cache as a
+// list-page batch that includes the same uid.
+export async function getPublicProfileCached(
+  uid: string,
+): Promise<PublicProfile | null> {
+  const map = await getPublicProfilesByUids([uid]);
+  return map.get(uid) ?? null;
+}

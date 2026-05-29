@@ -5,6 +5,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,14 @@ export default async function AdminHomePage() {
     listEvents({ statuses: ["draft", "published"], limit: 5 }).catch(() => []),
     listPostsByStatus("pending", 5).catch(() => []),
   ]);
+  const profiles = await getPublicProfilesByUids([
+    ...pending.map((p) => p.ownerUid),
+    ...pendingPosts.map((p) => p.authorUid),
+  ]);
+  const labelFor = (uid: string, fallback: string) => {
+    const prof = profiles.get(uid);
+    return prof ? `@${prof.username}` : fallback;
+  };
 
   return (
     <div className="space-y-8">
@@ -40,7 +49,9 @@ export default async function AdminHomePage() {
                   className="flex items-center justify-between gap-3 text-sm hover:underline"
                 >
                   <span>{p.title}</span>
-                  <span className="text-xs text-zinc-500">{p.ownerName}</span>
+                  <span className="text-xs text-zinc-500">
+                    {labelFor(p.ownerUid, p.ownerName)}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -66,7 +77,9 @@ export default async function AdminHomePage() {
                   className="flex items-center justify-between gap-3 text-sm hover:underline"
                 >
                   <span>{p.title}</span>
-                  <span className="text-xs text-zinc-500">{p.authorName}</span>
+                  <span className="text-xs text-zinc-500">
+                    {labelFor(p.authorUid, p.authorName)}
+                  </span>
                 </Link>
               </li>
             ))}

@@ -89,8 +89,18 @@ describe("signInWithIdToken — first-time login bootstrap", () => {
       bio: "",
       affiliationPublic: false,
       bioPublic: false,
+      // Both new flags must default to private — opting in is the
+      // safer bootstrap so signup never silently exposes a real name
+      // and never auto-publishes an empty link set.
+      fullNamePublic: false,
+      links: {},
       emailOptIn: true,
     });
+    // `username` is intentionally absent on bootstrap — see the
+    // comment in signInWithIdToken for why we let the read-side
+    // projection backfill `defaultUsernameFor(uid)` until the user
+    // claims a real handle on /my/profile.
+    expect(profile).not.toHaveProperty("username");
   });
 
   it("falls back to email-local-part when displayName is missing", async () => {
