@@ -122,7 +122,7 @@ You land on the new event's edit page to adjust dates and publish.
 2. Optionally type a comment (shown to the submitter on rejection).
 3. Click **承認** or **却下**.
 4. Approved projects immediately appear on the public `/showcase` page.
-5. Submitter notification email goes out automatically — **once issue #15 (Trigger Email setup) is done**. Until then, the mail doc is enqueued but nothing sends it.
+5. Submitter notification email goes out automatically via the Trigger Email extension + Resend SMTP. Recipient list is resolved per-call: env var + every admin / editor user from Firebase Auth (see [Notification recipients](#notification-recipients-who-gets-the-admin-emails)).
 
 Submitters can edit their own projects from `/my/projects`; editing flips the status back to `pending` for re-review.
 
@@ -134,7 +134,7 @@ Anyone signed in can submit a guide from `/guide/new`. The first one lands in th
 2. Optionally type a コメント (shown to the author on rejection — not on approval).
 3. Click **公開 (+ contributor 付与)** or **却下**.
 4. Approved guides immediately appear on `/guide`. The same action also grants the `contributor: true` custom claim to the author **if they don't already hold admin / editor / contributor** — that's the promotion that lets their next guide skip review.
-5. Author notification email goes out automatically — same `mail/` queue as project + post decisions, **gated on issue #15** for actual delivery. The publish notice gets an extra paragraph explaining the contributor promotion when applicable.
+5. Author notification email goes out automatically — same `mail/` queue + Resend SMTP as project + post decisions. The publish notice gets an extra paragraph explaining the contributor promotion when applicable.
 
 Authors can edit their own guides from `/my/guides`; a non-trusted author's edit (no admin/editor/contributor claim) flips the status back to `pending` or stays in `draft`. Contributors and above can edit + republish their own guides directly without re-review.
 
@@ -149,7 +149,7 @@ If a contributor abuses the trust, demote them at `/admin/users` → **contribut
 3. Optionally type a comment (shown to the author on rejection — not on approval).
 4. Click **公開** or **却下**.
 5. Approved posts immediately appear on `/blog` with `publishedAt` set to now (only on first publish — re-publishing an edited post preserves the original date).
-6. Author notification email goes out automatically — same as projects, **gated on issue #15** for actual delivery.
+6. Author notification email goes out automatically — same as projects.
 
 Authors can edit their own posts from `/my/posts`; non-admin edits can land in either `draft` (save without resubmitting) or `pending` (resubmit for review). Admins can also edit any post via the same form (handy for typo fixes).
 
@@ -179,13 +179,13 @@ Per event:
 4. **フィルタ** toggle between 確定参加者のみ (default) and 全て (incl. cancelled/waitlist).
 5. **詳細** column expands the `<details>` disclosure to show survey responses for each row.
 
-The CSV approach was chosen instead of an in-app mass-mail UI because JTPA already drives a ~2000-person Google Group. See [issue #15](https://github.com/gomyway1216/JTPA-Main/issues/15) for the Trigger Email extension plan when richer mailing becomes needed.
+The CSV approach is the primary path because JTPA already drives a ~2000-person Google Group — the in-app mail pipeline (Trigger Email + Resend SMTP) is now wired up too, but the UI for richer mass-mailing (per-event reminders, "you're in!" notices, per-recipient personalization) hasn't been built yet.
 
 ## Mass-emailing best practices
 
 For one-off blasts to event attendees, the export → Gmail BCC flow is fine up to ~500 recipients (Gmail webmail limit) or ~2000 (Workspace limit). For larger broadcasts use the existing Google Group address instead.
 
-Per-event reminders, "you're in!" promotion notices, and per-recipient personalization are out of scope until issue #15 is done.
+Per-event reminders, "you're in!" promotion notices, and per-recipient personalization are still unbuilt UI on top of the now-functional `enqueueEventBlast` (and similar) helpers — a future follow-up if/when the Google Group flow stops being enough.
 
 ## Editing the `/about` page
 

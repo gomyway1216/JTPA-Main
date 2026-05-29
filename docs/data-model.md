@@ -164,7 +164,7 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 - Admins approve/reject (sets `status`, `reviewerUid`, `reviewNote`, `reviewedAt`)
 - `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below. Comment reads use the project's `status == 'approved'` gate (not `'published'` like the other parent types).
 
-Notification on decision is enqueued via `enqueueProjectDecisionNotification` (no-op until issue #15 lands).
+Notification on decision is enqueued via `enqueueProjectDecisionNotification` — the Trigger Email extension picks it up and sends through Resend.
 
 ## `posts/{postId}` (Blog)
 
@@ -358,7 +358,9 @@ adding a new sitePage means: (1) add the slug there, (2) add it to
 
 ## `mail/{autoId}` (Trigger Email)
 
-Written by `src/lib/notifications.ts` via the Admin SDK. Once the Firebase Trigger Email extension is installed (issue #15), it watches this collection and sends via the configured SMTP provider.
+Written by `src/lib/notifications.ts` via the Admin SDK. The Firebase Trigger Email extension (`firebase/firestore-send-email@0.2.9`) watches this collection and sends via Resend SMTP (`smtp.resend.com:465`) from `JTPA <noreply@bayarea-ai.com>` — the verified Resend domain.
+
+The extension writes a `delivery` field back onto each doc after processing (state = `SUCCESS` / `ERROR`, with the Resend message id on success). Inspect `delivery.error` if a notification fails to land.
 
 | Field | Type | Notes |
 |---|---|---|

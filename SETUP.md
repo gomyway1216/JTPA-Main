@@ -8,10 +8,12 @@ Firebase プロジェクト `jtpa-main` を前提とした初期セットアッ�
   (Anonymous はイベント当日のウォークイン来場者の QR チェックインで使用)
 - **Firestore Database** を `us-west1` で作成 (本番モード)
 - **Storage** を作成
-- **Extensions** → "Trigger Email" (Stream Firestore to Email) をインストール *(未設定: [issue #15](https://github.com/gomyway1216/JTPA-Main/issues/15))*
-  - 配信プロバイダ: Resend / SendGrid どちらでも可
-  - Collection を `mail` に設定 (このリポの実装と一致)
-  - From address はドメイン認証済みの送信元を指定
+- **Extensions** → "Trigger Email" (Stream Firestore to Email) — 設定済み:
+  - Extension: `firebase/firestore-send-email@0.2.9`
+  - SMTP: Resend (`smtps://resend@smtp.resend.com:465`、 API key は Cloud Secret Manager)
+  - Collection: `mail`
+  - Default FROM: `JTPA <noreply@bayarea-ai.com>` ([bayarea-ai.com](https://bayarea-ai.com) は Resend で verify 済み)
+  - 配信ログ: [resend.com/logs](https://resend.com/logs) (誰に届いたか、 bounce 状況など)
 
 ## 2. ローカル開発
 

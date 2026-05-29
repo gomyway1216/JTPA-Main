@@ -95,8 +95,9 @@ If we add another custom domain, add it here too or sign-in will throw `auth/una
 
 | Thing | Tracking issue |
 |---|---|
-| Trigger Email extension + SMTP provider | [#15](https://github.com/gomyway1216/JTPA-Main/issues/15) |
-| `ADMIN_NOTIFICATION_EMAILS` env var (depends on #15) | #15 |
+| (nothing currently tracked here — [#15](https://github.com/gomyway1216/JTPA-Main/issues/15) was the last open infra TODO and shipped with the Trigger Email + Resend SMTP setup) | — |
+
+The Trigger Email extension is installed (`firebase/firestore-send-email@0.2.9`) and sending through Resend (`smtp.resend.com:465`), with `bayarea-ai.com` as the verified sender domain. `ADMIN_NOTIFICATION_EMAILS` is set to the bootstrap admin recipient; the runtime resolver also pulls every admin + editor user from Firebase Auth (see [`docs/admin.md`](admin.md#notification-recipients-who-gets-the-admin-emails)).
 
 ## Cost model
 
