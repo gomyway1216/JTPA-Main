@@ -127,13 +127,20 @@ export default async function PollDetailPage({
         </p>
       )}
 
+      {/*
+        Both children are keyed on poll.id to force a fresh mount when the
+        route swaps to a different poll (Next.js client navigation otherwise
+        keeps the existing component instance and its useState, leaking the
+        previous poll's options/voterCount/draft into the new page until
+        the user interacts). The keys must be PREFIXED to be unique among
+        siblings — when two siblings share the same key, React's reconciler
+        misroutes the second one during the RSC merge that follows a Server
+        Action's `revalidatePath` call (e.g. clicking the like button), and
+        re-renders the form as a sibling of itself instead of replacing it.
+        See issue #75.
+      */}
       <PollVoteForm
-        // key on poll.id forces a fresh mount when the route swaps to
-        // a different poll. Without it, Next.js client navigation keeps
-        // the existing component instance and its useState — leaking
-        // the previous poll's options/voterCount/draft into the new
-        // page until the user interacts.
-        key={poll.id}
+        key={`vote-${poll.id}`}
         pollId={poll.id}
         pollSlug={poll.slug}
         initialOptions={poll.options}
@@ -143,7 +150,7 @@ export default async function PollDetailPage({
       />
 
       <CommentsSection
-        key={poll.id}
+        key={`comments-${poll.id}`}
         parentType="poll"
         parentId={poll.id}
         parentSlug={poll.slug}
