@@ -3,12 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // We mock adminDb() to a Firestore stub whose collection("mail").add()
 // captures the queued doc. Each test inspects the captured payload to
 // assert the subject/body/recipient/category we build.
+//
+// adminAuth().listUsers() is also mocked because the admin-notification
+// helpers now query Auth for users with admin / editor claims. Default
+// stub returns "no users" so the existing "skips when env var empty"
+// tests still observe an empty recipient list.
 
 const addMock = vi.fn();
 const collectionMock = vi.fn(() => ({ add: addMock }));
+const listUsersMock = vi.fn();
 
 vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => ({ collection: collectionMock }),
+  adminAuth: () => ({ listUsers: listUsersMock }),
 }));
 
 async function importFresh() {
@@ -18,12 +25,30 @@ async function importFresh() {
   return await import("@/lib/notifications");
 }
 
+// Convenience helper for building Auth user stubs matching the shape
+// `adminAuth().listUsers()` returns. Defaults to no custom claims.
+function authUser(opts: {
+  uid: string;
+  email?: string | null;
+  claims?: Record<string, unknown>;
+}) {
+  return {
+    uid: opts.uid,
+    email: opts.email ?? null,
+    customClaims: opts.claims,
+  };
+}
+
 const ORIGINAL_ENV = process.env;
 
 beforeEach(() => {
   addMock.mockReset();
   addMock.mockResolvedValue({ id: "mail-id" });
   collectionMock.mockClear();
+  listUsersMock.mockReset();
+  // Default: no admin/editor users in Auth — keeps the env-var-empty
+  // tests below observing an empty recipient list.
+  listUsersMock.mockResolvedValue({ users: [], pageToken: undefined });
   // Start from a clean env each test so module-load reads are predictable.
   process.env = { ...ORIGINAL_ENV };
   delete process.env.ADMIN_NOTIFICATION_EMAILS;
@@ -71,9 +96,10 @@ describe("enqueueMail", () => {
 });
 
 describe("enqueueAdminNewProjectNotification", () => {
-  it("skips the enqueue when ADMIN_NOTIFICATION_EMAILS is empty", async () => {
-    // No recipients configured (typical for fresh dev environments) →
+  it("skips the enqueue when env var empty AND no admin/editor users exist", async () => {
+    // No recipients configured AND no admin / editor users in Auth →
     // we must not write a half-formed mail doc that nobody can receive.
+    // The Auth listUsers stub already defaults to an empty page.
     const { enqueueAdminNewProjectNotification } = await importFresh();
     await enqueueAdminNewProjectNotification({
       projectId: "p1",
@@ -84,7 +110,7 @@ describe("enqueueAdminNewProjectNotification", () => {
     expect(addMock).not.toHaveBeenCalled();
   });
 
-  it("sends to each comma-separated recipient with subject + body", async () => {
+  it("sends to each comma-separated env var recipient with subject + body", async () => {
     process.env.ADMIN_NOTIFICATION_EMAILS = "admin1@x, admin2@x ,admin3@x";
     const { enqueueAdminNewProjectNotification } = await importFresh();
     await enqueueAdminNewProjectNotification({
@@ -100,13 +126,181 @@ describe("enqueueAdminNewProjectNotification", () => {
       category: string;
       metadata: { projectId: string };
     };
-    // Whitespace must be trimmed off each entry.
+    // Whitespace must be trimmed off each entry. Order from env var
+    // matches insertion order because the Set is seeded from the array.
     expect(payload.to).toEqual(["admin1@x", "admin2@x", "admin3@x"]);
     expect(payload.message.subject).toContain("My Project");
     expect(payload.message.text).toContain("Alice");
     expect(payload.message.text).toContain("alice@example.com");
     expect(payload.category).toBe("admin_project_pending");
     expect(payload.metadata).toEqual({ projectId: "p1" });
+  });
+
+  it("includes every Auth user with admin or editor claim and dedups against env var", async () => {
+    // Mix of admin / editor / contributor / plain users. The notification
+    // should reach admin + editor only, deduped with the env var entry.
+    // Contributor and plain users must NOT receive admin notifications —
+    // the role is for self-publishing guides, not moderation.
+    process.env.ADMIN_NOTIFICATION_EMAILS = "ops@example.com, admin@example.com";
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        authUser({
+          uid: "u1",
+          email: "admin@example.com",
+          claims: { admin: true },
+        }),
+        authUser({
+          uid: "u2",
+          email: "editor@example.com",
+          claims: { editor: true },
+        }),
+        authUser({
+          uid: "u3",
+          email: "contributor@example.com",
+          claims: { contributor: true },
+        }),
+        authUser({ uid: "u4", email: "regular@example.com" }),
+        // Both admin AND editor — counts once.
+        authUser({
+          uid: "u5",
+          email: "founder@example.com",
+          claims: { admin: true, editor: true },
+        }),
+      ],
+      pageToken: undefined,
+    });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    // Set order: env var entries first (insertion order preserved), then
+    // Auth additions in the order they appear in the page response.
+    expect(payload.to).toEqual([
+      "ops@example.com",
+      "admin@example.com",
+      "editor@example.com",
+      "founder@example.com",
+    ]);
+  });
+
+  it("walks pagination until pageToken is undefined", async () => {
+    // Auth lists are paginated 1000 per call. Make sure we keep walking
+    // — a misconfigured loop here would silently drop admins past the
+    // first page in larger projects.
+    listUsersMock
+      .mockResolvedValueOnce({
+        users: [
+          authUser({
+            uid: "u1",
+            email: "page1@example.com",
+            claims: { admin: true },
+          }),
+        ],
+        pageToken: "next-page",
+      })
+      .mockResolvedValueOnce({
+        users: [
+          authUser({
+            uid: "u2",
+            email: "page2@example.com",
+            claims: { editor: true },
+          }),
+        ],
+        pageToken: undefined,
+      });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    expect(payload.to).toContain("page1@example.com");
+    expect(payload.to).toContain("page2@example.com");
+    expect(listUsersMock).toHaveBeenCalledTimes(2);
+    expect(listUsersMock).toHaveBeenNthCalledWith(2, 1000, "next-page");
+  });
+
+  it("falls back to env var when the Auth walk throws", async () => {
+    // Transient Auth API failure → still send to the env var recipients
+    // so we don't silently drop the notification entirely. Better a
+    // partial recipient list than no notification at all.
+    process.env.ADMIN_NOTIFICATION_EMAILS = "ops@example.com";
+    listUsersMock.mockRejectedValueOnce(new Error("auth API down"));
+    const consoleWarnSpy = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => {});
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    expect(payload.to).toEqual(["ops@example.com"]);
+    expect(consoleWarnSpy).toHaveBeenCalled();
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("skips users with admin / editor claim but no email", async () => {
+    // Edge case: Apple-ID users or anonymous-converted users may have a
+    // claim but no email. Skipping them prevents `to` from getting a
+    // null entry that breaks the Trigger Email extension.
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        authUser({ uid: "u1", email: null, claims: { admin: true } }),
+        authUser({
+          uid: "u2",
+          email: "real@example.com",
+          claims: { admin: true },
+        }),
+      ],
+      pageToken: undefined,
+    });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    expect(payload.to).toEqual(["real@example.com"]);
+  });
+
+  it("treats non-true claim values as no claim (no truthy coercion)", async () => {
+    // Same `=== true` guard as session.ts and isAdmin in users-admin.ts.
+    // A custom claim like `admin: 1` or `editor: "yes"` must NOT count.
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        authUser({
+          uid: "u1",
+          email: "truthy@example.com",
+          claims: { admin: 1, editor: "yes" },
+        }),
+        authUser({
+          uid: "u2",
+          email: "real@example.com",
+          claims: { admin: true },
+        }),
+      ],
+      pageToken: undefined,
+    });
+    const { enqueueAdminNewProjectNotification } = await importFresh();
+    await enqueueAdminNewProjectNotification({
+      projectId: "p1",
+      title: "T",
+      ownerName: "Alice",
+      ownerEmail: "a@b",
+    });
+    const payload = addMock.mock.calls[0][0] as { to: string[] };
+    expect(payload.to).toEqual(["real@example.com"]);
   });
 });
 

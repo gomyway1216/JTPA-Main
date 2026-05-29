@@ -1,6 +1,6 @@
 import "server-only";
 
-import { adminDb } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
 // The Firebase "Trigger Email" extension watches a configured collection
 // (default: `mail`) and sends queued messages via SMTP/SendGrid/Resend.
@@ -40,15 +40,57 @@ const ADMIN_NOTIFICATION_RECIPIENTS = (
   .map((s) => s.trim())
   .filter(Boolean);
 
+// Returns the recipient list for "admin" notifications (new project / blog
+// post / guide submission). Two sources are merged, with dedup:
+//
+// 1. `ADMIN_NOTIFICATION_EMAILS` env var — fallback for people without an
+//    app account (external ops contact, generic alias, etc.). Set in App
+//    Hosting Console → Environment variables.
+// 2. Every Firebase Auth user with `admin: true` or `editor: true` custom
+//    claim — so role changes at `/admin/users` immediately update who
+//    receives notifications, with no env var edit needed.
+//
+// `contributor: true` is intentionally NOT included: contributors are
+// trusted authors for their OWN guides, but they're not moderators and
+// shouldn't be paged about other people's pending submissions.
+//
+// Best-effort: if the Auth listUsers walk fails (transient API error,
+// permission issue), we log and fall back to whatever env var recipients
+// exist. The caller never throws — a missed notification is a degraded
+// state, not a broken Server Action.
+export async function resolveAdminRecipients(): Promise<string[]> {
+  const set = new Set<string>(ADMIN_NOTIFICATION_RECIPIENTS);
+  try {
+    let pageToken: string | undefined;
+    do {
+      const page = await adminAuth().listUsers(1000, pageToken);
+      for (const user of page.users) {
+        const claims = (user.customClaims ?? {}) as Record<string, unknown>;
+        if (claims.admin === true || claims.editor === true) {
+          if (user.email) set.add(user.email);
+        }
+      }
+      pageToken = page.pageToken;
+    } while (pageToken);
+  } catch (err) {
+    console.warn(
+      "Failed to walk Auth users for admin recipients; falling back to env var:",
+      err,
+    );
+  }
+  return Array.from(set);
+}
+
 export async function enqueueAdminNewProjectNotification(opts: {
   projectId: string;
   title: string;
   ownerName: string;
   ownerEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規プロジェクト投稿: ${opts.title}`,
       text: `${opts.ownerName} (${opts.ownerEmail}) が新しいプロジェクトを投稿しました。\n\nタイトル: ${opts.title}\n\n承認: /admin/projects/pending`,
@@ -106,9 +148,10 @@ export async function enqueueAdminNewPostNotification(opts: {
   authorName: string;
   authorEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規ブログ記事の審査依頼: ${opts.title}`,
       text: `${opts.authorName} (${opts.authorEmail}) が新しい記事を投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/posts`,
@@ -145,9 +188,10 @@ export async function enqueueAdminNewGuideNotification(opts: {
   authorName: string;
   authorEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規ガイドの審査依頼: ${opts.title}`,
       text: `${opts.authorName} (${opts.authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/guides`,
