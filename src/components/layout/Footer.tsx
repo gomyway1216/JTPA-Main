@@ -4,28 +4,36 @@ export function Footer() {
   return (
     <footer className="border-t border-zinc-200 bg-white py-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <p>© {new Date().getFullYear()} JTPA</p>
-          {/*
-            Maintainer credit. External link → `rel="noreferrer noopener"`
-            so the third-party page can't access `window.opener`, and
-            `target="_blank"` so it doesn't pull the JTPA reader away
-            from the page they were on. Kept here (not in the about
-            page only) so it stays visible even when /about content
-            gets edited via /admin/about.
-          */}
-          <p className="text-xs text-zinc-500">
-            Built by{" "}
+        {/*
+          Copyright + quiet maintainer credit. Kept on a single line
+          with a thin separator so the personal credit reads as a
+          footnote rather than a co-equal byline. The name is one
+          shade lighter than the surrounding text on purpose — visible
+          to anyone scanning the footer, but doesn't compete with the
+          JTPA branding.
+
+          External link → `rel="noreferrer noopener"` so the linked
+          page can't access `window.opener`, and `target="_blank"` so
+          the reader doesn't lose the JTPA page they were on. The
+          /about page also carries a fuller maintainer block; this
+          line exists so the credit survives even when admin edits
+          the about Markdown.
+        */}
+        <p>
+          © {new Date().getFullYear()} JTPA
+          <span aria-hidden="true" className="mx-2 text-zinc-300 dark:text-zinc-700">·</span>
+          <span className="text-xs text-zinc-400 dark:text-zinc-500">
+            by{" "}
             <a
               href="https://meetyudai.com"
               target="_blank"
               rel="noreferrer noopener"
-              className="hover:underline"
+              className="hover:text-zinc-600 hover:underline dark:hover:text-zinc-300"
             >
               Yudai Yaguchi
             </a>
-          </p>
-        </div>
+          </span>
+        </p>
         <nav className="flex flex-wrap gap-4 text-xs">
           <Link href="/about" className="hover:underline">
             JTPAとは
