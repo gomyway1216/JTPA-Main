@@ -101,6 +101,10 @@ describe("getPublicProfile", () => {
       affiliation: null,
       bio: "hi",
       links: {},
+      // `role: null` for a plain user — the projection always emits the
+      // field (so the consumer never has to deal with `undefined`) and
+      // the value mirrors the absent `roleBadge` in the stored doc.
+      role: null,
     });
     expect(out).not.toHaveProperty("email");
     expect(out).not.toHaveProperty("affiliationPublic");

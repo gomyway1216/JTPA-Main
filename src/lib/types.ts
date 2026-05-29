@@ -68,6 +68,15 @@ export interface UserProfile {
   // generic `sns` slot).
   links?: UserLinks;
   emailOptIn: boolean;
+  // Denormalized highest role claim (admin > editor > contributor),
+  // mirrored from Firebase Auth custom claims so the public profile
+  // surface can render a badge without a per-render Auth lookup. Source
+  // of truth is still the claim — this field is written every time
+  // `setUserRole` flips a claim, every time `autoPromoteAuthor` lands
+  // a contributor promotion, and on each `signInWithIdToken` bootstrap
+  // (self-healing if it ever drifts). Absent on profile docs for plain
+  // users (renders no badge).
+  roleBadge?: "admin" | "editor" | "contributor";
   createdAt: TsLike;
   updatedAt: TsLike;
 }
@@ -450,4 +459,42 @@ export interface PollVoteDoc {
   optionIds: string[];
   createdAt: TsLike;
   updatedAt: TsLike;
+}
+
+// ---------- feedback ----------
+// Lifecycle of an entry submitted from /help. Default `new`; admins +
+// editors flip to `read` while triaging and `resolved` when the
+// feedback has been actioned (or explicitly closed without action).
+// `archived` is reserved for stale entries we want to keep but hide
+// from the default list view.
+export type FeedbackStatus = "new" | "read" | "resolved" | "archived";
+
+// `feedback/{autoId}` — site-wide bug reports / feature requests / etc.
+// submitted from the /help page. Always written through the
+// `submitFeedback` Server Action, which:
+//   - enforces requireUser() (the `authorUid` field is taken from the
+//     session, NOT the client payload, so it can't be spoofed)
+//   - validates body length + trims it
+//   - denormalizes author metadata so the admin list can render the
+//     submitter info without a per-row Auth lookup
+// Reads are restricted to admin + editor via firestore.rules.
+export interface FeedbackDoc {
+  id: string;
+  body: string;
+  // Submitter snapshot, denormalized at write time. Email lands here
+  // even though it's normally PII because the audience for this
+  // collection is admin/editor only — same precedent as the attendee
+  // export. Fields are nullable when the user signed in via a path
+  // that didn't carry the optional info (e.g. anonymous walk-in auth).
+  authorUid: string;
+  authorEmail: string | null;
+  authorDisplayName: string | null;
+  authorUsername: string | null;
+  status: FeedbackStatus;
+  // Who/when flipped the entry off `new`. Null until the first
+  // status transition.
+  reviewerUid: string | null;
+  reviewerDisplayName: string | null;
+  reviewedAt: TsLike | null;
+  createdAt: TsLike;
 }

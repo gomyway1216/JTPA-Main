@@ -125,6 +125,32 @@ describe("projectPublicProfile (privacy boundary)", () => {
     expect(projectPublicProfile(stripped).username).toBe("user-abcdef");
   });
 
+  it("forwards the denormalized roleBadge as role on the public profile", () => {
+    expect(projectPublicProfile(baseProfile({ roleBadge: "admin" })).role).toBe(
+      "admin",
+    );
+    expect(
+      projectPublicProfile(baseProfile({ roleBadge: "editor" })).role,
+    ).toBe("editor");
+    expect(
+      projectPublicProfile(baseProfile({ roleBadge: "contributor" })).role,
+    ).toBe("contributor");
+  });
+
+  it("returns null role when roleBadge is absent (plain user)", () => {
+    expect(projectPublicProfile(baseProfile()).role).toBeNull();
+  });
+
+  it("rejects unknown roleBadge values so a bad write can't leak a custom string", () => {
+    // The Firestore doc isn't schema-validated client-side — a stale doc
+    // with a typo'd badge value mustn't slip through and render an
+    // unexpected pill. The projection defensively allowlists the three
+    // canonical claims.
+    const partial = baseProfile();
+    (partial as { roleBadge?: string }).roleBadge = "superadmin";
+    expect(projectPublicProfile(partial).role).toBeNull();
+  });
+
   it("strips empty link slots so the icon row only renders inhabited entries", () => {
     const out = projectPublicProfile(
       baseProfile({

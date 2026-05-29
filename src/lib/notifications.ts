@@ -284,6 +284,45 @@ export async function enqueueGuideDecisionNotification(opts: {
   });
 }
 
+// Admin-facing notification fired when a user submits feedback from
+// /help. Goes to the same recipient list as the other admin alerts so
+// editors get visibility too. Body intentionally includes the full
+// submission text (truncated) — the value of this email is "can I
+// triage it inline without opening a browser?". Truncation cap matches
+// what fits in an iPhone mail preview without scrolling.
+export async function enqueueAdminNewFeedbackNotification(opts: {
+  feedbackId: string;
+  body: string;
+  authorName: string;
+  authorEmail: string;
+}): Promise<void> {
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
+  const preview =
+    opts.body.length > 400 ? `${opts.body.slice(0, 400)}…` : opts.body;
+  // Build the canonical triage URL from NEXT_PUBLIC_SITE_URL so the
+  // link actually opens in a mail client (a bare `/admin/feedback`
+  // doesn't have a base to resolve against). Falls back to the
+  // relative path when the env var isn't wired up — the email is
+  // still readable; the link just needs a copy-paste. Mirrors the
+  // same pattern as `enqueueWaitlistPromotionNotification`. Per PR
+  // #88 Gemini review.
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "";
+  const triageUrl = `${base}/admin/feedback`;
+  await enqueueMail({
+    to: recipients,
+    message: {
+      subject: `[JTPA] 新規フィードバックが届きました`,
+      text:
+        `${opts.authorName} (${opts.authorEmail}) からフィードバックが届きました。\n\n` +
+        `${preview}\n\n` +
+        `triage: ${triageUrl}`,
+    },
+    category: "admin_feedback_new",
+    metadata: { feedbackId: opts.feedbackId },
+  });
+}
+
 // Sent when a confirmed attendee cancels and a waitlisted user gets
 // auto-promoted into the freed seat (see cancelRsvp in actions/rsvps.ts).
 // Best-effort — Trigger Email isn't configured yet (#15), so the doc

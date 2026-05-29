@@ -153,6 +153,23 @@ async function autoPromoteAuthor(
       ...claims,
       contributor: true,
     });
+    // Mirror the new claim into the user's profile doc so the role pill
+    // in `AuthorBadge` shows up immediately on the author's next page
+    // render. Best-effort — same rationale as the audit write in
+    // `setUserRole`: a missing profile doc just means the user never
+    // signed in via the app, and the badge will be backfilled by the
+    // bootstrap on their next sign-in.
+    try {
+      await adminDb()
+        .collection("users")
+        .doc(authorUid)
+        .update({ roleBadge: "contributor" });
+    } catch (err) {
+      console.warn(
+        `Failed to mirror contributor role badge for ${authorUid}:`,
+        err,
+      );
+    }
     return true;
   } catch (err) {
     // Promotion is best-effort — the guide approval already landed,

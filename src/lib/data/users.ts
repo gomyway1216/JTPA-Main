@@ -46,6 +46,12 @@ export interface PublicProfile {
   // Always-public when set. Empty/undefined slots are stripped so the
   // /u/[uid] icon row only renders inhabited links.
   links: UserLinks;
+  // Highest role for the user, denormalized from Auth custom claims so
+  // `AuthorBadge` can render a role pill (Admin / Editor / Contributor)
+  // alongside the @username without an Auth read per page. `null` for
+  // plain users / when the docs lacks the field yet (older accounts that
+  // haven't signed in since the bootstrap that writes this field).
+  role: "admin" | "editor" | "contributor" | null;
 }
 
 // Pure projection: apply per-field visibility flags to a stored
@@ -70,6 +76,17 @@ export function projectPublicProfile(data: UserProfile): PublicProfile {
     if (data.links.linkedin) links.linkedin = data.links.linkedin;
     if (data.links.sns) links.sns = data.links.sns;
   }
+  // Defensive read: only forward known role values so a malformed write
+  // (or a legacy doc with a stale string) can't surface unexpected
+  // strings into the public surface.
+  const role: PublicProfile["role"] =
+    data.roleBadge === "admin"
+      ? "admin"
+      : data.roleBadge === "editor"
+        ? "editor"
+        : data.roleBadge === "contributor"
+          ? "contributor"
+          : null;
   return {
     uid: data.uid,
     username: data.username || defaultUsernameFor(data.uid),
@@ -78,6 +95,7 @@ export function projectPublicProfile(data: UserProfile): PublicProfile {
     affiliation: data.affiliationPublic ? (data.affiliation ?? "") : null,
     bio: data.bioPublic ? (data.bio ?? "") : null,
     links,
+    role,
   };
 }
 

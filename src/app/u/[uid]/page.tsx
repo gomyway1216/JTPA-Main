@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { RolePill } from "@/components/users/AuthorBadge";
 import { UserLinksRow } from "@/components/users/UserLinks";
 import { getPublicProfile } from "@/lib/data/users";
 
@@ -56,8 +57,15 @@ export default async function PublicProfilePage({
             </div>
           )}
           <div className="min-w-0 flex-1 space-y-1">
-            <h1 className="text-xl font-semibold break-all">
-              @{profile.username}
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold break-all">
+              <span>@{profile.username}</span>
+              {/*
+                Role pill mirrors the one `AuthorBadge` renders inline
+                next to a comment author — same color palette + label
+                conventions, but a notch larger to sit next to the
+                heading text without looking like an afterthought.
+              */}
+              {profile.role && <RolePill role={profile.role} size="lg" />}
             </h1>
             {/*
               The real name is a secondary label, shown only when the

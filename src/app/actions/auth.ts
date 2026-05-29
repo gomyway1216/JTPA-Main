@@ -2,6 +2,8 @@
 
 import { redirect } from "next/navigation";
 
+import { FieldValue } from "firebase-admin/firestore";
+
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import {
   clearSessionCookie,
@@ -10,6 +12,22 @@ import {
 
 export async function signInWithIdToken(idToken: string): Promise<void> {
   const decoded = await adminAuth().verifyIdToken(idToken, true);
+
+  // Compute the role badge from the decoded token's custom claims so we
+  // can both bootstrap and self-heal the denormalized `roleBadge` field
+  // in `users/{uid}` on every sign-in. Order matches the role hierarchy
+  // used everywhere else (admin > editor > contributor). Returning
+  // `null` for a plain user makes the upsert / merge branch below drop
+  // the field entirely (via FieldValue.delete in the merge branch and
+  // simply omitting it in the create branch).
+  const claimBadge: "admin" | "editor" | "contributor" | null =
+    decoded.admin === true
+      ? "admin"
+      : decoded.editor === true
+        ? "editor"
+        : decoded.contributor === true
+          ? "contributor"
+          : null;
 
   // Upsert user profile (first login bootstraps the profile doc).
   const ref = adminDb().collection("users").doc(decoded.uid);
@@ -23,6 +41,11 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
       photoURL: decoded.picture ?? null,
       affiliation: "",
       bio: "",
+      // Only include `roleBadge` when the user actually has a claim.
+      // Avoids writing `roleBadge: null` (which would round-trip back
+      // to the public projection as a deliberate "no role" rather
+      // than absent).
+      ...(claimBadge ? { roleBadge: claimBadge } : {}),
       // Default-private for affiliation/bio/fullName so signup doesn't
       // silently expose anything until the user explicitly opts in on
       // /my/profile. emailOptIn defaults to true because that's the
@@ -50,6 +73,13 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
         email: decoded.email ?? snap.get("email") ?? "",
         displayName: decoded.name ?? snap.get("displayName"),
         photoURL: decoded.picture ?? snap.get("photoURL") ?? null,
+        // Self-healing role badge sync: write the current claim's badge
+        // (or delete the field if no claim) so the denormalized value
+        // in the user doc matches the source of truth in Auth every
+        // sign-in. Catches drift from claim flips that happened while
+        // the user wasn't signed in, or from a legacy doc that pre-
+        // dates this field.
+        roleBadge: claimBadge ?? FieldValue.delete(),
         updatedAt: now,
       },
       { merge: true },

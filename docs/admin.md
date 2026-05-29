@@ -79,6 +79,7 @@ If both sources are empty, the notification is silently dropped (no half-formed 
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
 | `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
 | `/admin/guides` | Guide review queue (pending community submissions) + published / drafts / rejected sections, with approve/reject actions and the create button. Approval auto-promotes the author to `contributor`. | admin + editor |
+| `/admin/feedback` | Triage queue for `/help` feedback submissions. Inline status flips (未対応 → 確認済み → 対応済み, plus admin-only アーカイブ). Mirrored email lands in the admin notification list when a new entry arrives. | admin + editor |
 | `/admin/about` | Edit the `/about` page (title + Markdown body, stored in `sitePages/about`) | admin |
 | `/admin/users` | User list with role grant/revoke | admin |
 | `/admin/help` | In-app admin operations guide (Japanese, mirrors this doc at a high level) | admin + editor |

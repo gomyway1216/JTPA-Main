@@ -1,8 +1,18 @@
 import Link from "next/link";
 
+import { FeedbackForm } from "@/app/help/_components/FeedbackForm";
+import { getSessionUser } from "@/lib/auth/session";
+
 export const metadata = { title: "ヘルプ・使い方" };
 
-export default function HelpPage() {
+// `force-dynamic` so the FeedbackForm at the bottom can read the current
+// session — the rest of the page is static, but bumping the whole page
+// to dynamic is the simplest way to keep the form's logged-in/-out
+// branch right without splitting the layout into a server/client pair.
+export const dynamic = "force-dynamic";
+
+export default async function HelpPage() {
+  const user = await getSessionUser();
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-10">
       <header className="space-y-2">
@@ -29,6 +39,7 @@ export default function HelpPage() {
           <li><a href="#comments" className="text-blue-600 hover:underline">コメント・いいね</a></li>
           <li><a href="#profile" className="text-blue-600 hover:underline">プロフィール公開設定</a></li>
           <li><a href="#mypage" className="text-blue-600 hover:underline">マイページ</a></li>
+          <li><a href="#feedback" className="text-blue-600 hover:underline">要望・不具合報告</a></li>
         </ul>
       </nav>
 
@@ -231,11 +242,24 @@ export default function HelpPage() {
         </Table>
       </Section>
 
+      <Section id="feedback" title="要望・不具合報告">
+        <p>
+          サイトへの要望、不具合の報告、改善の提案などをこちらから送ってください。
+          内容は管理者・編集者だけが見るので、公の場では書きにくいものも遠慮なくどうぞ。
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>送信するにはログインが必要です（誰の声か分かる方が動きやすいので）。</li>
+          <li>使い方の質問は{" "}
+            <Link href="/qa/new" className="text-blue-600 hover:underline">Q&amp;Aに投稿</Link>{" "}
+            すると他の人にも役立ちます。
+          </li>
+        </ul>
+        <FeedbackForm user={user} />
+      </Section>
+
       <footer className="border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800">
         <p>
-          このページに書かれていない使い方・不具合報告は{" "}
-          <Link href="/qa/new" className="text-blue-600 hover:underline">Q&amp;Aに投稿</Link>{" "}
-          するか、コミュニティの Slack/Google Group までお寄せください。
+          コミュニティの Slack / Google Group での雑談も歓迎です。
         </p>
       </footer>
     </div>
