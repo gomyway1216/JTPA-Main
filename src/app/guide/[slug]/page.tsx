@@ -37,24 +37,34 @@ export default async function GuideDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = await getGuideBySlug(slug);
-  // Drafts are reachable only from the admin UI — for the public route,
-  // treat anything not currently published as a missing page so we don't
-  // leak in-progress content via guessed slugs.
-  if (!guide || guide.status !== "published") notFound();
+  // Session + record load are independent — kick them off together
+  // rather than serially. We need the user for the access check below.
+  const [user, guide] = await Promise.all([
+    getSessionUser(),
+    getGuideBySlug(slug),
+  ]);
+  if (!guide) notFound();
+
+  // Non-published guides are reachable via this route for admin / editor
+  // (cross-author preview, e.g. clicking プレビュー from /admin/guides
+  // pending queue) AND the author themselves (so an author can preview
+  // their draft / pending / rejected guide via /my/guides). Anonymous
+  // visitors and other signed-in users see the same 404 they would for
+  // a non-existent slug — don't leak that the slug exists. Mirrors the
+  // /qa/[slug] pattern.
+  const ownerUid = guide.authorUid ?? guide.createdBy?.uid;
+  const isAuthorOrCurator =
+    !!user && (user.isAdmin || user.isEditor || user.uid === ownerUid);
+  if (guide.status !== "published" && !isAuthorOrCurator) {
+    notFound();
+  }
 
   const tags = guide.tags ?? [];
 
-  // Session + comment listing are independent — kick them off together
-  // rather than serially. The like-state query depends on the comment
-  // ids so it stays after the join.
-  const [user, comments] = await Promise.all([
-    getSessionUser(),
-    listComments("guide", guide.id).catch((err) => {
-      console.error("Failed to list guide comments:", err);
-      return [];
-    }),
-  ]);
+  const comments = await listComments("guide", guide.id).catch((err) => {
+    console.error("Failed to list guide comments:", err);
+    return [];
+  });
   const likedSet = await getMyLikesForParent({
     parentType: "guide",
     parentId: guide.id,
@@ -70,6 +80,22 @@ export default async function GuideDetailPage({
       <Link href="/guide" className="text-xs text-zinc-500 hover:underline">
         ← ガイド一覧
       </Link>
+
+      {guide.status !== "published" && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          このガイドは現在{" "}
+          <strong>
+            {guide.status === "pending"
+              ? "審査待ち"
+              : guide.status === "rejected"
+                ? "却下"
+                : guide.status === "archived"
+                  ? "アーカイブ"
+                  : "下書き"}
+          </strong>{" "}
+          状態です。一般公開はされておらず、投稿者と管理者・エディタのみが閲覧できます。
+        </div>
+      )}
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{guide.title}</h1>

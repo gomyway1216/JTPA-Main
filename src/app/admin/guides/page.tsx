@@ -9,11 +9,10 @@ export const dynamic = "force-dynamic";
 // Restructured around the moderation workflow now that guides support
 // community submissions. Layout mirrors /admin/posts: pending queue on
 // top with approve/reject cards, then collapsed sections for published /
-// drafts / rejected.
-//
-// Intentionally not catching Firestore errors here — see admin/posts for
-// the rationale. Missing composite indexes show up as a clickable
-// "create this index" link in the error, which we'd hide by swallowing.
+// drafts / rejected. Failures on any individual section log + degrade
+// to an empty list so a missing composite index on (say) rejected guides
+// doesn't blank out the pending queue too — the same shape as
+// /admin/posts.
 export default async function AdminGuidesPage() {
   // listGuides handles the curated published+draft view (ordered by the
   // `order` field); listGuidesByStatus drives the per-state sections

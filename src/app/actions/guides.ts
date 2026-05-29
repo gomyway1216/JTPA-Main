@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
-  isTrustedAuthor,
   requireAdmin,
   requireEditor,
   requireUser,
@@ -16,8 +15,18 @@ import {
   enqueueAdminNewGuideNotification,
   enqueueGuideDecisionNotification,
 } from "@/lib/notifications";
-import type { GuideAuthorRef, GuideDoc, GuideStatus } from "@/lib/types";
+import type {
+  GuideAuthorRef,
+  GuideDoc,
+  GuideStatus,
+  SessionUser,
+} from "@/lib/types";
 import { slugify } from "@/lib/utils";
+
+// Default sort order for community-submitted guides — slotted near the
+// end of the list so they don't shove curated guides down. Admin / editor
+// can re-rank during review via the order field on the edit form.
+const DEFAULT_GUIDE_ORDER = 100;
 
 // Firestore auto-IDs are 20 alphanumeric chars; we accept the same shape
 // from the client when a draft id is supplied so we can co-locate
@@ -106,6 +115,85 @@ function resolveStatus(
   return requested === "published" ? "pending" : requested;
 }
 
+// Mirrors `requireContributor` semantics but works on a user object the
+// caller already has — used for redirects and order-clamp decisions
+// where the role is being consulted, not enforced.
+function hasCuratorAccess(user: SessionUser): boolean {
+  // contributor is NOT included: contributors can self-publish their own
+  // guides, but they don't get access to /admin/* or the right to
+  // re-order the public guide list. Treat them like plain users for
+  // those concerns.
+  return user.isAdmin || user.isEditor;
+}
+
+// Side-effects that fire when an admin/editor lands a guide in
+// `published` for the first time, lifted out of `decideGuide` so the
+// same flow can run from `updateGuide` when an admin/editor edits a
+// pending submission directly to published via the form. Without this
+// shared path, the admin form bypass would silently:
+//   - leave `reviewerUid` / `reviewedAt` unset
+//   - skip the author's contributor auto-promotion
+//   - skip the decision-notification mail
+// Returns whether the author was just auto-promoted so the caller can
+// thread that into the notification body.
+async function autoPromoteAuthor(
+  authorUid: string,
+  reviewerUid: string,
+): Promise<boolean> {
+  if (!authorUid || authorUid === reviewerUid) return false;
+  try {
+    const target = await adminAuth().getUser(authorUid);
+    const claims = (target.customClaims ?? {}) as Record<string, unknown>;
+    const alreadyTrusted =
+      claims.admin === true ||
+      claims.editor === true ||
+      claims.contributor === true;
+    if (alreadyTrusted) return false;
+    await adminAuth().setCustomUserClaims(authorUid, {
+      ...claims,
+      contributor: true,
+    });
+    return true;
+  } catch (err) {
+    // Promotion is best-effort — the guide approval already landed,
+    // and admins can flip the claim manually from /admin/users if
+    // this silently fails. Log so it's recoverable.
+    console.warn(
+      `Failed to auto-promote contributor (uid: ${authorUid}):`,
+      err,
+    );
+    return false;
+  }
+}
+
+// Fire the author-facing decision email. Best-effort: a failure here
+// just means the mail doc didn't get queued, which is recoverable.
+async function notifyAuthorOfDecision(
+  authorUid: string,
+  title: string,
+  decision: "published" | "rejected",
+  note: string | undefined,
+  promoted: boolean,
+): Promise<void> {
+  if (!authorUid) return;
+  try {
+    const ownerSnap = await adminDb().collection("users").doc(authorUid).get();
+    const ownerEmail = ownerSnap.exists
+      ? (ownerSnap.data()?.email as string)
+      : null;
+    if (!ownerEmail) return;
+    await enqueueGuideDecisionNotification({
+      to: ownerEmail,
+      title,
+      decision,
+      note: decision === "rejected" ? note : undefined,
+      promoted,
+    });
+  } catch (err) {
+    console.warn("Failed to enqueue guide decision notification:", err);
+  }
+}
+
 // ---------- create ----------
 
 // Replaces the legacy `createGuide` admin-only Server Action. Any
@@ -121,6 +209,7 @@ export async function submitGuide(
   const user = await requireUser();
   const parsed = parseGuideInput(input);
   const resolvedStatus = resolveStatus(user, parsed.status);
+  const isCurator = hasCuratorAccess(user);
 
   // `optionalNonEmpty` uses `z.preprocess` which widens the inferred
   // type to `unknown` — cast through the explicit shape so the result
@@ -138,6 +227,12 @@ export async function submitGuide(
     }
   }
 
+  // Order is a curator-only knob. The form already hides it from
+  // non-admin/editor users, but a crafted client payload could
+  // otherwise let a contributor pin their guide to the top of the
+  // public list with `order: 0`. Force the default for non-curators.
+  const resolvedOrder = isCurator ? parsed.order : DEFAULT_GUIDE_ORDER;
+
   const now = Timestamp.now();
   const author = authorRef(user);
   // Privileged authors skip the review queue, so their published guides
@@ -152,7 +247,7 @@ export async function submitGuide(
     body: parsed.body,
     tags: parsed.tags,
     status: resolvedStatus,
-    order: parsed.order,
+    order: resolvedOrder,
     authorUid: user.uid,
     authorName: user.displayName || null,
     authorPhotoURL: user.photoURL,
@@ -211,10 +306,11 @@ export async function submitGuide(
 
   revalidate(slug);
 
-  // Privileged authors land back on the edit page (so they can refine
-  // and re-save). Community submissions go to /my/guides where they can
-  // track the review status.
-  if (isTrustedAuthor(user)) {
+  // Admin / editor land back on the admin edit page so they can refine
+  // and re-save. Contributors and plain authors go to /my/guides — the
+  // admin layout would bounce contributors away to "/" (they don't
+  // unlock any `/admin/*` route despite being a trusted-author tier).
+  if (isCurator) {
     redirect(`/admin/guides/${guideId}/edit`);
   }
   redirect("/my/guides");
@@ -246,8 +342,8 @@ export async function updateGuide(
   // Privileged tiers (admin / editor) can edit any guide. Contributors
   // and plain authors can only touch their own.
   const ownerUid = cur.authorUid ?? cur.createdBy?.uid;
-  const isAdminOrEditor = user.isAdmin || user.isEditor;
-  if (!isAdminOrEditor && ownerUid !== user.uid) {
+  const isCurator = hasCuratorAccess(user);
+  if (!isCurator && ownerUid !== user.uid) {
     throw new Error("FORBIDDEN");
   }
 
@@ -267,13 +363,31 @@ export async function updateGuide(
 
   // Same intent → status resolution as `submitGuide`. Admin/editor can
   // freely change status; contributors can self-publish their own;
-  // plain users are clamped to draft/pending. For admin/editor we
-  // preserve the existing status when they didn't explicitly request a
-  // change (they normally drive status via decideGuide / publishGuide,
-  // not the form save button).
-  const requestedStatus = isAdminOrEditor
+  // plain users are clamped to draft/pending.
+  const requestedStatus = isCurator
     ? parsed.status
     : resolveStatus(user, parsed.status);
+
+  // Order is curator-only. Non-curators always preserve the current
+  // value (or fall through to the default when the doc predates the
+  // field) so a crafted contributor payload can't reorder the public
+  // guide list — matches the `order` clamp in submitGuide.
+  const resolvedOrder = isCurator
+    ? parsed.order
+    : (cur.order ?? DEFAULT_GUIDE_ORDER);
+
+  // When an admin/editor approves a community submission directly from
+  // the edit form (pending → published) we need to run the same side
+  // effects `decideGuide` would: stamp reviewer + reviewedAt, auto-
+  // promote the author to contributor on first approval, and queue the
+  // decision-notification email. Without this, the form's "公開する"
+  // button is a silent bypass.
+  const isApprovingPending =
+    isCurator &&
+    requestedStatus === "published" &&
+    cur.status === "pending" &&
+    ownerUid !== undefined &&
+    ownerUid !== user.uid;
 
   // First-publish detection — anchored on `publishedAt`, like posts —
   // so re-publishing an edited guide that was already public doesn't
@@ -289,12 +403,35 @@ export async function updateGuide(
     body: parsed.body,
     tags: parsed.tags,
     status: requestedStatus,
-    order: parsed.order,
+    order: resolvedOrder,
+    ...(isApprovingPending
+      ? {
+          reviewerUid: user.uid,
+          // Clear any stale rejection note that may be lingering on the
+          // doc from a previous review round.
+          reviewNote: "",
+          reviewedAt: FieldValue.serverTimestamp(),
+        }
+      : {}),
     ...(becomesPublished ? { publishedAt: Timestamp.now() } : {}),
     ...(becomesPending ? { submittedAt: Timestamp.now() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
     updatedBy: authorRef(user),
   });
+
+  // Side-effects run AFTER the doc write so the public state is
+  // consistent first — a failed promotion or notification doesn't roll
+  // the approval back.
+  if (isApprovingPending && ownerUid) {
+    const promoted = await autoPromoteAuthor(ownerUid, user.uid);
+    await notifyAuthorOfDecision(
+      ownerUid,
+      parsed.title,
+      "published",
+      undefined,
+      promoted,
+    );
+  }
 
   revalidate(requestedSlug ?? cur.slug);
 }
@@ -336,19 +473,26 @@ export async function deleteGuide(guideId: string): Promise<void> {
 
 // ---------- admin review queue ----------
 
-// Approve or reject a pending guide. Mirrors `decidePost`.
+// Approve or reject a pending guide. Mirrors `decidePost`. Admin AND
+// editor can call this — editors hold the cross-author curation power,
+// so they're trusted to clear the review queue alongside admins.
 //
 // On the first approval for a given author, we also flip on the
 // `contributor: true` custom claim so the author's subsequent guides
 // skip the review queue. The promotion is idempotent — re-approving a
 // guide from someone who is already admin/editor/contributor doesn't
 // re-grant or notify about the role change.
+//
+// The shared side-effect helpers (`autoPromoteAuthor`,
+// `notifyAuthorOfDecision`) are also reused from `updateGuide` so an
+// admin/editor approving via the edit form rather than the review card
+// doesn't silently bypass promotion + notification.
 export async function decideGuide(
   guideId: string,
   decision: "published" | "rejected",
   note?: string,
 ): Promise<void> {
-  const admin = await requireAdmin();
+  const reviewer = await requireEditor();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");
@@ -359,7 +503,7 @@ export async function decideGuide(
 
   await ref.update({
     status: decision,
-    reviewerUid: admin.uid,
+    reviewerUid: reviewer.uid,
     // Clear any stale rejection note on approval so the previous round's
     // critique doesn't follow an approved guide forever.
     reviewNote: isRejection ? (note ?? "") : "",
@@ -368,62 +512,23 @@ export async function decideGuide(
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // Auto-promote the author on first approval, if they aren't already
-  // an admin / editor / contributor. The claim only takes effect after
-  // the author signs out and back in, but we surface that in the
-  // notification email below.
-  let promoted = false;
+  // Auto-promote + notify only on a first-time publish (or on any
+  // rejection for the notify side). Re-publishing a previously-public
+  // guide that was bounced back to pending shouldn't re-promote or
+  // re-email.
   const authorUid = cur.authorUid ?? cur.createdBy?.uid;
-  if (decision === "published" && authorUid && authorUid !== admin.uid) {
-    try {
-      const target = await adminAuth().getUser(authorUid);
-      const claims = (target.customClaims ?? {}) as Record<string, unknown>;
-      const alreadyTrusted =
-        claims.admin === true ||
-        claims.editor === true ||
-        claims.contributor === true;
-      if (!alreadyTrusted) {
-        await adminAuth().setCustomUserClaims(authorUid, {
-          ...claims,
-          contributor: true,
-        });
-        promoted = true;
-      }
-    } catch (err) {
-      // Promotion is best-effort — the guide approval already landed,
-      // and admins can flip the claim manually from /admin/users if
-      // this silently fails. Log so it's recoverable.
-      console.warn(
-        `Failed to auto-promote contributor for guide ${guideId} (uid: ${authorUid}):`,
-        err,
-      );
-    }
+  let promoted = false;
+  if (decision === "published" && authorUid) {
+    promoted = await autoPromoteAuthor(authorUid, reviewer.uid);
   }
-
-  // Notify author on first publish OR any rejection. The note only
-  // travels with rejection mails, same shape as posts.
-  const notifyOnDecision = isRejection || isFirstPublish;
-  if (notifyOnDecision && authorUid) {
-    try {
-      const ownerSnap = await adminDb()
-        .collection("users")
-        .doc(authorUid)
-        .get();
-      const ownerEmail = ownerSnap.exists
-        ? (ownerSnap.data()?.email as string)
-        : null;
-      if (ownerEmail) {
-        await enqueueGuideDecisionNotification({
-          to: ownerEmail,
-          title: cur.title,
-          decision,
-          note: isRejection ? note : undefined,
-          promoted,
-        });
-      }
-    } catch (err) {
-      console.warn("Failed to enqueue guide decision notification:", err);
-    }
+  if ((isRejection || isFirstPublish) && authorUid) {
+    await notifyAuthorOfDecision(
+      authorUid,
+      cur.title,
+      decision,
+      note,
+      promoted,
+    );
   }
 
   revalidate(cur.slug);

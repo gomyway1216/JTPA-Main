@@ -14,7 +14,9 @@ The repo is public, so this doc is also public. Nothing here is a secret — adm
 | signed-in user (no role) | RSVP events, self check-in at events, submit projects (admin review), submit blog posts (admin review), **submit guides (admin review on first one, then auto-promoted to `contributor`)**, post Q&A (auto-published), create polls (auto-published), vote in polls, comment on any published guide / blog / Q&A / poll / approved project, like records and comments | Anything admin/editor-only |
 | anonymous | Read public content (published events, approved projects, published blog posts + guides + Q&A + polls, including poll results); walk-in check-in via the QR code at the door (uses anonymous Firebase Auth + creates a guest RSVP) | Anything that requires sign-in (RSVP, post, vote, comment, like) |
 
-The three role claims compose independently — a user can hold `editor` without `contributor`, or both. `editor` is strictly more powerful than `contributor` (editor can edit any guide; contributor can only touch their own). Editor / contributor are both strictly less privileged than admin. An editor or contributor visiting an admin-only URL is redirected to `/admin/guides`.
+The three role claims compose independently — a user can hold `editor` without `contributor`, or both. `editor` is strictly more powerful than `contributor` (editor can edit any guide; contributor can only touch their own). Editor / contributor are both strictly less privileged than admin.
+
+`contributor` does **not** unlock any `/admin/*` route — it only lets the holder skip the admin review queue for their own guide submissions. An editor visiting an admin-only URL is redirected to `/admin/guides` (the one admin page editors can use); a contributor or plain signed-in user gets bounced to `/` instead.
 
 `contributor` is auto-granted on a user's first admin-approved guide so subsequent guide submissions skip the review queue — see [Reviewing guide submissions](#reviewing-guide-submissions) below. Admins can grant or revoke it manually from `/admin/users` at any time.
 

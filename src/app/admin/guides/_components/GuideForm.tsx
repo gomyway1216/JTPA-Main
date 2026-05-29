@@ -89,6 +89,10 @@ export function GuideForm({
   // "審査に出す" button instead of "公開する".
   const canPublishDirectly =
     user.isAdmin || user.isEditor || user.isContributor;
+  // Subset of `canPublishDirectly`: only admin/editor have `/admin/*`
+  // route access. Used for post-delete redirects — contributors get
+  // bounced from the admin layout, so they need to land on /my/guides.
+  const hasAdminAccess = user.isAdmin || user.isEditor;
 
   const [title, setTitle] = useState(guide?.title ?? "");
   const [slug, setSlug] = useState(guide?.slug ?? "");
@@ -303,10 +307,12 @@ export function GuideForm({
     startTransition(async () => {
       try {
         await deleteGuide(guide.id);
-        // Trusted authors land on the admin guides list; plain authors
-        // bounce back to /my/guides where they can see the rest of
-        // their submissions.
-        window.location.href = canPublishDirectly
+        // Admin / editor land on the admin guides list; everyone else
+        // (contributors + plain authors) bounces back to /my/guides
+        // where they can see the rest of their submissions. The admin
+        // layout redirects contributors away from `/admin/*` so sending
+        // them there would be a worse experience.
+        window.location.href = hasAdminAccess
           ? "/admin/guides"
           : "/my/guides";
       } catch (err) {
