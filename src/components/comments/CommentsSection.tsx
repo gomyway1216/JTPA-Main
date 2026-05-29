@@ -402,13 +402,21 @@ function ReplyToPrefix({
   profile: PublicProfile | null;
   fallbackName: string;
 }) {
+  // Mirror AuthorBadge's missing-profile behavior: when the replied-to
+  // user's doc is gone (deleted account / legacy guest), render the
+  // handle as plain text instead of a /u/[uid] link that would 404.
+  // Per PR #79 Copilot review.
   const label = profile?.username ?? fallbackName ?? "unknown";
   return (
     <p className="mt-1 text-xs text-zinc-500">
       Re:{" "}
-      <Link href={`/u/${uid}`} className="font-medium hover:underline">
-        @{label}
-      </Link>
+      {profile ? (
+        <Link href={`/u/${uid}`} className="font-medium hover:underline">
+          @{label}
+        </Link>
+      ) : (
+        <span className="font-medium">@{label}</span>
+      )}
     </p>
   );
 }

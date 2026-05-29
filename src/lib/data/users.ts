@@ -98,33 +98,24 @@ export const getPublicProfile = cache(
   },
 );
 
-// Batch-fetch public profiles for the set of uids that a single page
-// will render (post + comment authors, list rows, etc.). Returns a Map
-// keyed by uid; missing uids (deleted accounts, walk-in guests whose
-// uids never had a users/{uid} doc) are simply absent from the map so
-// the caller can render a "@unknown" fallback.
+// Inner cached implementation, keyed by a normalized sorted-string.
+// React's `cache()` matches arguments by reference identity (===), so
+// wrapping a function that takes an array would never hit on a
+// second call — every caller builds a fresh array literal. The string
+// key collapses two calls with the same uid set (in any order) to
+// one Firestore round-trip per request.
 //
-// Why a single `getAll` instead of per-row fetches:
+// `key` is "" for an empty uid set so the public wrapper can
+// short-circuit before even calling in.
+//
+// Why a single `getAll` per call:
 //   - one Firestore round-trip per page instead of N
-//   - React's `cache()` already de-dupes within a request, but `getAll`
-//     also collapses Firestore's per-doc read overhead
 //   - keeps the rules path identical (Admin SDK, server-only)
-//
-// Wrapped in `cache()` so two different surfaces that ask for
-// overlapping uid sets in the same render don't each issue a round-trip.
-// The cache key is the sorted uid string — a stable join order so the
-// memo hits regardless of caller-side ordering.
-export const getPublicProfilesByUids = cache(
-  async (uids: readonly string[]): Promise<Map<string, PublicProfile>> => {
-    // De-dup and drop empties — callers commonly pass `[post.authorUid,
-    // ...comments.map(c => c.authorUid)]` which can contain duplicates
-    // and (for guest-authored RSVPs / legacy docs) blank uids.
-    const unique = Array.from(
-      new Set(uids.filter((u): u is string => !!u && typeof u === "string")),
-    );
+const _getPublicProfilesByKey = cache(
+  async (key: string): Promise<Map<string, PublicProfile>> => {
     const out = new Map<string, PublicProfile>();
-    if (unique.length === 0) return out;
-
+    if (!key) return out;
+    const unique = key.split(",");
     const refs = unique.map((u) => adminDb().collection("users").doc(u));
     // `getAll(...refs)` is the Admin SDK batch read — single RPC for the
     // whole set. Result order matches `refs`, so we can zip with `unique`.
@@ -137,6 +128,34 @@ export const getPublicProfilesByUids = cache(
     return out;
   },
 );
+
+// Batch-fetch public profiles for the set of uids that a single page
+// will render (post + comment authors, list rows, etc.). Returns a Map
+// keyed by uid; missing uids (deleted accounts, walk-in guests whose
+// uids never had a users/{uid} doc) are simply absent from the map so
+// the caller can render a "@unknown" fallback.
+//
+// Two different surfaces in the same render that ask for overlapping
+// uid sets share a single round-trip via `_getPublicProfilesByKey`'s
+// `cache()`. The normalization here (dedup + sort + join) builds a
+// stable string key so the memo hits regardless of caller-side
+// ordering or duplicates — per PR #79 Copilot review (the previous
+// version handed an array to cache(), which keys by identity, so
+// equivalent calls didn't dedupe).
+export async function getPublicProfilesByUids(
+  uids: readonly string[],
+): Promise<Map<string, PublicProfile>> {
+  // De-dup, drop empties / non-strings, and sort so two callers that
+  // pass `[a, b]` and `[b, a, a]` collapse to the same cache key.
+  const unique = Array.from(
+    new Set(uids.filter((u): u is string => !!u && typeof u === "string")),
+  ).sort();
+  // Uids never contain commas (Firebase uids are base62-ish), so a bare
+  // comma join is unambiguous. Empty set short-circuits before hitting
+  // the cache so we don't pollute it with a useless "" entry.
+  if (unique.length === 0) return new Map();
+  return _getPublicProfilesByKey(unique.join(","));
+}
 
 // Convenience helper for the single-author case. Wraps the batch helper
 // so a one-uid call still hits the same per-request cache as a

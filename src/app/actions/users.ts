@@ -185,10 +185,24 @@ export async function updateMyProfile(
       const currentUsername = userData.username;
 
       if (currentUsername !== desiredUsername) {
+        // Firestore transactions require ALL reads to happen before
+        // ANY writes — interleaving throws "Firestore transactions
+        // require all reads to be executed before all writes" at
+        // commit time. So we read both reservation slots up front,
+        // then branch on the snapshots to decide what to write.
+        // Per PR #79 Gemini + Copilot reviews.
         const newResRef = adminDb()
           .collection("usernames")
           .doc(desiredUsername);
-        const newResSnap = await tx.get(newResRef);
+        const oldResRef = currentUsername
+          ? adminDb().collection("usernames").doc(currentUsername)
+          : null;
+
+        const [newResSnap, oldResSnap] = await Promise.all([
+          tx.get(newResRef),
+          oldResRef ? tx.get(oldResRef) : Promise.resolve(null),
+        ]);
+
         if (newResSnap.exists) {
           const ownerUid = (newResSnap.data() as { uid: string }).uid;
           if (ownerUid !== user.uid) {
@@ -200,24 +214,21 @@ export async function updateMyProfile(
           // the reservation set + user update below converge on a
           // consistent state.
         }
+
+        // ----- writes (after all reads above) -----
         tx.set(newResRef, {
           uid: user.uid,
           createdAt: Timestamp.now(),
         });
-        if (currentUsername) {
-          // Release the old slot so another user can claim it. Only
-          // delete if it actually points at us (defensive — should
-          // always be the case because we wrote it).
-          const oldResRef = adminDb()
-            .collection("usernames")
-            .doc(currentUsername);
-          const oldResSnap = await tx.get(oldResRef);
-          if (
-            oldResSnap.exists &&
-            (oldResSnap.data() as { uid: string }).uid === user.uid
-          ) {
-            tx.delete(oldResRef);
-          }
+        if (
+          oldResRef &&
+          oldResSnap?.exists &&
+          (oldResSnap.data() as { uid: string }).uid === user.uid
+        ) {
+          // Release the old slot so another user can claim it. Defensive
+          // ownership check (should always be us, but a stale doc would
+          // otherwise wipe someone else's reservation).
+          tx.delete(oldResRef);
         }
       }
 

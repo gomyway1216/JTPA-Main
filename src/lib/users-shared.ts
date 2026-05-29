@@ -2,14 +2,22 @@
 // (read/write/bootstrap) and the client profile form. No `server-only`
 // import so the client can validate input live without a round-trip.
 
-// 3–20 chars, lowercase alphanumerics + `_` / `-`. Excludes leading/
-// trailing separators and consecutive separators so handles are URL- and
-// log-friendly. Keep in lockstep with USERNAME_HELP_TEXT below — it's
-// what the form surfaces to the user.
-export const USERNAME_REGEX = /^[a-z0-9](?:[a-z0-9_-]{1,18}[a-z0-9])?$/;
+// Strictly 3–20 chars, lowercase alphanumerics + `_` / `-`. Excludes:
+//   - leading/trailing separators (anchored `[a-z0-9]` at both ends)
+//   - consecutive separators `__` / `--` / `_-` / `-_` anywhere (negative
+//     lookahead at the start)
+// so handles stay URL- and log-friendly. Min 3 enforced by the
+// non-optional middle group (`{1,18}`) — without that, the previous
+// `(?:...)?` form silently allowed single-char handles while the help
+// text promised 3-20. Keep in lockstep with USERNAME_HELP_TEXT below
+// — it's what the form surfaces to the user.
+// Per PR #79 Copilot review (the original pattern allowed
+// `foo__bar`/`foo--bar`, contradicting the doc comment).
+export const USERNAME_REGEX =
+  /^(?!.*[_-]{2})[a-z0-9][a-z0-9_-]{1,18}[a-z0-9]$/;
 
 export const USERNAME_HELP_TEXT =
-  "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。";
+  "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。区切り文字は連続不可。";
 
 // Handles that must never become a username because they'd collide with a
 // top-level route or admin surface. The match is exact (post-normalize) so
