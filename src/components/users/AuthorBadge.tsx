@@ -22,6 +22,12 @@ interface Props {
 // renaming a user (or flipping their full-name visibility) propagates
 // to every list/detail surface on the next render, with no doc-level
 // backfill needed.
+//
+// Role pills (Admin / Editor / Contributor) render inline after the
+// username when the profile's `role` field is set — see RolePill below.
+// The role is denormalized from Auth custom claims on every claim
+// change AND on every sign-in bootstrap, so it stays in sync without
+// per-render Auth lookups.
 export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   const avatarClass = size === "sm" ? "h-5 w-5" : "h-6 w-6";
   const initialClass = size === "sm" ? "text-[10px]" : "text-xs";
@@ -56,6 +62,7 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
         </span>
       )}
       <span>@{username}</span>
+      {profile?.role && <RolePill role={profile.role} size={size} />}
     </>
   );
 
@@ -75,6 +82,41 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   return (
     <span className="inline-flex items-center gap-1.5 align-middle">
       {inner}
+    </span>
+  );
+}
+
+// Small inline pill rendered next to the @username when the user has an
+// elevated role. Three flavors that mirror the claim hierarchy:
+// admin (rose) > editor (blue) > contributor (emerald). Only the
+// HIGHEST role appears — the projection in `users.ts` already collapses
+// to one, so we don't have to handle multi-role users here. `aria-label`
+// spells out the role for screen readers; the visible text stays compact.
+function RolePill({
+  role,
+  size,
+}: {
+  role: "admin" | "editor" | "contributor";
+  size: "sm" | "md";
+}) {
+  const palette =
+    role === "admin"
+      ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-300"
+      : role === "editor"
+        ? "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300"
+        : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300";
+  const label =
+    role === "admin" ? "Admin" : role === "editor" ? "Editor" : "Contributor";
+  const sizeCls =
+    size === "md"
+      ? "text-[10px] px-1.5 py-0"
+      : "text-[9px] px-1 py-0";
+  return (
+    <span
+      aria-label={`role: ${label}`}
+      className={`inline-flex items-center rounded border font-medium uppercase tracking-wide ${palette} ${sizeCls}`}
+    >
+      {label}
     </span>
   );
 }

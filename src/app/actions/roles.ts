@@ -92,17 +92,31 @@ export async function setUserRole({
     }
   }
 
-  // Audit trail on the user's profile doc. Stored separately from the
-  // claim itself so we keep a paper-trail of who flipped what and when
-  // (the claim alone is just a boolean). Use `update` rather than
-  // `set({ merge: true })` so we don't accidentally create a half-baked
-  // profile doc for a user who hasn't signed in via the app yet — the
-  // role change itself has already landed, the audit is best-effort.
+  // Audit trail + denormalized role badge on the user's profile doc.
+  // The badge mirrors the claim hierarchy (admin > editor > contributor)
+  // so `AuthorBadge` can render the role pill without a per-render Auth
+  // lookup; recompute from the post-write `next` claim object rather
+  // than from the in-progress flip so we get the actual highest claim
+  // even when multiple claims were already set. Use `update` rather
+  // than `set({ merge: true })` so we don't accidentally create a
+  // half-baked profile doc for a user who hasn't signed in via the app
+  // yet — the role change itself has already landed, the audit + badge
+  // mirror is best-effort and will self-heal on next sign-in via the
+  // `signInWithIdToken` bootstrap.
+  const nextBadge: "admin" | "editor" | "contributor" | null =
+    next.admin === true
+      ? "admin"
+      : next.editor === true
+        ? "editor"
+        : next.contributor === true
+          ? "contributor"
+          : null;
   try {
     await adminDb()
       .collection("users")
       .doc(uid)
       .update({
+        roleBadge: nextBadge ?? FieldValue.delete(),
         roleChangedAt: FieldValue.serverTimestamp(),
         roleChangedBy: {
           uid: actor.uid,
