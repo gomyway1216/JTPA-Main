@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getSitePage, SITE_PAGE_DEFAULTS } from "@/lib/data/site-pages";
+
+// Yudai's JTPA uid. Hardcoded because the maintainer attribution is
+// a specific, stable individual — using an env var or DB lookup would
+// be overhead for a one-name credit that effectively never changes.
+// If maintainership ever transfers, update this constant (and remove
+// the comment).
+const MAINTAINER_UID = "FQe7JWGETbTm9w9sAZgacemC1aC3";
 
 export async function generateMetadata(): Promise<Metadata> {
   const page = await getSitePage("about");
@@ -20,10 +28,13 @@ export default async function AboutPage() {
         Maintainer section pinned below the editable about Markdown.
         Kept in the source code (not in `sitePages/about`) so the
         attribution survives an admin who edits the about content and
-        forgets to copy this footer over — and so the link to the
-        portfolio uses a real anchor (the MarkdownBody renderer escapes
-        raw HTML, so styling the link here would otherwise require
-        round-tripping the URL into the Markdown).
+        forgets to copy this footer over — and so the link can be a
+        styled anchor (the MarkdownBody renderer escapes raw HTML).
+
+        The name links to the maintainer's public JTPA profile
+        (/u/[uid]) — that page in turn exposes whatever external links
+        the user has chosen to publish (portfolio, GitHub, …) via
+        /my/profile, so we don't hardcode meetyudai.com here.
       */}
       <section className="border-t border-zinc-200 pt-6 text-sm dark:border-zinc-800">
         <h2 className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">
@@ -31,14 +42,12 @@ export default async function AboutPage() {
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
           このサイトは{" "}
-          <a
-            href="https://meetyudai.com"
-            target="_blank"
-            rel="noreferrer noopener"
+          <Link
+            href={`/u/${MAINTAINER_UID}`}
             className="text-blue-600 hover:underline"
           >
             Yudai Yaguchi
-          </a>{" "}
+          </Link>{" "}
           が開発・運用しています。
         </p>
       </section>
