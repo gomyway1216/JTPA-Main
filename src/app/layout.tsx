@@ -32,7 +32,12 @@ export default async function RootLayout({
   return (
     <html
       lang="ja"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      // Apply the same surface bg to <html> as <body>. Without it, any
+      // sliver where <body> doesn't fully cover the viewport — overscroll
+      // bounce on macOS / iOS, or browser autofill bars — leaks the
+      // default white html background through, which reads as a stray
+      // light strip at the bottom of the page in dark mode.
+      className={`${geistSans.variable} ${geistMono.variable} h-full bg-zinc-50 antialiased dark:bg-zinc-950`}
       suppressHydrationWarning
     >
       <head>
