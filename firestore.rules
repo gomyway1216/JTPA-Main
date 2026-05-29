@@ -621,6 +621,30 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ----- feedback -----
+    // /help submissions. Authenticated users can create their own entry;
+    // only admin + editor can read or update; only admin can delete.
+    // We can't enforce body length on the rule layer with the standard
+    // SDK without writing a heavy field-by-field check, so the create
+    // rule only validates the cheap invariants — the Server Action is
+    // the canonical write path and applies the full Zod validation.
+    match /feedback/{feedbackId} {
+      allow read, list: if isAdmin() || isEditor();
+      allow create: if isSignedIn()
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.status == 'new'
+        && request.resource.data.body is string
+        && request.resource.data.body.size() >= 4
+        && request.resource.data.body.size() <= 2000;
+      // Editors triage; admins also can. The Server Action sets the
+      // reviewer fields; this rule just keeps the status set bounded
+      // so a direct client write can't park entries in an unknown
+      // state.
+      allow update: if (isAdmin() || isEditor())
+        && request.resource.data.status in ['new', 'read', 'resolved', 'archived'];
+      allow delete: if isAdmin();
+    }
+
     // ----- mail (Trigger Email extension) -----
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {

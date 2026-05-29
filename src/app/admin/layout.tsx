@@ -29,6 +29,11 @@ export default async function AdminLayout({
             {user.isAdmin && <AdminLink href="/admin/posts">ブログ管理</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/attendees">参加者</AdminLink>}
             <AdminLink href="/admin/guides">ガイド</AdminLink>
+            {/* Feedback triage is intentionally shared with editors so
+                admins aren't the bottleneck for marking entries
+                read/resolved. The Server Action enforces requireEditor
+                regardless of which role clicked through. */}
+            <AdminLink href="/admin/feedback">フィードバック</AdminLink>
             {user.isAdmin && <AdminLink href="/admin/about">JTPAとは</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/users">ユーザー</AdminLink>}
             <AdminLink href="/admin/help">ヘルプ</AdminLink>

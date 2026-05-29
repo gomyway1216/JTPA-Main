@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
+import { countNewFeedback } from "@/lib/data/feedback";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
@@ -13,10 +14,11 @@ export default async function AdminHomePage() {
   const user = await getSessionUser();
   if (!user?.isAdmin) redirect("/admin/guides");
 
-  const [pending, upcoming, pendingPosts] = await Promise.all([
+  const [pending, upcoming, pendingPosts, newFeedbackCount] = await Promise.all([
     listProjects({ status: "pending", limit: 5 }).catch(() => []),
     listEvents({ statuses: ["draft", "published"], limit: 5 }).catch(() => []),
     listPostsByStatus("pending", 5).catch(() => []),
+    countNewFeedback().catch(() => 0),
   ]);
   const profiles = await getPublicProfilesByUids([
     ...pending.map((p) => p.ownerUid),
@@ -85,6 +87,25 @@ export default async function AdminHomePage() {
             ))}
           </ul>
         )}
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold">
+            新規フィードバック ({newFeedbackCount})
+          </h2>
+          <Link
+            href="/admin/feedback"
+            className="text-sm text-blue-600 hover:underline"
+          >
+            triage →
+          </Link>
+        </div>
+        <p className="text-sm text-zinc-500 mt-2">
+          {newFeedbackCount === 0
+            ? "未対応のフィードバックはありません。"
+            : "/help から届いた要望・不具合報告です。"}
+        </p>
       </section>
 
       <section>
