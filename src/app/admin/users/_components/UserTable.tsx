@@ -157,7 +157,15 @@ export function UserTable({
                             editor
                           </span>
                         )}
-                        {!u.isAdmin && !u.isEditor && (
+                        {u.isContributor && (
+                          <span
+                            className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-900 dark:bg-sky-950 dark:text-sky-200"
+                            title="自分のガイドを審査なしで公開できる"
+                          >
+                            contributor
+                          </span>
+                        )}
+                        {!u.isAdmin && !u.isEditor && !u.isContributor && (
                           <span className="text-xs text-zinc-500">なし</span>
                         )}
                       </div>
@@ -167,6 +175,22 @@ export function UserTable({
                     </td>
                     <td className="py-2">
                       <div className="flex flex-wrap justify-end gap-1.5">
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() =>
+                            handleToggle(
+                              u.uid,
+                              "contributor",
+                              !u.isContributor,
+                            )
+                          }
+                          className="rounded border border-sky-300 px-2 py-1 text-xs text-sky-800 hover:bg-sky-50 disabled:opacity-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950"
+                        >
+                          {u.isContributor
+                            ? "contributor 剥奪"
+                            : "contributor 付与"}
+                        </button>
                         <button
                           type="button"
                           disabled={isPending}

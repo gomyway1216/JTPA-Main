@@ -45,6 +45,7 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       photoURL: (decoded.picture as string | undefined) ?? null,
       isAdmin: decoded.admin === true,
       isEditor: decoded.editor === true,
+      isContributor: decoded.contributor === true,
     };
   } catch {
     return null;
@@ -69,4 +70,25 @@ export async function requireEditor(): Promise<SessionUser> {
   const user = await requireUser();
   if (!user.isAdmin && !user.isEditor) throw new Error("FORBIDDEN");
   return user;
+}
+
+// Allows admin OR editor OR contributor. Use for paths where any user who
+// has earned the right to self-publish guides (without admin review)
+// should be allowed through. Strictly more permissive than
+// `requireEditor` — contributors can edit/publish their own guides but
+// not other people's, so the caller still has to enforce ownership.
+export async function requireContributor(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!user.isAdmin && !user.isEditor && !user.isContributor) {
+    throw new Error("FORBIDDEN");
+  }
+  return user;
+}
+
+// Convenience predicate for code paths that just want to know "is this
+// user trusted enough to skip the review queue?" without throwing.
+// Mirrors the OR semantics of `requireContributor`.
+export function isTrustedAuthor(user: SessionUser | null): boolean {
+  if (!user) return false;
+  return user.isAdmin || user.isEditor || user.isContributor;
 }

@@ -254,9 +254,9 @@ One ballot per voter. Doc existence == voted.
 
 …all inside a transaction so the denormalized counters never drift.
 
-## `guides/{guideId}` (Curated help articles)
+## `guides/{guideId}` (Help articles, community + curated)
 
-Admin- and editor-curated reference docs. Distinct from `qa` (open community) and `posts` (community blog with review queue).
+Originally admin/editor-only curated reference docs. Now also accepts community submissions on the same moderation shape as `posts`: anyone signed in can write a draft or submit for review; admins approve before publish; first approval auto-promotes the author to `contributor` so their next guide skips the queue.
 
 | Field | Type | Notes |
 |---|---|---|
@@ -264,15 +264,26 @@ Admin- and editor-curated reference docs. Distinct from `qa` (open community) an
 | `title` | string | |
 | `body` | string | Markdown |
 | `tags` | string[] | |
-| `status` | enum | `"draft" \| "published"` |
-| `order` | number | Manual sort key for the `/guide` list; lower = earlier |
-| `likeCount` | number? | |
-| `createdBy`, `updatedBy` | `{ uid, displayName, email }` | Last editor identity, denormalized |
+| `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
+| `order` | number | Manual sort key for the `/guide` list; lower = earlier. Admin / editor set this during review; the public submission form hides the knob from non-curators. |
+| `authorUid` | string? | Denormalized author identity for queries like `listMyGuides`. Optional on legacy guides created before the community-submission flow — read paths fall back to `createdBy.uid`. |
+| `authorName`, `authorPhotoURL` | string / string \| null | Denormalized from auth for display. Optional on legacy guides. |
+| `reviewerUid` | string \| null | Set by admin on decision. Null for guides authored directly by admin / editor / contributor (which skip review). |
+| `reviewNote` | string? | Visible to author if rejected. Cleared on subsequent approval. |
+| `publishedAt` | Timestamp? | Set when the guide first transitioned to `published` — same first-publish-detection trick as `posts` so re-publishing an edited guide doesn't overwrite the original date. |
+| `submittedAt`, `reviewedAt?` | Timestamp? | Mirrors `posts`. Set when the author submits for review and when an admin decides. |
+| `likeCount` | number? | Denormalized; missing = 0 on legacy docs |
+| `createdBy`, `updatedBy` | `{ uid, displayName, email }` | Last writer identity (preserved for legacy compat — the new `authorUid` field is the canonical "who owns this"). |
 | `createdAt`, `updatedAt` | Timestamp | |
 
-**Rules**: public read on `published`; write restricted to admin + editor.
+**Rules** (full block in `firestore.rules`, summarized):
+- **Read**: published is public. Drafts / pending / rejected / archived: visible to admin / editor / author.
+- **Create**: admin / editor may land in any status. Contributors may create their own with `draft` / `pending` / `published`. Plain signed-in users may create their own with `draft` / `pending` only — `reviewerUid` must start null so authors can't fake a reviewer.
+- **Update**: admin / editor may change anything. Author may edit their own back to `draft` / `pending` (or `published` if they're a contributor / admin / editor). `authorUid` and `reviewerUid` are pinned for non-admin/editor updates.
+- **Delete**: admin / editor / author of record.
+- `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern above.
 
-Comments + likes subcollections behave the same as posts.
+The `decideGuide` Server Action (`src/app/actions/guides.ts`) also writes the `contributor: true` Firebase Auth custom claim on the author's user record when approving a guide from someone who isn't already trusted (admin / editor / contributor). The promotion is idempotent and best-effort: the guide approval is the source of truth, and if the claim write fails the admin can flip it manually from `/admin/users` later.
 
 ## Comment + like subcollections (shared shape)
 
@@ -366,7 +377,8 @@ events/{anything}/...                   cover images (admin write, public read; 
 presentations/{eventId}/{uid}/...       slide files (presenter or admin write, public read)
 projects/{uid}/...                      project thumbnails + screenshots (owner write, public read)
 posts/{uid}/...                         blog cover images + inline body images (author write, public read)
-guides/{guideId}/...                    guide body images (admin or editor write, public read)
+guides/{guideId}/{uid}/...              guide body images (uploader-only write, public read; admin/editor can write anywhere)
+guides/{guideId}/...                    legacy guide image path (admin/editor-only) — kept for existing assets
 qa/{qaId}/{uid}/...                     Q&A body images (uploader-only write, public read)
 users/{uid}/...                         avatars (self write, public read)
 ```

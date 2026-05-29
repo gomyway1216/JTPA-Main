@@ -32,12 +32,12 @@ export default function AdminHelpPage() {
       <nav className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
         <p className="mb-2 font-medium">目次</p>
         <ul className="grid gap-1 sm:grid-cols-2">
-          <li><a href="#roles" className="text-blue-600 hover:underline">権限 (admin / editor)</a></li>
+          <li><a href="#roles" className="text-blue-600 hover:underline">権限 (admin / editor / contributor)</a></li>
           <li><a href="#events" className="text-blue-600 hover:underline">イベント運営</a></li>
           <li><a href="#attendees" className="text-blue-600 hover:underline">参加者の確認とCSV出力</a></li>
           <li><a href="#projects" className="text-blue-600 hover:underline">ショーケース承認</a></li>
           <li><a href="#posts" className="text-blue-600 hover:underline">ブログ記事の審査</a></li>
-          <li><a href="#guides" className="text-blue-600 hover:underline">ガイド (editor 可)</a></li>
+          <li><a href="#guides" className="text-blue-600 hover:underline">ガイドの審査と contributor 自動付与</a></li>
           <li><a href="#about" className="text-blue-600 hover:underline">「JTPAとは」の編集</a></li>
           <li><a href="#users" className="text-blue-600 hover:underline">ユーザーと権限付与</a></li>
           <li><a href="#deploy" className="text-blue-600 hover:underline">デプロイ確認</a></li>
@@ -46,20 +46,23 @@ export default function AdminHelpPage() {
 
       <Section id="roles" title="権限の仕組み">
         <p>
-          ログインユーザーには <code>admin</code> / <code>editor</code> の
-          いずれかまたは両方の権限が付与されます。これらは Firebase Auth の
-          Custom Claim として保存され、ログインしなおさないと反映されません。
+          ログインユーザーには <code>admin</code> / <code>editor</code> /{" "}
+          <code>contributor</code>{" "}
+          のいずれか (または複数の組み合わせ) が付与されます。これらは Firebase
+          Auth の Custom Claim として保存され、ログインしなおさないと反映されません。
         </p>
         <Table headers={["権限", "できること"]}>
           <Row cells={["admin", "全機能 (イベント・プロジェクト・記事・参加者・ガイド・About・ユーザー権限管理)"]} />
-          <Row cells={["editor", "ガイドの作成・編集・公開・削除のみ"]} />
-          <Row cells={["(なし)", "一般メンバーと同じ: RSVP・投稿・コメント・いいね"]} />
+          <Row cells={["editor", "他人のものを含む全ガイドの作成・編集・公開・削除 (キュレーター職)"]} />
+          <Row cells={["contributor", "自分のガイドを審査なしで公開・編集・削除 (信頼される投稿者)"]} />
+          <Row cells={["(なし)", "一般メンバー: RSVP・投稿 (ガイドは初回 admin 審査)・コメント・いいね"]} />
         </Table>
         <Callout>
-          editor は admin の部分集合です。editor が <code>/admin</code> 配下の
-          管理画面を直接開いた場合は <code>/admin/guides</code> に
-          リダイレクトされます (例外: ガイド管理画面とこのヘルプページのみ
-          editor も閲覧可)。
+          editor / contributor は admin の部分集合です。editor が{" "}
+          <code>/admin</code> 配下の管理画面を直接開いた場合は{" "}
+          <code>/admin/guides</code> にリダイレクトされます (例外: ガイド管理画面と
+          このヘルプページのみ editor も閲覧可)。 contributor 権限は{" "}
+          <code>/admin</code> へのアクセスを与えません — あくまで「自分のガイドの自己公開」だけです。
         </Callout>
       </Section>
 
@@ -158,16 +161,48 @@ export default function AdminHelpPage() {
         </ul>
       </Section>
 
-      <Section id="guides" title="ガイド (editor 可)">
+      <Section id="guides" title="ガイドの審査と contributor 自動付与">
         <p>
           <Link href="/admin/guides" className="text-blue-600 hover:underline">/admin/guides</Link>{" "}
-          で AI ツールの解説などキュレーションされた記事を管理します。
-          ここは <strong>editor 権限のユーザーも編集可能</strong>な唯一の管理画面です。
+          で AI ツールの解説などのガイドを管理します。 ここは{" "}
+          <strong>editor 権限のユーザーも編集可能</strong>な唯一の管理画面です。
         </p>
+        <p>
+          コミュニティ投稿のガイドは <strong>審査待ち (pending)</strong>{" "}
+          として上部に並びます。各カードからプレビュー・編集・コメント記入ができ、
+          「公開」または「却下」ボタンで決定します。
+        </p>
+        <Step n={1} title="プレビュー / 内容を編集">
+          投稿者が書いた内容を確認。typo 修正が必要なら admin 側で先に編集してから公開して構いません (editor 権限のユーザーも同じ動線で編集可)。
+        </Step>
+        <Step n={2} title="任意でコメント">
+          却下する場合のフィードバックを記入。承認時にはコメントはメールに含まれません。
+        </Step>
+        <Step n={3} title="公開 (+ contributor 付与)">
+          ボタンを押すとガイドが公開され、投稿者には{" "}
+          <code>contributor: true</code>{" "}
+          のカスタムクレームが自動付与されます (二度目以降は審査不要に)。
+          投稿者は一度サインアウト → 再ログインで権限が有効になります。
+        </Step>
+        <Step n={4} title="却下">
+          コメント付きで却下できます。投稿者は{" "}
+          <code>/my/guides</code>{" "}
+          で却下理由を確認し、内容を修正して再投稿できます。
+        </Step>
         <ul className="list-disc pl-5 space-y-1">
-          <li><code>order</code> フィールドで <code>/guide</code> での表示順を制御 (小さい順)</li>
-          <li>下書き状態で保存して後で公開可能</li>
+          <li><code>order</code> フィールドで <code>/guide</code> での表示順を制御 (小さい順)。 admin/editor のみが触れる項目。</li>
+          <li>下書き (<code>draft</code>) や公開済み (<code>published</code>) も同じ管理画面から編集可能</li>
           <li>Markdown は GFM (表・コードブロック・タスクリスト) 対応、コードはシンタックスハイライト</li>
+          <li>
+            contributor を悪用するユーザーが現れた場合は{" "}
+            <Link
+              href="/admin/users"
+              className="text-blue-600 hover:underline"
+            >
+              /admin/users
+            </Link>{" "}
+            の「contributor 剥奪」で降格できます。既存の公開ガイドはそのまま残ります。
+          </li>
         </ul>
       </Section>
 

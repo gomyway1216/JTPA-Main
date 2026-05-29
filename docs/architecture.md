@@ -84,7 +84,7 @@ The full set of upload paths:
 | `events/{eventId}/...` | Event cover images (up to 10MB, image only) | Admin |
 | `projects/{uid}/...` | Project thumbnail + screenshots (up to 5MB each, image only) | Owner (uid match) or admin |
 | `posts/{uid}/...` | Blog cover image + inline body images (up to 5MB each, image only) | Author (uid match) or admin |
-| `guides/{guideId}/...` | Guide body images (up to 5MB each, image only) | Admin or editor |
+| `guides/{guideId}/{uid}/...` | Guide body images (up to 5MB each, image only) | Uploader (uid match), admin, or editor |
 | `qa/{qaId}/{uid}/...` | Q&A body images (up to 5MB each, image only) | Uploader (uid match) or admin |
 | `users/{uid}/...` | User avatar (up to 2MB, image only) | Self only |
 
