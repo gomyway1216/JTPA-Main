@@ -51,6 +51,23 @@ export default async function AboutPage() {
           がお手伝いしています。
         </p>
         {/*
+          Light call-to-action pointing at the /help feedback form for
+          questions / bug reports / suggestions. Kept inside the
+          maintainer block (rather than spun into its own section) so
+          it reads as "the person who maintains this is reachable"
+          rather than a generic "contact us" panel.
+        */}
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          質問・不具合報告・改善案などは{" "}
+          <Link
+            href="/help#feedback"
+            className="text-blue-600 hover:underline"
+          >
+            ヘルプの「要望・不具合報告」
+          </Link>{" "}
+          からお気軽にどうぞ。
+        </p>
+        {/*
           Quiet source-code link. Not a feature — just discoverability
           for anyone curious "who wrote this / how does it work". Keeps
           the maintainer attribution honest (the work IS in the open)
