@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPoll } from "@/lib/data/poll";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ export default async function PollListPage() {
       return [];
     }),
   ]);
+  const authorProfiles = await getPublicProfilesByUids(
+    items.map((p) => p.authorUid),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
@@ -74,11 +78,7 @@ export default async function PollListPage() {
                   </Link>
                 </h2>
                 <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge
-                    name={p.authorName}
-                    photoURL={p.authorPhotoURL}
-                    uid={p.authorUid}
-                  />
+                  <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
                   <span>
                     · {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票
                   </span>

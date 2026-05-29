@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,9 @@ export default async function QaListPage() {
       return [];
     }),
   ]);
+  const authorProfiles = await getPublicProfilesByUids(
+    items.map((q) => q.authorUid),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
@@ -72,11 +76,7 @@ export default async function QaListPage() {
                 </Link>
               </h2>
               <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                <AuthorBadge
-                  name={q.authorName}
-                  photoURL={q.authorPhotoURL}
-                  uid={q.authorUid}
-                />
+                <AuthorBadge profile={authorProfiles.get(q.authorUid) ?? null} />
                 <span>· {formatDate(q.createdAt)}</span>
                 {(q.likeCount ?? 0) > 0 && (
                   <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>

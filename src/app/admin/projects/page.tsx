@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { ProjectReviewCard } from "@/app/admin/projects/_components/ProjectReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listProjects } from "@/lib/data/projects";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,15 @@ export default async function AdminProjectsPage() {
     listProjects({ status: "approved", limit: 50 }).catch(() => []),
     listProjects({ status: "rejected", limit: 20 }).catch(() => []),
   ]);
+  const ownerProfiles = await getPublicProfilesByUids([
+    ...pending.map((p) => p.ownerUid),
+    ...approved.map((p) => p.ownerUid),
+    ...rejected.map((p) => p.ownerUid),
+  ]);
+  const labelFor = (uid: string, fallback: string) => {
+    const prof = ownerProfiles.get(uid);
+    return prof ? `@${prof.username}` : fallback;
+  };
 
   return (
     <div className="space-y-8">
@@ -26,7 +36,13 @@ export default async function AdminProjectsPage() {
           {pending.length === 0 ? (
             <p className="text-sm text-zinc-500">承認待ちはありません。</p>
           ) : (
-            pending.map((p) => <ProjectReviewCard key={p.id} project={p} />)
+            pending.map((p) => (
+              <ProjectReviewCard
+                key={p.id}
+                project={p}
+                ownerProfile={ownerProfiles.get(p.ownerUid) ?? null}
+              />
+            ))
           )}
         </div>
       </section>
@@ -37,7 +53,9 @@ export default async function AdminProjectsPage() {
           {approved.map((p) => (
             <li key={p.id} className="py-2 text-sm flex justify-between gap-3">
               <span>{p.title}</span>
-              <span className="text-zinc-500">{p.ownerName}</span>
+              <span className="text-zinc-500">
+                {labelFor(p.ownerUid, p.ownerName)}
+              </span>
             </li>
           ))}
         </ul>
@@ -50,7 +68,9 @@ export default async function AdminProjectsPage() {
             {rejected.map((p) => (
               <li key={p.id} className="py-2 text-sm flex justify-between gap-3">
                 <span>{p.title}</span>
-                <span className="text-zinc-500">{p.ownerName}</span>
+                <span className="text-zinc-500">
+                {labelFor(p.ownerUid, p.ownerName)}
+              </span>
               </li>
             ))}
           </ul>

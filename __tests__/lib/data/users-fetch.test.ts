@@ -77,24 +77,37 @@ describe("getPublicProfile", () => {
         uid: "uid-1",
         email: "secret@example.com",
         displayName: "Alice",
+        username: "alice",
         photoURL: "https://x/a.png",
         affiliation: "Corp",
         bio: "hi",
         affiliationPublic: false,
         bioPublic: true,
+        // fullNamePublic intentionally false here so the snapshot keeps
+        // exercising the "private real name" path; the link bag is
+        // empty so we also confirm the projection emits `links: {}`
+        // rather than omitting the field.
+        fullNamePublic: false,
+        links: {},
         emailOptIn: true,
       }),
     });
     const out = await getPublicProfile("uid-1");
     expect(out).toEqual({
       uid: "uid-1",
-      displayName: "Alice",
+      username: "alice",
+      fullName: null,
       photoURL: "https://x/a.png",
       affiliation: null,
       bio: "hi",
+      links: {},
     });
     expect(out).not.toHaveProperty("email");
     expect(out).not.toHaveProperty("affiliationPublic");
+    expect(out).not.toHaveProperty("fullNamePublic");
     expect(out).not.toHaveProperty("emailOptIn");
+    // displayName is never on the public projection — `fullName` is
+    // the gated field, and it's null when the user hasn't opted in.
+    expect(out).not.toHaveProperty("displayName");
   });
 });

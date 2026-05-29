@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getProjectBySlug } from "@/lib/data/projects";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
 
@@ -38,19 +39,22 @@ export default async function ProjectDetailPage({
     console.error("Failed to load project like state:", err);
     return new Set<string>();
   });
+  // Batched profile read for the project owner + every commenter.
+  const profilesByUid = await getPublicProfilesByUids([
+    project.ownerUid,
+    ...comments.map((c) => c.authorUid),
+  ]);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{project.title}</h1>
-        <p className="text-sm text-zinc-500">
-          投稿者:{" "}
-          <Link
-            href={`/u/${project.ownerUid}`}
-            className="hover:text-zinc-700 hover:underline dark:hover:text-zinc-300"
-          >
-            {project.ownerName}
-          </Link>
+        <p className="flex items-center gap-1.5 text-sm text-zinc-500">
+          <span>投稿者:</span>
+          <AuthorBadge
+            profile={profilesByUid.get(project.ownerUid) ?? null}
+            size="md"
+          />
         </p>
         {project.tags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
@@ -162,6 +166,7 @@ export default async function ProjectDetailPage({
         parentSlug={project.slug}
         initialComments={comments}
         initialLikedKeys={[...likedSet]}
+        profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}
       />
     </article>

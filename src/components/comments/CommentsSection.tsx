@@ -12,7 +12,9 @@ import {
   primaryButtonClassSm,
 } from "@/components/forms/styles";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { parentRoutePrefix } from "@/lib/comments-parent";
+import type { PublicProfile } from "@/lib/data/users";
 import type {
   CommentDoc,
   CommentParentType,
@@ -31,6 +33,13 @@ interface Props {
   // are either `RECORD_LIKE_KEY` or `comment:{commentId}`. Empty for
   // anonymous visitors.
   initialLikedKeys: string[];
+  // Map of authorUid → current public profile, prefetched by the parent
+  // server component for every uid that appears in `initialComments`.
+  // Passed as a plain object (not a Map) because Map doesn't survive the
+  // RSC→Client serialization boundary. A missing entry means the
+  // commenter's user doc is gone (deleted account) — AuthorBadge
+  // handles that by rendering an unlinked "@unknown" placeholder.
+  profilesByUid: Record<string, PublicProfile>;
   user: SessionUser | null;
 }
 
@@ -40,6 +49,7 @@ export function CommentsSection({
   parentSlug,
   initialComments,
   initialLikedKeys,
+  profilesByUid,
   user,
 }: Props) {
   const [comments, setComments] = useState<CommentDoc[]>(initialComments);
@@ -183,15 +193,11 @@ export function CommentsSection({
             )}
           </header>
           {repliesTo && (
-            <p className="mt-1 text-xs text-zinc-500">
-              Re:{" "}
-              <Link
-                href={`/u/${repliesTo.authorUid}`}
-                className="font-medium hover:underline"
-              >
-                @{repliesTo.authorName}
-              </Link>
-            </p>
+            <ReplyToPrefix
+              uid={repliesTo.authorUid}
+              profile={profilesByUid[repliesTo.authorUid] ?? null}
+              fallbackName={repliesTo.authorName}
+            />
           )}
           <p className="mt-2 text-sm italic text-zinc-500">
             このコメントは削除されました
@@ -208,20 +214,10 @@ export function CommentsSection({
       <article className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
-            <Link
-              href={`/u/${c.authorUid}`}
-              className="flex items-center gap-2 hover:underline"
-            >
-              {c.authorPhotoURL && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
-                  src={c.authorPhotoURL}
-                  alt=""
-                  className="h-6 w-6 rounded-full object-cover"
-                />
-              )}
-              <span className="font-medium">{c.authorName}</span>
-            </Link>
+            <AuthorBadge
+              profile={profilesByUid[c.authorUid] ?? null}
+              size="md"
+            />
             <span className="text-xs text-zinc-500">
               {formatDateTime(c.createdAt)}
             </span>
@@ -239,15 +235,11 @@ export function CommentsSection({
         </header>
 
         {repliesTo && (
-          <p className="mt-1 text-xs text-zinc-500">
-            Re:{" "}
-            <Link
-              href={`/u/${repliesTo.authorUid}`}
-              className="font-medium hover:underline"
-            >
-              @{repliesTo.authorName}
-            </Link>
-          </p>
+          <ReplyToPrefix
+            uid={repliesTo.authorUid}
+            profile={profilesByUid[repliesTo.authorUid] ?? null}
+            fallbackName={repliesTo.authorName}
+          />
         )}
 
         <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
@@ -298,7 +290,7 @@ export function CommentsSection({
               onChange={(e) => setReplyBody(e.target.value)}
               disabled={pending}
               autoFocus
-              placeholder={`@${c.authorName} への返信 (最大 2000 文字)`}
+              placeholder={`@${profilesByUid[c.authorUid]?.username ?? c.authorName} への返信 (最大 2000 文字)`}
               className={inputClass}
             />
             <div className="flex items-center justify-between gap-3">
@@ -393,5 +385,30 @@ export function CommentsSection({
         )}
       </div>
     </section>
+  );
+}
+
+// Small "Re: @author" prefix used above replies. Lives outside the main
+// component so it doesn't re-create on every render; takes both the
+// looked-up profile (preferred) and the comment's denormalized
+// `authorName` as a last-resort fallback for the case where a user doc
+// was deleted but the comment doc still carries the historical name.
+function ReplyToPrefix({
+  uid,
+  profile,
+  fallbackName,
+}: {
+  uid: string;
+  profile: PublicProfile | null;
+  fallbackName: string;
+}) {
+  const label = profile?.username ?? fallbackName ?? "unknown";
+  return (
+    <p className="mt-1 text-xs text-zinc-500">
+      Re:{" "}
+      <Link href={`/u/${uid}`} className="font-medium hover:underline">
+        @{label}
+      </Link>
+    </p>
   );
 }

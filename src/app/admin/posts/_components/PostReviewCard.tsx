@@ -5,10 +5,22 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { decidePost } from "@/app/actions/posts";
+import type { PublicProfile } from "@/lib/data/users";
 import type { PostDoc } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
-export function PostReviewCard({ post }: { post: PostDoc }) {
+export function PostReviewCard({
+  post,
+  authorProfile,
+}: {
+  post: PostDoc;
+  // Resolved server-side by the parent admin page so this card can show
+  // the author's current @username instead of the denormalized
+  // `post.authorName` snapshot. `null` means the user doc is gone — we
+  // fall back to the denormalized name so the review queue still
+  // identifies who submitted the post.
+  authorProfile: PublicProfile | null;
+}) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -43,7 +55,9 @@ export function PostReviewCard({ post }: { post: PostDoc }) {
         <div className="min-w-0 flex-1">
           <h3 className="text-lg font-semibold">{post.title}</h3>
           <p className="text-xs text-zinc-500">
-            {post.authorName} · 投稿 {formatDate(post.submittedAt)}
+            {authorProfile ? `@${authorProfile.username}` : post.authorName}
+            {" · 投稿 "}
+            {formatDate(post.submittedAt)}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 text-xs">

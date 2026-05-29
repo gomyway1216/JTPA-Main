@@ -9,6 +9,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getQaBySlug } from "@/lib/data/qa";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +63,13 @@ export default async function QaDetailPage({
     console.error("Failed to load Q&A like state:", err);
     return new Set<string>();
   });
+  // Single batched read for the Q&A author + every commenter — passed
+  // to AuthorBadge here and serialized into a plain object for the
+  // (Client) CommentsSection (Map doesn't cross the RSC boundary).
+  const profilesByUid = await getPublicProfilesByUids([
+    qa.authorUid,
+    ...comments.map((c) => c.authorUid),
+  ]);
 
   const canEdit = isAuthorOrAdmin;
 
@@ -83,9 +91,7 @@ export default async function QaDetailPage({
         <h1 className="text-3xl font-bold tracking-tight">{qa.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
-            name={qa.authorName}
-            photoURL={qa.authorPhotoURL}
-            uid={qa.authorUid}
+            profile={profilesByUid.get(qa.authorUid) ?? null}
             size="md"
           />
           <span>· {formatDate(qa.createdAt)}</span>
@@ -132,6 +138,7 @@ export default async function QaDetailPage({
         parentSlug={qa.slug}
         initialComments={comments}
         initialLikedKeys={[...likedSet]}
+        profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}
       />
     </article>
