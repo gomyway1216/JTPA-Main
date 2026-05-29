@@ -52,23 +52,31 @@ firebase use jtpa-main
 firebase deploy --only firestore,storage
 ```
 
-## 4. 管理者・エディタを作る (Custom Claim を付与)
+## 4. ロールを付与する (Custom Claim)
 
 対象アカウントで一度サインインしてから:
 
 ```bash
-# admin 付与 / 解除
+# admin 付与 / 解除 (全権限)
 npm run set-admin -- uwyudai@gmail.com
 npm run set-admin -- uwyudai@gmail.com -- --revoke
 
-# editor 付与 / 解除 (ガイド執筆者向け、admin 未満の権限)
+# editor 付与 / 解除 (他人のガイドも編集できるキュレーター)
 npm run set-editor -- editor@example.com
 npm run set-editor -- editor@example.com -- --revoke
+
+# contributor 付与 / 解除 (自分のガイドを審査なしで公開できる)
+npm run set-contributor -- author@example.com
+npm run set-contributor -- author@example.com -- --revoke
 ```
 
 権限反映には一度ログアウト→再ログインが必要。
 admin がいる場合は `/admin/users` の UI からロール付与・剥奪もできるので、
 CLI は最初の bootstrap だけで OK。
+
+`contributor` は普段は手動で付与する必要はなく、コミュニティ投稿者がガイドを
+1本投稿 → admin が承認 した時点で自動的に付与されます。詳細は
+[`docs/admin.md`](docs/admin.md#roles) を参照。
 
 ## 5. Firebase App Hosting へのデプロイ
 

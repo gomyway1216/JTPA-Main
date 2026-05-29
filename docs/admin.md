@@ -22,6 +22,17 @@ The three role claims compose independently — a user can hold `editor` without
 
 Q&A, polls, comments, and guides authored by admin/editor/contributor go live immediately (no review queue). Admins can hard-delete abusive comments or flip a Q&A / poll doc to `archived` after the fact. Authors can soft-delete their own comments.
 
+### Why three tiers?
+
+The contributor tier exists to make community guide submissions self-sustaining without conflating the trust required to *publish your own content* with the trust required to *edit other people's content*. Concretely:
+
+- **Plain user → contributor** is "this person showed up and wrote something good once." The cost of getting it wrong is small (admin can revoke + revert).
+- **Plain user → editor** is "this person can edit anyone's guide, including the curated landing pages." Much higher trust bar; not something we want to auto-grant.
+
+If we had only `editor`, auto-promotion would either (a) hand out too much power on every first approval, or (b) never happen, leaving every community guide stuck behind admin review forever. The middle tier lets admin work be O(unique contributors) instead of O(submissions) — each new author needs one approval, then they self-serve.
+
+If an editor leaves or stops curating, demote them to `contributor` at `/admin/users` to keep their self-publish flow working without the cross-author edit power.
+
 ## Granting roles (preferred: admin UI)
 
 `/admin/users` lists every user with their current roles and last-login time. Admins can:
