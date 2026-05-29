@@ -41,14 +41,31 @@ export default async function AboutPage() {
           メンテナー
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
-          このサイトは{" "}
+          サイトの開発・運用は{" "}
           <Link
             href={`/u/${MAINTAINER_UID}`}
             className="text-blue-600 hover:underline"
           >
             Yudai Yaguchi
           </Link>{" "}
-          が開発・運用しています。
+          がお手伝いしています。
+        </p>
+        {/*
+          Quiet source-code link. Not a feature — just discoverability
+          for anyone curious "who wrote this / how does it work". Keeps
+          the maintainer attribution honest (the work IS in the open)
+          without leaning self-promotional.
+        */}
+        <p className="mt-2 text-xs text-zinc-500">
+          ソースコード:{" "}
+          <a
+            href="https://github.com/gomyway1216/JTPA-Main"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="hover:underline"
+          >
+            github.com/gomyway1216/JTPA-Main →
+          </a>
         </p>
       </section>
     </div>
