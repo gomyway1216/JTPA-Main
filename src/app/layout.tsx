@@ -37,7 +37,13 @@ export default async function RootLayout({
       // bounce on macOS / iOS, or browser autofill bars — leaks the
       // default white html background through, which reads as a stray
       // light strip at the bottom of the page in dark mode.
-      className={`${geistSans.variable} ${geistMono.variable} h-full bg-zinc-50 antialiased dark:bg-zinc-950`}
+      //
+      // `bg-background` is backed by the `--background` CSS var (defined
+      // in globals.css and exposed through `@theme inline` as the
+      // `background` color token), so both html and body track the same
+      // single source of truth — any future palette tweak propagates here
+      // without manually re-syncing two hardcoded color stops.
+      className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
       <head>
@@ -47,7 +53,13 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body
-        className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100"
+        // Body matches <html> via `bg-background` so there's no 1-px
+        // color drift between the two layers — the whole point of also
+        // painting <html> was to plug visual gaps, and that only holds
+        // if both surfaces resolve to the exact same hex. Text colors
+        // stay on the zinc-900/100 pair (intentionally a touch softer
+        // than the pure-ink `--foreground`).
+        className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100"
         suppressHydrationWarning
       >
         <ThemeProvider>
