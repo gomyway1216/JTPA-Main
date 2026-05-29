@@ -55,6 +55,17 @@ Requirements:
 
 Same sign-out-and-back-in rule applies.
 
+## Notification recipients (who gets the admin emails)
+
+Every admin notification email (new project / blog post / guide submission) is sent to the union of two sources:
+
+1. **Every Firebase Auth user with `admin: true` or `editor: true`** — pulled live each time a notification fires, so granting / revoking roles at `/admin/users` immediately changes who receives notifications. No code change or env var edit needed.
+2. **The `ADMIN_NOTIFICATION_EMAILS` env var** — comma-separated fallback for people who don't have an app account (external ops contact, a generic ops@ alias, etc.). Edit at App Hosting Console → Environment variables. See [`docs/deployment.md`](deployment.md#environment-variables).
+
+`contributor` is intentionally not on the list — contributors can self-publish their own guides but they're not moderators, so they don't get paged about other people's pending submissions.
+
+If both sources are empty, the notification is silently dropped (no half-formed mail doc that nobody can receive).
+
 ## Admin pages map
 
 | URL | Purpose | Who |

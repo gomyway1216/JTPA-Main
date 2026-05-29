@@ -41,7 +41,7 @@ Three sources, in order of precedence at runtime:
 | Source | Used for | Visibility |
 |---|---|---|
 | `apphosting.yaml` `env:` | Static config (currently none beyond comments) | Checked into git |
-| App Hosting Console UI → Environment variables | `NEXT_PUBLIC_FIREBASE_*`, `ADMIN_NOTIFICATION_EMAILS` | Not in git |
+| App Hosting Console UI → Environment variables | `NEXT_PUBLIC_FIREBASE_*`, `ADMIN_NOTIFICATION_EMAILS` (optional fallback — see [admin.md](admin.md#notification-recipients-who-gets-the-admin-emails); admin / editor users from Auth are always auto-included) | Not in git |
 | Google Secret Manager (`secret:` ref in `apphosting.yaml`) | True secrets — currently NONE used by app code | Not in git, IAM-gated |
 
 The `NEXT_PUBLIC_FIREBASE_*` values used to be in `apphosting.yaml` but were moved to the Console UI in PR #5 to keep the repo source-code free of identifiers (even though they end up in the client bundle anyway). This is a soft hardening — adjust if it ever gets in the way.

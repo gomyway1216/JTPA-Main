@@ -1,6 +1,6 @@
 import "server-only";
 
-import { adminDb } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
 // The Firebase "Trigger Email" extension watches a configured collection
 // (default: `mail`) and sends queued messages via SMTP/SendGrid/Resend.
@@ -40,15 +40,104 @@ const ADMIN_NOTIFICATION_RECIPIENTS = (
   .map((s) => s.trim())
   .filter(Boolean);
 
+// Returns the recipient list for "admin" notifications (new project / blog
+// post / guide submission). Two sources are merged, with dedup:
+//
+// 1. `ADMIN_NOTIFICATION_EMAILS` env var — fallback for people without an
+//    app account (external ops contact, generic alias, etc.). Set in App
+//    Hosting Console → Environment variables.
+// 2. Every Firebase Auth user with `admin: true` or `editor: true` custom
+//    claim — so role changes at `/admin/users` immediately update who
+//    receives notifications, with no env var edit needed.
+//
+// `contributor: true` is intentionally NOT included: contributors are
+// trusted authors for their OWN guides, but they're not moderators and
+// shouldn't be paged about other people's pending submissions.
+//
+// Caching: the resolved list is memoized for ADMIN_RECIPIENT_CACHE_TTL_MS
+// to keep notification bursts (e.g. an admin approving 5 pending guides
+// in a row) from hammering `listUsers()`. 5 minutes is short enough that
+// a freshly-granted role propagates quickly — recipients need to
+// sign out + back in for the claim to flow into their session cookie
+// anyway, which takes ~1 minute, so the cache rarely blocks a legit
+// notification. The cache only stores SUCCESSFUL walks; transient
+// failures fall back to env var without poisoning the cache.
+//
+// Partial-failure semantics: Auth emails are buffered separately and
+// merged into the result only after the full pagination walk succeeds.
+// A mid-walk listUsers() failure returns the env var alone, never the
+// env var + a partial Auth subset (which would be impossible for the
+// caller to distinguish from a complete list).
+//
+// Best-effort: if the Auth listUsers walk fails entirely (transient API
+// error, permission issue), we log and fall back to whatever env var
+// recipients exist. The caller never throws — a missed notification is
+// a degraded state, not a broken Server Action.
+const ADMIN_RECIPIENT_CACHE_TTL_MS = 5 * 60 * 1000;
+let cachedAdminRecipients: { value: string[]; expiresAt: number } | null = null;
+
+export async function resolveAdminRecipients(): Promise<string[]> {
+  const now = Date.now();
+  if (cachedAdminRecipients && cachedAdminRecipients.expiresAt > now) {
+    return cachedAdminRecipients.value;
+  }
+
+  // Seed the result Set with the env var entries, lowercased. SMTP
+  // treats addresses as case-insensitive, but the Set itself compares
+  // strings case-sensitively — without normalizing we'd happily keep
+  // both "Admin@example.com" and "admin@example.com" in the recipient
+  // list and the user would receive duplicate copies of every alert.
+  const envSet = new Set<string>(
+    ADMIN_NOTIFICATION_RECIPIENTS.map((email) => email.toLowerCase()),
+  );
+
+  // Buffer Auth emails out-of-band so a partial pagination walk can be
+  // discarded wholesale on failure (see "Partial-failure semantics"
+  // above). Only after the loop exits cleanly do we fold them into the
+  // env set.
+  const authEmails: string[] = [];
+  try {
+    let pageToken: string | undefined;
+    do {
+      const page = await adminAuth().listUsers(1000, pageToken);
+      for (const user of page.users) {
+        const claims = (user.customClaims ?? {}) as Record<string, unknown>;
+        if (claims.admin === true || claims.editor === true) {
+          if (user.email) authEmails.push(user.email.toLowerCase());
+        }
+      }
+      pageToken = page.pageToken;
+    } while (pageToken);
+  } catch (err) {
+    console.warn(
+      "Failed to walk Auth users for admin recipients; falling back to env var:",
+      err,
+    );
+    // Failure path: env-only result, NOT cached. Try again next call —
+    // a transient `listUsers` outage shouldn't lock us into degraded
+    // recipients for the next 5 minutes.
+    return Array.from(envSet);
+  }
+
+  for (const email of authEmails) envSet.add(email);
+  const result = Array.from(envSet);
+  cachedAdminRecipients = {
+    value: result,
+    expiresAt: now + ADMIN_RECIPIENT_CACHE_TTL_MS,
+  };
+  return result;
+}
+
 export async function enqueueAdminNewProjectNotification(opts: {
   projectId: string;
   title: string;
   ownerName: string;
   ownerEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規プロジェクト投稿: ${opts.title}`,
       text: `${opts.ownerName} (${opts.ownerEmail}) が新しいプロジェクトを投稿しました。\n\nタイトル: ${opts.title}\n\n承認: /admin/projects/pending`,
@@ -106,9 +195,10 @@ export async function enqueueAdminNewPostNotification(opts: {
   authorName: string;
   authorEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規ブログ記事の審査依頼: ${opts.title}`,
       text: `${opts.authorName} (${opts.authorEmail}) が新しい記事を投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/posts`,
@@ -145,9 +235,10 @@ export async function enqueueAdminNewGuideNotification(opts: {
   authorName: string;
   authorEmail: string;
 }): Promise<void> {
-  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  const recipients = await resolveAdminRecipients();
+  if (recipients.length === 0) return;
   await enqueueMail({
-    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    to: recipients,
     message: {
       subject: `[JTPA] 新規ガイドの審査依頼: ${opts.title}`,
       text: `${opts.authorName} (${opts.authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/guides`,
