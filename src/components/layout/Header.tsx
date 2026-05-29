@@ -55,16 +55,19 @@ export function Header({ user }: { user: SessionUser | null }) {
   ).toUpperCase();
 
   return (
-    // `backdrop-blur` makes the <header> a stacking context, and pages
-    // below us also create stacking contexts (e.g. the landing-page
-    // hero uses `isolate` for its decorative blobs). Without an
-    // explicit positive z-index on the header, the *page* stacking
-    // context paints over the header's, hiding overlays that visually
-    // overlap the page area (the theme toggle / user dropdowns).
-    // `relative z-30` makes the header's stacking context the higher
-    // one so its descendants stay clickable on top of any page-area
-    // overlay.
-    <header className="relative z-30 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
+    // Frosted-glass sticky header. `position: sticky` keeps the bar
+    // pinned through page scroll; `backdrop-blur-xl` + a translucent
+    // background blurs the page contents that scroll behind it, the
+    // signature Apple-style "vibrancy" effect. The border is intentionally
+    // lighter than a normal `border-zinc-200` so the bar reads as one
+    // continuous frosted layer rather than a stacked panel.
+    //
+    // `backdrop-blur` already makes the <header> a stacking context, and
+    // pages below us also create their own (e.g. the landing-page hero
+    // uses `isolate` for its decorative blobs). `z-30` keeps the header's
+    // stacking context above the page area so dropdowns stay clickable
+    // even when a page section uses negative-z decorations.
+    <header className="sticky top-0 z-30 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl supports-[backdrop-filter]:bg-white/60 dark:border-zinc-800/60 dark:bg-zinc-950/70 dark:supports-[backdrop-filter]:bg-zinc-950/55">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold tracking-tight">
