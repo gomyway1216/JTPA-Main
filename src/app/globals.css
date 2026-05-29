@@ -157,6 +157,28 @@ body {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
+
+/*
+ * Tailwind v4's preflight reset zeroes out the browser defaults for
+ * `<b>`, `<strong>`, `<i>`, and `<em>` — so `**bold**` and `*italic*`
+ * arrive as the right HTML element but render as plain body text
+ * without these explicit overrides. Bug report:
+ * https://github.com/gomyway1216/JTPA-Main/issues/78
+ */
+.prose-jtpa :is(b, strong) {
+  font-weight: 700;
+}
+.prose-jtpa :is(i, em) {
+  font-style: italic;
+}
+.prose-jtpa :is(s, del) {
+  text-decoration: line-through;
+}
+.prose-jtpa mark {
+  background-color: rgba(250, 204, 21, 0.35); /* yellow-400/35 */
+  padding: 0.05em 0.2em;
+  border-radius: 0.2em;
+}
 .prose-jtpa :is(h1, h2, h3, h4, h5, h6):first-child {
   margin-top: 0;
 }
