@@ -256,12 +256,6 @@ export default async function HelpPage() {
         </ul>
         <FeedbackForm user={user} />
       </Section>
-
-      <footer className="border-t border-zinc-200 pt-6 text-sm text-zinc-500 dark:border-zinc-800">
-        <p>
-          コミュニティの Slack / Google Group での雑談も歓迎です。
-        </p>
-      </footer>
     </div>
   );
 }
