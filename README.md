@@ -1,6 +1,6 @@
 # JTPA-Main
 
-Community website for the Japanese Technology Professionals Association (JTPA): event scheduling + RSVP + QR check-in, presenter material sharing, an AI project showcase (admin-moderated), member blog (admin-moderated), open Q&A, multi-select community polls, and admin/editor-curated help guides. All content collections support per-record likes and threaded comments from signed-in members.
+Community website for the Japanese Technology Professionals Association (JTPA): event scheduling + RSVP + QR check-in, presenter material sharing, an AI project showcase (admin-moderated), member blog (admin-moderated), open Q&A, multi-select community polls, and community-written help guides (admin-reviewed first time, then the author is auto-promoted to a `contributor` tier and can self-publish). All content collections support per-record likes and threaded comments from signed-in members.
 
 Built with **Next.js 16** (App Router) on **Firebase App Hosting**, backed by **Firestore**, **Firebase Auth (Google OAuth)** and **Firebase Storage**.
 
