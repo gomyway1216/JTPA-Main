@@ -139,6 +139,60 @@ export async function enqueuePostDecisionNotification(opts: {
   });
 }
 
+export async function enqueueAdminNewGuideNotification(opts: {
+  guideId: string;
+  title: string;
+  authorName: string;
+  authorEmail: string;
+}): Promise<void> {
+  if (ADMIN_NOTIFICATION_RECIPIENTS.length === 0) return;
+  await enqueueMail({
+    to: ADMIN_NOTIFICATION_RECIPIENTS,
+    message: {
+      subject: `[JTPA] 新規ガイドの審査依頼: ${opts.title}`,
+      text: `${opts.authorName} (${opts.authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/guides`,
+    },
+    category: "admin_guide_pending",
+    metadata: { guideId: opts.guideId },
+  });
+}
+
+// Guide approval / rejection notice to the author. The "promoted" flag
+// nudges the email subject when the user was auto-granted the
+// `contributor` claim on their first approved guide, so the
+// "you can now self-publish next time" sentence isn't repeated for
+// every subsequent approval.
+export async function enqueueGuideDecisionNotification(opts: {
+  to: string;
+  title: string;
+  decision: "published" | "rejected";
+  note?: string;
+  promoted?: boolean;
+}): Promise<void> {
+  const subj =
+    opts.decision === "published"
+      ? `[JTPA] ガイドが公開されました: ${opts.title}`
+      : `[JTPA] ガイドのレビュー結果について: ${opts.title}`;
+  let body: string;
+  if (opts.decision === "published") {
+    body = `ガイド「${opts.title}」が公開されました。`;
+    if (opts.promoted) {
+      body +=
+        `\n\nおめでとうございます！コミュニティへの貢献を確認できたので、` +
+        `今後はガイドを審査なしで直接公開できるようになりました ` +
+        `(contributor 権限を付与しました)。\n\n` +
+        `権限の反映には一度サインアウトして再ログインが必要です。`;
+    }
+  } else {
+    body = `ガイド「${opts.title}」のレビュー結果をお知らせします。${opts.note ? `\n\nコメント: ${opts.note}` : ""}\n\n内容を修正して再投稿いただけます。`;
+  }
+  await enqueueMail({
+    to: opts.to,
+    message: { subject: subj, text: body },
+    category: `guide_${opts.decision}`,
+  });
+}
+
 // Sent when a confirmed attendee cancels and a waitlisted user gets
 // auto-promoted into the freed seat (see cancelRsvp in actions/rsvps.ts).
 // Best-effort — Trigger Email isn't configured yet (#15), so the doc

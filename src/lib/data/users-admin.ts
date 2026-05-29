@@ -9,6 +9,10 @@ export interface AdminUserListEntry {
   photoURL: string | null;
   isAdmin: boolean;
   isEditor: boolean;
+  // Trusted-author tier between signed-in and editor. Auto-granted on a
+  // user's first admin-approved guide; can also be granted/revoked
+  // manually from /admin/users.
+  isContributor: boolean;
   disabled: boolean;
   // Normalized to ISO 8601 (UTC). Firebase Auth metadata returns these as
   // RFC 2822-style strings — we convert here so consumers can rely on a
@@ -52,6 +56,7 @@ export async function listAllUsersForAdmin(
         photoURL: u.photoURL ?? null,
         isAdmin: u.customClaims?.admin === true,
         isEditor: u.customClaims?.editor === true,
+        isContributor: u.customClaims?.contributor === true,
         disabled: u.disabled,
         lastSignInAt: toIso(u.metadata.lastSignInTime),
         createdAt: toIso(u.metadata.creationTime),

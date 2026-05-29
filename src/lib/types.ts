@@ -223,6 +223,12 @@ export interface SessionUser {
   photoURL: string | null;
   isAdmin: boolean;
   isEditor: boolean;
+  // `contributor: true` lets the user self-publish guides without going
+  // through admin review. Strictly less privileged than `editor` — a
+  // contributor can only edit / publish guides they themselves authored,
+  // not anyone else's. Auto-granted on the first admin-approved guide
+  // submission so that follow-up posts skip the review queue.
+  isContributor: boolean;
 }
 
 // ---------- blog posts ----------
@@ -300,7 +306,22 @@ export interface LikeDoc {
 }
 
 // ---------- guides (AI setup / help content) ----------
-export type GuideStatus = "draft" | "published";
+// Originally admin/editor-only curated reference docs. With the addition
+// of the `contributor` role and community-submission flow, guides now
+// share the moderation shape with `posts`:
+//   - draft / pending: author still iterating or waiting for review
+//   - published      : visible to everyone on /guide
+//   - rejected       : admin sent it back with a note
+//   - archived       : admin retired without deleting
+// admin and editor can author/publish directly (no pending step);
+// contributors can self-publish their own guides; plain signed-in users
+// submit as `pending` and wait for admin approval.
+export type GuideStatus =
+  | "draft"
+  | "pending"
+  | "published"
+  | "rejected"
+  | "archived";
 
 export interface GuideAuthorRef {
   uid: string;
@@ -316,6 +337,25 @@ export interface GuideDoc {
   tags: string[];
   status: GuideStatus;
   order: number;
+  // Author identity, denormalized in the same shape as posts/qa/polls so
+  // shared query paths (`listMyGuides`, /my/likes activity feeds, etc.)
+  // can scan one field. Optional on legacy admin/editor guides created
+  // before the community flow — read paths fall back to `createdBy.uid`
+  // when unset.
+  authorUid?: string;
+  authorName?: string;
+  authorPhotoURL?: string | null;
+  // Review metadata, mirroring PostDoc. Set by admin when a community
+  // submission is approved or rejected; `null`/missing on guides created
+  // directly by an admin/editor (which skip the review queue).
+  reviewerUid?: string | null;
+  reviewNote?: string;
+  // Set when the guide first transitioned to `published`. Same first-
+  // publish-detection trick as posts so re-publishing an edited guide
+  // doesn't overwrite the original publish date.
+  publishedAt?: TsLike;
+  submittedAt?: TsLike;
+  reviewedAt?: TsLike;
   // Denormalized like count. Old docs may not have it; treat missing as 0.
   likeCount?: number;
   createdAt: TsLike;

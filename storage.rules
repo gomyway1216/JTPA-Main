@@ -70,11 +70,32 @@ service firebase.storage {
         && isImage() && maxSize(2);
     }
 
-    // Guide images (embedded in Markdown body): public read,
-    // admin or editor write. Split create/update from delete because
-    // `request.resource` is null on delete, which would null-eval
-    // through isImage()/maxSize() and reject authorized deletes.
-    match /guides/{guideId}/{allPaths=**} {
+    // Guide images (embedded in Markdown body): public read. With the
+    // contributor flow, guides are no longer admin/editor-only — any
+    // signed-in user submitting a guide may need to embed images. The
+    // path is `guides/{guideId}/{uid}/{filename}` (mirroring the Q&A
+    // layout) so writes can be constrained to the uploader's own
+    // sub-folder: a user can't drop files into someone else's guide
+    // on the client. Admin/editor can always write/delete anywhere.
+    // Note: legacy guides may still hold images at the old flat path
+    // `guides/{guideId}/{filename}` (created before this PR);
+    // `deleteFiles({prefix})` in `deleteGuide` still sweeps those up
+    // because the prefix matches both layouts.
+    match /guides/{guideId}/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow create, update: if ((isSignedIn() && request.auth.uid == uid)
+          || isAdmin() || isEditor())
+        && isImage() && maxSize(5);
+      allow delete: if (isSignedIn() && request.auth.uid == uid)
+        || isAdmin() || isEditor();
+    }
+
+    // Legacy guide image path (no uid segment) — only admin/editor can
+    // touch these. Kept so existing guides created before the
+    // contributor flow keep their write/delete semantics; new uploads
+    // go through the path above. Once all legacy assets are migrated
+    // this block can be removed.
+    match /guides/{guideId}/{filename} {
       allow read: if true;
       allow create, update: if (isAdmin() || isEditor())
         && isImage() && maxSize(5);

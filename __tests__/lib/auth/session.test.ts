@@ -156,6 +156,7 @@ describe("getSessionUser", () => {
       picture: "https://x/a.png",
       admin: true,
       editor: true,
+      contributor: true,
     });
     const { getSessionUser } = await importFresh();
     expect(await getSessionUser()).toEqual({
@@ -165,6 +166,7 @@ describe("getSessionUser", () => {
       photoURL: "https://x/a.png",
       isAdmin: true,
       isEditor: true,
+      isContributor: true,
     });
   });
 
@@ -182,23 +184,26 @@ describe("getSessionUser", () => {
       photoURL: null,
       isAdmin: false,
       isEditor: false,
+      isContributor: false,
     });
   });
 
-  it("treats non-true admin/editor claims as false (no truthy coercion)", async () => {
+  it("treats non-true admin/editor/contributor claims as false (no truthy coercion)", async () => {
     // The cookie format is the source of truth: a value like `1` or
-    // `"yes"` must NOT grant admin. Only the literal boolean `true`
+    // `"yes"` must NOT grant any role. Only the literal boolean `true`
     // counts.
     cookieStore.get.mockReturnValueOnce({ value: "cookie" });
     verifySessionCookieMock.mockResolvedValueOnce({
       uid: "u1",
       admin: 1,
       editor: "yes",
+      contributor: "true",
     });
     const { getSessionUser } = await importFresh();
     const out = await getSessionUser();
     expect(out?.isAdmin).toBe(false);
     expect(out?.isEditor).toBe(false);
+    expect(out?.isContributor).toBe(false);
   });
 });
 
