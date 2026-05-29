@@ -105,6 +105,15 @@ export async function setFeedbackStatus(
   const actor = await requireEditor();
   const parsed = readableParse(StatusSchema, input);
 
+  // `archived` is the "hide from default triage" terminal status —
+  // gated to admins only so editors can't unilaterally remove entries
+  // from the queue. Matches the UI (the アーカイブ button only renders
+  // for admins) and the Firestore rule. Per PR #88 Gemini security
+  // review — the UI guard alone isn't load-bearing.
+  if (parsed.status === "archived" && !actor.isAdmin) {
+    throw new Error("アーカイブできるのは admin だけです");
+  }
+
   const ref = adminDb().collection("feedback").doc(parsed.feedbackId);
   await ref.update({
     status: parsed.status,

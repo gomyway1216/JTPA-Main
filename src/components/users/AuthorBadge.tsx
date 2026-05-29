@@ -92,12 +92,16 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
 // HIGHEST role appears — the projection in `users.ts` already collapses
 // to one, so we don't have to handle multi-role users here. `aria-label`
 // spells out the role for screen readers; the visible text stays compact.
-function RolePill({
+//
+// Exported so the /u/[uid] page header — which renders the @handle
+// directly rather than through `AuthorBadge` — can drop a matching
+// pill next to its bigger username heading.
+export function RolePill({
   role,
-  size,
+  size = "sm",
 }: {
   role: "admin" | "editor" | "contributor";
-  size: "sm" | "md";
+  size?: "sm" | "md" | "lg";
 }) {
   const palette =
     role === "admin"
@@ -108,9 +112,11 @@ function RolePill({
   const label =
     role === "admin" ? "Admin" : role === "editor" ? "Editor" : "Contributor";
   const sizeCls =
-    size === "md"
-      ? "text-[10px] px-1.5 py-0"
-      : "text-[9px] px-1 py-0";
+    size === "lg"
+      ? "text-xs px-2 py-0.5"
+      : size === "md"
+        ? "text-[10px] px-1.5 py-0"
+        : "text-[9px] px-1 py-0";
   return (
     <span
       aria-label={`role: ${label}`}

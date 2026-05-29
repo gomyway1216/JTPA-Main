@@ -636,12 +636,20 @@ service cloud.firestore {
         && request.resource.data.body is string
         && request.resource.data.body.size() >= 4
         && request.resource.data.body.size() <= 2000;
-      // Editors triage; admins also can. The Server Action sets the
-      // reviewer fields; this rule just keeps the status set bounded
-      // so a direct client write can't park entries in an unknown
-      // state.
+      // Editors triage; admins also can. Defense in depth on top of
+      // the Server Action:
+      //  - Only triage-related fields may be modified — a direct client
+      //    write can't mutate the original `body`, `authorUid`,
+      //    `createdAt`, or other submission metadata.
+      //  - `archived` is admin-only (matches the Server Action gate
+      //    and the UI: the アーカイブ button only renders for admins).
+      //    Editors can still flip between new/read/resolved.
+      // Per PR #88 Gemini security review.
       allow update: if (isAdmin() || isEditor())
-        && request.resource.data.status in ['new', 'read', 'resolved', 'archived'];
+        && request.resource.data.status in ['new', 'read', 'resolved', 'archived']
+        && (request.resource.data.status != 'archived' || isAdmin())
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['status', 'reviewerUid', 'reviewerDisplayName', 'reviewedAt']);
       allow delete: if isAdmin();
     }
 

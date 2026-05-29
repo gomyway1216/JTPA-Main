@@ -87,7 +87,16 @@ export function FeedbackForm({ user }: Props) {
       <textarea
         id="feedback-body"
         value={body}
-        onChange={(e) => setBody(e.target.value)}
+        onChange={(e) => {
+          setBody(e.target.value);
+          // Drop the previous send's banner the moment the user starts
+          // a fresh message — otherwise the success / error message
+          // sits there alongside what's plainly a new draft and reads
+          // as if it applies to the in-progress text. Per PR #88
+          // Gemini review.
+          if (success) setSuccess(null);
+          if (error) setError(null);
+        }}
         rows={5}
         placeholder="例: ガイドの並び順を作者名でフィルタしたい / ◯◯ページでスクロールがガタつく"
         disabled={pending}

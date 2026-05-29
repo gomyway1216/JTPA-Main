@@ -300,6 +300,15 @@ export async function enqueueAdminNewFeedbackNotification(opts: {
   if (recipients.length === 0) return;
   const preview =
     opts.body.length > 400 ? `${opts.body.slice(0, 400)}…` : opts.body;
+  // Build the canonical triage URL from NEXT_PUBLIC_SITE_URL so the
+  // link actually opens in a mail client (a bare `/admin/feedback`
+  // doesn't have a base to resolve against). Falls back to the
+  // relative path when the env var isn't wired up — the email is
+  // still readable; the link just needs a copy-paste. Mirrors the
+  // same pattern as `enqueueWaitlistPromotionNotification`. Per PR
+  // #88 Gemini review.
+  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ?? "";
+  const triageUrl = `${base}/admin/feedback`;
   await enqueueMail({
     to: recipients,
     message: {
@@ -307,7 +316,7 @@ export async function enqueueAdminNewFeedbackNotification(opts: {
       text:
         `${opts.authorName} (${opts.authorEmail}) からフィードバックが届きました。\n\n` +
         `${preview}\n\n` +
-        `triage: /admin/feedback`,
+        `triage: ${triageUrl}`,
     },
     category: "admin_feedback_new",
     metadata: { feedbackId: opts.feedbackId },

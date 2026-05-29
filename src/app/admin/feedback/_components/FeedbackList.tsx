@@ -100,6 +100,17 @@ function FeedbackRow({
 }) {
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<FeedbackStatus>(entry.status);
+  // Track the prop value we last seeded `status` from so we can re-sync
+  // when the parent re-renders with fresh server data (after a
+  // revalidate, or after another admin updated the row from a different
+  // tab). `useState` only runs its initializer once, so without this
+  // dance the local optimistic status would shadow the new server
+  // value forever. Per PR #88 Gemini review.
+  const [seedStatus, setSeedStatus] = useState<FeedbackStatus>(entry.status);
+  if (entry.status !== seedStatus) {
+    setSeedStatus(entry.status);
+    setStatus(entry.status);
+  }
   const [error, setError] = useState<string | null>(null);
 
   function flip(next: FeedbackStatus) {
