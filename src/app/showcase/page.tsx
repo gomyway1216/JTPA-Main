@@ -1,12 +1,19 @@
 import Link from "next/link";
 
 import { listProjects } from "@/lib/data/projects";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "ショーケース" };
 
 export default async function ShowcasePage() {
   const projects = await listProjects({ limit: 100 }).catch(() => []);
+  // Batched profile lookup for every project owner shown in the grid;
+  // missing entries fall back to "@unknown" so a deleted-owner project
+  // still renders.
+  const ownerProfiles = await getPublicProfilesByUids(
+    projects.map((p) => p.ownerUid),
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 space-y-6">
@@ -47,7 +54,9 @@ export default async function ShowcasePage() {
                 )}
                 <div className="p-5">
                   <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
-                  <p className="mt-1 text-xs text-zinc-500">by {p.ownerName}</p>
+                  <p className="mt-1 text-xs text-zinc-500">
+                    by @{ownerProfiles.get(p.ownerUid)?.username ?? "unknown"}
+                  </p>
                   <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
                     {p.description}
                   </p>

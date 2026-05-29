@@ -11,11 +11,38 @@ export type TsLike =
   | { _seconds: number; _nanoseconds: number };
 
 // ---------- users ----------
+// Per-user external links shown as icons on the public /u/[uid] page.
+// `sns` is intentionally a generic slot — the UI inspects the URL's host
+// to pick an icon (X, Instagram, Threads, Bluesky, Mastodon, …) and falls
+// back to a generic SNS glyph for unknown hosts. Each field stores the
+// full URL or is omitted entirely; empty strings are normalized to missing
+// on write so the public projection doesn't render empty <a> tags.
+export interface UserLinks {
+  portfolio?: string;
+  github?: string;
+  linkedin?: string;
+  sns?: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
+  // Source of truth for the human-typed "real name" surface. Bootstrapped
+  // from the Google account on first sign-in and refreshed on every
+  // sign-in so renames in Google propagate, but it's only ever displayed
+  // when `fullNamePublic` is true. The username (below) is what's shown
+  // by default everywhere else.
   displayName: string;
   photoURL?: string;
+  // Stable, user-facing handle (e.g. "yudai"). Unique across all users
+  // via a transactional reservation in `usernames/{username}` →
+  // `{uid}`. Format enforced by USERNAME_REGEX. Bootstrapped to
+  // `user-<6chars-of-uid>` on first sign-in and on any existing-user
+  // sign-in that pre-dates this field; users can rename via
+  // /my/profile. Optional in the type only so docs written before this
+  // field exists still typecheck — every read path treats a missing
+  // username as a migration trigger.
+  username?: string;
   affiliation?: string;
   // Plain-text self-introduction shown on the public /u/[uid] page when
   // `bioPublic` is true. Multi-line; newlines are rendered with
@@ -24,14 +51,34 @@ export interface UserProfile {
   // Per-field public/private toggles. Default-false (private) on older
   // docs that pre-date these fields — opt-in is the safer migration.
   // email itself is intentionally NEVER user-toggleable (PII / spam
-  // surface); the public profile page only ever shows displayName,
-  // photoURL, and whichever of affiliation/bio the user has opted to
-  // publish.
+  // surface); the public profile page only ever shows username,
+  // photoURL, the conditionally-public displayName, and whichever of
+  // affiliation/bio/links the user has opted to publish.
   affiliationPublic?: boolean;
   bioPublic?: boolean;
+  // Controls whether the Google-account `displayName` (real / full name)
+  // is shown on the public /u/[uid] page and as a secondary label next
+  // to the @username badge. Default false so signup never silently
+  // exposes a real name — users opt in from /my/profile.
+  fullNamePublic?: boolean;
+  // External links — always public when set. The shape is a small fixed
+  // record (not an array) so additions stay backwards-compatible and
+  // the edit form can render four labeled inputs without an "add row"
+  // dance. See UserLinks for the per-slot semantics (especially the
+  // generic `sns` slot).
+  links?: UserLinks;
   emailOptIn: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;
+}
+
+// `usernames/{username}` reservation. Doc id IS the username; the body
+// just carries the owning uid so a lookup can resolve "which user owns
+// this handle" without a query. Created/updated/deleted transactionally
+// alongside the `users/{uid}.username` field so the two never diverge.
+export interface UsernameReservationDoc {
+  uid: string;
+  createdAt: TsLike;
 }
 
 // ---------- events ----------

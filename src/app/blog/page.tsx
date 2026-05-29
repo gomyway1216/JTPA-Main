@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listPublishedPosts } from "@/lib/data/posts";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,13 @@ export const metadata = { title: "ブログ" };
 
 export default async function BlogIndexPage() {
   const posts = await listPublishedPosts(50).catch(() => []);
+  // Single batched read for every author appearing in the list — keeps
+  // the page to one Firestore round-trip for user lookups regardless of
+  // post count. AuthorBadge handles the missing-profile case (deleted
+  // user) by rendering a plain @unknown placeholder.
+  const authorProfiles = await getPublicProfilesByUids(
+    posts.map((p) => p.authorUid),
+  );
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 space-y-6">
@@ -58,11 +66,7 @@ export default async function BlogIndexPage() {
                   </Link>
                 </h2>
                 <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge
-                    name={p.authorName}
-                    photoURL={p.authorPhotoURL}
-                    uid={p.authorUid}
-                  />
+                  <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
                   {p.publishedAt && <span>· {formatDate(p.publishedAt)}</span>}
                 </p>
                 {p.excerpt && (

@@ -10,12 +10,15 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
     uid: "u1",
     email: "secret@example.com",
     displayName: "Test User",
+    username: "testuser",
     photoURL: "https://example.com/p.png",
     affiliation: "Test Corp",
     bio: "I do testing.",
     affiliationPublic: false,
     bioPublic: false,
+    fullNamePublic: false,
     emailOptIn: true,
+    links: {},
     createdAt: { seconds: 0, nanoseconds: 0 },
     updatedAt: { seconds: 0, nanoseconds: 0 },
     ...overrides,
@@ -23,14 +26,14 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
 }
 
 describe("projectPublicProfile (privacy boundary)", () => {
-  it("always exposes uid + displayName + photoURL", () => {
+  it("always exposes uid + username + photoURL", () => {
     const out = projectPublicProfile(baseProfile());
     expect(out.uid).toBe("u1");
-    expect(out.displayName).toBe("Test User");
+    expect(out.username).toBe("testuser");
     expect(out.photoURL).toBe("https://example.com/p.png");
   });
 
-  it("NEVER leaks email, emailOptIn, or visibility flags themselves", () => {
+  it("NEVER leaks email, emailOptIn, displayName (when private), or visibility flags themselves", () => {
     const out = projectPublicProfile(baseProfile());
     // Compile-time: PublicProfile doesn't declare these. Runtime check
     // belt-and-suspenders so a future code change can't silently broaden
@@ -39,8 +42,13 @@ describe("projectPublicProfile (privacy boundary)", () => {
     expect(out).not.toHaveProperty("emailOptIn");
     expect(out).not.toHaveProperty("affiliationPublic");
     expect(out).not.toHaveProperty("bioPublic");
+    expect(out).not.toHaveProperty("fullNamePublic");
     expect(out).not.toHaveProperty("createdAt");
     expect(out).not.toHaveProperty("updatedAt");
+    // Real name is null when fullNamePublic is false — not the raw
+    // displayName string. The /u/[uid] page reads `fullName`, not a
+    // separate displayName field, so this is the visible guarantee.
+    expect(out.fullName).toBeNull();
   });
 
   it("hides affiliation when affiliationPublic = false", () => {
@@ -63,6 +71,14 @@ describe("projectPublicProfile (privacy boundary)", () => {
     expect(out.bio).toBe("I do testing.");
   });
 
+  it("exposes fullName only when fullNamePublic = true", () => {
+    expect(projectPublicProfile(baseProfile()).fullName).toBeNull();
+    const opted = projectPublicProfile(
+      baseProfile({ fullNamePublic: true }),
+    );
+    expect(opted.fullName).toBe("Test User");
+  });
+
   it("treats missing visibility flags (older docs) as false", () => {
     // Simulate a doc that pre-dates the visibility-flag fields: the
     // properties are absent (not just `false`). The projection uses a
@@ -73,9 +89,11 @@ describe("projectPublicProfile (privacy boundary)", () => {
     const stripped = baseProfile();
     delete (stripped as { affiliationPublic?: boolean }).affiliationPublic;
     delete (stripped as { bioPublic?: boolean }).bioPublic;
+    delete (stripped as { fullNamePublic?: boolean }).fullNamePublic;
     const out = projectPublicProfile(stripped);
     expect(out.affiliation).toBeNull();
     expect(out.bio).toBeNull();
+    expect(out.fullName).toBeNull();
   });
 
   it("returns null photoURL when stored value is missing", () => {
@@ -96,5 +114,31 @@ describe("projectPublicProfile (privacy boundary)", () => {
     const out = projectPublicProfile(partial);
     expect(out.affiliation).toBe("");
     expect(out.bio).toBe("");
+  });
+
+  it("falls back to a deterministic username when the stored value is missing", () => {
+    // Docs that pre-date the `username` field land here without one.
+    // The projection backfills `user-<first6chars>` so every render
+    // path always has a non-empty handle to show.
+    const stripped = baseProfile({ uid: "abcdef123456" });
+    delete (stripped as { username?: string }).username;
+    expect(projectPublicProfile(stripped).username).toBe("user-abcdef");
+  });
+
+  it("strips empty link slots so the icon row only renders inhabited entries", () => {
+    const out = projectPublicProfile(
+      baseProfile({
+        links: {
+          portfolio: "https://example.com",
+          github: "",
+          linkedin: undefined,
+          sns: "https://x.com/foo",
+        },
+      }),
+    );
+    expect(out.links).toEqual({
+      portfolio: "https://example.com",
+      sns: "https://x.com/foo",
+    });
   });
 });

@@ -4,9 +4,20 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 
 import { decideProject } from "@/app/actions/projects";
+import type { PublicProfile } from "@/lib/data/users";
 import type { ProjectDoc } from "@/lib/types";
 
-export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
+export function ProjectReviewCard({
+  project,
+  ownerProfile,
+}: {
+  project: ProjectDoc;
+  // Resolved server-side by the parent admin page so this card can
+  // show the owner's current @username instead of the denormalized
+  // `project.ownerName` snapshot. Falls back to the denormalized name
+  // when the user doc is gone so the queue still identifies the owner.
+  ownerProfile: PublicProfile | null;
+}) {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -31,7 +42,7 @@ export function ProjectReviewCard({ project }: { project: ProjectDoc }) {
         <div>
           <h3 className="text-lg font-semibold">{project.title}</h3>
           <p className="text-xs text-zinc-500">
-            {project.ownerName}
+            {ownerProfile ? `@${ownerProfile.username}` : project.ownerName}
             {project.appUrl && (
               <>
                 {" · "}

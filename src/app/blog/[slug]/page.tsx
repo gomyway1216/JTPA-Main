@@ -9,6 +9,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPostBySlug } from "@/lib/data/posts";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,16 @@ export default async function BlogPostPage({
     return new Set<string>();
   });
 
+  // One batched read covering the post author + every commenter. The
+  // resulting map is consumed twice: directly here for the header
+  // badge, and again as a plain object for the (Client) CommentsSection
+  // — Map doesn't survive the RSC→Client serialization boundary so we
+  // convert with Object.fromEntries below.
+  const profilesByUid = await getPublicProfilesByUids([
+    post.authorUid,
+    ...comments.map((c) => c.authorUid),
+  ]);
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
@@ -71,9 +82,7 @@ export default async function BlogPostPage({
         <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
-            name={post.authorName}
-            photoURL={post.authorPhotoURL}
-            uid={post.authorUid}
+            profile={profilesByUid.get(post.authorUid) ?? null}
             size="md"
           />
           {post.publishedAt && <span>· {formatDate(post.publishedAt)}</span>}
@@ -124,6 +133,7 @@ export default async function BlogPostPage({
         parentSlug={post.slug}
         initialComments={comments}
         initialLikedKeys={[...likedSet]}
+        profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}
       />
     </article>

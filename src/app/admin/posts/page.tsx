@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { PostReviewCard } from "@/app/admin/posts/_components/PostReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPostsByStatus } from "@/lib/data/posts";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +38,19 @@ export default async function AdminPostsPage() {
       return [];
     }),
   ]);
+  // Single batched read covering every author across all four status
+  // lists — keeps the admin queue render to one Firestore round-trip
+  // for users regardless of post count.
+  const authorProfiles = await getPublicProfilesByUids([
+    ...pending.map((p) => p.authorUid),
+    ...published.map((p) => p.authorUid),
+    ...rejected.map((p) => p.authorUid),
+    ...drafts.map((p) => p.authorUid),
+  ]);
+  const labelFor = (uid: string, fallback: string) => {
+    const prof = authorProfiles.get(uid);
+    return prof ? `@${prof.username}` : fallback;
+  };
 
   return (
     <div className="space-y-8">
@@ -48,7 +62,13 @@ export default async function AdminPostsPage() {
           {pending.length === 0 ? (
             <p className="text-sm text-zinc-500">審査待ちはありません。</p>
           ) : (
-            pending.map((p) => <PostReviewCard key={p.id} post={p} />)
+            pending.map((p) => (
+              <PostReviewCard
+                key={p.id}
+                post={p}
+                authorProfile={authorProfiles.get(p.authorUid) ?? null}
+              />
+            ))
           )}
         </div>
       </section>
@@ -71,7 +91,7 @@ export default async function AdminPostsPage() {
                   {p.title}
                 </Link>
                 <span className="text-xs text-zinc-500">
-                  {p.authorName}
+                  {labelFor(p.authorUid, p.authorName)}
                   {p.publishedAt && <> · {formatDate(p.publishedAt)}</>}
                 </span>
               </li>
@@ -91,7 +111,7 @@ export default async function AdminPostsPage() {
               >
                 <span>{p.title}</span>
                 <span className="text-xs text-zinc-500">
-                  {p.authorName} · 最終更新 {formatDate(p.updatedAt)}
+                  {labelFor(p.authorUid, p.authorName)} · 最終更新 {formatDate(p.updatedAt)}
                 </span>
               </li>
             ))}
@@ -109,7 +129,9 @@ export default async function AdminPostsPage() {
                 className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
               >
                 <span>{p.title}</span>
-                <span className="text-xs text-zinc-500">{p.authorName}</span>
+                <span className="text-xs text-zinc-500">
+                  {labelFor(p.authorUid, p.authorName)}
+                </span>
               </li>
             ))}
           </ul>

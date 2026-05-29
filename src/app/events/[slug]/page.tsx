@@ -7,7 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
-import { getMyProfile } from "@/lib/data/users";
+import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDateTime, isEventEnded } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +37,11 @@ export default async function EventDetailPage({
     listPresentations(event.id).catch(() => []),
     user ? getMyProfile(user.uid).catch(() => null) : Promise.resolve(null),
   ]);
+  // Batched public-profile read for every presenter on the agenda so
+  // PresentationSection can render @usernames without per-row fetches.
+  const presenterProfiles = await getPublicProfilesByUids(
+    presentations.map((p) => p.presenterUid),
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -158,6 +163,7 @@ export default async function EventDetailPage({
         user={user}
         myRsvp={myRsvp}
         initialPresentations={presentations}
+        presenterProfiles={Object.fromEntries(presenterProfiles)}
       />
     </div>
   );

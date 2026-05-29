@@ -23,13 +23,23 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
       photoURL: decoded.picture ?? null,
       affiliation: "",
       bio: "",
-      // Default-private for affiliation/bio so signup doesn't silently
-      // expose anything until the user explicitly opts in on
+      // Default-private for affiliation/bio/fullName so signup doesn't
+      // silently expose anything until the user explicitly opts in on
       // /my/profile. emailOptIn defaults to true because that's the
       // long-standing onboarding behavior — users get JTPA
       // announcements and can opt out from the profile page.
+      //
+      // `username` is intentionally NOT set here — leaving it absent
+      // makes the public-profile projection fall back to
+      // `defaultUsernameFor(uid)` for display while leaving the
+      // `usernames/{handle}` reservation slot free. The user claims a
+      // real handle (which writes both `users.username` and the
+      // reservation doc atomically) the first time they save
+      // /my/profile. See projectPublicProfile in src/lib/data/users.ts.
       affiliationPublic: false,
       bioPublic: false,
+      fullNamePublic: false,
+      links: {},
       emailOptIn: true,
       createdAt: now,
       updatedAt: now,

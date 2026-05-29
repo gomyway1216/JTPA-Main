@@ -9,6 +9,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getMyPollVote, getPollBySlug } from "@/lib/data/poll";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,12 @@ export default async function PollDetailPage({
     console.error("Failed to load poll like state:", err);
     return new Set<string>();
   });
+  // Batched profile read covering the poll author + every commenter.
+  // Map → plain object for the (Client) CommentsSection crossing.
+  const profilesByUid = await getPublicProfilesByUids([
+    poll.authorUid,
+    ...comments.map((c) => c.authorUid),
+  ]);
 
   const canEdit = isAuthorOrAdmin;
   const initialSelectedIds = myVote?.optionIds ?? [];
@@ -88,9 +95,7 @@ export default async function PollDetailPage({
         <h1 className="text-3xl font-bold tracking-tight">{poll.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
-            name={poll.authorName}
-            photoURL={poll.authorPhotoURL}
-            uid={poll.authorUid}
+            profile={profilesByUid.get(poll.authorUid) ?? null}
             size="md"
           />
           <span>· {formatDate(poll.createdAt)}</span>
@@ -144,6 +149,7 @@ export default async function PollDetailPage({
         parentSlug={poll.slug}
         initialComments={comments}
         initialLikedKeys={[...likedSet]}
+        profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}
       />
     </article>

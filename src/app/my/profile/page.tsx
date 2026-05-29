@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
+import { defaultUsernameFor } from "@/lib/users-shared";
 
 import { ProfileForm } from "./_components/ProfileForm";
 
@@ -21,13 +22,24 @@ export default async function MyProfilePage() {
   //
   // Visibility flags default to false (private) — older docs that
   // pre-date these fields land here as `undefined` and get the same
-  // conservative default.
+  // conservative default. `username` defaults to the deterministic
+  // fallback so the form pre-fills with a sensible suggestion the user
+  // can rename or keep on first save.
   const initial = {
+    username: profile?.username ?? defaultUsernameFor(user.uid),
+    fullName: user.displayName,
     affiliation: profile?.affiliation ?? "",
     bio: profile?.bio ?? "",
     affiliationPublic: profile?.affiliationPublic ?? false,
     bioPublic: profile?.bioPublic ?? false,
+    fullNamePublic: profile?.fullNamePublic ?? false,
     emailOptIn: profile?.emailOptIn ?? true,
+    links: {
+      portfolio: profile?.links?.portfolio ?? "",
+      github: profile?.links?.github ?? "",
+      linkedin: profile?.links?.linkedin ?? "",
+      sns: profile?.links?.sns ?? "",
+    },
   };
 
   return (
@@ -35,7 +47,7 @@ export default async function MyProfilePage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">アカウント設定</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          所属・紹介文・通知設定を編集できます。各項目は個別に公開/非公開を切り替えられます。表示名・メールアドレス・アイコンは Google アカウント側で管理され、メールは常に非公開です。
+          ユーザーネーム・公開する情報・リンク・通知設定を編集できます。フルネーム・メール・アイコンは Google アカウント側で管理され、メールは常に非公開です。
         </p>
       </header>
 
@@ -44,8 +56,6 @@ export default async function MyProfilePage() {
           Google アカウント情報 (編集不可)
         </h2>
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-zinc-500">表示名</dt>
-          <dd>{user.displayName || "(未設定)"}</dd>
           <dt className="text-zinc-500">メール</dt>
           <dd>{user.email}</dd>
           {user.photoURL && (
