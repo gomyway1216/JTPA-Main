@@ -79,7 +79,7 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | `src/lib/comments-parent.ts` | Maps `parentType` → Firestore collection name, public URL prefix, and "is this parent publicly visible?" check |
 | `src/lib/check-in.ts` | Check-in token generation (16 chars from a confusable-free alphabet), validity window (4h before / 6h after the event), QR-payload URL builder |
 | `src/lib/data/serialize.ts` | `plainify()` — converts Admin SDK Timestamps to plain objects so Server → Client component handoff doesn't throw |
-| `src/lib/notifications.ts` | Enqueues docs into `mail/{autoId}` for the Trigger Email extension (no-op until issue #15 lands) |
+| `src/lib/notifications.ts` | Enqueues docs into `mail/{autoId}` for the Trigger Email extension (Resend SMTP, sending from `JTPA <noreply@bayarea-ai.com>`). `resolveAdminRecipients()` merges the `ADMIN_NOTIFICATION_EMAILS` env var with every admin / editor user from Firebase Auth, cached 5 min. |
 | `src/lib/rsvp-counters.ts` | Pure-function RSVP counter math, unit-tested separately from `cancelRsvp` |
 | `src/components/markdown/MarkdownBody.tsx` | Shared Markdown renderer (GFM, syntax highlighting, heading demotion, external links open in new tab) |
 | `src/components/comments/CommentsSection.tsx` | Shared comment list/form used by every commentable parent |
