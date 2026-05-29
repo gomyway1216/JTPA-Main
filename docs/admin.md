@@ -122,7 +122,7 @@ You land on the new event's edit page to adjust dates and publish.
 2. Optionally type a comment (shown to the submitter on rejection).
 3. Click **承認** or **却下**.
 4. Approved projects immediately appear on the public `/showcase` page.
-5. Submitter notification email goes out automatically via the Trigger Email extension + Resend SMTP. Recipient list is resolved per-call: env var + every admin / editor user from Firebase Auth (see [Notification recipients](#notification-recipients-who-gets-the-admin-emails)).
+5. Submitter notification email goes out automatically — sent directly to the submitter's email via the Trigger Email extension + Resend SMTP. (This is distinct from the new-submission alert: that one fans out to admin + editor per [Notification recipients](#notification-recipients-who-gets-the-admin-emails).)
 
 Submitters can edit their own projects from `/my/projects`; editing flips the status back to `pending` for re-review.
 
