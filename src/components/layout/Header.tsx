@@ -55,7 +55,16 @@ export function Header({ user }: { user: SessionUser | null }) {
   ).toUpperCase();
 
   return (
-    <header className="border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
+    // `backdrop-blur` makes the <header> a stacking context, and pages
+    // below us also create stacking contexts (e.g. the landing-page
+    // hero uses `isolate` for its decorative blobs). Without an
+    // explicit positive z-index on the header, the *page* stacking
+    // context paints over the header's, hiding overlays that visually
+    // overlap the page area (the theme toggle / user dropdowns).
+    // `relative z-30` makes the header's stacking context the higher
+    // one so its descendants stay clickable on top of any page-area
+    // overlay.
+    <header className="relative z-30 border-b border-zinc-200 bg-white/80 backdrop-blur dark:border-zinc-800 dark:bg-zinc-950/80">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold tracking-tight">
