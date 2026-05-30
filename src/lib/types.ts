@@ -450,7 +450,7 @@ export interface PollDoc {
   authorPhotoURL: string | null;
   status: PollStatus;
   // Denormalized count of distinct voters (NOT total selections — a voter
-  // who picks 3 options counts as 1). Used for "X 人が投票" UI and to
+  // who picks 3 options counts as 1). Used for voter-count UI and to
   // gate "options can no longer be edited" once the first vote arrives.
   voterCount: number;
   // Denormalized like count on the poll itself. Missing = 0 on legacy docs.

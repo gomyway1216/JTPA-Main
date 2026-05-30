@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { ProjectAsset, ProjectDoc } from "@/lib/types";
 
@@ -54,13 +55,10 @@ type ParsedProjectInput =
   | { ok: true; data: z.infer<typeof ProjectInputSchema> }
   | { ok: false; error: string };
 
-function parseProjectInput(input: ProjectFormInput): ParsedProjectInput {
+async function parseProjectInput(input: ProjectFormInput): Promise<ParsedProjectInput> {
   const result = ProjectInputSchema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -113,7 +111,7 @@ export async function submitProject(
   input: ProjectFormInput,
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = parseProjectInput(input);
+  const pr = await parseProjectInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const now = Timestamp.now();
@@ -148,7 +146,7 @@ export async function submitProject(
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
   revalidatePath("/admin/projects");
-  redirect(`/my/projects`);
+  return redirectToLocalizedPath("/my/projects");
 }
 
 export async function updateMyProject(
@@ -156,15 +154,15 @@ export async function updateMyProject(
   input: ProjectFormInput,
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = parseProjectInput(input);
+  const pr = await parseProjectInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "プロジェクトが見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
   const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) {
-    return { ok: false, error: "このプロジェクトを編集する権限がありません" };
+    return { ok: false, error: await actionError("projectEditForbidden") };
   }
 
   // Compute orphans now — they're whatever paths the previous version
@@ -204,7 +202,7 @@ export async function updateMyProject(
   revalidatePath("/admin/projects");
   // Redirect on success — mirrors updateMyPost so the author lands back on
   // their list instead of sitting on a now-stale edit form (per #129 review).
-  redirect("/my/projects");
+  return redirectToLocalizedPath("/my/projects");
 }
 
 export async function deleteMyProject(
@@ -217,7 +215,7 @@ export async function deleteMyProject(
   if (!snap.exists) return { ok: true };
   const cur = snap.data() as ProjectDoc;
   if (cur.ownerUid !== user.uid) {
-    return { ok: false, error: "このプロジェクトを削除する権限がありません" };
+    return { ok: false, error: await actionError("projectDeleteForbidden") };
   }
 
   // Collect the asset paths now, but defer the Storage cleanup until AFTER
@@ -244,7 +242,7 @@ export async function decideProject(
   const admin = await requireAdmin();
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "プロジェクトが見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
   const cur = snap.data() as { ownerUid: string; title: string };
 
   await ref.update({

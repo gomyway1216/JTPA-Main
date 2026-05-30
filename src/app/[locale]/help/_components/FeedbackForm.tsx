@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { loginHref } from "@/i18n/paths";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { submitFeedback } from "@/app/actions/feedback";
@@ -24,6 +26,9 @@ const BODY_MAX = 2000;
 // without an extra navigation, which matches how this tends to be used
 // during a triage push.
 export function FeedbackForm({ user }: Props) {
+  const t = useTranslations("FeedbackForm");
+  const auth = useTranslations("Auth");
+  const locale = useLocale();
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -33,13 +38,13 @@ export function FeedbackForm({ user }: Props) {
     return (
       <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 p-4 text-sm dark:border-zinc-700 dark:bg-zinc-900">
         <p className="mb-2 text-zinc-700 dark:text-zinc-300">
-          要望や不具合報告を送るにはログインが必要です。
+          {t("loginRequired")}
         </p>
         <Link
-          href={`/login?redirect=${encodeURIComponent("/help#feedback")}`}
+          href={loginHref("/help#feedback", locale)}
           className="inline-flex rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
-          Googleでログイン
+          {auth("googleLogin")}
         </Link>
       </div>
     );
@@ -51,11 +56,11 @@ export function FeedbackForm({ user }: Props) {
     setSuccess(null);
     const trimmed = body.trim();
     if (trimmed.length < BODY_MIN) {
-      setError(`本文は${BODY_MIN}文字以上で入力してください。`);
+      setError(t("bodyMin", { count: BODY_MIN }));
       return;
     }
     if (trimmed.length > BODY_MAX) {
-      setError(`本文は${BODY_MAX}文字以内で入力してください。`);
+      setError(t("bodyMax", { count: BODY_MAX }));
       return;
     }
     startTransition(async () => {
@@ -68,11 +73,9 @@ export function FeedbackForm({ user }: Props) {
           return;
         }
         setBody("");
-        setSuccess(
-          "送信しました。確認次第対応します。ありがとうございます！",
-        );
+        setSuccess(t("success"));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("sendFailed"));
       }
     });
   }
@@ -88,7 +91,7 @@ export function FeedbackForm({ user }: Props) {
         htmlFor="feedback-body"
         className="block text-sm font-medium text-zinc-700 dark:text-zinc-300"
       >
-        要望・不具合・改善案
+        {t("label")}
       </label>
       <textarea
         id="feedback-body"
@@ -104,7 +107,7 @@ export function FeedbackForm({ user }: Props) {
           if (error) setError(null);
         }}
         rows={5}
-        placeholder="例: ガイドの並び順を作者名でフィルタしたい / ◯◯ページでスクロールがガタつく"
+        placeholder={t("placeholder")}
         disabled={pending}
         className="w-full rounded-md border border-zinc-300 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900"
       />
@@ -117,7 +120,7 @@ export function FeedbackForm({ user }: Props) {
           disabled={pending || overCap || body.trim().length < BODY_MIN}
           className="rounded-md bg-zinc-900 px-4 py-1.5 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          {pending ? "送信中…" : "送信"}
+          {pending ? t("sending") : t("send")}
         </button>
       </div>
       {error && (
@@ -134,8 +137,7 @@ export function FeedbackForm({ user }: Props) {
         </p>
       )}
       <p className="text-xs text-zinc-500">
-        送信内容は admin / editor 権限のメンバーだけが閲覧できます。
-        他のメンバーや一般公開はされません。
+        {t("privacy")}
       </p>
     </form>
   );

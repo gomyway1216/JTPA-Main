@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { buildAttendeeCsv } from "@/lib/attendee-csv";
@@ -18,6 +19,8 @@ export function AttendeeExportBar({
 }) {
   const [filter, setFilter] = useState<Filter>("confirmed");
   const [toast, setToast] = useState<string | null>(null);
+  const t = useTranslations("Admin.attendees");
+  const common = useTranslations("Admin.common");
 
   const filtered =
     filter === "all"
@@ -32,14 +35,14 @@ export function AttendeeExportBar({
 
   async function copyEmails() {
     if (emails.length === 0) {
-      flashToast("該当者なし");
+      flashToast(common("noRecipients"));
       return;
     }
     try {
       await navigator.clipboard.writeText(emails.join(", "));
-      flashToast(`${emails.length} 件のメアドをコピー`);
+      flashToast(common("copiedEmails", { count: emails.length }));
     } catch {
-      flashToast("コピー失敗 (HTTPS が必要かも)");
+      flashToast(common("copyFailed"));
     }
   }
 
@@ -59,34 +62,34 @@ export function AttendeeExportBar({
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-      <span className="font-medium">エクスポート:</span>
+      <span className="font-medium">{common("export")}</span>
       <select
         value={filter}
         onChange={(e) => setFilter(e.target.value as Filter)}
         className="rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950"
       >
-        <option value="confirmed">確定参加者のみ</option>
-        <option value="all">全て (キャンセル待ち・キャンセル含む)</option>
+        <option value="confirmed">{t("exportConfirmed")}</option>
+        <option value="all">{t("exportAll")}</option>
       </select>
       <span className="text-xs text-zinc-500">
-        ({filtered.length} 件 / 全 {rsvps.length} 件)
+        {common("countAll", { visible: filtered.length, total: rsvps.length })}
       </span>
       <button
         type="button"
         onClick={copyEmails}
         className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
       >
-        メアドをコピー
+        {common("copyEmails")}
       </button>
       <button
         type="button"
         onClick={downloadCsv}
         className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
       >
-        CSV ダウンロード
+        {common("downloadCsv")}
         {surveyFields.length > 0 && (
           <span className="ml-1 text-[10px] text-zinc-500">
-            (+{surveyFields.length} アンケート列)
+            {common("surveyColumns", { count: surveyFields.length })}
           </span>
         )}
       </button>

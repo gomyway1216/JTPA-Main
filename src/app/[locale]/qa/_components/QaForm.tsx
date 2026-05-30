@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -42,7 +43,7 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
 });
 
 // Split on half-width comma plus the two common full-width JP commas so
-// `タグA、タグB，タグC` works alongside `tagA, tagB`.
+// Japanese commas work alongside ASCII commas.
 function stringToTags(s: string): string[] {
   return s
     .split(/[,、，]/)
@@ -61,6 +62,15 @@ interface Props {
 }
 
 export function QaForm({ mode, user, qa }: Props) {
+  const t = useTranslations("QaForm");
+  const actionErrors = useTranslations("ActionErrors");
+  const imageUploadMessages = {
+    missingGuideId: () => actionErrors("guideImageMissingId"),
+    missingQaId: () => actionErrors("qaImageMissingId"),
+    missingUserId: () => actionErrors("userMissingId"),
+    unsupportedType: (types: string) => actionErrors("imageType", { types }),
+    tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
+  };
   const [title, setTitle] = useState(qa?.title ?? "");
   const [body, setBody] = useState<string>(qa?.body ?? "");
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
@@ -95,20 +105,20 @@ export function QaForm({ mode, user, qa }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_GUIDE_IMAGE_BYTES) {
-      setError("画像サイズは 5MB 以下にしてください");
+      setError(t("imageTooLarge"));
       e.target.value = "";
       return;
     }
     setUploading(true);
     try {
-      const url = await uploadQaImage(qaId, user.uid, file);
+      const url = await uploadQaImage(qaId, user.uid, file, imageUploadMessages);
       const alt = file.name.replace(/\.[^.]+$/, "");
       // Append the image link at the end of the body. Simpler than the
       // GuideForm caret-aware insertion — Q&A bodies tend to be short
       // and the user can rearrange afterwards.
       setBody((prev) => `${prev}${prev && !prev.endsWith("\n") ? "\n\n" : ""}![${alt}](${url})\n`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロード失敗");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -148,14 +158,14 @@ export function QaForm({ mode, user, qa }: Props) {
         // NEXT_REDIRECT; let unstable_rethrow pass that through and surface
         // anything else as a real failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!qa) return;
-    if (!confirm("この質問を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -165,14 +175,14 @@ export function QaForm({ mode, user, qa }: Props) {
         if (!res.ok) setError(res.error);
       } catch (err) {
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required htmlFor="qa-title">
+      <Field label={t("title")} required htmlFor="qa-title">
         <input
           id="qa-title"
           type="text"
@@ -181,12 +191,12 @@ export function QaForm({ mode, user, qa }: Props) {
           maxLength={120}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="例: Claude Code でテスト書かせるコツは？"
+          placeholder={t("titlePlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label="本文 (Markdown)" required>
+      <Field label={t("body")} required>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <button
@@ -195,10 +205,10 @@ export function QaForm({ mode, user, qa }: Props) {
               disabled={pending || uploading}
               className={secondaryButtonClassSm}
             >
-              {uploading ? "アップロード中…" : "📷 画像を追加"}
+              {uploading ? t("uploading") : `📷 ${t("addImage")}`}
             </button>
             <span className="text-xs text-zinc-500">
-              {GUIDE_IMAGE_LABEL}、5MB 以下
+              {t("imageHint", { types: GUIDE_IMAGE_LABEL })}
             </span>
             <input
               ref={fileInputRef}
@@ -219,13 +229,13 @@ export function QaForm({ mode, user, qa }: Props) {
         </div>
       </Field>
 
-      <Field label="タグ (カンマ区切り・最大 8)" htmlFor="qa-tags">
+      <Field label={t("tags")} htmlFor="qa-tags">
         <input
           id="qa-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
-          placeholder="Claude Code, テスト, バグ"
+          placeholder={t("tagsPlaceholder")}
           className={inputClass}
         />
       </Field>
@@ -239,12 +249,12 @@ export function QaForm({ mode, user, qa }: Props) {
           className={primaryButtonClass}
         >
           {pending
-            ? "送信中…"
+            ? t("submitting")
             : uploading
-              ? "アップロード中…"
+              ? t("uploadingButton")
               : mode === "create"
-                ? "投稿する"
-                : "更新する"}
+                ? t("submit")
+                : t("update")}
         </button>
         {mode === "edit" && (
           <button
@@ -253,11 +263,10 @@ export function QaForm({ mode, user, qa }: Props) {
             onClick={handleDelete}
             className={`ml-auto ${dangerButtonClass}`}
           >
-            削除
+            {t("delete")}
           </button>
         )}
       </div>
     </form>
   );
 }
-

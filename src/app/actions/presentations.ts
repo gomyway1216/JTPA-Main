@@ -7,7 +7,10 @@ import * as z from "zod";
 import { plainify } from "@/lib/data/serialize";
 import { requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError } from "@/lib/i18n/action-errors";
 import type { PresentationDoc, RsvpDoc } from "@/lib/types";
+
+const FILE_OR_URL_REQUIRED = "fileOrUrlRequired";
 
 const optionalUrl = z.preprocess(
   (v) => (v === "" ? undefined : v),
@@ -33,7 +36,7 @@ const CreateSchema = z
   })
   .refine(
     (v) => !!v.externalSlidesUrl || (!!v.filePath && !!v.fileUrl),
-    "ファイル または 外部URL のどちらかを指定してください",
+    FILE_OR_URL_REQUIRED,
   );
 
 const UpdateSchema = z
@@ -45,7 +48,7 @@ const UpdateSchema = z
   })
   .refine(
     (v) => !!v.externalSlidesUrl || (!!v.filePath && !!v.fileUrl),
-    "ファイル または 外部URL のどちらかを指定してください",
+    FILE_OR_URL_REQUIRED,
   );
 
 export type CreatePresentationInput = z.input<typeof CreateSchema>;
@@ -64,16 +67,25 @@ export type PresentationResult =
 
 // Zod parse that yields a readable error string instead of throwing, so
 // the message survives to the client (see PresentationResult above).
-function parseOrError<T extends z.ZodTypeAny>(
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  const issueTexts = await Promise.all(
+    result.error.issues.map(async (issue) => {
+      const message =
+        issue.message === FILE_OR_URL_REQUIRED
+          ? await actionError("fileOrUrlRequired")
+          : issue.message;
+      return `${issue.path.join(".") || "(root)"}: ${message}`;
+    }),
+  );
+  return {
+    ok: false,
+    error: await actionError("input", { issues: issueTexts.join("; ") }),
+  };
 }
 
 async function ensurePresenter(
@@ -82,7 +94,7 @@ async function ensurePresenter(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const denied = {
     ok: false as const,
-    error: "発表者として登録されていません",
+    error: await actionError("presenterOnly"),
   };
   const rsvpSnap = await adminDb()
     .collection("events")
@@ -112,7 +124,7 @@ export async function createPresentation(
   input: CreatePresentationInput,
 ): Promise<PresentationResult> {
   const user = await requireUser();
-  const parsed = parseOrError(CreateSchema, input);
+  const parsed = await parseOrError(CreateSchema, input);
   if (!parsed.ok) return parsed;
   const presenter = await ensurePresenter(parsed.data.eventId, user.uid);
   if (!presenter.ok) return presenter;
@@ -147,7 +159,7 @@ export async function updatePresentation(
   input: UpdatePresentationInput,
 ): Promise<PresentationResult> {
   const user = await requireUser();
-  const parsed = parseOrError(UpdateSchema, input);
+  const parsed = await parseOrError(UpdateSchema, input);
   if (!parsed.ok) return parsed;
 
   const ref = adminDb()
@@ -157,11 +169,11 @@ export async function updatePresentation(
     .doc(parsed.data.presentationId);
   const snap = await ref.get();
   if (!snap.exists) {
-    return { ok: false, error: "発表資料が見つかりません" };
+    return { ok: false, error: await actionError("presentationNotFound") };
   }
   const prev = snap.data() as PresentationDoc;
   if (prev.presenterUid !== user.uid) {
-    return { ok: false, error: "この発表資料を編集する権限がありません" };
+    return { ok: false, error: await actionError("presentationForbidden") };
   }
 
   // If the caller replaced an uploaded file (different filePath, or

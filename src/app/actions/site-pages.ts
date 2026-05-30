@@ -6,6 +6,7 @@ import * as z from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { inputError } from "@/lib/i18n/action-errors";
 import { SITE_PAGE_SLUGS } from "@/lib/data/site-pages";
 
 const SitePageInputSchema = z.object({
@@ -20,10 +21,7 @@ export async function saveSitePage(input: SitePageFormInput): Promise<void> {
   const user = await requireAdmin();
   const result = SitePageInputSchema.safeParse(input);
   if (!result.success) {
-    const issues = result.error.issues
-      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-      .join("; ");
-    throw new Error(`入力エラー: ${issues}`);
+    throw new Error(await inputError(result.error.issues));
   }
   const parsed = result.data;
 

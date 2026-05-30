@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError } from "@/lib/i18n/action-errors";
 import { enqueueWaitlistPromotionNotification } from "@/lib/notifications";
 import { cancellationDeltas } from "@/lib/rsvp-counters";
 import type { RsvpDoc } from "@/lib/types";
@@ -34,7 +35,7 @@ export async function submitRsvp(
     if (!eventSnap.exists) {
       return {
         ok: false as const,
-        error: "イベントが見つかりません。削除された可能性があります。",
+        error: await actionError("eventNotFoundDeleted"),
       };
     }
     const event = eventSnap.data() as {
@@ -48,7 +49,7 @@ export async function submitRsvp(
     if (event.status === "cancelled") {
       return {
         ok: false as const,
-        error: "このイベントは中止されたため、参加登録できません。",
+        error: await actionError("eventCancelledRsvp"),
       };
     }
 
@@ -172,7 +173,7 @@ export async function cancelRsvp({
       if (!eventSnap.exists) {
         return {
           ok: false as const,
-          error: "イベントが見つかりません。削除された可能性があります。",
+          error: await actionError("eventNotFoundDeleted"),
         };
       }
       const event = eventSnap.data() as { title: string; slug: string };

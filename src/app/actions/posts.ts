@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { PostDoc, PostStatus, ProjectAsset } from "@/lib/types";
 
@@ -46,13 +47,10 @@ type ParsedPostInput =
   | { ok: true; data: z.infer<typeof PostInputSchema> }
   | { ok: false; error: string };
 
-function parsePostInput(input: PostFormInput): ParsedPostInput {
+async function parsePostInput(input: PostFormInput): Promise<ParsedPostInput> {
   const result = PostInputSchema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -99,7 +97,7 @@ export async function submitPost(
   input: PostFormInput,
 ): Promise<PostSaveResult> {
   const user = await requireUser();
-  const pr = parsePostInput(input);
+  const pr = await parsePostInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const now = Timestamp.now();
@@ -137,7 +135,7 @@ export async function submitPost(
   revalidatePath("/blog");
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
-  redirect("/my/posts");
+  return redirectToLocalizedPath("/my/posts");
 }
 
 // ---------- update (owner) ----------
@@ -147,15 +145,15 @@ export async function updateMyPost(
   input: PostFormInput,
 ): Promise<PostSaveResult> {
   const user = await requireUser();
-  const pr = parsePostInput(input);
+  const pr = await parsePostInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "記事が見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    return { ok: false, error: "この記事を編集する権限がありません" };
+    return { ok: false, error: await actionError("postEditForbidden") };
   }
 
   const orphans = orphanPaths(cur.coverImage, parsed.coverImage);
@@ -190,7 +188,7 @@ export async function updateMyPost(
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
-  redirect("/my/posts");
+  return redirectToLocalizedPath("/my/posts");
 }
 
 // ---------- delete (owner) ----------
@@ -203,7 +201,7 @@ export async function deleteMyPost(postId: string): Promise<PostSaveResult> {
   if (!snap.exists) return { ok: true };
   const cur = snap.data() as PostDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    return { ok: false, error: "この記事を削除する権限がありません" };
+    return { ok: false, error: await actionError("postDeleteForbidden") };
   }
 
   const paths: string[] = [];
@@ -227,7 +225,7 @@ export async function publishPost(postId: string): Promise<PostSaveResult> {
   const admin = await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "記事が見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
 
   // Check the timestamp directly so re-publishing a post that was edited
@@ -274,7 +272,7 @@ export async function decidePost(
   const admin = await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "記事が見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
 
   // Same first-publish detection as publishPost — anchored on the actual
@@ -323,14 +321,14 @@ export async function decidePost(
   return { ok: true };
 }
 
-// Not wired into the UI yet — kept ready for the published-list "アーカイブ"
+// Not wired into the UI yet — kept ready for the published-list archive
 // button (planned follow-up) so older posts can be retired without losing
 // the doc (vs deleteMyPost which removes it entirely).
 export async function archivePost(postId: string): Promise<PostSaveResult> {
   await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "記事が見つかりません" };
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
   await ref.update({
     status: "archived" as const,

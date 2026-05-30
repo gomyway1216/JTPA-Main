@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { loginHref } from "@/i18n/paths";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -52,6 +54,8 @@ export function CommentsSection({
   profilesByUid,
   user,
 }: Props) {
+  const t = useTranslations("Comments");
+  const locale = useLocale();
   const [comments, setComments] = useState<CommentDoc[]>(initialComments);
   const [body, setBody] = useState("");
   // null = top-level comment form. String = inline reply form targeting
@@ -148,15 +152,15 @@ export function CommentsSection({
         }
         router.refresh();
       } catch (err) {
-        showError(err instanceof Error ? err.message : "送信に失敗しました");
+        showError(err instanceof Error ? err.message : t("sendError"));
       }
     });
   }
 
   async function handleDelete(commentId: string, hard = false) {
     const prompt = hard
-      ? "このコメントを完全に削除しますか？復元できません。"
-      : "このコメントを削除しますか？";
+      ? t("hardDeleteConfirm")
+      : t("deleteConfirm");
     if (!confirm(prompt)) return;
     setError(null);
     startTransition(async () => {
@@ -179,7 +183,7 @@ export function CommentsSection({
         );
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteError"));
       }
     });
   }
@@ -205,7 +209,7 @@ export function CommentsSection({
                 disabled={pending}
                 className="text-xs text-red-600 hover:underline disabled:opacity-50"
               >
-                完全に削除
+                {t("hardDelete")}
               </button>
             )}
           </header>
@@ -217,7 +221,7 @@ export function CommentsSection({
             />
           )}
           <p className="mt-2 text-sm italic text-zinc-500">
-            このコメントは削除されました
+            {t("deleted")}
           </p>
         </article>
       );
@@ -246,7 +250,7 @@ export function CommentsSection({
               disabled={pending}
               className="text-xs text-red-600 hover:underline disabled:opacity-50"
             >
-              削除
+              {t("delete")}
             </button>
           )}
         </header>
@@ -293,7 +297,7 @@ export function CommentsSection({
               disabled={pending}
               className="text-xs text-zinc-600 hover:underline disabled:opacity-50 dark:text-zinc-400"
             >
-              {isReplyOpen ? "返信をやめる" : "返信"}
+              {isReplyOpen ? t("cancelReply") : t("reply")}
             </button>
           )}
         </footer>
@@ -310,7 +314,9 @@ export function CommentsSection({
               onChange={(e) => setReplyBody(e.target.value)}
               disabled={pending}
               autoFocus
-              placeholder={`@${profilesByUid[c.authorUid]?.username ?? c.authorName} への返信 (最大 2000 文字)`}
+              placeholder={t("replyPlaceholder", {
+                name: profilesByUid[c.authorUid]?.username ?? c.authorName,
+              })}
               className={inputClass}
             />
             <div className="flex items-center justify-between gap-3">
@@ -322,7 +328,7 @@ export function CommentsSection({
                 disabled={pending || !replyBody.trim()}
                 className={primaryButtonClassSm}
               >
-                {pending ? "送信中..." : "返信する"}
+                {pending ? t("submitting") : t("replySubmit")}
               </button>
             </div>
             {replyError && <p className={errorTextClass}>{replyError}</p>}
@@ -334,13 +340,15 @@ export function CommentsSection({
 
   return (
     <section
-      aria-label="コメント"
+      aria-label={t("label")}
       className="border-t border-zinc-200 pt-6 dark:border-zinc-800"
     >
-      <h2 className="text-lg font-semibold">コメント ({comments.length})</h2>
+      <h2 className="text-lg font-semibold">
+        {t("heading", { count: comments.length })}
+      </h2>
 
       {comments.length === 0 ? (
-        <p className="mt-3 text-sm text-zinc-500">まだコメントはありません。</p>
+        <p className="mt-3 text-sm text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="mt-4 space-y-4">
           {threads.map(({ root, replies }) => (
@@ -365,7 +373,7 @@ export function CommentsSection({
             className="space-y-2"
           >
             <label htmlFor={bodyId} className="sr-only">
-              コメント本文
+              {t("bodyLabel")}
             </label>
             <textarea
               id={bodyId}
@@ -374,7 +382,7 @@ export function CommentsSection({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               disabled={pending}
-              placeholder="コメントを入力 (最大 2000 文字)"
+              placeholder={t("bodyPlaceholder")}
               className={inputClass}
             />
             <div className="flex items-center justify-between gap-3">
@@ -386,7 +394,7 @@ export function CommentsSection({
                 disabled={pending || !body.trim()}
                 className={primaryButtonClass}
               >
-                {pending ? "送信中..." : "コメントする"}
+                {pending ? t("submitting") : t("submit")}
               </button>
             </div>
             {error && <p className={errorTextClass}>{error}</p>}
@@ -394,13 +402,13 @@ export function CommentsSection({
         ) : (
           <div className="rounded-md border border-zinc-200 p-4 text-center text-sm dark:border-zinc-800">
             <p className="text-zinc-700 dark:text-zinc-300 mb-2">
-              コメントするにはログインが必要です。
+              {t("loginRequired")}
             </p>
             <Link
-              href={`/login?redirect=${encodeURIComponent(loginRedirect)}`}
+              href={loginHref(loginRedirect, locale)}
               className="inline-flex rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
-              Googleでログイン
+              {t("googleLogin")}
             </Link>
           </div>
         )}

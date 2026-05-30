@@ -6,6 +6,7 @@ import * as z from "zod";
 
 import { requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type { ProjectAsset, UserLinks, UserProfile } from "@/lib/types";
 import {
   isCanonicalAvatarUrl,
@@ -14,9 +15,15 @@ import {
   isUnclaimedDefaultUsername,
   normalizeUsername,
   USERNAME_REGEX,
-  usernameErrorMessage,
   validateUsernameFormat,
+  type UsernameValidationError,
 } from "@/lib/users-shared";
+
+const USER_LINK_MAX = "userLinkMax";
+const USER_URL_INVALID = "userUrlInvalid";
+const USER_URL_PROTOCOL = "userUrlProtocol";
+const USER_AFFILIATION_MAX = "userAffiliationMax";
+const USER_BIO_MAX = "userBioMax";
 
 // Affiliation: trim FIRST, then bound to a reasonable length. Empty
 // string is the "no affiliation" sentinel (same shape signInWithIdToken
@@ -53,11 +60,11 @@ const optionalUrl = z.preprocess(
   },
   z
     .string()
-    .max(MAX_LINK_LEN, `リンクは${MAX_LINK_LEN}文字以内で入力してください`)
-    .url("URLの形式が正しくありません")
+    .max(MAX_LINK_LEN, USER_LINK_MAX)
+    .url(USER_URL_INVALID)
     .refine(
       (s) => /^https?:\/\//i.test(s),
-      "http:// または https:// で始まるURLを入力してください",
+      USER_URL_PROTOCOL,
     )
     .optional(),
 );
@@ -71,11 +78,11 @@ const LinksSchema = z.object({
 
 // Username field accepts the raw input; we normalize + validate in code
 // rather than chaining transforms here so the error type is precise
-// enough to map back to the shared `usernameErrorMessage` strings.
+// enough to map back to localized username error strings.
 const ProfileInputSchema = z.object({
   username: z.string().max(100), // outer cap; real shape check happens below
-  affiliation: trimmedString(200, "所属は200文字以内で入力してください"),
-  bio: trimmedString(1000, "紹介文は1000文字以内で入力してください"),
+  affiliation: trimmedString(200, USER_AFFILIATION_MAX),
+  bio: trimmedString(1000, USER_BIO_MAX),
   affiliationPublic: z.boolean(),
   bioPublic: z.boolean(),
   fullNamePublic: z.boolean(),
@@ -108,6 +115,41 @@ export type UsernameAvailability =
   | { status: "yours" }
   | { status: "invalid"; reason: string };
 
+async function localizeProfileInputIssues(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
+) {
+  return Promise.all(
+    issues.map(async (issue) => {
+      let message = issue.message;
+      if (message === USER_LINK_MAX) {
+        message = await actionError("userLinkMax", { count: MAX_LINK_LEN });
+      } else if (message === USER_URL_INVALID) {
+        message = await actionError("userUrlInvalid");
+      } else if (message === USER_URL_PROTOCOL) {
+        message = await actionError("userUrlProtocol");
+      } else if (message === USER_AFFILIATION_MAX) {
+        message = await actionError("userAffiliationMax", { count: 200 });
+      } else if (message === USER_BIO_MAX) {
+        message = await actionError("userBioMax", { count: 1000 });
+      }
+      return { path: issue.path, message };
+    }),
+  );
+}
+
+async function usernameActionErrorMessage(
+  err: UsernameValidationError,
+): Promise<string> {
+  switch (err) {
+    case "empty":
+      return actionError("usernameEmpty");
+    case "format":
+      return actionError("usernameHelp");
+    case "reserved":
+      return actionError("usernameReserved");
+  }
+}
+
 export async function checkUsernameAvailable(
   desired: string,
 ): Promise<UsernameAvailability> {
@@ -138,7 +180,10 @@ export async function checkUsernameAvailable(
         return { status: "yours" };
       }
     }
-    return { status: "invalid", reason: usernameErrorMessage(formatErr) };
+    return {
+      status: "invalid",
+      reason: await usernameActionErrorMessage(formatErr),
+    };
   }
 
   const resSnap = await adminDb().collection("usernames").doc(norm).get();
@@ -158,10 +203,12 @@ export async function updateMyProfile(
 
   const parsed = ProfileInputSchema.safeParse(input);
   if (!parsed.success) {
-    const message = parsed.error.issues
-      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-      .join("; ");
-    return { ok: false, error: `入力エラー: ${message}` };
+    return {
+      ok: false,
+      error: await inputError(
+        await localizeProfileInputIssues(parsed.error.issues),
+      ),
+    };
   }
 
   // Username gets its own validation pass with the shared helper so the
@@ -177,7 +224,7 @@ export async function updateMyProfile(
   // current one (grandfathered claim), and we need to read the user
   // doc to know that. Per PR #94 Copilot review.
   if (usernameErr && usernameErr !== "reserved") {
-    return { ok: false, error: usernameErrorMessage(usernameErr) };
+    return { ok: false, error: await usernameActionErrorMessage(usernameErr) };
   }
   const desiredIsReserved = usernameErr === "reserved";
 
@@ -190,12 +237,12 @@ export async function updateMyProfile(
   // set and would have accepted a `user-*` payload that bypassed
   // `validateUsernameFormat`.
   if (!USERNAME_REGEX.test(desiredUsername)) {
-    return { ok: false, error: "ユーザーネームの形式が正しくありません" };
+    return { ok: false, error: await actionError("usernameFormatInvalid") };
   }
   if (isReservedUsername(desiredUsername) !== desiredIsReserved) {
     // Sanity check: the two helpers must agree. If they ever
     // disagree, something has drifted and we should fail closed.
-    return { ok: false, error: "ユーザーネームの検証に失敗しました" };
+    return { ok: false, error: await actionError("usernameValidationFailed") };
   }
 
   // Normalize links: drop empty/undefined slots so the stored object
@@ -321,7 +368,7 @@ export async function updateMyProfile(
     if (err instanceof Error && err.message === "USERNAME_TAKEN") {
       return {
         ok: false,
-        error: "そのユーザーネームは既に使われています。別の名前を入力してください。",
+        error: await actionError("usernameTaken"),
       };
     }
     if (err instanceof Error && err.message === "USERNAME_RESERVED") {
@@ -330,20 +377,19 @@ export async function updateMyProfile(
       // "taken by someone else".
       return {
         ok: false,
-        error: "このユーザーネームは予約済みです",
+        error: await actionError("usernameReserved"),
       };
     }
     if (err instanceof Error && err.message === "PROFILE_DOC_MISSING") {
       return {
         ok: false,
-        error:
-          "プロフィールが見つかりません。一度ログアウトして再ログインしてください。",
+        error: await actionError("profileMissingRelogin"),
       };
     }
     console.error("updateMyProfile failed:", err);
     return {
       ok: false,
-      error: "保存に失敗しました。時間を置いて再試行してください。",
+      error: await actionError("saveRetry"),
     };
   }
 
@@ -406,7 +452,7 @@ export async function updateMyAvatar(
 
   const parsed = AvatarAssetSchema.safeParse(asset);
   if (!parsed.success) {
-    return { ok: false, error: "アイコンの保存に失敗しました（不正な入力）" };
+    return { ok: false, error: await actionError("avatarInvalidInput") };
   }
   const { path, url } = parsed.data;
 
@@ -417,7 +463,7 @@ export async function updateMyAvatar(
   // host (e.g. https://evil.example.com/users%2F…) through, which would
   // then be served to everyone viewing the avatar.
   if (!isOwnedAvatarPath(user.uid, path)) {
-    return { ok: false, error: "アイコンの保存に失敗しました（不正なパス）" };
+    return { ok: false, error: await actionError("avatarInvalidPath") };
   }
   // Take the bucket name from env (the exact value the client embeds in the
   // download URL) rather than `adminStorage().bucket().name`: the latter
@@ -436,11 +482,11 @@ export async function updateMyAvatar(
     );
     return {
       ok: false,
-      error: "アイコンの保存に失敗しました（システム設定エラー）",
+      error: await actionError("avatarConfigError"),
     };
   }
   if (!isCanonicalAvatarUrl(url, bucketName, path)) {
-    return { ok: false, error: "アイコンの保存に失敗しました（不正なURL）" };
+    return { ok: false, error: await actionError("avatarInvalidUrl") };
   }
 
   const userRef = adminDb().collection("users").doc(user.uid);
@@ -452,8 +498,7 @@ export async function updateMyAvatar(
     if (!snap.exists) {
       return {
         ok: false,
-        error:
-          "プロフィールが見つかりません。一度ログアウトして再ログインしてください。",
+        error: await actionError("profileMissingRelogin"),
       };
     }
     const prev = (snap.data() as UserProfile).avatar;
@@ -473,7 +518,7 @@ export async function updateMyAvatar(
     console.error("updateMyAvatar failed:", err);
     return {
       ok: false,
-      error: "アイコンの保存に失敗しました。時間を置いて再試行してください。",
+      error: await actionError("avatarSaveRetry"),
     };
   }
 
@@ -506,7 +551,7 @@ export async function removeMyAvatar(): Promise<UpdateAvatarResult> {
     console.error("removeMyAvatar failed:", err);
     return {
       ok: false,
-      error: "アイコンの削除に失敗しました。時間を置いて再試行してください。",
+      error: await actionError("avatarDeleteRetry"),
     };
   }
 

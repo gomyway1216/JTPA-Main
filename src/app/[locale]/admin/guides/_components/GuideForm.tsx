@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { RefMDEditor } from "@uiw/react-md-editor";
@@ -84,9 +85,18 @@ export function GuideForm({
   user: SessionUser;
   guide?: GuideDoc;
 }) {
+  const t = useTranslations("GuideForm");
+  const actionErrors = useTranslations("ActionErrors");
+  const imageUploadMessages = {
+    missingGuideId: () => actionErrors("guideImageMissingId"),
+    missingQaId: () => actionErrors("qaImageMissingId"),
+    missingUserId: () => actionErrors("userMissingId"),
+    unsupportedType: (types: string) => actionErrors("imageType", { types }),
+    tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
+  };
   // Admin / editor / contributor — anyone trusted to self-publish without
   // going through the admin review queue. Plain signed-in users see the
-  // "審査に出す" button instead of "公開する".
+  // submit-for-review button instead of the direct-publish button.
   const canPublishDirectly =
     user.isAdmin || user.isEditor || user.isContributor;
   // Subset of `canPublishDirectly`: only admin/editor have `/admin/*`
@@ -150,13 +160,13 @@ export function GuideForm({
   async function uploadAndInsert(files: File[]) {
     if (files.length === 0) return;
     if (uploadingRef.current) {
-      setError("前のアップロードが完了するまでお待ちください");
+      setError(t("waitForUpload"));
       return;
     }
     uploadingRef.current = true;
     setError(null);
     setUploading(true);
-    setUploadInfo(`${files.length} 件アップロード中...`);
+    setUploadInfo(t("uploadingCount", { count: files.length }));
 
     // Snapshot the caret BEFORE we kick off uploads. Splicing once at the
     // end (rather than per-image) keeps the math simple and avoids the
@@ -175,7 +185,12 @@ export function GuideForm({
         // there to the uploader, which lets non-admin contributors
         // attach body images without granting them access to anyone
         // else's guide assets.
-        const url = await uploadGuideImage(guideId, user.uid, file);
+        const url = await uploadGuideImage(
+          guideId,
+          user.uid,
+          file,
+          imageUploadMessages,
+        );
         const altRaw = file.name.replace(/\.[^.]+$/, "");
         inserts.push(`\n![${escapeAlt(altRaw)}](${url})\n`);
       }
@@ -207,13 +222,13 @@ export function GuideForm({
         );
       }
 
-      setUploadInfo(`${files.length} 件アップロードしました`);
+      setUploadInfo(t("uploadedCount", { count: files.length }));
       setTimeout(() => setUploadInfo(null), 3000);
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "画像のアップロードに失敗しました",
+          : t("imageUploadFailed"),
       );
       setUploadInfo(null);
     } finally {
@@ -288,8 +303,8 @@ export function GuideForm({
           setError(res.error);
           return;
         }
-        // Update path doesn't redirect; surface explicit "✓ 保存しました"
-        // feedback so the click feels acknowledged. Create redirects via
+        // Update path doesn't redirect; surface explicit saved feedback
+        // so the click feels acknowledged. Create redirects via
         // the Server Action (so res is unreachable on create success);
         // gating on res?.ok also avoids a false flash if res is null.
         if (res?.ok) setSavedAt(Date.now());
@@ -301,14 +316,14 @@ export function GuideForm({
         // and returns silently for anything else, which we then
         // surface as a real save failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : t("saveFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!guide) return;
-    if (!confirm("このガイドを削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     startTransition(async () => {
       try {
         const res = await deleteGuide(guide.id);
@@ -325,7 +340,7 @@ export function GuideForm({
           ? "/admin/guides"
           : "/my/guides";
       } catch (err) {
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -341,7 +356,7 @@ export function GuideForm({
       }}
       className="space-y-4"
     >
-      <Field label="タイトル" required htmlFor="guide-title">
+      <Field label={t("title")} required htmlFor="guide-title">
         <input
           id="guide-title"
           type="text"
@@ -351,23 +366,23 @@ export function GuideForm({
           className={inputClass}
         />
       </Field>
-      <Field label="スラッグ (URL)" htmlFor="guide-slug">
+      <Field label={t("slug")} htmlFor="guide-slug">
         <input
           id="guide-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          placeholder="自動生成 (英小文字/数字/ハイフン)"
+          placeholder={t("slugPlaceholder")}
           className={inputClass}
         />
       </Field>
-      <Field label="タグ (カンマ区切り)" htmlFor="guide-tags">
+      <Field label={t("tags")} htmlFor="guide-tags">
         <input
           id="guide-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
-          placeholder="Claude, 環境構築, 初心者向け"
+          placeholder={t("tagsPlaceholder")}
           className={inputClass}
         />
       </Field>
@@ -375,7 +390,7 @@ export function GuideForm({
           admin sets the order during review so community guides slot
           in without authors stepping on the curated set. */}
       {(user.isAdmin || user.isEditor) && (
-        <Field label="表示順 (小さいほど上)" htmlFor="guide-order">
+        <Field label={t("order")} htmlFor="guide-order">
           <input
             id="guide-order"
             type="number"
@@ -387,7 +402,7 @@ export function GuideForm({
         </Field>
       )}
 
-      <Field label="本文 (Markdown)" required>
+      <Field label={t("body")} required>
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -396,11 +411,13 @@ export function GuideForm({
               onClick={() => fileInputRef.current?.click()}
               className={secondaryButtonClassSm}
             >
-              {uploading ? "アップロード中..." : "📷 画像をアップロード"}
+              {uploading ? t("uploading") : `📷 ${t("uploadImage")}`}
             </button>
             <span className="text-xs text-zinc-500">
-              ドラッグ&ドロップ / ペーストも可 ({GUIDE_IMAGE_LABEL}、
-              {MAX_GUIDE_IMAGE_BYTES / 1024 / 1024}MB以下)
+              {t("imageHint", {
+                types: GUIDE_IMAGE_LABEL,
+                size: MAX_GUIDE_IMAGE_BYTES / 1024 / 1024,
+              })}
             </span>
             {uploadInfo && (
               <span className="text-xs text-emerald-700 dark:text-emerald-300">
@@ -445,8 +462,7 @@ export function GuideForm({
       {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && !canPublishDirectly && (
         <p className="text-xs text-zinc-500">
-          編集して「審査に出す」を押すと再度「審査中」となり、
-          管理者の承認後に再掲載されます。
+          {t("editReviewNotice")}
         </p>
       )}
 
@@ -458,7 +474,7 @@ export function GuideForm({
             onClick={() => submit("draft")}
             className={secondaryButtonClass}
           >
-            下書き保存
+            {t("saveDraft")}
           </button>
           {canPublishDirectly ? (
             <button
@@ -466,7 +482,7 @@ export function GuideForm({
               disabled={pending || uploading}
               className={primaryButtonClass}
             >
-              {pending ? "保存中..." : "公開する"}
+              {pending ? t("saving") : t("publish")}
             </button>
           ) : (
             <button
@@ -475,13 +491,13 @@ export function GuideForm({
               className={primaryButtonClass}
             >
               {pending
-                ? "送信中..."
+                ? t("submitting")
                 : mode === "create"
-                  ? "審査に出す"
-                  : "審査に出し直す"}
+                  ? t("submitForReview")
+                  : t("resubmitForReview")}
             </button>
           )}
-          <SaveFlash savedAt={savedAt} />
+          <SaveFlash savedAt={savedAt} message={t("saved")} />
         </div>
         {mode === "edit" && (
           <button
@@ -490,7 +506,7 @@ export function GuideForm({
             disabled={pending || uploading}
             className={dangerButtonClass}
           >
-            ガイドを削除
+            {t("deleteGuide")}
           </button>
         )}
       </div>

@@ -22,32 +22,70 @@ export function toDate(value: TsLike | undefined | null): Date | null {
   return null;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const timeFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-export function formatDate(value: TsLike | undefined | null): string {
-  const d = toDate(value);
-  return d ? dateFormatter.format(d) : "";
+function formatterCacheKey(locale: Intl.LocalesArgument): string {
+  return Array.isArray(locale)
+    ? locale.join(",")
+    : typeof locale === "string"
+      ? locale
+      : "ja-JP";
 }
 
-export function formatDateTime(value: TsLike | undefined | null): string {
-  const d = toDate(value);
-  return d ? `${dateFormatter.format(d)} ${timeFormatter.format(d)}` : "";
+function dateFormatter(locale: Intl.LocalesArgument) {
+  const key = formatterCacheKey(locale);
+  let formatter = dateFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    dateFormatterCache.set(key, formatter);
+  }
+  return formatter;
 }
 
-export function formatTime(value: TsLike | undefined | null): string {
+function timeFormatter(locale: Intl.LocalesArgument) {
+  const key = formatterCacheKey(locale);
+  let formatter = timeFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    timeFormatterCache.set(key, formatter);
+  }
+  return formatter;
+}
+
+export function formatDate(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
   const d = toDate(value);
-  return d ? timeFormatter.format(d) : "";
+  return d ? dateFormatter(locale).format(d) : "";
+}
+
+export function formatDateTime(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
+  const d = toDate(value);
+  return d
+    ? `${dateFormatter(locale).format(d)} ${timeFormatter(locale).format(d)}`
+    : "";
+}
+
+export function formatTime(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
+  const d = toDate(value);
+  return d ? timeFormatter(locale).format(d) : "";
 }
 
 export function slugify(input: string, fallbackPrefix = "event"): string {
@@ -70,7 +108,7 @@ export function slugify(input: string, fallbackPrefix = "event"): string {
  * True if the event has ended (its `endAt` is in the past) OR an admin
  * has explicitly flipped its status to `cancelled` or `past`.
  *
- * Used to gate the RSVP form and to surface "イベント終了" notices without
+ * Used to gate the RSVP form and to surface event-ended notices without
  * waiting for an admin to manually transition `status: "published"` → `"past"`
  * (issue #20). Status remains the source of truth for `draft` / `cancelled`.
  */

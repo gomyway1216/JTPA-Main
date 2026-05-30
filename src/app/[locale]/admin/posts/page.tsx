@@ -1,21 +1,31 @@
 import Link from "@/i18n/navigation";
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { PostReviewCard } from "@/app/[locale]/admin/posts/_components/PostReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "ブログ管理" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Admin.posts");
+  return { title: t("metadataTitle") };
+}
 
 export default async function AdminPostsPage() {
   const user = await getSessionUser();
   // Skip the /admin landing — editors hit a second redirect to
   // /admin/guides anyway. Send them straight there for one fewer hop and
   // consistency with the other admin-only routes.
-  if (!user?.isAdmin) redirect("/admin/guides");
+  if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("Admin.posts"),
+  ]);
 
   // Surface the full review queue + the recently-published / rejected /
   // drafted lists. Drafts are visible to admins so they can nudge an
@@ -56,11 +66,11 @@ export default async function AdminPostsPage() {
     <div className="space-y-8">
       <section>
         <h1 className="text-2xl font-bold">
-          審査待ち ({pending.length})
+          {t("titlePending", { count: pending.length })}
         </h1>
         <div className="mt-4 space-y-3">
           {pending.length === 0 ? (
-            <p className="text-sm text-zinc-500">審査待ちはありません。</p>
+            <p className="text-sm text-zinc-500">{t("emptyPending")}</p>
           ) : (
             pending.map((p) => (
               <PostReviewCard
@@ -74,10 +84,12 @@ export default async function AdminPostsPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold">公開中 ({published.length})</h2>
+        <h2 className="text-lg font-semibold">
+          {t("titlePublished", { count: published.length })}
+        </h2>
         <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
           {published.length === 0 ? (
-            <li className="py-2 text-sm text-zinc-500">公開中の記事はありません。</li>
+            <li className="py-2 text-sm text-zinc-500">{t("emptyPublished")}</li>
           ) : (
             published.map((p) => (
               <li
@@ -92,7 +104,7 @@ export default async function AdminPostsPage() {
                 </Link>
                 <span className="text-xs text-zinc-500">
                   {labelFor(p.authorUid, p.authorName)}
-                  {p.publishedAt && <> · {formatDate(p.publishedAt)}</>}
+                  {p.publishedAt && <> · {formatDate(p.publishedAt, locale)}</>}
                 </span>
               </li>
             ))
@@ -102,7 +114,9 @@ export default async function AdminPostsPage() {
 
       {drafts.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold">下書き ({drafts.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("titleDrafts", { count: drafts.length })}
+          </h2>
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {drafts.map((p) => (
               <li
@@ -111,7 +125,8 @@ export default async function AdminPostsPage() {
               >
                 <span>{p.title}</span>
                 <span className="text-xs text-zinc-500">
-                  {labelFor(p.authorUid, p.authorName)} · 最終更新 {formatDate(p.updatedAt)}
+                  {labelFor(p.authorUid, p.authorName)} ·{" "}
+                  {t("updated", { date: formatDate(p.updatedAt, locale) })}
                 </span>
               </li>
             ))}
@@ -121,7 +136,9 @@ export default async function AdminPostsPage() {
 
       {rejected.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold">却下 ({rejected.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("titleRejected", { count: rejected.length })}
+          </h2>
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {rejected.map((p) => (
               <li

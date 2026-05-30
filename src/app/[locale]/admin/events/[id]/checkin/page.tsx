@@ -1,11 +1,13 @@
 import QRCode from "qrcode";
 import { headers } from "next/headers";
 import Link from "@/i18n/navigation";
-import { notFound, redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
+import { notFound } from "next/navigation";
 
 import { TokenControls } from "@/app/[locale]/admin/events/[id]/checkin/TokenControls";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventById } from "@/lib/data/events";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,11 @@ export default async function AdminCheckInPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user?.isAdmin) redirect("/admin/guides");
+  if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("Admin.checkIn"),
+  ]);
 
   const { id } = await params;
   const event = await getEventById(id);
@@ -51,22 +57,22 @@ export default async function AdminCheckInPage({
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">チェックイン</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-500">
-          {event.title}（{formatDateTime(event.startAt)}）
+          {event.title} ({formatDateTime(event.startAt, locale)})
         </p>
       </header>
 
       <div className="grid gap-2 text-sm sm:grid-cols-3">
-        <Stat label="RSVP数" value={event.rsvpCount} />
-        <Stat label="出席数" value={event.attendanceCount ?? 0} />
-        <Stat label="ウェイトリスト" value={event.waitlistCount} />
+        <Stat label={t("rsvpCount")} value={event.rsvpCount} />
+        <Stat label={t("attendanceCount")} value={event.attendanceCount ?? 0} />
+        <Stat label={t("waitlistCount")} value={event.waitlistCount} />
       </div>
 
       <section className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
         {!event.checkInToken ? (
           <p className="text-center text-sm text-zinc-500">
-            まだトークンが発行されていません。下のボタンで生成してください。
+            {t("noToken")}
           </p>
         ) : !baseUrl ? (
           // Defensive: the request-header fallback should always work, so
@@ -74,7 +80,7 @@ export default async function AdminCheckInPage({
           // misconfigured to strip Host). Surface it so the admin doesn't
           // print an unscannable QR.
           <p className="text-center text-sm text-red-600">
-            QRコードを生成できません: ホスト名を解決できませんでした。<code>NEXT_PUBLIC_SITE_URL</code> を設定してください。
+            {t("hostError")} <code>NEXT_PUBLIC_SITE_URL</code> {t("hostErrorAction")}
           </p>
         ) : qrSvg && checkInUrl ? (
           <div className="flex flex-col items-center gap-4">
@@ -86,7 +92,7 @@ export default async function AdminCheckInPage({
               {checkInUrl}
             </p>
             <p className="text-xs text-zinc-500">
-              トークン: <code className="font-mono">{event.checkInToken}</code>
+              {t("token")} <code className="font-mono">{event.checkInToken}</code>
             </p>
           </div>
         ) : null}
@@ -95,14 +101,14 @@ export default async function AdminCheckInPage({
       <TokenControls eventId={event.id} hasToken={!!event.checkInToken} />
 
       <p className="text-xs text-zinc-500">
-        QRコードは当日のみ有効です（開始の4時間前〜終了の6時間後まで）。漏洩した場合は再生成すれば即座に無効化されます。
+        {t("note")}
       </p>
 
       <Link
         href="/admin/attendees"
         className="inline-block text-sm text-blue-600 hover:underline"
       >
-        参加者一覧で出席状況を確認
+        {t("attendeesLink")}
       </Link>
     </div>
   );

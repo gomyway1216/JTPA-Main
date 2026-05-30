@@ -7,6 +7,7 @@ import * as z from "zod";
 import { requireEditor, requireUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import {
   enqueueAdminNewFeedbackNotification,
 } from "@/lib/notifications";
@@ -36,16 +37,13 @@ export type SubmitFeedbackResult =
   | { ok: true; id: string }
   | { ok: false; error: string };
 
-function parseOrError<T extends z.ZodTypeAny>(
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 /**
@@ -60,7 +58,7 @@ export async function submitFeedback(
   input: SubmitFeedbackInput,
 ): Promise<SubmitFeedbackResult> {
   const user = await requireUser();
-  const pr = parseOrError(SubmitSchema, input);
+  const pr = await parseOrError(SubmitSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -114,17 +112,17 @@ export async function setFeedbackStatus(
   input: SetFeedbackStatusInput,
 ): Promise<FeedbackActionResult> {
   const actor = await requireEditor();
-  const pr = parseOrError(StatusSchema, input);
+  const pr = await parseOrError(StatusSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
   // `archived` is the "hide from default triage" terminal status —
   // gated to admins only so editors can't unilaterally remove entries
-  // from the queue. Matches the UI (the アーカイブ button only renders
+  // from the queue. Matches the UI (the archive button only renders
   // for admins) and the Firestore rule. Per PR #88 Gemini security
   // review — the UI guard alone isn't load-bearing.
   if (parsed.status === "archived" && !actor.isAdmin) {
-    return { ok: false, error: "アーカイブできるのは admin だけです" };
+    return { ok: false, error: await actionError("feedbackArchiveAdminOnly") };
   }
 
   const ref = adminDb().collection("feedback").doc(parsed.feedbackId);

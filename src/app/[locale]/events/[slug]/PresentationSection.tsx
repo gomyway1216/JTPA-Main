@@ -4,6 +4,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -64,6 +65,7 @@ export function PresentationSection({
   // (not Map) so the prop survives the RSC→Client serialization.
   presenterProfiles: Record<string, PublicProfile>;
 }) {
+  const t = useTranslations("Presentations");
   const [presentations, setPresentations] =
     useState<PresentationDoc[]>(initialPresentations);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -88,20 +90,20 @@ export function PresentationSection({
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold">発表資料</h2>
+        <h2 className="text-xl font-semibold">{t("title")}</h2>
         {canPresent && editingId === null && (
           <button
             type="button"
             onClick={() => setEditingId("new")}
             className="rounded-md bg-zinc-900 px-3 py-1 text-xs font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
-            + 発表資料を追加
+            {t("add")}
           </button>
         )}
       </div>
 
       {presentations.length === 0 && editingId !== "new" && (
-        <p className="text-sm text-zinc-500">まだ発表資料は登録されていません。</p>
+        <p className="text-sm text-zinc-500">{t("empty")}</p>
       )}
 
       <ul className="space-y-3">
@@ -137,7 +139,7 @@ export function PresentationSection({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{p.title || "(タイトル未設定)"}</p>
+                  <p className="font-medium">{p.title || t("untitled")}</p>
                   {/*
                     AuthorBadge instead of a raw `@username` so role
                     pills and opted-in real names show up here. Each
@@ -165,7 +167,7 @@ export function PresentationSection({
                         rel="noreferrer noopener"
                         className="text-blue-600 hover:underline"
                       >
-                        📎 {p.fileName || "ファイルを開く"}
+                        📎 {p.fileName || t("openFile")}
                       </a>
                     )}
                     {p.externalSlidesUrl && (
@@ -175,7 +177,7 @@ export function PresentationSection({
                         rel="noreferrer noopener"
                         className="text-blue-600 hover:underline"
                       >
-                        🔗 外部リンク
+                        🔗 {t("externalLink")}
                       </a>
                     )}
                   </div>
@@ -186,7 +188,7 @@ export function PresentationSection({
                     onClick={() => setEditingId(p.id)}
                     className="shrink-0 text-xs text-blue-600 hover:underline"
                   >
-                    編集
+                    {t("edit")}
                   </button>
                 )}
               </div>
@@ -238,6 +240,7 @@ function PresentationForm({
   onCancel: () => void;
   onDelete?: () => void;
 }) {
+  const t = useTranslations("Presentations");
   const [draft, setDraft] = useState<Draft>(initial);
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -261,7 +264,7 @@ function PresentationForm({
       };
     }
     if (stagedFile.size > MAX_FILE_BYTES) {
-      throw new Error("ファイルサイズは 50MB 以下にしてください");
+      throw new Error(t("fileTooLarge"));
     }
     const safeName = stagedFile.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
     const path = `presentations/${eventId}/${uid}/${Date.now()}-${safeName}`;
@@ -298,11 +301,11 @@ function PresentationForm({
     e.preventDefault();
     setError(null);
     if (!draft.title.trim()) {
-      setError("タイトルを入力してください");
+      setError(t("titleRequired"));
       return;
     }
     if (!hasFile && !hasUrl) {
-      setError("ファイル または 外部URL のどちらか (両方OK) を指定してください");
+      setError(t("fileOrUrlRequired"));
       return;
     }
 
@@ -311,7 +314,9 @@ function PresentationForm({
       fileFields = await uploadIfNeeded();
     } catch (err) {
       setError(
-        err instanceof Error ? `アップロード失敗: ${err.message}` : "アップロード失敗",
+        err instanceof Error
+          ? t("uploadFailedWithMessage", { message: err.message })
+          : t("uploadFailed"),
       );
       return;
     }
@@ -347,21 +352,21 @@ function PresentationForm({
       } catch (err) {
         // Only unexpected failures reach here now (e.g. an expired
         // session throwing in requireUser, or a network blip).
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : t("saveFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!presentationId) return;
-    if (!confirm("発表資料を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
         await deletePresentation({ presentationId, eventId, eventSlug });
         onDelete?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -375,7 +380,7 @@ function PresentationForm({
         type="text"
         value={draft.title}
         onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-        placeholder="タイトル"
+        placeholder={t("titlePlaceholder")}
         required
         className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
       />
@@ -383,17 +388,17 @@ function PresentationForm({
         rows={2}
         value={draft.abstract}
         onChange={(e) => setDraft({ ...draft, abstract: e.target.value })}
-        placeholder="概要 (任意)"
+        placeholder={t("abstractPlaceholder")}
         className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
       />
 
       <div className="space-y-1">
         <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-          ファイル (任意・最大 50MB)
+          {t("fileLabel")}
         </label>
         {draft.filePath && !stagedFile && (
           <p className="text-xs text-zinc-500">
-            現在のファイル: {draft.fileName || draft.filePath}{" "}
+            {t("currentFile", { name: draft.fileName || draft.filePath })}{" "}
             <button
               type="button"
               onClick={() =>
@@ -406,7 +411,7 @@ function PresentationForm({
               }
               className="ml-1 text-red-600 hover:underline"
             >
-              削除
+              {t("delete")}
             </button>
           </p>
         )}
@@ -418,15 +423,17 @@ function PresentationForm({
         />
         {stagedFile && (
           <p className="text-xs text-zinc-500">
-            選択中: {stagedFile.name} ({(stagedFile.size / 1024 / 1024).toFixed(1)}{" "}
-            MB)
+            {t("selectedFile", {
+              name: stagedFile.name,
+              size: (stagedFile.size / 1024 / 1024).toFixed(1),
+            })}
           </p>
         )}
       </div>
 
       <div className="space-y-1">
         <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
-          外部URL (任意・Google Slides / YouTube 等)
+          {t("externalUrlLabel")}
         </label>
         <input
           type="url"
@@ -441,7 +448,7 @@ function PresentationForm({
 
       {progress !== null && (
         <p className="text-xs text-zinc-600 dark:text-zinc-400">
-          アップロード中… {progress.toFixed(0)}%
+          {t("uploading", { progress: progress.toFixed(0) })}
         </p>
       )}
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -453,12 +460,12 @@ function PresentationForm({
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
           {progress !== null
-            ? "アップロード中..."
+            ? t("uploadingButton")
             : pending
-              ? "保存中..."
+              ? t("saving")
               : mode === "create"
-                ? "保存"
-                : "更新"}
+                ? t("save")
+                : t("update")}
         </button>
         <button
           type="button"
@@ -466,7 +473,7 @@ function PresentationForm({
           disabled={pending || progress !== null}
           className="rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
         >
-          キャンセル
+          {t("cancel")}
         </button>
         {mode === "edit" && onDelete && (
           <button
@@ -475,7 +482,7 @@ function PresentationForm({
             disabled={pending}
             className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
           >
-            削除
+            {t("delete")}
           </button>
         )}
       </div>

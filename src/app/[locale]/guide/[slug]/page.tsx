@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -38,6 +39,10 @@ export default async function GuideDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("GuideDetail"),
+  ]);
   // Session + record load are independent — kick them off together
   // rather than serially. We need the user for the access check below.
   const [user, guide] = await Promise.all([
@@ -47,7 +52,7 @@ export default async function GuideDetailPage({
   if (!guide) notFound();
 
   // Non-published guides are reachable via this route for admin / editor
-  // (cross-author preview, e.g. clicking プレビュー from /admin/guides
+  // (cross-author preview, e.g. clicking preview from /admin/guides
   // pending queue) AND the author themselves (so an author can preview
   // their draft / pending / rejected guide via /my/guides). Anonymous
   // visitors and other signed-in users see the same 404 they would for
@@ -61,6 +66,14 @@ export default async function GuideDetailPage({
   }
 
   const tags = guide.tags ?? [];
+  const statusLabel =
+    guide.status === "pending"
+      ? t("status.pending")
+      : guide.status === "rejected"
+        ? t("status.rejected")
+        : guide.status === "archived"
+          ? t("status.archived")
+          : t("status.draft");
 
   const comments = await listComments("guide", guide.id).catch((err) => {
     console.error("Failed to list guide comments:", err);
@@ -85,29 +98,20 @@ export default async function GuideDetailPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/guide" className="text-xs text-zinc-500 hover:underline">
-        ← ガイド一覧
+        {t("back")}
       </Link>
 
       {guide.status !== "published" && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          このガイドは現在{" "}
-          <strong>
-            {guide.status === "pending"
-              ? "審査待ち"
-              : guide.status === "rejected"
-                ? "却下"
-                : guide.status === "archived"
-                  ? "アーカイブ"
-                  : "下書き"}
-          </strong>{" "}
-          状態です。一般公開はされておらず、投稿者と管理者・エディタのみが閲覧できます。
+          {t("statusNoticePrefix")} <strong>{statusLabel}</strong>{" "}
+          {t("statusNoticeSuffix")}
         </div>
       )}
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{guide.title}</h1>
         <p className="text-xs text-zinc-500">
-          最終更新: {formatDate(guide.updatedAt)}
+          {t("lastUpdated", { date: formatDate(guide.updatedAt, locale) })}
         </p>
         {tags.length > 0 && (
           <div className="flex flex-wrap gap-2">

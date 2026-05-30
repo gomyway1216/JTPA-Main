@@ -6,6 +6,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -25,6 +26,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/forms/styles";
+import { localizedPath } from "@/i18n/paths";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
@@ -48,7 +50,7 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
 });
 
 // Splits on half-width comma plus the two common full-width JP commas so
-// `タグA、タグB，タグC` works alongside `tagA, tagB`.
+// Japanese commas work alongside ASCII commas.
 function stringToTags(s: string): string[] {
   return s
     .split(/[,、，]/)
@@ -67,6 +69,8 @@ interface Props {
 }
 
 export function PostForm({ mode, user, post }: Props) {
+  const locale = useLocale();
+  const t = useTranslations("PostForm");
   const [title, setTitle] = useState(post?.title ?? "");
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
   const [body, setBody] = useState<string>(post?.body ?? "");
@@ -94,12 +98,10 @@ export function PostForm({ mode, user, post }: Props) {
     onProgress: (pct: number) => void,
   ): Promise<ProjectAsset> {
     if (file.size > MAX_IMAGE_BYTES) {
-      return Promise.reject(new Error("画像サイズは 5MB 以下にしてください"));
+      return Promise.reject(new Error(t("imageTooLarge")));
     }
     if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
-      return Promise.reject(
-        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
-      );
+      return Promise.reject(new Error(t("imageType")));
     }
     const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
     const path = `posts/${user.uid}/${Date.now()}-${safeName}`;
@@ -133,7 +135,7 @@ export function PostForm({ mode, user, post }: Props) {
       const asset = await uploadOne(file, setCoverProgress);
       setCoverImage(asset);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロード失敗");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setCoverProgress(null);
       e.target.value = "";
@@ -166,14 +168,14 @@ export function PostForm({ mode, user, post }: Props) {
         // Success throws the internal NEXT_REDIRECT — let it propagate so the
         // navigation actually happens. Anything else is a real save failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : t("saveFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!post) return;
-    if (!confirm("この記事を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -184,9 +186,9 @@ export function PostForm({ mode, user, post }: Props) {
           setError(res.error);
           return;
         }
-        window.location.href = "/my/posts";
+        window.location.href = localizedPath("/my/posts", locale);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -203,7 +205,7 @@ export function PostForm({ mode, user, post }: Props) {
       }}
       className="space-y-4"
     >
-      <Field label="タイトル" required htmlFor="post-title">
+      <Field label={t("title")} required htmlFor="post-title">
         <input
           id="post-title"
           type="text"
@@ -215,7 +217,7 @@ export function PostForm({ mode, user, post }: Props) {
       </Field>
 
       <Field
-        label="抜粋 (一覧表示用・最大 300 字)"
+        label={t("excerpt")}
         required
         htmlFor="post-excerpt"
       >
@@ -231,7 +233,7 @@ export function PostForm({ mode, user, post }: Props) {
         <p className="mt-1 text-xs text-zinc-500">{excerpt.length} / 300</p>
       </Field>
 
-      <Field label="本文 (Markdown)" required>
+      <Field label={t("body")} required>
         <div data-color-mode={colorMode}>
           <MDEditor
             value={body}
@@ -242,25 +244,25 @@ export function PostForm({ mode, user, post }: Props) {
         </div>
       </Field>
 
-      <Field label="タグ (カンマ区切り・最大 8)" htmlFor="post-tags">
+      <Field label={t("tags")} htmlFor="post-tags">
         <input
           id="post-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
-          placeholder="お知らせ、勉強会, レポート"
+          placeholder={t("tagsPlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label="カバー画像 (任意・5MB まで)">
+      <Field label={t("cover")}>
         <div className="space-y-2">
           {coverImage && (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverImage.url}
-                alt="cover preview"
+                alt={t("coverPreviewAlt")}
                 className="h-20 w-32 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
@@ -268,7 +270,7 @@ export function PostForm({ mode, user, post }: Props) {
                 onClick={() => setCoverImage(undefined)}
                 className="text-xs text-red-600 hover:underline"
               >
-                削除
+                {t("delete")}
               </button>
             </div>
           )}
@@ -281,7 +283,7 @@ export function PostForm({ mode, user, post }: Props) {
           />
           {coverProgress !== null && (
             <p className="text-xs text-zinc-500">
-              アップロード中… {coverProgress.toFixed(0)}%
+              {t("uploading", { progress: coverProgress.toFixed(0) })}
             </p>
           )}
         </div>
@@ -290,7 +292,7 @@ export function PostForm({ mode, user, post }: Props) {
       {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && !user.isAdmin && (
         <p className="text-xs text-zinc-500">
-          編集すると再度「審査中」となり、管理者の承認後に再掲載されます。
+          {t("editReviewNotice")}
         </p>
       )}
 
@@ -301,7 +303,7 @@ export function PostForm({ mode, user, post }: Props) {
           onClick={() => submit("draft")}
           className={secondaryButtonClass}
         >
-          下書き保存
+          {t("saveDraft")}
         </button>
         <button
           type="submit"
@@ -309,12 +311,12 @@ export function PostForm({ mode, user, post }: Props) {
           className={primaryButtonClass}
         >
           {pending
-            ? "送信中..."
+            ? t("submitting")
             : uploading
-              ? "アップロード中..."
+              ? t("uploadingButton")
               : mode === "create"
-                ? "投稿して審査依頼"
-                : "更新して再審査"}
+                ? t("submitForReview")
+                : t("updateForReview")}
         </button>
         {mode === "edit" && (
           <button
@@ -323,11 +325,10 @@ export function PostForm({ mode, user, post }: Props) {
             onClick={handleDelete}
             className={`ml-auto ${dangerButtonClass}`}
           >
-            削除
+            {t("delete")}
           </button>
         )}
       </div>
     </form>
   );
 }
-

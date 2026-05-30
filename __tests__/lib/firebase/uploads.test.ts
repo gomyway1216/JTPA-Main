@@ -148,6 +148,13 @@ describe("uploadUserAvatar", () => {
       type: over.type ?? "image/png",
       size: over.size ?? 1234,
     }) as unknown as File;
+  const messages = {
+    missingGuideId: () => "missing guide",
+    missingQaId: () => "missing qa",
+    missingUserId: () => "missing user",
+    unsupportedType: (types: string) => `type ${types}`,
+    tooLarge: (size: number) => `large ${size}`,
+  };
 
   beforeEach(() => {
     vi.mocked(uploadBytes).mockReset();
@@ -170,26 +177,34 @@ describe("uploadUserAvatar", () => {
   });
 
   it("rejects a missing uid before touching Storage", async () => {
-    await expect(uploadUserAvatar("", file())).rejects.toThrow();
+    await expect(uploadUserAvatar("", file(), messages)).rejects.toThrow();
     expect(uploadBytes).not.toHaveBeenCalled();
   });
 
   it("rejects non-raster types such as SVG", async () => {
     await expect(
-      uploadUserAvatar("u1", file({ type: "image/svg+xml" })),
+      uploadUserAvatar("u1", file({ type: "image/svg+xml" }), messages),
     ).rejects.toThrow();
     expect(uploadBytes).not.toHaveBeenCalled();
   });
 
   it("rejects files larger than 2 MiB", async () => {
     await expect(
-      uploadUserAvatar("u1", file({ size: MAX_AVATAR_IMAGE_BYTES + 1 })),
+      uploadUserAvatar(
+        "u1",
+        file({ size: MAX_AVATAR_IMAGE_BYTES + 1 }),
+        messages,
+      ),
     ).rejects.toThrow();
     expect(uploadBytes).not.toHaveBeenCalled();
   });
 
   it("uploads under users/{uid}/avatar-… and returns the {path, url} pair", async () => {
-    const result = await uploadUserAvatar("u1", file({ name: "me.png" }));
+    const result = await uploadUserAvatar(
+      "u1",
+      file({ name: "me.png" }),
+      messages,
+    );
     expect(result.path).toMatch(/^users\/u1\/avatar-\d+-me\.png$/);
     expect(result.url).toContain(
       `/o/${encodeURIComponent(result.path)}?alt=media`,
@@ -198,8 +213,8 @@ describe("uploadUserAvatar", () => {
   });
 
   it("scopes the path to the uid (one user can't target another's folder)", async () => {
-    const a = await uploadUserAvatar("alice", file());
-    const b = await uploadUserAvatar("bob", file());
+    const a = await uploadUserAvatar("alice", file(), messages);
+    const b = await uploadUserAvatar("bob", file(), messages);
     expect(a.path.startsWith("users/alice/")).toBe(true);
     expect(b.path.startsWith("users/bob/")).toBe(true);
   });

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -17,6 +18,7 @@ export default async function ProjectDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const t = await getTranslations("ShowcaseDetail");
   const project = await getProjectBySlug(slug);
   if (!project || project.status !== "approved") notFound();
 
@@ -50,7 +52,7 @@ export default async function ProjectDetailPage({
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{project.title}</h1>
         <p className="flex items-center gap-1.5 text-sm text-zinc-500">
-          <span>投稿者:</span>
+          <span>{t("author")}</span>
           <AuthorBadge
             profile={profilesByUid.get(project.ownerUid) ?? null}
             size="md"
@@ -85,7 +87,7 @@ export default async function ProjectDetailPage({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={project.thumbnail.url}
-          alt={`${project.title} のカバー画像`}
+          alt={t("coverAlt", { title: project.title })}
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
@@ -97,7 +99,7 @@ export default async function ProjectDetailPage({
 
       {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">
-          <h2 className="text-lg font-semibold">スクリーンショット</h2>
+          <h2 className="text-lg font-semibold">{t("screenshots")}</h2>
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {project.screenshots?.map((s, i) => (
               <li key={s.path}>
@@ -134,7 +136,7 @@ export default async function ProjectDetailPage({
             rel="noreferrer noopener"
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
-            アプリを開く →
+            {t("openApp")}
           </a>
         )}
         {project.repoUrl && (
@@ -144,7 +146,7 @@ export default async function ProjectDetailPage({
             rel="noreferrer noopener"
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
           >
-            ソースコード
+            {t("sourceCode")}
           </a>
         )}
         {project.demoVideoUrl && (
@@ -154,7 +156,7 @@ export default async function ProjectDetailPage({
             rel="noreferrer noopener"
             className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
           >
-            デモ動画
+            {t("demoVideo")}
           </a>
         )}
       </div>

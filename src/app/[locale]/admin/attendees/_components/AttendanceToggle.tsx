@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -18,6 +19,7 @@ export function AttendanceToggle({
   const [attended, setAttendedState] = useState(initialAttended);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("Admin.attendees");
 
   function toggle() {
     const next = !attended;
@@ -31,7 +33,7 @@ export function AttendanceToggle({
         router.refresh();
       } catch (e) {
         setAttendedState(!next);
-        setError(e instanceof Error ? e.message : "失敗");
+        setError(e instanceof Error ? e.message : t("attendanceFailed"));
       }
     });
   }
@@ -48,7 +50,7 @@ export function AttendanceToggle({
             : "rounded-md border border-zinc-300 px-2 py-1 text-xs text-zinc-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"
         }
       >
-        {pending ? "..." : attended ? "✓ 出席" : "未出席"}
+        {pending ? "..." : attended ? t("attended") : t("unattended")}
       </button>
       {error && <p className="text-[10px] text-red-600">{error}</p>}
     </div>

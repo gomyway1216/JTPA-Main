@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
   requireUser,
 } from "@/lib/auth/session";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import {
   enqueueAdminNewGuideNotification,
   enqueueGuideDecisionNotification,
@@ -63,17 +64,15 @@ export type GuideFormInput = z.input<typeof GuideInputSchema>;
 // { ok: true }.
 export type GuideActionResult = { ok: true } | { ok: false; error: string };
 
-function parseGuideInput(
+async function parseGuideInput(
   input: GuideFormInput,
-):
+): Promise<
   | { ok: true; data: z.infer<typeof GuideInputSchema> }
-  | { ok: false; error: string } {
+  | { ok: false; error: string }
+> {
   const result = GuideInputSchema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 function authorRef(user: {
@@ -232,7 +231,7 @@ export async function submitGuide(
   draftId?: string,
 ): Promise<GuideActionResult> {
   const user = await requireUser();
-  const pr = parseGuideInput(input);
+  const pr = await parseGuideInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const resolvedStatus = resolveStatus(user, parsed.status);
@@ -250,7 +249,7 @@ export async function submitGuide(
       .limit(1)
       .get();
     if (!existing.empty) {
-      return { ok: false, error: `スラッグ "${slug}" は既に使用されています` };
+      return { ok: false, error: await actionError("slugTaken", { slug }) };
     }
   }
 
@@ -293,7 +292,7 @@ export async function submitGuide(
     // `guides/{guideId}/{uid}/...` before saving. Validate the shape so
     // arbitrary strings don't slip into doc().set().
     if (!FIRESTORE_AUTO_ID.test(draftId)) {
-      return { ok: false, error: "不正な下書きIDが指定されました" };
+      return { ok: false, error: await actionError("invalidDraftId") };
     }
     const ref = adminDb().collection("guides").doc(draftId);
     // `create()` is atomic — fails with ALREADY_EXISTS instead of
@@ -304,7 +303,7 @@ export async function submitGuide(
     } catch (err) {
       const e = err as { code?: number | string };
       if (e.code === 6 || e.code === "already-exists") {
-        return { ok: false, error: "下書きIDが既に使われています" };
+        return { ok: false, error: await actionError("draftIdTaken") };
       }
       throw err;
     }
@@ -338,9 +337,9 @@ export async function submitGuide(
   // admin layout would bounce contributors away to "/" (they don't
   // unlock any `/admin/*` route despite being a trusted-author tier).
   if (isCurator) {
-    redirect(`/admin/guides/${guideId}/edit`);
+    return redirectToLocalizedPath(`/admin/guides/${guideId}/edit`);
   }
-  redirect("/my/guides");
+  return redirectToLocalizedPath("/my/guides");
 }
 
 // Legacy alias kept so existing admin/editor form callers compile during
@@ -360,12 +359,12 @@ export async function updateGuide(
   input: GuideFormInput,
 ): Promise<GuideActionResult> {
   const user = await requireUser();
-  const pr = parseGuideInput(input);
+  const pr = await parseGuideInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "ガイドが見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
 
   // Privileged tiers (admin / editor) can edit any guide. Contributors
@@ -373,7 +372,7 @@ export async function updateGuide(
   const ownerUid = cur.authorUid ?? cur.createdBy?.uid;
   const isCurator = hasCuratorAccess(user);
   if (!isCurator && ownerUid !== user.uid) {
-    return { ok: false, error: "このガイドを編集する権限がありません。" };
+    return { ok: false, error: await actionError("guideEditForbidden") };
   }
 
   // Same `unknown`-widening hazard from `optionalNonEmpty` as in
@@ -388,7 +387,7 @@ export async function updateGuide(
     if (conflict.docs.some((d) => d.id !== guideId)) {
       return {
         ok: false,
-        error: `スラッグ "${requestedSlug}" は既に使用されています`,
+        error: await actionError("slugTaken", { slug: requestedSlug }),
       };
     }
   }
@@ -412,7 +411,7 @@ export async function updateGuide(
   // the edit form (pending → published) we need to run the same side
   // effects `decideGuide` would: stamp reviewer + reviewedAt, auto-
   // promote the author to contributor on first approval, and queue the
-  // decision-notification email. Without this, the form's "公開する"
+  // decision-notification email. Without this, the form's publish button
   // button is a silent bypass.
   const isApprovingPending =
     isCurator &&
@@ -485,7 +484,7 @@ export async function deleteGuide(
   const ownerUid = cur.authorUid ?? cur.createdBy?.uid;
   const isAdminOrEditor = user.isAdmin || user.isEditor;
   if (!isAdminOrEditor && ownerUid !== user.uid) {
-    return { ok: false, error: "このガイドを削除する権限がありません。" };
+    return { ok: false, error: await actionError("guideDeleteForbidden") };
   }
 
   await ref.delete();
@@ -531,7 +530,7 @@ export async function decideGuide(
   const reviewer = await requireEditor();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "ガイドが見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
 
   const isFirstPublish = decision === "published" && !cur.publishedAt;
@@ -580,7 +579,7 @@ export async function publishGuide(
   await requireEditor();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "ガイドが見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
   const isFirstPublish = !cur.publishedAt;
   await ref.update({
@@ -593,7 +592,7 @@ export async function publishGuide(
 }
 
 // Admin-only retire. Same shape as `archivePost`. Not wired into the UI
-// yet — kept ready for an "アーカイブ" button on the published guides
+// yet — kept ready for an archive button on the published guides
 // list so guides can be retired without losing the doc.
 export async function archiveGuide(
   guideId: string,
@@ -601,7 +600,7 @@ export async function archiveGuide(
   await requireAdmin();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "ガイドが見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
   await ref.update({
     status: "archived" as const,

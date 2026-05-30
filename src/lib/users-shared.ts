@@ -9,15 +9,12 @@
 // so handles stay URL- and log-friendly. Min 3 enforced by the
 // non-optional middle group (`{1,18}`) — without that, the previous
 // `(?:...)?` form silently allowed single-char handles while the help
-// text promised 3-20. Keep in lockstep with USERNAME_HELP_TEXT below
-// — it's what the form surfaces to the user.
+// text promised 3-20. Keep the localized form help text in lockstep
+// with this regex.
 // Per PR #79 Copilot review (the original pattern allowed
 // `foo__bar`/`foo--bar`, contradicting the doc comment).
 export const USERNAME_REGEX =
   /^(?!.*[_-]{2})[a-z0-9][a-z0-9_-]{1,18}[a-z0-9]$/;
-
-export const USERNAME_HELP_TEXT =
-  "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。区切り文字は連続不可。";
 
 // Prefixes the system uses for auto-generated handles (currently just
 // `user-<6 chars of uid>` via `defaultUsernameFor` below). Anyone
@@ -108,22 +105,6 @@ export function validateUsernameFormat(
   return null;
 }
 
-export function usernameErrorMessage(err: UsernameValidationError): string {
-  switch (err) {
-    case "empty":
-      return "ユーザーネームを入力してください";
-    case "format":
-      return USERNAME_HELP_TEXT;
-    case "reserved":
-      // Single message covers both exact-name reservations (`admin`,
-      // `login`, …) and prefix reservations (`user-…`) — the user
-      // experience is the same: "pick another one". Mentioning the
-      // prefix space explicitly would be over-sharing the system's
-      // internal naming convention.
-      return "このユーザーネームは予約済みです";
-  }
-}
-
 // Deterministic fallback username derived from the uid. Used both on
 // first-login bootstrap and as a backfill for older accounts that
 // pre-date the `username` field. Length stays well within USERNAME_REGEX
@@ -147,7 +128,7 @@ export function defaultUsernameFor(uid: string): string {
 // (e.g. just toggling email opt-in or adding a LinkedIn URL), the
 // submitted handle is a reserved one that doesn't match their stored
 // username (which is absent) — and `updateMyProfile` rejected it as a
-// forbidden claim with "このユーザーネームは予約済みです" (issue #104).
+// forbidden claim with a reserved-username error (issue #104).
 //
 // This helper recognizes that exact no-op: stored handle absent AND the
 // desired handle is precisely this user's own default. Callers treat it as

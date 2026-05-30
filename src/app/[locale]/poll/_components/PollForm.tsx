@@ -1,6 +1,7 @@
 "use client";
 
 import { unstable_rethrow } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function PollForm({ mode, poll, optionsLocked }: Props) {
+  const t = useTranslations("PollForm");
   const [title, setTitle] = useState(poll?.title ?? "");
   const [description, setDescription] = useState(poll?.description ?? "");
   const [options, setOptions] = useState<DraftOption[]>(
@@ -74,7 +76,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
       .map((o) => ({ id: o.id, label: o.label.trim() }))
       .filter((o) => o.label.length > 0);
     if (cleanedOptions.length < MIN_OPTIONS) {
-      setError(`選択肢は${MIN_OPTIONS}つ以上必要です`);
+      setError(t("minOptionsError", { count: MIN_OPTIONS }));
       return;
     }
     const payload: PollFormInput = {
@@ -95,14 +97,14 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
         // submit/update redirect on success (throwing NEXT_REDIRECT); let
         // unstable_rethrow pass that through and surface anything else.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!poll) return;
-    if (!confirm("この投票を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -110,7 +112,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
         if (res && !res.ok) setError(res.error);
       } catch (err) {
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -121,7 +123,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required htmlFor="poll-title">
+      <Field label={t("title")} required htmlFor="poll-title">
         <input
           id="poll-title"
           type="text"
@@ -130,24 +132,24 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           maxLength={120}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="例: 普段どのAIを一番使ってる？"
+          placeholder={t("titlePlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label="説明 (任意)" htmlFor="poll-desc">
+      <Field label={t("description")} htmlFor="poll-desc">
         <textarea
           id="poll-desc"
           rows={3}
           maxLength={2000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="補足や「その他はコメントで」などの注記"
+          placeholder={t("descriptionPlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label={`選択肢 (${MIN_OPTIONS}〜${MAX_OPTIONS}つ)`} required>
+      <Field label={t("options", { min: MIN_OPTIONS, max: MAX_OPTIONS })} required>
         <div className="space-y-2">
           {optionsLocked && (
             // The form re-renders the option inputs disabled so the
@@ -155,7 +157,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
             // changes are ignored server-side. Explaining the freeze
             // up front avoids silent edits.
             <p className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-              既に投票が入っているため、選択肢は変更できません。タイトル・説明のみ編集可能です。
+              {t("optionsLocked")}
             </p>
           )}
           {options.map((opt, idx) => (
@@ -165,7 +167,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
                 maxLength={80}
                 value={opt.label}
                 onChange={(e) => setOptionLabel(idx, e.target.value)}
-                placeholder={`選択肢 ${idx + 1}`}
+                placeholder={t("optionPlaceholder", { number: idx + 1 })}
                 disabled={optionsLocked}
                 className={inputClass}
               />
@@ -176,7 +178,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
                   optionsLocked || pending || options.length <= MIN_OPTIONS
                 }
                 className="shrink-0 rounded-md border border-zinc-300 px-2 py-1.5 text-xs text-zinc-700 hover:bg-zinc-50 disabled:opacity-30 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-                aria-label={`選択肢 ${idx + 1} を削除`}
+                aria-label={t("removeOption", { number: idx + 1 })}
               >
                 ✕
               </button>
@@ -189,7 +191,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
               disabled={pending}
               className="rounded-md border border-dashed border-zinc-300 px-3 py-1.5 text-xs text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
             >
-              + 選択肢を追加
+              {t("addOption")}
             </button>
           )}
         </div>
@@ -203,7 +205,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           disabled={pending || !canSubmit}
           className={primaryButtonClass}
         >
-          {pending ? "送信中…" : mode === "create" ? "投稿する" : "更新する"}
+          {pending ? t("submitting") : mode === "create" ? t("submit") : t("update")}
         </button>
         {mode === "edit" && (
           <button
@@ -212,11 +214,10 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
             onClick={handleDelete}
             className={`ml-auto ${dangerButtonClass}`}
           >
-            削除
+            {t("delete")}
           </button>
         )}
       </div>
     </form>
   );
 }
-

@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { loginHref } from "@/i18n/paths";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -31,6 +33,8 @@ type Props =
   | (CommonProps & { target: "comment"; commentId: string });
 
 export function LikeButton(props: Props) {
+  const t = useTranslations("LikeButton");
+  const locale = useLocale();
   const [liked, setLiked] = useState(props.initialLiked);
   const [count, setCount] = useState(props.initialCount);
   const [pending, startTransition] = useTransition();
@@ -77,7 +81,7 @@ export function LikeButton(props: Props) {
         // Revert the optimistic flip on failure.
         setLiked(prevLiked);
         setCount(prevCount);
-        setError(err instanceof Error ? err.message : "更新に失敗しました");
+        setError(err instanceof Error ? err.message : t("error"));
       }
     });
   }
@@ -96,10 +100,10 @@ export function LikeButton(props: Props) {
     const redirect = `${parentRoutePrefix(props.parentType)}/${props.parentSlug}`;
     return (
       <Link
-        href={`/login?redirect=${encodeURIComponent(redirect)}`}
+        href={loginHref(redirect, locale)}
         className={`${baseCls} ${stateCls}`}
-        aria-label="いいねするにはログイン"
-        title="いいねするにはログインが必要です"
+        aria-label={t("loginAria")}
+        title={t("loginTitle")}
       >
         <span aria-hidden>♡</span>
         <span>{count}</span>
@@ -114,7 +118,7 @@ export function LikeButton(props: Props) {
         onClick={handleClick}
         disabled={pending}
         aria-pressed={liked}
-        aria-label={liked ? "いいねを取り消す" : "いいねする"}
+        aria-label={liked ? t("unlike") : t("like")}
         className={`${baseCls} ${stateCls} disabled:opacity-60`}
       >
         <span aria-hidden>{liked ? "♥" : "♡"}</span>

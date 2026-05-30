@@ -11,6 +11,7 @@ import {
   parentRoutePrefix,
 } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
   GuideDoc,
   PollDoc,
@@ -45,16 +46,13 @@ export type LikeActionResult =
   | { ok: true; result: LikeResult }
   | { ok: false; error: string };
 
-function parseOrError<T extends z.ZodTypeAny>(
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 /**
@@ -70,7 +68,7 @@ export async function toggleLikeRecord(
   input: LikeRecordInput,
 ): Promise<LikeActionResult> {
   const user = await requireUser();
-  const pr = parseOrError(RecordSchema, input);
+  const pr = await parseOrError(RecordSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -87,13 +85,15 @@ export async function toggleLikeRecord(
       tx.get(likeRef),
       tx.get(parentRef),
     ]);
-    if (!parentSnap.exists) return { ok: false as const, error: "対象が見つかりません。" };
+    if (!parentSnap.exists) {
+      return { ok: false as const, error: await actionError("likeTargetNotFound") };
+    }
     const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Only allow likes on publicly-visible records. Mirrors the comment
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      return { ok: false as const, error: "公開済みのコンテンツのみにいいねできます" };
+      return { ok: false as const, error: await actionError("publishedOnlyLike") };
     }
     const wasLiked = likeSnap.exists;
     // Compute the new count in memory and write it directly. The original
@@ -132,7 +132,7 @@ export async function toggleLikeComment(
   input: LikeCommentInput,
 ): Promise<LikeActionResult> {
   const user = await requireUser();
-  const pr = parseOrError(CommentSchema, input);
+  const pr = await parseOrError(CommentSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -152,7 +152,7 @@ export async function toggleLikeComment(
       tx.get(parentRef),
     ]);
     if (!parentSnap.exists || !commentSnap.exists) {
-      return { ok: false as const, error: "対象が見つかりません。" };
+      return { ok: false as const, error: await actionError("likeTargetNotFound") };
     }
     const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Defense in depth: if the parent has been unpublished while the
@@ -160,7 +160,7 @@ export async function toggleLikeComment(
     // likes are left in place — flipping the parent's status back to
     // published shouldn't lose them.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      return { ok: false as const, error: "公開済みのコンテンツのみにいいねできます" };
+      return { ok: false as const, error: await actionError("publishedOnlyLike") };
     }
     const wasLiked = likeSnap.exists;
     // In-memory compute for the same reason as toggleLikeRecord — keeps

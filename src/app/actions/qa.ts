@@ -2,11 +2,12 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type { QaDoc, QaStatus } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ import { slugify } from "@/lib/utils";
 // against the same regex Firestore uses on auto-ids (20 chars, no
 // special punctuation) keeps anything weirder out of doc().set().
 const FIRESTORE_AUTO_ID = /^[A-Za-z0-9_-]{1,40}$/;
+const QA_INVALID_ID = "qaInvalidId";
 
 const QaFormSchema = z.object({
   // Pre-generated client-side id. When present, `submitQa` writes the
@@ -24,7 +26,7 @@ const QaFormSchema = z.object({
   // can still hit the action without owning an id ahead of time.
   id: z
     .string()
-    .regex(FIRESTORE_AUTO_ID, "不正なIDが指定されました")
+    .regex(FIRESTORE_AUTO_ID, QA_INVALID_ID)
     .optional(),
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(1).max(20000),
@@ -54,16 +56,22 @@ export type SetQaStatusInput = z.input<typeof StatusSchema>;
 // *return* on failure; setQaStatus returns { ok: true }.
 export type QaActionResult = { ok: true } | { ok: false; error: string };
 
-function parseOrError<T extends z.ZodTypeAny>(
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  const issues = await Promise.all(
+    result.error.issues.map(async (issue) => ({
+      path: issue.path,
+      message:
+        issue.message === QA_INVALID_ID
+          ? await actionError("qaInvalidId")
+          : issue.message,
+    })),
+  );
+  return { ok: false, error: await inputError(issues) };
 }
 
 // Resolve a free slug under /qa. Mirrors the pattern in
@@ -87,7 +95,7 @@ async function findFreeQaSlug(seed: string): Promise<string> {
 
 export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
   const user = await requireUser();
-  const pr = parseOrError(QaFormSchema, input);
+  const pr = await parseOrError(QaFormSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -127,10 +135,7 @@ export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
       // same as a slug collision and surface a useful error.
       const code = (err as { code?: number | string } | null)?.code;
       if (code === 6 || code === "already-exists") {
-        return {
-          ok: false,
-          error: "投稿の保存に失敗しました。もう一度やり直してください。",
-        };
+        return { ok: false, error: await actionError("qaSaveRetry") };
       }
       throw err;
     }
@@ -140,7 +145,7 @@ export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
 
   revalidatePath("/qa");
   revalidatePath(`/qa/${slug}`);
-  redirect(`/qa/${slug}`);
+  return redirectToLocalizedPath(`/qa/${slug}`);
 }
 
 export async function updateMyQa(
@@ -148,16 +153,16 @@ export async function updateMyQa(
   input: QaFormInput,
 ): Promise<QaActionResult> {
   const user = await requireUser();
-  const pr = parseOrError(QaFormSchema, input);
+  const pr = await parseOrError(QaFormSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
   const ref = adminDb().collection("qa").doc(qaId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "質問が見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    return { ok: false, error: "この質問を編集する権限がありません。" };
+    return { ok: false, error: await actionError("qaEditForbidden") };
   }
 
   // Slug changes only when the author explicitly chose a new value AND
@@ -179,7 +184,7 @@ export async function updateMyQa(
   revalidatePath("/qa");
   revalidatePath(`/qa/${cur.slug}`);
   if (newSlug !== cur.slug) revalidatePath(`/qa/${newSlug}`);
-  redirect(`/qa/${newSlug}`);
+  return redirectToLocalizedPath(`/qa/${newSlug}`);
 }
 
 export async function deleteMyQa(qaId: string): Promise<QaActionResult> {
@@ -189,7 +194,7 @@ export async function deleteMyQa(qaId: string): Promise<QaActionResult> {
   if (snap.exists) {
     const cur = snap.data() as QaDoc;
     if (cur.authorUid !== user.uid && !user.isAdmin) {
-      return { ok: false, error: "この質問を削除する権限がありません。" };
+      return { ok: false, error: await actionError("qaDeleteForbidden") };
     }
     // We don't recursively delete the comments/likes subcollections here —
     // Firestore doesn't cascade. Admin can do that out-of-band if a Q&A
@@ -199,8 +204,7 @@ export async function deleteMyQa(qaId: string): Promise<QaActionResult> {
     revalidatePath("/qa");
     revalidatePath(`/qa/${cur.slug}`);
   }
-  // Idempotent: whether or not the doc existed, end up on the list.
-  redirect("/qa");
+  return redirectToLocalizedPath("/qa");
 }
 
 /**
@@ -212,13 +216,13 @@ export async function setQaStatus(
   input: SetQaStatusInput,
 ): Promise<QaActionResult> {
   await requireAdmin();
-  const pr = parseOrError(StatusSchema, input);
+  const pr = await parseOrError(StatusSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
   const ref = adminDb().collection("qa").doc(parsed.qaId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: "質問が見つかりません。" };
+  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
 
   if (cur.status === parsed.status) return { ok: true }; // no-op

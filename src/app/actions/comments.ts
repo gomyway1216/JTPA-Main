@@ -12,6 +12,7 @@ import {
   parentRoutePrefix,
 } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
   CommentDoc,
   GuideDoc,
@@ -52,16 +53,13 @@ export type DeleteCommentResult =
   | { ok: true; comment: CommentDoc | null }
   | { ok: false; error: string };
 
-function parseOrError<T extends z.ZodTypeAny>(
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 // ---------- post / list ----------
@@ -70,7 +68,7 @@ export async function postComment(
   input: CommentInput,
 ): Promise<PostCommentResult> {
   const user = await requireUser();
-  const pr = parseOrError(CommentSchema, input);
+  const pr = await parseOrError(CommentSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -82,14 +80,11 @@ export async function postComment(
     .doc(parsed.parentId);
   const parentSnap = await parentRef.get();
   if (!parentSnap.exists) {
-    return { ok: false, error: "投稿先が見つかりません。" };
+    return { ok: false, error: await actionError("commentParentNotFound") };
   }
   const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
   if (!isParentPubliclyVisible(parsed.parentType, parentData)) {
-    return {
-      ok: false,
-      error: "コメントは公開済みのコンテンツにのみ投稿できます",
-    };
+    return { ok: false, error: await actionError("commentPublishedOnly") };
   }
 
   // If this is a reply, validate the parent comment exists AND lives under
@@ -102,7 +97,7 @@ export async function postComment(
       .doc(parsed.parentCommentId)
       .get();
     if (!parentCommentSnap.exists) {
-      return { ok: false, error: "返信先のコメントが見つかりません" };
+      return { ok: false, error: await actionError("replyCommentNotFound") };
     }
   }
 
@@ -132,19 +127,19 @@ export async function postComment(
 // ---------- delete ----------
 
 // Soft-deletes by default: clears body and stamps `deletedAt` so the UI
-// can render a "削除されました" placeholder while keeping the slot in the
+// can render a deleted-comment placeholder while keeping the slot in the
 // thread (replies stay attached to their parent). Hard delete — actually
 // removing the doc — is admin-only.
 export async function deleteComment(
   input: DeleteCommentInput,
 ): Promise<DeleteCommentResult> {
   const user = await requireUser();
-  const pr = parseOrError(DeleteSchema, input);
+  const pr = await parseOrError(DeleteSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
   if (parsed.hard && !user.isAdmin) {
-    return { ok: false, error: "ハード削除は管理者のみ可能です。" };
+    return { ok: false, error: await actionError("commentHardDeleteAdminOnly") };
   }
 
   const parentRef = adminDb()
@@ -155,7 +150,7 @@ export async function deleteComment(
   if (!snap.exists) return { ok: true, comment: null };
   const cur = snap.data() as CommentDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    return { ok: false, error: "このコメントを削除する権限がありません。" };
+    return { ok: false, error: await actionError("commentDeleteForbidden") };
   }
 
   let result: CommentDoc | null;

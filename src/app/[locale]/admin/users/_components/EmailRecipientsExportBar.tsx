@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { OptedInRecipient } from "@/lib/data/users-admin";
@@ -33,6 +34,8 @@ export function EmailRecipientsExportBar({
   totalUsers: number;
 }) {
   const [toast, setToast] = useState<string | null>(null);
+  const t = useTranslations("Admin.users");
+  const common = useTranslations("Admin.common");
 
   function flashToast(msg: string) {
     setToast(msg);
@@ -41,22 +44,22 @@ export function EmailRecipientsExportBar({
 
   async function copyEmails() {
     if (recipients.length === 0) {
-      flashToast("該当者なし");
+      flashToast(common("noRecipients"));
       return;
     }
     try {
       await navigator.clipboard.writeText(
         recipients.map((r) => r.email).join(", "),
       );
-      flashToast(`${recipients.length} 件のメアドをコピー`);
+      flashToast(common("copiedEmails", { count: recipients.length }));
     } catch {
-      flashToast("コピー失敗 (HTTPS が必要かも)");
+      flashToast(common("copyFailed"));
     }
   }
 
   function downloadCsv() {
     if (recipients.length === 0) {
-      flashToast("該当者なし");
+      flashToast(common("noRecipients"));
       return;
     }
     const csv = buildCsv(recipients);
@@ -75,23 +78,26 @@ export function EmailRecipientsExportBar({
   return (
     <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-medium">メール一斉配信用エクスポート:</span>
+        <span className="font-medium">{t("exportTitle")}</span>
         <span className="text-xs text-zinc-500">
-          オプトイン {recipients.length} 件 / 全 {totalUsers} 名
+          {t("exportCount", {
+            recipients: recipients.length,
+            total: totalUsers,
+          })}
         </span>
         <button
           type="button"
           onClick={copyEmails}
           className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
         >
-          メアドをコピー
+          {common("copyEmails")}
         </button>
         <button
           type="button"
           onClick={downloadCsv}
           className="rounded border border-zinc-300 bg-white px-3 py-1 text-xs hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-800"
         >
-          CSV ダウンロード
+          {common("downloadCsv")}
         </button>
         {toast && (
           <span className="text-xs text-emerald-700 dark:text-emerald-300">
@@ -100,8 +106,7 @@ export function EmailRecipientsExportBar({
         )}
       </div>
       <p className="text-xs text-zinc-500">
-        プロフィールでメール通知をオプトアウトしたユーザーは含まれません。
-        外部メール配信サービスにそのまま投入してください。
+        {t("exportHelp")}
       </p>
     </div>
   );

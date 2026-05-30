@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 
 import { setUserRole, type ManagedRole } from "@/app/actions/roles";
 import type { AdminUserListEntry } from "@/lib/data/users-admin";
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -14,7 +15,7 @@ function formatDate(iso: string | null): string {
   // client hydration produce the same string — otherwise React fires a
   // hydration warning when the server-rendered HTML doesn't match the
   // client's locale-aware render.
-  return d.toLocaleString("ja-JP", {
+  return d.toLocaleString(locale === "en" ? "en-US" : "ja-JP", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -41,6 +42,8 @@ export function UserTable({
   const [error, setError] = useState<string | null>(null);
   const [pendingUid, setPendingUid] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const locale = useLocale();
+  const t = useTranslations("Admin.users");
 
   // Filter by email OR displayName substring, case-insensitive. Empty query
   // shows everyone (sorted by last sign-in upstream).
@@ -72,7 +75,7 @@ export function UserTable({
         // of the masked generic Server Action crash.
         if (!res.ok) setError(res.error);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "ロール変更に失敗しました");
+        setError(err instanceof Error ? err.message : t("roleChangeFailed"));
       } finally {
         setPendingUid(null);
       }
@@ -83,8 +86,8 @@ export function UserTable({
     <div className="space-y-3">
       <input
         type="search"
-        aria-label="ユーザーをメールアドレスまたは名前で検索"
-        placeholder="メールアドレス or 名前で絞り込み"
+        aria-label={t("searchAria")}
+        placeholder={t("searchPlaceholder")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
@@ -93,16 +96,16 @@ export function UserTable({
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-zinc-500">該当するユーザーがいません。</p>
+        <p className="text-sm text-zinc-500">{t("empty")}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-zinc-500">
               <tr>
-                <th className="py-2">ユーザー</th>
-                <th className="py-2">ロール</th>
-                <th className="py-2">最終ログイン</th>
-                <th className="py-2 text-right">操作</th>
+                <th className="py-2">{t("columns.user")}</th>
+                <th className="py-2">{t("columns.role")}</th>
+                <th className="py-2">{t("columns.lastLogin")}</th>
+                <th className="py-2 text-right">{t("columns.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -135,10 +138,10 @@ export function UserTable({
                         )}
                         <div className="min-w-0">
                           <div className="truncate font-medium">
-                            {u.displayName || "(名前未設定)"}
+                            {u.displayName || t("nameUnset")}
                             {isSelf && (
                               <span className="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
-                                あなた
+                                {t("you")}
                               </span>
                             )}
                           </div>
@@ -163,18 +166,18 @@ export function UserTable({
                         {u.isContributor && (
                           <span
                             className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-medium text-sky-900 dark:bg-sky-950 dark:text-sky-200"
-                            title="自分のガイドを審査なしで公開できる"
+                            title={t("contributorHint")}
                           >
                             contributor
                           </span>
                         )}
                         {!u.isAdmin && !u.isEditor && !u.isContributor && (
-                          <span className="text-xs text-zinc-500">なし</span>
+                          <span className="text-xs text-zinc-500">{t("none")}</span>
                         )}
                       </div>
                     </td>
                     <td className="py-2 text-xs text-zinc-500">
-                      {formatDate(u.lastSignInAt)}
+                      {formatDate(u.lastSignInAt, locale)}
                     </td>
                     <td className="py-2">
                       <div className="flex flex-wrap justify-end gap-1.5">
@@ -191,8 +194,8 @@ export function UserTable({
                           className="rounded border border-sky-300 px-2 py-1 text-xs text-sky-800 hover:bg-sky-50 disabled:opacity-50 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950"
                         >
                           {u.isContributor
-                            ? "contributor 剥奪"
-                            : "contributor 付与"}
+                            ? t("contributorRevoke")
+                            : t("contributorGrant")}
                         </button>
                         <button
                           type="button"
@@ -202,7 +205,7 @@ export function UserTable({
                           }
                           className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
                         >
-                          {u.isEditor ? "editor 剥奪" : "editor 付与"}
+                          {u.isEditor ? t("editorRevoke") : t("editorGrant")}
                         </button>
                         {u.isAdmin ? (
                           <button
@@ -210,15 +213,15 @@ export function UserTable({
                             disabled={isPending || !canRevokeAdmin}
                             title={
                               isSelf
-                                ? "自分自身の admin は剥奪できません"
+                                ? t("cannotRevokeSelf")
                                 : isLastAdmin
-                                  ? "最後の admin は剥奪できません"
+                                  ? t("cannotRevokeLast")
                                   : undefined
                             }
                             onClick={() => handleToggle(u.uid, "admin", false)}
                             className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
                           >
-                            admin 剥奪
+                            {t("adminRevoke")}
                           </button>
                         ) : (
                           <button
@@ -227,7 +230,7 @@ export function UserTable({
                             onClick={() => handleToggle(u.uid, "admin", true)}
                             className="rounded border border-purple-300 px-2 py-1 text-xs text-purple-700 hover:bg-purple-50 disabled:opacity-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950"
                           >
-                            admin 付与
+                            {t("adminGrant")}
                           </button>
                         )}
                       </div>
@@ -241,7 +244,7 @@ export function UserTable({
       )}
 
       <p className="text-xs text-zinc-500">
-        表示中: {filtered.length} / 全 {users.length} 名
+        {t("visibleCount", { visible: filtered.length, total: users.length })}
       </p>
     </div>
   );

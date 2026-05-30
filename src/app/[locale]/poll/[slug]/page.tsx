@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { PollVoteForm } from "@/app/[locale]/poll/_components/PollVoteForm";
@@ -38,6 +39,11 @@ export default async function PollDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t, common] = await Promise.all([
+    getLocale(),
+    getTranslations("PollDetail"),
+    getTranslations("Common"),
+  ]);
   const [user, poll] = await Promise.all([
     getSessionUser(),
     getPollBySlug(slug),
@@ -82,12 +88,13 @@ export default async function PollDetailPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/poll" className="text-xs text-zinc-500 hover:underline">
-        ← 投票一覧
+        {t("back")}
       </Link>
 
       {poll.status === "archived" && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          この投稿は管理者によって <strong>アーカイブ</strong> されています。あなた以外には表示されません。
+          {t("archivedNoticePrefix")} <strong>{t("archived")}</strong>{" "}
+          {t("archivedNoticeSuffix")}
         </div>
       )}
 
@@ -98,7 +105,7 @@ export default async function PollDetailPage({
             profile={profilesByUid.get(poll.authorUid) ?? null}
             size="md"
           />
-          <span>· {formatDate(poll.createdAt)}</span>
+          <span>· {formatDate(poll.createdAt, locale)}</span>
         </p>
         <div className="flex items-center gap-3">
           <LikeButton
@@ -115,7 +122,7 @@ export default async function PollDetailPage({
               href={`/poll/${poll.slug}/edit`}
               className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
             >
-              編集
+              {common("edit")}
             </Link>
           )}
         </div>

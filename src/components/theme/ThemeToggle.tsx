@@ -1,16 +1,18 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { useTheme, type ThemeMode } from "./ThemeProvider";
 
-const OPTIONS: { value: ThemeMode; label: string }[] = [
-  { value: "light", label: "ライト" },
-  { value: "dark", label: "ダーク" },
-  { value: "system", label: "システム" },
+const OPTIONS: { value: ThemeMode; labelKey: string }[] = [
+  { value: "light", labelKey: "light" },
+  { value: "dark", labelKey: "dark" },
+  { value: "system", labelKey: "system" },
 ];
 
 export function ThemeToggle() {
+  const t = useTranslations("Theme");
   const { mode, setMode, resolved } = useTheme();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -36,7 +38,7 @@ export function ThemeToggle() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="テーマを切り替える"
+        aria-label={t("toggle")}
         aria-haspopup="menu"
         aria-expanded={open}
         className="rounded-md p-2 text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
@@ -64,7 +66,7 @@ export function ThemeToggle() {
                   : "text-zinc-600 dark:text-zinc-400"
               }`}
             >
-              {opt.label}
+              {t(opt.labelKey)}
             </button>
           ))}
         </div>

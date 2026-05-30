@@ -1,4 +1,6 @@
 import Link from "@/i18n/navigation";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -9,9 +11,16 @@ import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "ブログ" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("BlogPage");
+  return { title: t("metadataTitle") };
+}
 
 export default async function BlogIndexPage() {
+  const locale = await getLocale();
+  const t = await getTranslations("BlogPage");
+  const common = await getTranslations("Common");
   const posts = await listPublishedPosts(50).catch(() => []);
   // Single batched read for every author appearing in the list — keeps
   // the page to one Firestore round-trip for user lookups regardless of
@@ -24,27 +33,27 @@ export default async function BlogIndexPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 space-y-8">
       {/* Stack on mobile so the subtitle isn't crushed against the
-          "記事を投稿" button. From `sm:` we keep the desktop side-by-side
+          new-article button. From `sm:` we keep the desktop side-by-side
           layout. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ブログ</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            JTPAコミュニティのメンバーによる記事
+            {t("description")}
           </p>
         </div>
         <Link
           href="/blog/new"
           className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          記事を投稿
+          {t("submit")}
         </Link>
       </header>
 
       {posts.length === 0 ? (
         <EmptyState
-          message="まだ公開済みの記事はありません。"
-          hint="最初の記事を投稿してみましょう。"
+          message={t("empty")}
+          hint={t("emptyHint")}
         />
       ) : (
         <ul className="space-y-4">
@@ -59,7 +68,7 @@ export default async function BlogIndexPage() {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
                   src={p.coverImage.url}
-                  alt={`${p.title} のカバー画像`}
+                  alt={common("coverImageAlt", { title: p.title })}
                   className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
                 />
               )}
@@ -74,7 +83,7 @@ export default async function BlogIndexPage() {
                 </h2>
                 <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
                   <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
-                  {p.publishedAt && <span>· {formatDate(p.publishedAt)}</span>}
+                  {p.publishedAt && <span>· {formatDate(p.publishedAt, locale)}</span>}
                 </p>
                 {p.excerpt && (
                   <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">

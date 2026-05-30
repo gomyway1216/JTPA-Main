@@ -48,7 +48,7 @@ export async function listFeedback(
 
 /**
  * Dashboard counter — number of feedback entries waiting for triage.
- * Used by /admin to render a "新規フィードバック (N)" tile. Capped count
+ * Used by /admin to render a new-feedback tile. Capped count
  * (>= cap surfaces as "{cap}+") so the count query stays bounded; in
  * practice the queue should never approach the cap.
  */

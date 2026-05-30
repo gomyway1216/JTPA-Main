@@ -1,5 +1,5 @@
 import Link from "@/i18n/navigation";
-import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
@@ -7,12 +7,17 @@ import { countNewFeedback } from "@/lib/data/feedback";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHomePage() {
   const user = await getSessionUser();
-  if (!user?.isAdmin) redirect("/admin/guides");
+  if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
+  const [t, common] = await Promise.all([
+    getTranslations("Admin.dashboard"),
+    getTranslations("Admin.common"),
+  ]);
 
   const [pending, upcoming, pendingPosts, newFeedbackCount] = await Promise.all([
     listProjects({ status: "pending", limit: 5 }).catch(() => []),
@@ -31,17 +36,19 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">管理ダッシュボード</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">承認待ちのプロジェクト ({pending.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("pendingProjects", { count: pending.length })}
+          </h2>
           <Link href="/admin/projects" className="text-sm text-blue-600 hover:underline">
-            すべて見る →
+            {common("viewAll")}
           </Link>
         </div>
         {pending.length === 0 ? (
-          <p className="text-sm text-zinc-500 mt-2">承認待ちはありません。</p>
+          <p className="text-sm text-zinc-500 mt-2">{t("pendingEmpty")}</p>
         ) : (
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {pending.map((p) => (
@@ -63,13 +70,15 @@ export default async function AdminHomePage() {
 
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">審査待ちの記事 ({pendingPosts.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("pendingPosts", { count: pendingPosts.length })}
+          </h2>
           <Link href="/admin/posts" className="text-sm text-blue-600 hover:underline">
-            すべて見る →
+            {common("viewAll")}
           </Link>
         </div>
         {pendingPosts.length === 0 ? (
-          <p className="text-sm text-zinc-500 mt-2">審査待ちはありません。</p>
+          <p className="text-sm text-zinc-500 mt-2">{t("reviewEmpty")}</p>
         ) : (
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {pendingPosts.map((p) => (
@@ -92,31 +101,33 @@ export default async function AdminHomePage() {
       <section>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">
-            新規フィードバック ({newFeedbackCount})
+            {t("newFeedback", { count: newFeedbackCount })}
           </h2>
           <Link
             href="/admin/feedback"
             className="text-sm text-blue-600 hover:underline"
           >
-            triage →
+            {common("triage")}
           </Link>
         </div>
         <p className="text-sm text-zinc-500 mt-2">
           {newFeedbackCount === 0
-            ? "未対応のフィードバックはありません。"
-            : "/help から届いた要望・不具合報告です。"}
+            ? t("feedbackEmpty")
+            : t("feedbackDescription")}
         </p>
       </section>
 
       <section>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">イベント ({upcoming.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("events", { count: upcoming.length })}
+          </h2>
           <Link href="/admin/events" className="text-sm text-blue-600 hover:underline">
-            管理 →
+            {common("manage")}
           </Link>
         </div>
         {upcoming.length === 0 ? (
-          <p className="text-sm text-zinc-500 mt-2">イベントはありません。</p>
+          <p className="text-sm text-zinc-500 mt-2">{t("eventsEmpty")}</p>
         ) : (
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {upcoming.map((e) => (

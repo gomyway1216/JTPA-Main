@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -25,11 +26,15 @@ export function PostReviewCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("Admin.posts");
+  const projectsT = useTranslations("Admin.projects");
+  const common = useTranslations("Admin.common");
 
   function decide(decision: "published" | "rejected") {
     setError(null);
     if (decision === "rejected" && !note.trim()) {
-      if (!confirm("コメントなしで却下しますか？")) return;
+      if (!confirm(projectsT("rejectWithoutNoteConfirm"))) return;
     }
     startTransition(async () => {
       try {
@@ -42,10 +47,10 @@ export function PostReviewCard({
         // revalidatePath inside the Server Action invalidates the cache,
         // but the existing client-side React tree won't re-fetch until we
         // tell the router to refresh. Without this the just-decided card
-        // would linger in the 審査待ち list until manual reload.
+        // would linger in the pending list until manual reload.
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "失敗しました");
+        setError(err instanceof Error ? err.message : projectsT("failed"));
       }
     });
   }
@@ -61,8 +66,8 @@ export function PostReviewCard({
           <h3 className="text-lg font-semibold">{post.title}</h3>
           <p className="text-xs text-zinc-500">
             {authorProfile ? `@${authorProfile.username}` : post.authorName}
-            {" · 投稿 "}
-            {formatDate(post.submittedAt)}
+            {" · "}
+            {t("submitted", { date: formatDate(post.submittedAt, locale) })}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
@@ -70,13 +75,13 @@ export function PostReviewCard({
             href={`/blog/${post.slug}`}
             className="text-zinc-500 hover:underline"
           >
-            プレビュー
+            {common("preview")}
           </Link>
           <Link
             href={`/my/posts/${post.id}/edit`}
             className="text-zinc-500 hover:underline"
           >
-            内容を編集
+            {common("editContent")}
           </Link>
         </div>
       </header>
@@ -85,7 +90,7 @@ export function PostReviewCard({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={post.coverImage.url}
-          alt={`${post.title} のカバー画像`}
+          alt={t("coverAlt", { title: post.title })}
           className="mt-3 h-32 w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
@@ -108,12 +113,12 @@ export function PostReviewCard({
       )}
 
       <label htmlFor={noteId} className="sr-only">
-        コメント (却下時に投稿者へ送信)
+        {projectsT("notePlaceholder")}
       </label>
       <textarea
         id={noteId}
         rows={2}
-        placeholder="コメント (却下時に投稿者へ送信)"
+        placeholder={projectsT("notePlaceholder")}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         disabled={pending}
@@ -127,7 +132,7 @@ export function PostReviewCard({
           onClick={() => decide("published")}
           className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
         >
-          公開
+          {common("publish")}
         </button>
         <button
           type="button"
@@ -135,7 +140,7 @@ export function PostReviewCard({
           onClick={() => decide("rejected")}
           className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
         >
-          却下
+          {common("reject")}
         </button>
       </div>
     </article>

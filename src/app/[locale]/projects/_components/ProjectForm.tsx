@@ -5,6 +5,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { submitProject, updateMyProject } from "@/app/actions/projects";
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export function ProjectForm({ mode, user, project }: Props) {
+  const t = useTranslations("ProjectForm");
   const [title, setTitle] = useState(project?.title ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
@@ -61,12 +63,10 @@ export function ProjectForm({ mode, user, project }: Props) {
     onProgress: (pct: number) => void,
   ): Promise<ProjectAsset> {
     if (file.size > MAX_IMAGE_BYTES) {
-      return Promise.reject(new Error("画像サイズは 5MB 以下にしてください"));
+      return Promise.reject(new Error(t("imageTooLarge")));
     }
     if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
-      return Promise.reject(
-        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
-      );
+      return Promise.reject(new Error(t("imageType")));
     }
     const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
     const path = `projects/${user.uid}/${Date.now()}-${safeName}`;
@@ -98,7 +98,7 @@ export function ProjectForm({ mode, user, project }: Props) {
       const asset = await uploadOne(file, setThumbProgress);
       setThumbnail(asset);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロード失敗");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setThumbProgress(null);
       e.target.value = ""; // allow re-picking the same file
@@ -111,7 +111,7 @@ export function ProjectForm({ mode, user, project }: Props) {
     if (files.length === 0) return;
     const remaining = MAX_SCREENSHOTS - screenshots.length;
     if (remaining <= 0) {
-      setError(`スクリーンショットは最大 ${MAX_SCREENSHOTS} 枚までです`);
+      setError(t("tooManyScreenshots", { count: MAX_SCREENSHOTS }));
       return;
     }
     const toUpload = files.slice(0, remaining);
@@ -121,7 +121,7 @@ export function ProjectForm({ mode, user, project }: Props) {
         const asset = await uploadOne(file, setShotProgress);
         setScreenshots((cur) => [...cur, asset]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "アップロード失敗");
+        setError(err instanceof Error ? err.message : t("uploadFailed"));
         setShotProgress(null);
         e.target.value = "";
         return;
@@ -167,7 +167,7 @@ export function ProjectForm({ mode, user, project }: Props) {
         // Success throws the internal NEXT_REDIRECT — let it propagate so the
         // navigation actually happens. Anything else is a real failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
   }
@@ -176,7 +176,7 @@ export function ProjectForm({ mode, user, project }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required htmlFor="project-title">
+      <Field label={t("title")} required htmlFor="project-title">
         <input
           id="project-title"
           type="text"
@@ -186,7 +186,11 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputClass}
         />
       </Field>
-      <Field label="説明 (Markdown可)" required htmlFor="project-description">
+      <Field
+        label={t("description")}
+        required
+        htmlFor="project-description"
+      >
         <textarea
           id="project-description"
           required
@@ -196,7 +200,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputClass}
         />
       </Field>
-      <Field label="タグ (カンマ区切り)" htmlFor="project-tags">
+      <Field label={t("tags")} htmlFor="project-tags">
         <input
           id="project-tags"
           type="text"
@@ -206,17 +210,17 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputClass}
         />
       </Field>
-      <Field label="アプリのURL (任意)" htmlFor="project-app-url">
+      <Field label={t("appUrl")} htmlFor="project-app-url">
         <input
           id="project-app-url"
           type="url"
           value={appUrl}
           onChange={(e) => setAppUrl(e.target.value)}
-          placeholder="https://your-app.example.com (CLI / ローカル専用なら空欄でOK)"
+          placeholder={t("appUrlPlaceholder")}
           className={inputClass}
         />
       </Field>
-      <Field label="リポジトリURL" htmlFor="project-repo-url">
+      <Field label={t("repoUrl")} htmlFor="project-repo-url">
         <input
           id="project-repo-url"
           type="url"
@@ -225,7 +229,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           className={inputClass}
         />
       </Field>
-      <Field label="デモ動画URL (YouTube等)" htmlFor="project-demo-url">
+      <Field label={t("demoVideoUrl")} htmlFor="project-demo-url">
         <input
           id="project-demo-url"
           type="url"
@@ -235,14 +239,14 @@ export function ProjectForm({ mode, user, project }: Props) {
         />
       </Field>
 
-      <Field label="カバー画像 (一覧のサムネ用・1枚・5MBまで)">
+      <Field label={t("cover")}>
         <div className="space-y-2">
           {thumbnail && (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={thumbnail.url}
-                alt="thumbnail preview"
+                alt={t("thumbnailPreviewAlt")}
                 className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
@@ -250,7 +254,7 @@ export function ProjectForm({ mode, user, project }: Props) {
                 onClick={() => setThumbnail(undefined)}
                 className="text-xs text-red-600 hover:underline"
               >
-                削除
+                {t("delete")}
               </button>
             </div>
           )}
@@ -262,13 +266,13 @@ export function ProjectForm({ mode, user, project }: Props) {
           />
           {thumbProgress !== null && (
             <p className="text-xs text-zinc-500">
-              アップロード中… {thumbProgress.toFixed(0)}%
+              {t("uploading", { progress: thumbProgress.toFixed(0) })}
             </p>
           )}
         </div>
       </Field>
 
-      <Field label={`スクリーンショット (最大 ${MAX_SCREENSHOTS} 枚・各 5MBまで)`}>
+      <Field label={t("screenshots", { count: MAX_SCREENSHOTS })}>
         <div className="space-y-2">
           {screenshots.length > 0 && (
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -285,7 +289,7 @@ export function ProjectForm({ mode, user, project }: Props) {
                     onClick={() => removeScreenshot(i)}
                     className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white hover:bg-black/80"
                   >
-                    削除
+                    {t("delete")}
                   </button>
                 </li>
               ))}
@@ -302,11 +306,14 @@ export function ProjectForm({ mode, user, project }: Props) {
           )}
           {shotProgress !== null && (
             <p className="text-xs text-zinc-500">
-              アップロード中… {shotProgress.toFixed(0)}%
+              {t("uploading", { progress: shotProgress.toFixed(0) })}
             </p>
           )}
           <p className="text-xs text-zinc-500">
-            {screenshots.length} / {MAX_SCREENSHOTS} 枚
+            {t("screenshotCount", {
+              current: screenshots.length,
+              max: MAX_SCREENSHOTS,
+            })}
           </p>
         </div>
       </Field>
@@ -314,7 +321,7 @@ export function ProjectForm({ mode, user, project }: Props) {
       {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && (
         <p className="text-xs text-zinc-500">
-          編集すると再度「審査中」となり、管理者の承認後に再掲載されます。
+          {t("editReviewNotice")}
         </p>
       )}
 
@@ -324,14 +331,13 @@ export function ProjectForm({ mode, user, project }: Props) {
         className={primaryButtonClass}
       >
         {pending
-          ? "送信中..."
+          ? t("submitting")
           : uploading
-            ? "アップロード中..."
+            ? t("uploadingButton")
             : mode === "create"
-              ? "投稿して審査依頼"
-              : "更新して再審査"}
+              ? t("submitForReview")
+              : t("updateForReview")}
       </button>
     </form>
   );
 }
-

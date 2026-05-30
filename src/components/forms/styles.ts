@@ -38,17 +38,17 @@ const secondaryButtonBase =
 const dangerButtonBase =
   "inline-flex items-center justify-center rounded-md border border-red-300 bg-white font-medium text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 dark:border-red-800 dark:bg-zinc-950 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-red-400 dark:focus:ring-offset-zinc-950";
 
-// Primary action button (Submit, 投稿する, 保存, ...). Dark in light
+// Primary action button (submit, save, ...). Dark in light
 // mode, light in dark mode — matches the existing visual language.
 export const primaryButtonClass = `${primaryButtonBase} ${buttonSizeMd}`;
 // Compact variant for inline / reply / image-upload buttons.
 export const primaryButtonClassSm = `${primaryButtonBase} ${buttonSizeSm}`;
 
-// Outlined secondary button (cancel, 下書き保存, オプション追加, ...).
+// Outlined secondary button (cancel, save draft, add option, ...).
 export const secondaryButtonClass = `${secondaryButtonBase} ${buttonSizeMd}`;
 export const secondaryButtonClassSm = `${secondaryButtonBase} ${buttonSizeSm}`;
 
-// Destructive button (削除).
+// Destructive button.
 export const dangerButtonClass = `${dangerButtonBase} ${buttonSizeMd}`;
 export const dangerButtonClassSm = `${dangerButtonBase} ${buttonSizeSm}`;
 
