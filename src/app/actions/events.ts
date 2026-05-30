@@ -200,6 +200,14 @@ export async function deleteEvent(eventId: string): Promise<void> {
   }
   revalidatePath("/events");
   revalidatePath("/admin/events");
+  // Redirect server-side instead of letting the client navigate after the
+  // action resolves. Without this, the just-completed action triggers a
+  // refresh of the CURRENT route (`/admin/events/[id]/edit`), whose page
+  // re-runs `getEventById` → the doc is gone → `notFound()`, so the admin
+  // sees the 404 page flash before the client-side redirect lands. A
+  // server redirect navigates straight to the list and never re-renders
+  // the deleted event's edit page.
+  redirect("/admin/events");
 }
 
 // Try the base slug first, then append `-1`, `-2`, ... until we find one
