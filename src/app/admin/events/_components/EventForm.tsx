@@ -237,9 +237,14 @@ export function EventForm({
     if (!confirm("このイベントを削除しますか？")) return;
     startTransition(async () => {
       try {
+        // deleteEvent redirects to /admin/events on success, so there's no
+        // client-side navigation to do here.
         await deleteEvent(event.id);
-        window.location.href = "/admin/events";
       } catch (err) {
+        // Success throws the internal NEXT_REDIRECT — let it propagate so
+        // the navigation actually happens (mirrors handleSubmit). Anything
+        // else is a real delete failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "削除に失敗しました");
       }
     });
