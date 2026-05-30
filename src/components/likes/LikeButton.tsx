@@ -6,7 +6,7 @@ import { useState, useTransition } from "react";
 import {
   toggleLikeComment,
   toggleLikeRecord,
-  type LikeResult,
+  type LikeActionResult,
 } from "@/app/actions/likes";
 import { parentRoutePrefix } from "@/lib/comments-parent";
 import type { CommentParentType, SessionUser } from "@/lib/types";
@@ -50,24 +50,29 @@ export function LikeButton(props: Props) {
 
     startTransition(async () => {
       try {
-        let result: LikeResult;
-        if (props.target === "record") {
-          result = await toggleLikeRecord({
-            parentType: props.parentType,
-            parentId: props.parentId,
-          });
-        } else {
-          result = await toggleLikeComment({
-            parentType: props.parentType,
-            parentId: props.parentId,
-            commentId: props.commentId,
-          });
+        const res: LikeActionResult =
+          props.target === "record"
+            ? await toggleLikeRecord({
+                parentType: props.parentType,
+                parentId: props.parentId,
+              })
+            : await toggleLikeComment({
+                parentType: props.parentType,
+                parentId: props.parentId,
+                commentId: props.commentId,
+              });
+        if (!res.ok) {
+          // Revert the optimistic flip and surface the real reason.
+          setLiked(prevLiked);
+          setCount(prevCount);
+          setError(res.error);
+          return;
         }
         // Reconcile with server truth (e.g. count may differ if another
         // client liked at the same instant). `liked` for THIS user is
         // authoritative from the server.
-        setLiked(result.liked);
-        setCount(result.count);
+        setLiked(res.result.liked);
+        setCount(res.result.count);
       } catch (err) {
         // Revert the optimistic flip on failure.
         setLiked(prevLiked);

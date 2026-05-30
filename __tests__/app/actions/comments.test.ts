@@ -66,6 +66,17 @@ vi.mock("@/lib/firebase/admin", () => {
 
 import { postComment } from "@/app/actions/comments";
 
+// postComment now returns a discriminated result instead of throwing —
+// assert on the error result rather than a rejection.
+async function expectError(
+  p: ReturnType<typeof postComment>,
+  substr: string,
+) {
+  const res = await p;
+  if (res.ok) throw new Error("expected an error result, but got ok");
+  expect(res.error).toContain(substr);
+}
+
 beforeEach(() => {
   requireUserMock.mockReset();
   parentGetMock.mockReset();
@@ -85,50 +96,56 @@ beforeEach(() => {
 
 describe("postComment — Zod validation", () => {
   it("rejects unknown parentType (slipping past the union type)", async () => {
-    await expect(
+    await expectError(
       postComment({
         parentType: "spam" as never,
         parentId: "p1",
         body: "hi",
       }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
   it("rejects an empty body", async () => {
-    await expect(
+    await expectError(
       postComment({ parentType: "post", parentId: "p1", body: "" }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
   it("rejects a body that's all whitespace (trim+min(1))", async () => {
-    await expect(
+    await expectError(
       postComment({ parentType: "post", parentId: "p1", body: "   " }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
   it("rejects a body over 2000 chars", async () => {
-    await expect(
+    await expectError(
       postComment({
         parentType: "post",
         parentId: "p1",
         body: "x".repeat(2001),
       }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
   it("rejects an empty parentId", async () => {
-    await expect(
+    await expectError(
       postComment({ parentType: "post", parentId: "", body: "hi" }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 });
 
 describe("postComment — parent existence + visibility", () => {
-  it("throws NOT_FOUND when the parent doc is missing", async () => {
+  it("returns an error when the parent doc is missing", async () => {
     parentGetMock.mockResolvedValueOnce({ exists: false });
-    await expect(
+    await expectError(
       postComment({ parentType: "post", parentId: "p1", body: "hi" }),
-    ).rejects.toThrow("NOT_FOUND");
+      "見つかりません",
+    );
   });
 
   it("refuses to post on an unpublished post (rules-bypass guard)", async () => {
@@ -139,9 +156,10 @@ describe("postComment — parent existence + visibility", () => {
       exists: true,
       data: () => ({ status: "draft", slug: "p1" }),
     });
-    await expect(
+    await expectError(
       postComment({ parentType: "post", parentId: "p1", body: "hi" }),
-    ).rejects.toThrow("公開済み");
+      "公開済み",
+    );
     expect(commentSetMock).not.toHaveBeenCalled();
   });
 
@@ -152,9 +170,10 @@ describe("postComment — parent existence + visibility", () => {
       exists: true,
       data: () => ({ status: "published", slug: "x" }),
     });
-    await expect(
+    await expectError(
       postComment({ parentType: "project", parentId: "p1", body: "hi" }),
-    ).rejects.toThrow("公開済み");
+      "公開済み",
+    );
   });
 
   it("accepts a comment on a published post", async () => {
@@ -162,20 +181,23 @@ describe("postComment — parent existence + visibility", () => {
       exists: true,
       data: () => ({ status: "published", slug: "hello" }),
     });
-    const out = await postComment({
+    const res = await postComment({
       parentType: "post",
       parentId: "p1",
       body: "great post",
     });
-    expect(out).toMatchObject({
-      id: newCommentRefId,
-      parentType: "post",
-      parentId: "p1",
-      authorUid: "u1",
-      body: "great post",
-      parentCommentId: null,
-      likeCount: 0,
-    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.comment).toMatchObject({
+        id: newCommentRefId,
+        parentType: "post",
+        parentId: "p1",
+        authorUid: "u1",
+        body: "great post",
+        parentCommentId: null,
+        likeCount: 0,
+      });
+    }
     expect(commentSetMock).toHaveBeenCalledTimes(1);
   });
 
@@ -204,14 +226,15 @@ describe("postComment — replies (parentCommentId)", () => {
       data: () => ({ status: "published", slug: "x" }),
     });
     parentCommentGetMock.mockResolvedValueOnce({ exists: false });
-    await expect(
+    await expectError(
       postComment({
         parentType: "post",
         parentId: "p1",
         body: "reply",
         parentCommentId: "stranger-comment",
       }),
-    ).rejects.toThrow("返信先のコメント");
+      "返信先のコメント",
+    );
   });
 
   it("accepts a reply when the parent comment exists under this parent", async () => {
@@ -220,13 +243,14 @@ describe("postComment — replies (parentCommentId)", () => {
       data: () => ({ status: "published", slug: "x" }),
     });
     parentCommentGetMock.mockResolvedValueOnce({ exists: true });
-    const out = await postComment({
+    const res = await postComment({
       parentType: "post",
       parentId: "p1",
       body: "reply",
       parentCommentId: "c-original",
     });
-    expect(out.parentCommentId).toBe("c-original");
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.comment.parentCommentId).toBe("c-original");
   });
 
   it("treats parentCommentId=null as a top-level comment", async () => {
@@ -234,13 +258,14 @@ describe("postComment — replies (parentCommentId)", () => {
       exists: true,
       data: () => ({ status: "published", slug: "x" }),
     });
-    const out = await postComment({
+    const res = await postComment({
       parentType: "post",
       parentId: "p1",
       body: "top level",
       parentCommentId: null,
     });
-    expect(out.parentCommentId).toBeNull();
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.comment.parentCommentId).toBeNull();
     // The parent-comment existence check is skipped — no validation
     // call.
     expect(parentCommentGetMock).not.toHaveBeenCalled();
@@ -255,13 +280,16 @@ describe("postComment — author denormalization", () => {
       exists: true,
       data: () => ({ status: "published", slug: "x" }),
     });
-    const out = await postComment({
+    const res = await postComment({
       parentType: "post",
       parentId: "p1",
       body: "hi",
     });
-    expect(out.authorUid).toBe("u1");
-    expect(out.authorName).toBe("Alice");
-    expect(out.authorPhotoURL).toBe("https://x/a.png");
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.comment.authorUid).toBe("u1");
+      expect(res.comment.authorName).toBe("Alice");
+      expect(res.comment.authorPhotoURL).toBe("https://x/a.png");
+    }
   });
 });
