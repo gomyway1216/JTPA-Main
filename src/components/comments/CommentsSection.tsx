@@ -121,13 +121,17 @@ export function CommentsSection({
     if (!text) return;
     startTransition(async () => {
       try {
-        const saved = await postComment({
+        const res = await postComment({
           parentType,
           parentId,
           body: text,
           parentCommentId: opts.parentCommentId,
         });
-        setComments((cur) => [...cur, saved]);
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        setComments((cur) => [...cur, res.comment]);
         if (opts.parentCommentId) {
           setReplyBody("");
           setReplyingTo(null);
@@ -149,12 +153,17 @@ export function CommentsSection({
     setError(null);
     startTransition(async () => {
       try {
-        const updated = await deleteComment({
+        const res = await deleteComment({
           parentType,
           parentId,
           commentId,
           hard,
         });
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        const updated = res.comment;
         setComments((cur) =>
           updated === null
             ? cur.filter((c) => c.id !== commentId)
