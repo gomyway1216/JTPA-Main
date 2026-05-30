@@ -8,8 +8,8 @@ import { requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import type { UserLinks, UserProfile } from "@/lib/types";
 import {
+  isReservedUsername,
   normalizeUsername,
-  RESERVED_USERNAMES,
   USERNAME_REGEX,
   usernameErrorMessage,
   validateUsernameFormat,
@@ -112,6 +112,29 @@ export async function checkUsernameAvailable(
   const norm = normalizeUsername(desired);
   const formatErr = validateUsernameFormat(norm);
   if (formatErr) {
+    // Grandfather exception: a "reserved" error on a handle that's
+    // already the user's current username means they're trying to
+    // save WITHOUT renaming — e.g. a profile doc that was created
+    // before the prefix rule landed, and the user just wants to
+    // edit their bio. Don't block that. The rule is about new
+    // claims, not about confiscating handles already in use.
+    //
+    // Two-step lookup: confirm with the reservation registry that
+    // the caller is actually the owner (don't trust the input
+    // alone). The reservation doc id is the handle itself, so this
+    // is a single point read.
+    if (formatErr === "reserved") {
+      const ownedSnap = await adminDb()
+        .collection("usernames")
+        .doc(norm)
+        .get();
+      if (
+        ownedSnap.exists &&
+        (ownedSnap.data() as { uid: string }).uid === user.uid
+      ) {
+        return { status: "yours" };
+      }
+    }
     return { status: "invalid", reason: usernameErrorMessage(formatErr) };
   }
 
@@ -145,17 +168,31 @@ export async function updateMyProfile(
   // between "what the user typed" and "what we stored".
   const desiredUsername = normalizeUsername(parsed.data.username);
   const usernameErr = validateUsernameFormat(desiredUsername);
-  if (usernameErr) {
+  // Empty / format errors are unconditional — fail fast without
+  // touching Firestore. "reserved" is deferred to the transaction
+  // below: a reserved handle is still OK if it's already the user's
+  // current one (grandfathered claim), and we need to read the user
+  // doc to know that. Per PR #94 Copilot review.
+  if (usernameErr && usernameErr !== "reserved") {
     return { ok: false, error: usernameErrorMessage(usernameErr) };
   }
-  // RESERVED_USERNAMES is already covered by validateUsernameFormat but
-  // re-asserting USERNAME_REGEX here is a belt-and-suspenders against a
-  // future helper change that loosens one path without the other.
+  const desiredIsReserved = usernameErr === "reserved";
+
+  // Belt-and-suspenders: re-assert the format + reservation rules
+  // against the raw helpers in case a future refactor splits
+  // `validateUsernameFormat` and one path silently loosens. Use the
+  // shared `isReservedUsername` (covers exact names + prefixes) so
+  // the two checks can't drift — per PR #94 Gemini review, which
+  // spotted that the previous re-check only consulted the exact-name
+  // set and would have accepted a `user-*` payload that bypassed
+  // `validateUsernameFormat`.
   if (!USERNAME_REGEX.test(desiredUsername)) {
     return { ok: false, error: "ユーザーネームの形式が正しくありません" };
   }
-  if (RESERVED_USERNAMES.has(desiredUsername)) {
-    return { ok: false, error: "このユーザーネームは予約済みです" };
+  if (isReservedUsername(desiredUsername) !== desiredIsReserved) {
+    // Sanity check: the two helpers must agree. If they ever
+    // disagree, something has drifted and we should fail closed.
+    return { ok: false, error: "ユーザーネームの検証に失敗しました" };
   }
 
   // Normalize links: drop empty/undefined slots so the stored object
@@ -183,6 +220,15 @@ export async function updateMyProfile(
       }
       const userData = userSnap.data() as UserProfile;
       const currentUsername = userData.username;
+
+      // Grandfather: a reserved-by-rule handle is still allowed as
+      // long as it matches the user's CURRENT username (i.e. they're
+      // saving the rest of their profile without renaming). New
+      // claims into the reserved namespace are still blocked. Per
+      // PR #94 Copilot review.
+      if (desiredIsReserved && currentUsername !== desiredUsername) {
+        throw new Error("USERNAME_RESERVED");
+      }
 
       if (currentUsername !== desiredUsername) {
         // Firestore transactions require ALL reads to happen before
@@ -249,6 +295,15 @@ export async function updateMyProfile(
       return {
         ok: false,
         error: "そのユーザーネームは既に使われています。別の名前を入力してください。",
+      };
+    }
+    if (err instanceof Error && err.message === "USERNAME_RESERVED") {
+      // Reserved namespace (currently `user-*`) — distinct error so
+      // the user knows the issue is "system-reserved" rather than
+      // "taken by someone else".
+      return {
+        ok: false,
+        error: "このユーザーネームは予約済みです",
       };
     }
     if (err instanceof Error && err.message === "PROFILE_DOC_MISSING") {
