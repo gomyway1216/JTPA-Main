@@ -1,13 +1,20 @@
 import Link from "@/i18n/navigation";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { GuideListClient } from "@/app/[locale]/guide/_components/GuideListClient";
 import { getSessionUser } from "@/lib/auth/session";
 import { listGuides } from "@/lib/data/guides";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "ガイド" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("GuidePage");
+  return { title: t("metadataTitle") };
+}
 
 export default async function GuideIndexPage() {
+  const t = await getTranslations("GuidePage");
   // Intentionally not catching — see the admin list rationale: a missing
   // composite index here surfaces a fix-this link in the error, swallowing
   // it would hide the easiest debug signal.
@@ -27,10 +34,9 @@ export default async function GuideIndexPage() {
           side-by-side layout. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ガイド</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            AI ツールのセットアップから使いこなしまで、コミュニティでまとめた手引き集です。
-            あなたのノウハウもぜひ投稿してください。
+            {t("description")}
           </p>
         </div>
         {/* Submit-button location matches /qa and /poll: top-right of the
@@ -42,14 +48,14 @@ export default async function GuideIndexPage() {
             href="/guide/new"
             className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            ガイドを投稿
+            {t("submit")}
           </Link>
         ) : (
           <Link
             href="/login?redirect=/guide/new"
             className="w-fit shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
-            ログインして投稿
+            {t("loginSubmit")}
           </Link>
         )}
       </header>

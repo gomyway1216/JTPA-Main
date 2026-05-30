@@ -1,27 +1,32 @@
 "use client";
 
-import Link from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import Link, { usePathname } from "@/i18n/navigation";
 import type { SessionUser } from "@/lib/types";
 
 const NAV_LINKS = [
-  { href: "/events", label: "イベント" },
-  { href: "/showcase", label: "ショーケース" },
-  { href: "/blog", label: "ブログ" },
-  { href: "/guide", label: "ガイド" },
-  { href: "/qa", label: "Q&A" },
-  { href: "/poll", label: "投票" },
-  { href: "/about", label: "JTPAとは" },
-  { href: "/help", label: "ヘルプ" },
-];
+  { href: "/events", key: "events" },
+  { href: "/showcase", key: "showcase" },
+  { href: "/blog", key: "blog" },
+  { href: "/guide", key: "guide" },
+  { href: "/qa", key: "qa" },
+  { href: "/poll", key: "poll" },
+  { href: "/about", key: "about" },
+  { href: "/help", key: "help" },
+] as const;
 
 export function Header({ user }: { user: SessionUser | null }) {
+  const t = useTranslations("Header");
+  const locale = useLocale();
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const nextLocale = locale === "ja" ? "en" : "ja";
 
   // Close user dropdown on outside click
   useEffect(() => {
@@ -80,7 +85,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 href={l.href}
                 className="hover:text-zinc-950 dark:hover:text-white"
               >
-                {l.label}
+                {t(`nav.${l.key}`)}
               </Link>
             ))}
           </nav>
@@ -88,6 +93,14 @@ export function Header({ user }: { user: SessionUser | null }) {
 
         <div className="flex items-center gap-2 text-sm">
           <ThemeToggle />
+          <Link
+            href={pathname}
+            locale={nextLocale}
+            aria-label={t("language")}
+            className="rounded-md px-2 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {t(`locale.${nextLocale}`)}
+          </Link>
           {user ? (
             <div className="relative" ref={userMenuRef}>
               <button
@@ -95,7 +108,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 onClick={() => setUserMenuOpen((v) => !v)}
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
-                aria-label={user.displayName || user.email || "ユーザーメニュー"}
+                aria-label={user.displayName || user.email || t("userMenu")}
                 className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 {user.photoURL ? (
@@ -137,7 +150,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 >
                   <div className="border-b border-zinc-100 px-3 py-2 text-xs text-zinc-500 dark:border-zinc-800">
                     <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
-                      {user.displayName || "ユーザー"}
+                      {user.displayName || t("userFallback")}
                     </p>
                     <p className="truncate">{user.email}</p>
                   </div>
@@ -147,7 +160,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                     onClick={() => setUserMenuOpen(false)}
                     className="block px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                   >
-                    マイページ
+                    {t("myPage")}
                   </Link>
                   {user.isAdmin && (
                     <Link
@@ -156,7 +169,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                       onClick={() => setUserMenuOpen(false)}
                       className="block px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     >
-                      管理
+                      {t("admin")}
                     </Link>
                   )}
                   <div className="border-t border-zinc-100 dark:border-zinc-800">
@@ -170,14 +183,14 @@ export function Header({ user }: { user: SessionUser | null }) {
               href="/login"
               className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             >
-              ログイン
+              {t("login")}
             </Link>
           )}
 
           <button
             type="button"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label={mobileOpen ? "メニューを閉じる" : "メニューを開く"}
+            aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
             aria-expanded={mobileOpen}
             className="rounded-md p-2 text-zinc-700 hover:bg-zinc-100 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
@@ -216,7 +229,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 onClick={() => setMobileOpen(false)}
                 className="py-2 text-sm text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
               >
-                {l.label}
+                {t(`nav.${l.key}`)}
               </Link>
             ))}
           </nav>

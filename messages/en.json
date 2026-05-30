@@ -1,1 +1,187 @@
-{}
+{
+  "Common": {
+    "siteTitle": "JTPA — Japanese Technology Professionals Association",
+    "siteDescription": "Community events, AI project showcases, and study sessions from JTPA.",
+    "viewAll": "View all →",
+    "edit": "Edit",
+    "coverImageAlt": "Cover image for {title}",
+    "thumbnailAlt": "Thumbnail for {title}",
+    "location": {
+      "online": "Online",
+      "offline": "In person",
+      "hybrid": "Hybrid"
+    }
+  },
+  "Header": {
+    "nav": {
+      "events": "Events",
+      "showcase": "Showcase",
+      "blog": "Blog",
+      "guide": "Guides",
+      "qa": "Q&A",
+      "poll": "Polls",
+      "about": "About JTPA",
+      "help": "Help"
+    },
+    "userMenu": "User menu",
+    "userFallback": "User",
+    "myPage": "My page",
+    "admin": "Admin",
+    "login": "Log in",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language",
+    "locale": {
+      "ja": "日本語",
+      "en": "English"
+    }
+  },
+  "Footer": {
+    "about": "About JTPA",
+    "help": "Help",
+    "guide": "Guides",
+    "qa": "Q&A"
+  },
+  "Theme": {
+    "toggle": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "Auth": {
+    "googleLogin": "Log in with Google",
+    "loggingIn": "Logging in...",
+    "loginFailed": "Login failed",
+    "logout": "Log out"
+  },
+  "Home": {
+    "eyebrow": "Bay Area tech community",
+    "headlinePrefix": " gather,",
+    "headlineSuffix": "build, and share.",
+    "intro1": "JTPA runs AI-focused events and knowledge sharing for the Bay Area tech community.",
+    "intro2": "Join online and in-person events, and explore AI projects built by community members.",
+    "eventsCta": "Browse events",
+    "showcaseCta": "View showcase",
+    "upcomingEvents": "Upcoming Events",
+    "upcomingEventsDescription": "Online and in person. Join whichever session catches your interest.",
+    "noEvents": "There are no public events right now.",
+    "noEventsHint": "Check back for the next announcement.",
+    "featuredProjects": "Featured Projects",
+    "featuredProjectsDescription": "AI projects built by JTPA members.",
+    "noProjects": "No projects are listed yet.",
+    "submitProjectPrefix": "Have an AI project?",
+    "submitProjectLink": "Submit it",
+    "submitProjectSuffix": "to the showcase."
+  },
+  "NotFound": {
+    "title": "Page not found — JTPA",
+    "heading": "Page not found",
+    "description": "The page may have been removed, or the URL may be incorrect.",
+    "home": "Back to home",
+    "report": "Report this missing page →"
+  },
+  "Error": {
+    "label": "Error",
+    "title": "Something went wrong",
+    "description": "The request was interrupted because of an error. Please try again.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "digest": "Please include this request ID when contacting us: {digest}"
+  },
+  "Login": {
+    "title": "Log in",
+    "description": "A Google account is required to RSVP for events and submit projects to the showcase."
+  },
+  "LikeButton": {
+    "loginAria": "Log in to like",
+    "loginTitle": "You need to log in to like this",
+    "unlike": "Remove like",
+    "like": "Like",
+    "error": "Update failed"
+  },
+  "Comments": {
+    "label": "Comments",
+    "heading": "Comments ({count})",
+    "empty": "No comments yet.",
+    "bodyLabel": "Comment",
+    "bodyPlaceholder": "Write a comment (max 2000 characters)",
+    "submit": "Comment",
+    "submitting": "Sending...",
+    "loginRequired": "You need to log in to comment.",
+    "googleLogin": "Log in with Google",
+    "reply": "Reply",
+    "cancelReply": "Cancel reply",
+    "replyPlaceholder": "Reply to @{name} (max 2000 characters)",
+    "replySubmit": "Reply",
+    "delete": "Delete",
+    "hardDelete": "Delete permanently",
+    "deleted": "This comment was deleted",
+    "deleteConfirm": "Delete this comment?",
+    "hardDeleteConfirm": "Permanently delete this comment? This cannot be undone.",
+    "sendError": "Failed to send",
+    "deleteError": "Failed to delete"
+  },
+  "EventsPage": {
+    "metadataTitle": "Events",
+    "upcoming": "Upcoming Events",
+    "noUpcoming": "There are no upcoming events right now.",
+    "past": "Past Events",
+    "noPast": "No past events yet.",
+    "venue": "Venue available",
+    "rsvpCount": "{count} / {capacity} going",
+    "capacityUnknown": "—"
+  },
+  "ShowcasePage": {
+    "metadataTitle": "Showcase",
+    "title": "Showcase",
+    "description": "AI projects built by JTPA community members",
+    "submit": "Submit a project",
+    "empty": "No approved projects yet.",
+    "by": "by"
+  },
+  "BlogPage": {
+    "metadataTitle": "Blog",
+    "title": "Blog",
+    "description": "Articles from JTPA community members",
+    "submit": "Submit an article",
+    "empty": "No published articles yet.",
+    "emptyHint": "Be the first to submit one."
+  },
+  "GuidePage": {
+    "metadataTitle": "Guides",
+    "title": "Guides",
+    "description": "Community-curated guides for setting up and using AI tools. Share your own know-how too.",
+    "submit": "Submit a guide",
+    "loginSubmit": "Log in to submit"
+  },
+  "GuideList": {
+    "searchLabel": "Search guides",
+    "searchPlaceholder": "Search by keyword, title, tag, or body",
+    "clearTags": "Clear tags",
+    "empty": "No published guides yet.",
+    "noMatches": "No guides match those filters.",
+    "showing": "Showing {filtered} of {total}"
+  },
+  "QaPage": {
+    "metadataTitle": "Q&A",
+    "metadataDescription": "Questions and tips from the JTPA community",
+    "title": "Q&A",
+    "description": "Ask questions and share tips. Others can respond with comments, replies, and likes.",
+    "submit": "Post",
+    "loginSubmit": "Log in to post",
+    "empty": "No posts yet.",
+    "emptyHint": "Be the first to ask a question."
+  },
+  "PollPage": {
+    "metadataTitle": "Polls",
+    "metadataDescription": "Polls and surveys from the JTPA community",
+    "title": "Polls",
+    "description": "Collect community preferences. Multiple selections are supported and votes can be changed anytime.",
+    "submit": "Create poll",
+    "loginSubmit": "Log in to create",
+    "empty": "No polls yet.",
+    "emptyHint": "Create the first poll.",
+    "voterCount": "{count, plural, =0 {No votes} =1 {# vote} other {# votes}}",
+    "optionCount": "{count, plural, =1 {# option} other {# options}}"
+  }
+}

@@ -1,4 +1,6 @@
 import Link from "@/i18n/navigation";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -10,12 +12,18 @@ import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = {
-  title: "投票",
-  description: "JTPAコミュニティの投票・アンケート",
-};
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("PollPage");
+  return {
+    title: t("metadataTitle"),
+    description: t("metadataDescription"),
+  };
+}
 
 export default async function PollListPage() {
+  const locale = await getLocale();
+  const t = await getTranslations("PollPage");
   const [user, items] = await Promise.all([
     getSessionUser(),
     listPoll({ statuses: ["published"], limit: 50 }).catch((err) => {
@@ -32,9 +40,9 @@ export default async function PollListPage() {
       {/* Stack on mobile — same rationale as /blog, /guide, /qa. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">投票</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            みんなの「どっち派？」を集計します。複数選択OK・いつでも変更できます。
+            {t("description")}
           </p>
         </div>
         {user ? (
@@ -42,22 +50,22 @@ export default async function PollListPage() {
             href="/poll/new"
             className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            投票を作成
+            {t("submit")}
           </Link>
         ) : (
           <Link
             href="/login?redirect=/poll/new"
             className="w-fit shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
-            ログインして作成
+            {t("loginSubmit")}
           </Link>
         )}
       </header>
 
       {items.length === 0 ? (
         <EmptyState
-          message="まだ投票はありません。"
-          hint="最初の投票を作ってみましょう。"
+          message={t("empty")}
+          hint={t("emptyHint")}
         />
       ) : (
         <ul className="space-y-3">
@@ -85,7 +93,8 @@ export default async function PollListPage() {
                 <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
                   <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
                   <span>
-                    · {formatDate(p.createdAt)} · {p.voterCount ?? 0} 人が投票
+                    · {formatDate(p.createdAt, locale)} ·{" "}
+                    {t("voterCount", { count: p.voterCount ?? 0 })}
                   </span>
                   {(p.likeCount ?? 0) > 0 && (
                     <span className="ml-2 text-rose-600">♥ {p.likeCount}</span>
@@ -97,7 +106,7 @@ export default async function PollListPage() {
                   </p>
                 )}
                 <p className="mt-2 text-xs text-zinc-500">
-                  {p.options.length}つの選択肢
+                  {t("optionCount", { count: p.options.length })}
                   {topOptions.length > 0 && (
                     <> · {topOptions.map((o) => o.label).join(" / ")}…</>
                   )}

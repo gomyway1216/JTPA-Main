@@ -1,1 +1,187 @@
-{}
+{
+  "Common": {
+    "siteTitle": "JTPA — Japanese Technology Professionals Association",
+    "siteDescription": "JTPAのコミュニティイベント、AIプロジェクトのショーケース、勉強会情報。",
+    "viewAll": "すべて見る →",
+    "edit": "編集",
+    "coverImageAlt": "{title} のカバー画像",
+    "thumbnailAlt": "{title} のサムネイル",
+    "location": {
+      "online": "オンライン",
+      "offline": "対面",
+      "hybrid": "ハイブリッド"
+    }
+  },
+  "Header": {
+    "nav": {
+      "events": "イベント",
+      "showcase": "ショーケース",
+      "blog": "ブログ",
+      "guide": "ガイド",
+      "qa": "Q&A",
+      "poll": "投票",
+      "about": "JTPAとは",
+      "help": "ヘルプ"
+    },
+    "userMenu": "ユーザーメニュー",
+    "userFallback": "ユーザー",
+    "myPage": "マイページ",
+    "admin": "管理",
+    "login": "ログイン",
+    "openMenu": "メニューを開く",
+    "closeMenu": "メニューを閉じる",
+    "language": "表示言語",
+    "locale": {
+      "ja": "日本語",
+      "en": "English"
+    }
+  },
+  "Footer": {
+    "about": "JTPAとは",
+    "help": "ヘルプ・使い方",
+    "guide": "ガイド",
+    "qa": "Q&A"
+  },
+  "Theme": {
+    "toggle": "テーマを切り替える",
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "Auth": {
+    "googleLogin": "Googleでログイン",
+    "loggingIn": "ログイン中...",
+    "loginFailed": "ログインに失敗しました",
+    "logout": "ログアウト"
+  },
+  "Home": {
+    "eyebrow": "Bay Area テックコミュニティ",
+    "headlinePrefix": "で集まる、",
+    "headlineSuffix": "つくる、共有する。",
+    "intro1": "JTPAは、Bay AreaのテックコミュニティでAI関連のイベント運営・知識共有を行っています。",
+    "intro2": "オンライン/オフラインのイベント、メンバーが作ったAIプロジェクトのショーケースをお楽しみください。",
+    "eventsCta": "イベント一覧",
+    "showcaseCta": "ショーケースを見る",
+    "upcomingEvents": "直近のイベント",
+    "upcomingEventsDescription": "オンラインも対面も。気になる回に気軽に参加してください。",
+    "noEvents": "現在公開中のイベントはありません。",
+    "noEventsHint": "次回の告知をお楽しみに。",
+    "featuredProjects": "注目のプロジェクト",
+    "featuredProjectsDescription": "JTPA メンバーが手がけた AI プロジェクト。",
+    "noProjects": "掲載中のプロジェクトはありません。",
+    "submitProjectPrefix": "あなたの AI プロジェクトを",
+    "submitProjectLink": "投稿",
+    "submitProjectSuffix": "してみませんか？"
+  },
+  "NotFound": {
+    "title": "ページが見つかりません — JTPA",
+    "heading": "ページが見つかりません",
+    "description": "お探しのページは削除されたか、URL が間違っているかもしれません。",
+    "home": "ホームに戻る",
+    "report": "見つからないページの報告はこちら →"
+  },
+  "Error": {
+    "label": "エラー",
+    "title": "エラーが発生しました",
+    "description": "問題が発生したため処理を中断しました。もう一度お試しください。",
+    "retry": "再試行",
+    "home": "ホームに戻る",
+    "digest": "お問い合わせの際はこのリクエストIDをお知らせください: {digest}"
+  },
+  "Login": {
+    "title": "ログイン",
+    "description": "イベントへのRSVPや、ショーケースへのプロジェクト投稿にはGoogleアカウントでのログインが必要です。"
+  },
+  "LikeButton": {
+    "loginAria": "いいねするにはログイン",
+    "loginTitle": "いいねするにはログインが必要です",
+    "unlike": "いいねを取り消す",
+    "like": "いいねする",
+    "error": "更新に失敗しました"
+  },
+  "Comments": {
+    "label": "コメント",
+    "heading": "コメント ({count})",
+    "empty": "まだコメントはありません。",
+    "bodyLabel": "コメント本文",
+    "bodyPlaceholder": "コメントを入力 (最大 2000 文字)",
+    "submit": "コメントする",
+    "submitting": "送信中...",
+    "loginRequired": "コメントするにはログインが必要です。",
+    "googleLogin": "Googleでログイン",
+    "reply": "返信",
+    "cancelReply": "返信をやめる",
+    "replyPlaceholder": "@{name} への返信 (最大 2000 文字)",
+    "replySubmit": "返信する",
+    "delete": "削除",
+    "hardDelete": "完全に削除",
+    "deleted": "このコメントは削除されました",
+    "deleteConfirm": "このコメントを削除しますか？",
+    "hardDeleteConfirm": "このコメントを完全に削除しますか？復元できません。",
+    "sendError": "送信に失敗しました",
+    "deleteError": "削除に失敗しました"
+  },
+  "EventsPage": {
+    "metadataTitle": "イベント一覧",
+    "upcoming": "予定されているイベント",
+    "noUpcoming": "現在予定されているイベントはありません。",
+    "past": "過去のイベント",
+    "noPast": "過去のイベントはまだありません。",
+    "venue": "会場あり",
+    "rsvpCount": "{count} / {capacity} 参加予定",
+    "capacityUnknown": "—"
+  },
+  "ShowcasePage": {
+    "metadataTitle": "ショーケース",
+    "title": "ショーケース",
+    "description": "JTPAコミュニティのメンバーが作ったAIプロジェクト",
+    "submit": "プロジェクトを投稿",
+    "empty": "まだ承認済みプロジェクトはありません。",
+    "by": "by"
+  },
+  "BlogPage": {
+    "metadataTitle": "ブログ",
+    "title": "ブログ",
+    "description": "JTPAコミュニティのメンバーによる記事",
+    "submit": "記事を投稿",
+    "empty": "まだ公開済みの記事はありません。",
+    "emptyHint": "最初の記事を投稿してみましょう。"
+  },
+  "GuidePage": {
+    "metadataTitle": "ガイド",
+    "title": "ガイド",
+    "description": "AI ツールのセットアップから使いこなしまで、コミュニティでまとめた手引き集です。あなたのノウハウもぜひ投稿してください。",
+    "submit": "ガイドを投稿",
+    "loginSubmit": "ログインして投稿"
+  },
+  "GuideList": {
+    "searchLabel": "ガイドを検索",
+    "searchPlaceholder": "キーワードで検索（タイトル・タグ・本文）",
+    "clearTags": "タグをクリア",
+    "empty": "まだ公開済みのガイドはありません。",
+    "noMatches": "条件に一致するガイドがありません。",
+    "showing": "表示中: {filtered} / 全 {total} 件"
+  },
+  "QaPage": {
+    "metadataTitle": "Q&A",
+    "metadataDescription": "JTPAコミュニティの質問・Tips投稿",
+    "title": "Q&A",
+    "description": "気軽に質問やTipsを投稿しましょう。コメント・返信・いいねで反応できます。",
+    "submit": "投稿する",
+    "loginSubmit": "ログインして投稿",
+    "empty": "まだ投稿はありません。",
+    "emptyHint": "最初の質問を投稿してみましょう。"
+  },
+  "PollPage": {
+    "metadataTitle": "投票",
+    "metadataDescription": "JTPAコミュニティの投票・アンケート",
+    "title": "投票",
+    "description": "みんなの「どっち派？」を集計します。複数選択OK・いつでも変更できます。",
+    "submit": "投票を作成",
+    "loginSubmit": "ログインして作成",
+    "empty": "まだ投票はありません。",
+    "emptyHint": "最初の投票を作ってみましょう。",
+    "voterCount": "{count} 人が投票",
+    "optionCount": "{count}つの選択肢"
+  }
+}
