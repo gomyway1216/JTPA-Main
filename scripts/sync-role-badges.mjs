@@ -59,18 +59,42 @@ async function main() {
   let skippedSame = 0;
 
   do {
-    // Walk Auth users in pages of 1000 (the SDK cap). For each user we
-    // do at most one Firestore read + one Firestore write, batched
-    // across the page so we don't burst-write thousands of ops at once.
+    // Walk Auth users in pages of 1000 (the SDK cap). Per page we do:
+    //   - 1 Auth listUsers call (network: 1)
+    //   - 1 Firestore `getAll` covering every user doc in the page
+    //     (network: 1, regardless of page size)
+    //   - 1 Firestore `bulkWriter` queue covering every needed update
+    //     (network: handled internally, throttled + batched)
+    // i.e. ~3 RPCs per 1000 users instead of the 2001 the original
+    // sequential loop incurred. Per PR #92 + #93 Gemini + Copilot
+    // review: the loop comment used to claim "batched across the
+    // page" but the read AND the write were both sequential.
     const page = await auth.listUsers(1000, pageToken);
+    if (page.users.length === 0) {
+      pageToken = page.pageToken;
+      continue;
+    }
+
+    const refs = page.users.map((u) => db.collection("users").doc(u.uid));
+    const snaps = await db.getAll(...refs);
+    // `getAll` returns snaps in the same order as the refs; build a
+    // uid → snap map so the per-user pairing stays correct even if
+    // we ever reorder things in the future.
+    const snapByUid = new Map(snaps.map((s) => [s.id, s]));
+
+    // `bulkWriter` queues every write and flushes them in throttled
+    // batches under the hood (default ~500/s with built-in retries on
+    // contention). We `await writer.close()` after the page so we
+    // never start the next page until this one's writes are durable.
+    const writer = dryRun ? null : db.bulkWriter();
+
     for (const u of page.users) {
       scanned++;
       const claims = u.customClaims ?? {};
       const desired = badgeFor(claims);
 
-      const ref = db.collection("users").doc(u.uid);
-      const snap = await ref.get();
-      if (!snap.exists) {
+      const snap = snapByUid.get(u.uid);
+      if (!snap || !snap.exists) {
         // User has never signed in via the app, so no profile doc to
         // mirror onto. The bootstrap will create one on first sign-in.
         skippedNoDoc++;
@@ -90,14 +114,16 @@ async function main() {
       }
 
       if (desired === null) {
-        await ref.update({ roleBadge: FieldValue.delete() });
+        writer.update(snap.ref, { roleBadge: FieldValue.delete() });
         cleared++;
       } else {
-        await ref.update({ roleBadge: desired });
+        writer.update(snap.ref, { roleBadge: desired });
         written++;
       }
       console.log(`updated — ${label}`);
     }
+
+    if (writer) await writer.close();
     pageToken = page.pageToken;
   } while (pageToken);
 
