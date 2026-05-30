@@ -6,6 +6,7 @@ import {
   isCanonicalAvatarUrl,
   isOwnedAvatarPath,
   isReservedUsername,
+  isUnclaimedDefaultUsername,
   normalizeUsername,
   USERNAME_REGEX,
   validateUsernameFormat,
@@ -140,6 +141,38 @@ describe("defaultUsernameFor", () => {
     ]) {
       expect(USERNAME_REGEX.test(defaultUsernameFor(uid))).toBe(true);
     }
+  });
+});
+
+describe("isUnclaimedDefaultUsername", () => {
+  const uid = "ABCdef123456"; // defaultUsernameFor → "user-abcdef"
+
+  it("is true when the stored handle is absent and the desired one is this user's default", () => {
+    // The exact issue #104 scenario: no stored username, the form
+    // pre-fills the default placeholder, the user saves without
+    // touching it.
+    expect(isUnclaimedDefaultUsername(uid, undefined, "user-abcdef")).toBe(true);
+    expect(isUnclaimedDefaultUsername(uid, null, "user-abcdef")).toBe(true);
+    expect(isUnclaimedDefaultUsername(uid, "", "user-abcdef")).toBe(true);
+  });
+
+  it("is false once the user has actually claimed a handle", () => {
+    // A stored username means a real (or grandfathered) claim exists —
+    // the normal change/no-op paths in updateMyProfile handle it.
+    expect(isUnclaimedDefaultUsername(uid, "yudai", "user-abcdef")).toBe(false);
+    expect(isUnclaimedDefaultUsername(uid, "user-abcdef", "user-abcdef")).toBe(
+      false,
+    );
+  });
+
+  it("is false for any handle that isn't this user's own default", () => {
+    // Must not let an absent-username user claim a *different* user's
+    // default-shaped handle or a real name through this no-op path.
+    expect(isUnclaimedDefaultUsername(uid, undefined, "user-zzzzzz")).toBe(
+      false,
+    );
+    expect(isUnclaimedDefaultUsername(uid, undefined, "yudai")).toBe(false);
+    expect(isUnclaimedDefaultUsername(uid, undefined, "admin")).toBe(false);
   });
 });
 

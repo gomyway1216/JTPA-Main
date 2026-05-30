@@ -22,6 +22,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { validateSurveyFields } from "@/lib/event-survey";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type {
@@ -177,6 +178,17 @@ export function EventForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    // Validate the questionnaire up front. An unfinished item (e.g. a
+    // just-added field with no label) would otherwise fail the server's
+    // Zod schema, which Next masks as the generic "Server Components
+    // render" error in production — leaving the admin unable to tell why
+    // the save failed (issue #102). Surface a precise inline message and
+    // never send the bad payload.
+    const surveyError = validateSurveyFields(fields);
+    if (surveyError) {
+      setError(surveyError);
+      return;
+    }
     startTransition(async () => {
       try {
         const payload: EventFormInput = {
@@ -234,16 +246,25 @@ export function EventForm({
   }
 
   function addField() {
-    setFields((cur) => [
-      ...cur,
-      {
-        key: `q${cur.length + 1}`,
-        label: "",
-        type: "text",
-        required: false,
-        audience: "all",
-      },
-    ]);
+    setFields((cur) => {
+      // Pick the lowest `q<n>` not already in use. Seeding from the array
+      // length alone repeats keys after a middle item is removed (e.g.
+      // delete q2 from [q1,q2,q3] then add → another q3), and duplicate
+      // keys overwrite each other's responses. Per PR #110 Gemini review.
+      const used = new Set(cur.map((f) => f.key));
+      let n = cur.length + 1;
+      while (used.has(`q${n}`)) n++;
+      return [
+        ...cur,
+        {
+          key: `q${n}`,
+          label: "",
+          type: "text",
+          required: false,
+          audience: "all",
+        },
+      ];
+    });
   }
 
   function updateField(i: number, patch: Partial<SurveyField>) {
