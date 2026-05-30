@@ -149,6 +149,7 @@ export function PresentationSection({
                   <p className="text-xs text-zinc-500">
                     <AuthorBadge
                       profile={presenterProfiles[p.presenterUid] ?? null}
+                      linkable={false}
                     />
                   </p>
                   {p.abstract && (

@@ -41,11 +41,14 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   // strings (a "public but unset" full name) collapse to the @handle
   // via `||`, so we never render `name=""`.
   const label = profile?.fullName || `@${username}`;
-  // First Unicode code point of whichever label we're rendering —
-  // `slice(0,1)` would tear a surrogate pair for emoji / non-BMP
-  // characters (mirroring the /u/[uid] page's initials fallback).
-  // `?` covers the (theoretical) empty-label case.
-  const initial = ([...label][0] ?? "?").toUpperCase();
+  // First Unicode code point of the underlying NAME (not the
+  // rendered `label`) — the label starts with `@` when fullName is
+  // private, which would otherwise leak a literal `@` into the
+  // initials circle for every non-photo, non-public-name user. Per
+  // PR #93 Gemini + Copilot review. `slice(0,1)` would tear a
+  // surrogate pair for emoji / non-BMP characters; the spread form
+  // walks code points correctly. `?` covers the empty-name case.
+  const initial = ([...(profile?.fullName || username)][0] ?? "?").toUpperCase();
 
   const inner = (
     <>
