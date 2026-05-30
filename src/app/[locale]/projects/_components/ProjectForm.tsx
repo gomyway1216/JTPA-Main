@@ -159,13 +159,13 @@ export function ProjectForm({ mode, user, project }: Props) {
             : project
               ? await updateMyProject(project.id, payload)
               : null;
-        // create redirects on success (so it only returns on failure); edit
-        // returns { ok: true }. Either way an { ok: false } carries the real
-        // message — surface it inline instead of the masked generic crash.
+        // Both create and edit redirect on success, so a returned result is
+        // always a failure — surface the real message inline instead of the
+        // masked generic "Server Components render" crash.
         if (res && !res.ok) setError(res.error);
       } catch (err) {
-        // create's success throws the internal NEXT_REDIRECT — let it
-        // propagate so navigation happens. Anything else is a real failure.
+        // Success throws the internal NEXT_REDIRECT — let it propagate so the
+        // navigation actually happens. Anything else is a real failure.
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "送信に失敗しました");
       }

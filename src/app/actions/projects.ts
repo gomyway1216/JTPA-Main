@@ -43,11 +43,11 @@ const ProjectInputSchema = z.object({
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
 
-// submitProject redirects on success (so it only ever *returns* on failure);
-// the remaining actions return { ok: true }. Returning the error rather than
-// throwing it is what lets the real message reach the user — Next masks
-// thrown Server Action errors as a generic digest in production (same
-// reasoning as events.ts / users.ts, per PR #59).
+// submitProject / updateMyProject redirect on success (so they only ever
+// *return* on failure); the remaining actions return { ok: true }. Returning
+// the error rather than throwing it is what lets the real message reach the
+// user — Next masks thrown Server Action errors as a generic digest in
+// production (same reasoning as events.ts / users.ts, per PR #59).
 export type ProjectSaveResult = { ok: true } | { ok: false; error: string };
 
 type ParsedProjectInput =
@@ -202,7 +202,9 @@ export async function updateMyProject(
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
   revalidatePath("/admin/projects");
-  return { ok: true };
+  // Redirect on success — mirrors updateMyPost so the author lands back on
+  // their list instead of sitting on a now-stale edit form (per #129 review).
+  redirect("/my/projects");
 }
 
 export async function deleteMyProject(
