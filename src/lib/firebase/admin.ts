@@ -13,6 +13,21 @@ function getAdminApp(): App {
     process.env.FIREBASE_PROJECT_ID ??
     process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
+  // Storage bucket for `adminStorage().bucket()`. The Admin SDK does NOT
+  // infer a default bucket from the project id — without this option every
+  // `.bucket()` call throws "Bucket name not specified or invalid"
+  // synchronously. We reuse the SAME value the client embeds in its
+  // download URLs (NEXT_PUBLIC_* is readable server-side too) so a URL
+  // built client-side and validated server-side reference the identical
+  // bucket name (e.g. `jtpa-main.firebasestorage.app`, NOT the legacy
+  // `*.appspot.com` the SDK would otherwise have guessed).
+  // `|| undefined` so an empty-string env var isn't passed as a literal
+  // (invalid) bucket name — undefined lets `.bucket()` fail loudly only when
+  // actually used, rather than the SDK treating "" as a real bucket. Per
+  // PR #109 Gemini review.
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined;
+
   // FIREBASE_SERVICE_ACCOUNT lets you inject a JSON-stringified key in CI/dev.
   // In production (App Hosting / Cloud Run / GCE), ADC is picked up automatically.
   const inlineKey = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -20,9 +35,10 @@ function getAdminApp(): App {
     return initializeApp({
       credential: cert(JSON.parse(inlineKey)),
       projectId,
+      storageBucket,
     });
   }
-  return initializeApp({ projectId });
+  return initializeApp({ projectId, storageBucket });
 }
 
 export function adminAuth(): Auth {
