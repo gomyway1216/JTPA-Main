@@ -42,23 +42,37 @@ const DeleteSchema = z.object({
 export type CommentInput = z.input<typeof CommentSchema>;
 export type DeleteCommentInput = z.input<typeof DeleteSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+// Results returned to the client. Returning the error (rather than
+// throwing it) keeps the real message reachable — Next masks thrown
+// Server Action errors as a generic digest in production.
+export type PostCommentResult =
+  | { ok: true; comment: CommentDoc }
+  | { ok: false; error: string };
+export type DeleteCommentResult =
+  | { ok: true; comment: CommentDoc | null }
+  | { ok: false; error: string };
+
+function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) return { ok: true, data: result.data };
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
     .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  return { ok: false, error: `入力エラー: ${issues}` };
 }
 
 // ---------- post / list ----------
 
-export async function postComment(input: CommentInput): Promise<CommentDoc> {
+export async function postComment(
+  input: CommentInput,
+): Promise<PostCommentResult> {
   const user = await requireUser();
-  const parsed = readableParse(CommentSchema, input);
+  const pr = parseOrError(CommentSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   // Confirm the parent is published before accepting comments. Firestore
   // rules enforce the same on direct client writes, but Server Actions go
@@ -67,10 +81,15 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
     .collection(parentCollection(parsed.parentType))
     .doc(parsed.parentId);
   const parentSnap = await parentRef.get();
-  if (!parentSnap.exists) throw new Error("NOT_FOUND");
+  if (!parentSnap.exists) {
+    return { ok: false, error: "投稿先が見つかりません。" };
+  }
   const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
   if (!isParentPubliclyVisible(parsed.parentType, parentData)) {
-    throw new Error("コメントは公開済みのコンテンツにのみ投稿できます");
+    return {
+      ok: false,
+      error: "コメントは公開済みのコンテンツにのみ投稿できます",
+    };
   }
 
   // If this is a reply, validate the parent comment exists AND lives under
@@ -83,7 +102,7 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
       .doc(parsed.parentCommentId)
       .get();
     if (!parentCommentSnap.exists) {
-      throw new Error("返信先のコメントが見つかりません");
+      return { ok: false, error: "返信先のコメントが見つかりません" };
     }
   }
 
@@ -107,7 +126,7 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
   // Use the canonical slug from Firestore, not anything the caller sent
   // (slugs in the route are server-validated this way).
   revalidatePath(`${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`);
-  return plainify({ ...doc, id: ref.id });
+  return { ok: true, comment: plainify({ ...doc, id: ref.id }) };
 }
 
 // ---------- delete ----------
@@ -118,12 +137,14 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
 // removing the doc — is admin-only.
 export async function deleteComment(
   input: DeleteCommentInput,
-): Promise<CommentDoc | null> {
+): Promise<DeleteCommentResult> {
   const user = await requireUser();
-  const parsed = readableParse(DeleteSchema, input);
+  const pr = parseOrError(DeleteSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   if (parsed.hard && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: "ハード削除は管理者のみ可能です。" };
   }
 
   const parentRef = adminDb()
@@ -131,10 +152,10 @@ export async function deleteComment(
     .doc(parsed.parentId);
   const ref = parentRef.collection("comments").doc(parsed.commentId);
   const snap = await ref.get();
-  if (!snap.exists) return null;
+  if (!snap.exists) return { ok: true, comment: null };
   const cur = snap.data() as CommentDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: "このコメントを削除する権限がありません。" };
   }
 
   let result: CommentDoc | null;
@@ -167,7 +188,7 @@ export async function deleteComment(
       `${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`,
     );
   }
-  return result;
+  return { ok: true, comment: result };
 }
 
 // ---------- legacy aliases ----------
@@ -181,7 +202,7 @@ export type PostCommentInput = {
 };
 export async function postPostComment(
   input: PostCommentInput,
-): Promise<CommentDoc> {
+): Promise<PostCommentResult> {
   return postComment({
     parentType: "post",
     parentId: input.postId,

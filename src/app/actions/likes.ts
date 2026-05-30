@@ -38,16 +38,23 @@ export interface LikeResult {
   count: number;
 }
 
-function readableParse<T extends z.ZodTypeAny>(
+// Returning the error (rather than throwing it) keeps the real message
+// reachable — Next masks thrown Server Action errors as a generic digest
+// in production.
+export type LikeActionResult =
+  | { ok: true; result: LikeResult }
+  | { ok: false; error: string };
+
+function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) return { ok: true, data: result.data };
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
     .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  return { ok: false, error: `入力エラー: ${issues}` };
 }
 
 /**
@@ -61,27 +68,32 @@ function readableParse<T extends z.ZodTypeAny>(
  */
 export async function toggleLikeRecord(
   input: LikeRecordInput,
-): Promise<LikeResult> {
+): Promise<LikeActionResult> {
   const user = await requireUser();
-  const parsed = readableParse(RecordSchema, input);
+  const pr = parseOrError(RecordSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const parentRef = adminDb()
     .collection(parentCollection(parsed.parentType))
     .doc(parsed.parentId);
   const likeRef = parentRef.collection("likes").doc(user.uid);
 
-  const result = await adminDb().runTransaction(async (tx) => {
+  const result = await adminDb().runTransaction<
+    | { ok: false; error: string }
+    | { ok: true; liked: boolean; count: number; slug: string }
+  >(async (tx) => {
     const [likeSnap, parentSnap] = await Promise.all([
       tx.get(likeRef),
       tx.get(parentRef),
     ]);
-    if (!parentSnap.exists) throw new Error("NOT_FOUND");
+    if (!parentSnap.exists) return { ok: false as const, error: "対象が見つかりません。" };
     const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Only allow likes on publicly-visible records. Mirrors the comment
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      throw new Error("公開済みのコンテンツのみにいいねできます");
+      return { ok: false as const, error: "公開済みのコンテンツのみにいいねできます" };
     }
     const wasLiked = likeSnap.exists;
     // Compute the new count in memory and write it directly. The original
@@ -99,14 +111,16 @@ export async function toggleLikeRecord(
     }
     tx.update(parentRef, { likeCount: newCount });
     return {
+      ok: true as const,
       liked: !wasLiked,
       count: newCount,
       slug: parent.slug,
     };
   });
 
+  if (!result.ok) return result;
   revalidatePath(`${parentRoutePrefix(parsed.parentType)}/${result.slug}`);
-  return { liked: result.liked, count: result.count };
+  return { ok: true, result: { liked: result.liked, count: result.count } };
 }
 
 /**
@@ -116,9 +130,11 @@ export async function toggleLikeRecord(
  */
 export async function toggleLikeComment(
   input: LikeCommentInput,
-): Promise<LikeResult> {
+): Promise<LikeActionResult> {
   const user = await requireUser();
-  const parsed = readableParse(CommentSchema, input);
+  const pr = parseOrError(CommentSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const parentRef = adminDb()
     .collection(parentCollection(parsed.parentType))
@@ -126,14 +142,17 @@ export async function toggleLikeComment(
   const commentRef = parentRef.collection("comments").doc(parsed.commentId);
   const likeRef = commentRef.collection("likes").doc(user.uid);
 
-  const result = await adminDb().runTransaction(async (tx) => {
+  const result = await adminDb().runTransaction<
+    | { ok: false; error: string }
+    | { ok: true; liked: boolean; count: number; slug: string }
+  >(async (tx) => {
     const [likeSnap, commentSnap, parentSnap] = await Promise.all([
       tx.get(likeRef),
       tx.get(commentRef),
       tx.get(parentRef),
     ]);
     if (!parentSnap.exists || !commentSnap.exists) {
-      throw new Error("NOT_FOUND");
+      return { ok: false as const, error: "対象が見つかりません。" };
     }
     const parent = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
     // Defense in depth: if the parent has been unpublished while the
@@ -141,7 +160,7 @@ export async function toggleLikeComment(
     // likes are left in place — flipping the parent's status back to
     // published shouldn't lose them.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      throw new Error("公開済みのコンテンツのみにいいねできます");
+      return { ok: false as const, error: "公開済みのコンテンツのみにいいねできます" };
     }
     const wasLiked = likeSnap.exists;
     // In-memory compute for the same reason as toggleLikeRecord — keeps
@@ -156,12 +175,14 @@ export async function toggleLikeComment(
     }
     tx.update(commentRef, { likeCount: newCount });
     return {
+      ok: true as const,
       liked: !wasLiked,
       count: newCount,
       slug: parent.slug,
     };
   });
 
+  if (!result.ok) return result;
   revalidatePath(`${parentRoutePrefix(parsed.parentType)}/${result.slug}`);
-  return { liked: result.liked, count: result.count };
+  return { ok: true, result: { liked: result.liked, count: result.count } };
 }
