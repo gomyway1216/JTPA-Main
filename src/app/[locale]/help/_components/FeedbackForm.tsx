@@ -60,7 +60,13 @@ export function FeedbackForm({ user }: Props) {
     }
     startTransition(async () => {
       try {
-        await submitFeedback({ body: trimmed });
+        const res = await submitFeedback({ body: trimmed });
+        if (!res.ok) {
+          // Surface the real validation reason instead of the masked
+          // generic Server Action crash; keep the draft so it isn't lost.
+          setError(res.error);
+          return;
+        }
         setBody("");
         setSuccess(
           "送信しました。確認次第対応します。ありがとうございます！",

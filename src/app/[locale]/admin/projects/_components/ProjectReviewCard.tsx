@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { decideProject } from "@/app/actions/projects";
@@ -21,6 +22,7 @@ export function ProjectReviewCard({
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
 
   function decide(decision: "approved" | "rejected") {
     setError(null);
@@ -29,7 +31,17 @@ export function ProjectReviewCard({
     }
     startTransition(async () => {
       try {
-        await decideProject(project.id, decision, note);
+        const res = await decideProject(project.id, decision, note);
+        if (!res.ok) {
+          // Surface the real reason instead of the masked generic crash.
+          setError(res.error);
+          return;
+        }
+        // revalidatePath inside the Server Action invalidates the cache, but
+        // the existing client tree won't re-fetch until we refresh — without
+        // this the just-decided card lingers in the queue until a manual
+        // reload (mirrors PostReviewCard, per #129 review).
+        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "失敗しました");
       }

@@ -60,16 +60,22 @@ const VoteSchema = z.object({
 
 export type CastPollVoteInput = z.input<typeof VoteSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+// Mutations return a result rather than throwing so the real reason
+// reaches the user (Next masks thrown Server Action errors in production).
+// create/update/delete redirect on success; setPollStatus returns
+// { ok: true }; castPollVote returns its result payload on success.
+export type PollActionResult = { ok: true } | { ok: false; error: string };
+
+function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) return { ok: true, data: result.data };
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
     .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  return { ok: false, error: `入力エラー: ${issues}` };
 }
 
 // Generate a short stable id for a poll option. Lifted out so future
@@ -96,9 +102,13 @@ async function findFreePollSlug(seed: string): Promise<string> {
   return `${base}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-export async function submitPoll(input: PollFormInput): Promise<string> {
+export async function submitPoll(
+  input: PollFormInput,
+): Promise<PollActionResult> {
   const user = await requireUser();
-  const parsed = readableParse(PollFormSchema, input);
+  const pr = parseOrError(PollFormSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   // Strip empty/duplicate option labels — the form sends raw text inputs
   // and a user may have deleted the contents of an option without
@@ -123,7 +133,7 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
     });
   }
   if (cleanedOptions.length < MIN_OPTIONS) {
-    throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
+    return { ok: false, error: `重複を除いた選択肢が${MIN_OPTIONS}つ未満です` };
   }
 
   const slug = await findFreePollSlug(parsed.slug || parsed.title);
@@ -165,9 +175,11 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
 export async function updateMyPoll(
   pollId: string,
   input: PollFormInput,
-): Promise<void> {
+): Promise<PollActionResult> {
   const user = await requireUser();
-  const parsed = readableParse(PollFormSchema, input);
+  const pr = parseOrError(PollFormSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const isAdminCaller = user.isAdmin;
 
   const ref = adminDb().collection("polls").doc(pollId);
@@ -183,23 +195,31 @@ export async function updateMyPoll(
   // change. Reading it twice (here + in the txn) is fine — the txn
   // read is the authoritative one for the write.
   const preReadSnap = await ref.get();
-  if (!preReadSnap.exists) throw new Error("NOT_FOUND");
+  if (!preReadSnap.exists) {
+    return { ok: false, error: "投票が見つかりません。" };
+  }
   const preRead = preReadSnap.data() as PollDoc;
   if (preRead.authorUid !== user.uid && !isAdminCaller) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: "この投票を編集する権限がありません。" };
   }
   if (parsed.slug && parsed.slug !== preRead.slug) {
     newSlug = await findFreePollSlug(parsed.slug);
   }
 
-  const committed = await adminDb().runTransaction(async (tx) => {
+  const committed = await adminDb().runTransaction<
+    | { ok: false; error: string }
+    | { ok: true; slug: string; prevSlug: string }
+  >(async (tx) => {
     const snap = await tx.get(ref);
-    if (!snap.exists) throw new Error("NOT_FOUND");
+    if (!snap.exists) return { ok: false as const, error: "投票が見つかりません。" };
     const cur = snap.data() as PollDoc;
     // Re-check ownership inside the txn in case the doc was reassigned
     // between the pre-read and the txn start (paranoid but cheap).
     if (cur.authorUid !== user.uid && !isAdminCaller) {
-      throw new Error("FORBIDDEN");
+      return {
+        ok: false as const,
+        error: "この投票を編集する権限がありません。",
+      };
     }
 
     const optionsFrozen = (cur.voterCount ?? 0) > 0;
@@ -229,7 +249,10 @@ export async function updateMyPoll(
         cleaned.push({ id, label: opt.label, voteCount: 0 });
       }
       if (cleaned.length < MIN_OPTIONS) {
-        throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
+        return {
+          ok: false as const,
+          error: `重複を除いた選択肢が${MIN_OPTIONS}つ未満です`,
+        };
       }
       nextOptions = cleaned;
     }
@@ -242,8 +265,10 @@ export async function updateMyPoll(
       updatedAt: Timestamp.now(),
     });
 
-    return { slug: newSlug ?? cur.slug, prevSlug: cur.slug };
+    return { ok: true as const, slug: newSlug ?? cur.slug, prevSlug: cur.slug };
   });
+
+  if (!committed.ok) return committed;
 
   revalidatePath("/poll");
   revalidatePath(`/poll/${committed.prevSlug}`);
@@ -253,34 +278,40 @@ export async function updateMyPoll(
   redirect(`/poll/${committed.slug}`);
 }
 
-export async function deleteMyPoll(pollId: string): Promise<void> {
+export async function deleteMyPoll(pollId: string): Promise<PollActionResult> {
   const user = await requireUser();
   const ref = adminDb().collection("polls").doc(pollId);
   const snap = await ref.get();
-  if (!snap.exists) return;
-  const cur = snap.data() as PollDoc;
-  if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+  if (snap.exists) {
+    const cur = snap.data() as PollDoc;
+    if (cur.authorUid !== user.uid && !user.isAdmin) {
+      return { ok: false, error: "この投票を削除する権限がありません。" };
+    }
+    // Subcollections (votes/comments/likes) aren't cascaded — matches the
+    // Q&A delete behavior. The parent disappearing makes them unreachable
+    // via the UI anyway.
+    await ref.delete();
+    revalidatePath("/poll");
+    revalidatePath(`/poll/${cur.slug}`);
   }
-  // Subcollections (votes/comments/likes) aren't cascaded — matches the
-  // Q&A delete behavior. The parent disappearing makes them unreachable
-  // via the UI anyway.
-  await ref.delete();
-  revalidatePath("/poll");
-  revalidatePath(`/poll/${cur.slug}`);
+  // Idempotent: end up on the list whether or not the doc existed.
   redirect("/poll");
 }
 
-export async function setPollStatus(input: SetPollStatusInput): Promise<void> {
+export async function setPollStatus(
+  input: SetPollStatusInput,
+): Promise<PollActionResult> {
   await requireAdmin();
-  const parsed = readableParse(StatusSchema, input);
+  const pr = parseOrError(StatusSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const ref = adminDb().collection("polls").doc(parsed.pollId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: "投票が見つかりません。" };
   const cur = snap.data() as PollDoc;
 
-  if (cur.status === parsed.status) return;
+  if (cur.status === parsed.status) return { ok: true };
   await ref.update({
     status: parsed.status as PollStatus,
     updatedAt: Timestamp.now(),
@@ -288,6 +319,7 @@ export async function setPollStatus(input: SetPollStatusInput): Promise<void> {
 
   revalidatePath("/poll");
   revalidatePath(`/poll/${cur.slug}`);
+  return { ok: true };
 }
 
 export interface CastVoteResult {
@@ -295,6 +327,10 @@ export interface CastVoteResult {
   options: PollOption[];
   voterCount: number;
 }
+
+export type CastPollVoteResult =
+  | { ok: true; result: CastVoteResult }
+  | { ok: false; error: string };
 
 /**
  * Cast (or update) the current user's ballot on a poll. Multi-select:
@@ -309,22 +345,33 @@ export interface CastVoteResult {
  */
 export async function castPollVote(
   input: CastPollVoteInput,
-): Promise<CastVoteResult> {
+): Promise<CastPollVoteResult> {
   const user = await requireUser();
-  const parsed = readableParse(VoteSchema, input);
+  const pr = parseOrError(VoteSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const pollRef = adminDb().collection("polls").doc(parsed.pollId);
   const voteRef = pollRef.collection("votes").doc(user.uid);
 
-  const result = await adminDb().runTransaction(async (tx) => {
+  const result = await adminDb().runTransaction<
+    | { ok: false; error: string }
+    | {
+        ok: true;
+        optionIds: string[];
+        options: PollOption[];
+        voterCount: number;
+        slug: string;
+      }
+  >(async (tx) => {
     const [pollSnap, voteSnap] = await Promise.all([
       tx.get(pollRef),
       tx.get(voteRef),
     ]);
-    if (!pollSnap.exists) throw new Error("NOT_FOUND");
+    if (!pollSnap.exists) return { ok: false as const, error: "投票が見つかりません。" };
     const poll = pollSnap.data() as PollDoc;
     if (poll.status !== "published") {
-      throw new Error("公開中の投票のみ受け付けています");
+      return { ok: false as const, error: "公開中の投票のみ受け付けています" };
     }
 
     // Validate every incoming optionId actually exists on the poll.
@@ -335,7 +382,7 @@ export async function castPollVote(
     const dedupedNewIds = [...new Set(parsed.optionIds)];
     for (const id of dedupedNewIds) {
       if (!validIds.has(id)) {
-        throw new Error("不正な選択肢が含まれています");
+        return { ok: false as const, error: "不正な選択肢が含まれています" };
       }
     }
 
@@ -395,12 +442,15 @@ export async function castPollVote(
     });
 
     return {
+      ok: true as const,
       optionIds: [...newSet],
       options: updatedOptions,
       voterCount: nextVoterCount,
       slug: poll.slug,
     };
   });
+
+  if (!result.ok) return result;
 
   // Both pages display voterCount / option results, so revalidate the
   // list as well as the detail. Without /poll the list page would keep
@@ -409,8 +459,11 @@ export async function castPollVote(
   revalidatePath("/poll");
   revalidatePath(`/poll/${result.slug}`);
   return {
-    optionIds: result.optionIds,
-    options: result.options,
-    voterCount: result.voterCount,
+    ok: true,
+    result: {
+      optionIds: result.optionIds,
+      options: result.options,
+      voterCount: result.voterCount,
+    },
   };
 }
