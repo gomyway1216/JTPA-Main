@@ -208,17 +208,24 @@ export function EventForm({
           coverImage,
           surveyFields: fields,
         };
-        if (mode === "create") {
-          await createEvent(payload);
-        } else if (event) {
-          await updateEvent(event.id, payload);
+        const res =
+          mode === "create"
+            ? await createEvent(payload)
+            : event
+              ? await updateEvent(event.id, payload)
+              : null;
+        if (res && !res.ok) {
+          // Real validation / slug-conflict message surfaced inline,
+          // instead of the masked generic "Server Components render" crash.
+          setError(res.error);
+          return;
         }
-        // Update path doesn't redirect (admin stays on /admin/events/
-        // [id]/edit); surface explicit "✓ 保存しました" feedback so the
-        // click feels acknowledged. Create path redirects via the
-        // Server Action, so this line only ever observably runs on
-        // update.
-        setSavedAt(Date.now());
+        // Only an actual update returns here with `res.ok` (create redirects
+        // via the Server Action, so it never reaches this line). Gating on
+        // `res?.ok` also avoids a false "✓ 保存しました" if `res` is null —
+        // i.e. an edit somehow rendered without an `event`. Per PR #116
+        // Copilot review.
+        if (res?.ok) setSavedAt(Date.now());
       } catch (err) {
         // Server-Action `redirect()` (and `notFound()`, etc.) signal
         // navigation by throwing an internal Next.js error.
