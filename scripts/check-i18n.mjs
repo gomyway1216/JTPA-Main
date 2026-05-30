@@ -14,6 +14,11 @@ function readMessages(locale) {
 
 function flatten(value, prefix = "") {
   if (typeof value === "string") return [[prefix, value]];
+  if (Array.isArray(value)) {
+    return value.flatMap((nested, index) =>
+      flatten(nested, prefix ? `${prefix}.${index}` : String(index)),
+    );
+  }
   if (value && typeof value === "object" && !Array.isArray(value)) {
     return Object.entries(value).flatMap(([key, nested]) =>
       flatten(nested, prefix ? `${prefix}.${key}` : key),

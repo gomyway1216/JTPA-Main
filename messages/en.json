@@ -605,6 +605,211 @@
     "yours": "This is your current username",
     "taken": "This username is already taken"
   },
+  "HelpPage": {
+    "metadataTitle": "Help",
+    "title": "Help",
+    "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Q&A</qaLink>.",
+    "toc": "Contents",
+    "sections": {
+      "signin": {
+        "title": "Account and login",
+        "paragraphs": [
+          "Use Log in in the top-right corner to sign in with a Google account. JTPA does not use email/password registration."
+        ],
+        "items": [
+          "Your profile is created automatically on first login from your Google name, icon, and email address.",
+          "Login is required for event RSVPs, submissions, comments, likes, and votes.",
+          "To log out, open your account menu in the top-right corner and choose Log out."
+        ]
+      },
+      "events": {
+        "title": "Join events",
+        "steps": [
+          {
+            "title": "Find an event",
+            "href": "/events",
+            "body": "lists upcoming events, with past events below."
+          },
+          {
+            "title": "RSVP from the detail page",
+            "body": "Open the event detail page and choose Join. You can register as an attendee or presenter, and answer event-specific questions when provided."
+          },
+          {
+            "title": "Review or cancel your RSVP",
+            "href": "/my/rsvps",
+            "body": "shows your event history and upcoming registrations. You can cancel from the same screen."
+          }
+        ],
+        "callout": "Some events are members-only or have capacity limits. If an event is full, waitlisted users are promoted automatically when seats open."
+      },
+      "presenter": {
+        "title": "Present at an event",
+        "steps": [
+          {
+            "title": "RSVP as a presenter",
+            "body": "Choose the presenter role in the RSVP form and enter your presentation title and abstract."
+          },
+          {
+            "title": "Upload slides or links",
+            "body": "After RSVPing, use the presentation materials section to add PDF slides or external links such as YouTube. Multiple materials are supported."
+          },
+          {
+            "title": "Update materials later",
+            "body": "You can replace or add materials from the same section. Published materials are visible on the event page."
+          }
+        ]
+      },
+      "showcase": {
+        "title": "Submit to the showcase",
+        "paragraphs": [
+          "Share AI projects, services, and tools you built with the community."
+        ],
+        "steps": [
+          {
+            "title": "Create a submission",
+            "href": "/projects/new",
+            "body": "opens the submission form. Title, description, and app URL are required; images, tags, repository URL, and demo video URL are optional."
+          },
+          {
+            "title": "Wait for admin review",
+            "body": "Submissions are saved as pending. Once approved, they appear in the showcase."
+          },
+          {
+            "title": "Edit your project",
+            "href": "/my/projects",
+            "body": "lets you edit your own projects. Edits move approved projects back to pending for another review."
+          }
+        ]
+      },
+      "blog": {
+        "title": "Write blog articles",
+        "paragraphs": [
+          "Publish articles for the community, such as AI experiences, tutorials, or short essays."
+        ],
+        "steps": [
+          {
+            "title": "Create an article",
+            "href": "/blog/new",
+            "body": "opens the editor. Markdown tables, code blocks, and task lists are supported, along with cover images and tags."
+          },
+          {
+            "title": "Save a draft or request review",
+            "body": "Save work as a draft, or submit it as pending so an admin can review it."
+          },
+          {
+            "title": "Publish",
+            "body": "Approved articles appear on the blog. Published articles can be edited and resubmitted without changing the original publish date."
+          }
+        ]
+      },
+      "qa": {
+        "title": "Ask and answer in Q&A",
+        "paragraphs": [
+          "Q&A is for short questions, tips, and troubleshooting notes. Posts are published immediately without admin review."
+        ],
+        "items": [
+          "Browse the latest posts from /qa.",
+          "Create a post from /qa/new. Markdown is supported.",
+          "Use comments for answers and follow-up replies.",
+          "Edit your own questions from /my/qa."
+        ]
+      },
+      "guide": {
+        "title": "Read and write guides",
+        "paragraphs": [
+          "Guides collect reusable AI tool setup notes, tutorials, and reference material."
+        ],
+        "items": [
+          "Anyone can submit a guide from /guide/new.",
+          "First-time guides are published after admin review. Once approved, contributor access is granted automatically so future guides can be published directly.",
+          "Check your guide drafts, published guides, and rejected submissions from /my/guides.",
+          "Use blog posts for time-based stories and announcements; use guides for reference content that should remain easy to find later."
+        ]
+      },
+      "comments": {
+        "title": "Comments and likes",
+        "paragraphs": [
+          "Blog, guide, Q&A, showcase, and poll detail pages include comments and like buttons."
+        ],
+        "items": [
+          "Comments can be up to 2000 plain-text characters.",
+          "Replies are one level deep and are displayed in a flat timeline.",
+          "You can edit or delete your own comments. Deleted comments keep the author and deleted state visible.",
+          "Likes can be toggled on posts and individual comments.",
+          "See likes received on your comments from /my/likes."
+        ]
+      },
+      "profile": {
+        "title": "Public profile settings",
+        "paragraphs": [
+          "Use /my/profile to edit the information shown on your public profile."
+        ],
+        "table": {
+          "headers": ["Field", "Default", "Visibility"],
+          "rows": [
+            {
+              "cells": ["Name and icon", "Public", "Google account values. Always shown on comments and submissions."]
+            },
+            {
+              "cells": ["Affiliation", "Private", "Shown on /u/[uid] only when enabled."]
+            },
+            {
+              "cells": ["Bio", "Private", "Shown on /u/[uid] only when enabled. Line breaks are preserved."]
+            },
+            {
+              "cells": ["Email address", "Never public", "Email addresses are never shown publicly."]
+            }
+          ]
+        },
+        "note": "Click an author's name or icon to open their public profile page."
+      },
+      "mypage": {
+        "title": "My Page",
+        "paragraphs": [
+          "Open /my from the account menu to manage your registrations, submissions, settings, and received likes."
+        ],
+        "table": {
+          "headers": ["Menu", "What it shows"],
+          "rows": [
+            {
+              "href": "/my/rsvps",
+              "cells": ["Event history", "Your event RSVPs and cancellation controls."]
+            },
+            {
+              "href": "/my/projects",
+              "cells": ["My projects", "Projects submitted to the showcase."]
+            },
+            {
+              "href": "/my/posts",
+              "cells": ["My articles", "Blog articles, including drafts."]
+            },
+            {
+              "href": "/my/qa",
+              "cells": ["My Q&A", "Questions you posted in Q&A."]
+            },
+            {
+              "href": "/my/likes",
+              "cells": ["Likes received", "Likes on your comments across the site."]
+            },
+            {
+              "href": "/my/profile",
+              "cells": ["Account settings", "Profile visibility and email notification settings."]
+            }
+          ]
+        }
+      },
+      "feedback": {
+        "title": "Feedback and bug reports",
+        "paragraphs": [
+          "Send site requests, bug reports, and improvement ideas from here. Only admins and editors can read submitted feedback."
+        ],
+        "items": [
+          "Login is required so the team can follow up when needed.",
+          "For usage questions that may help others, post in Q&A instead."
+        ]
+      }
+    }
+  },
   "CheckIn": {
     "invalidTitle": "Invalid check-in link",
     "invalidDescription": "The QR code may be old or the URL may be incorrect. Please ask reception staff for help.",
