@@ -67,7 +67,10 @@ export function UserTable({
     setPendingUid(uid);
     startTransition(async () => {
       try {
-        await setUserRole({ uid, role, grant });
+        const res = await setUserRole({ uid, role, grant });
+        // Surface the real reason (self-revoke / last-admin / race) instead
+        // of the masked generic Server Action crash.
+        if (!res.ok) setError(res.error);
       } catch (err) {
         setError(err instanceof Error ? err.message : "ロール変更に失敗しました");
       } finally {
