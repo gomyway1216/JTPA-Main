@@ -1,9 +1,10 @@
 import Link from "@/i18n/navigation";
 import { redirect } from "next/navigation";
 
-import { AboutForm } from "@/app/[locale]/admin/about/_components/AboutForm";
 import { getSessionUser } from "@/lib/auth/session";
 import { getSitePage, SITE_PAGE_DEFAULTS } from "@/lib/data/site-pages";
+
+import { AboutForm } from "./_components/AboutForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "JTPAとは編集" };

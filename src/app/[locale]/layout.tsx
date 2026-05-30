@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import "../globals.css";
 
@@ -44,6 +44,7 @@ export default async function RootLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+  const messages = await getMessages();
 
   const sessionUser = await getSessionUser();
   // The session cookie only carries the Google `photoURL` (decoded from
@@ -96,7 +97,7 @@ export default async function RootLayout({
         className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100"
         suppressHydrationWarning
       >
-        <NextIntlClientProvider>
+        <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <AuthProvider initialUser={user}>
               <Header user={user} />
