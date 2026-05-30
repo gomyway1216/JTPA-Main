@@ -12,6 +12,7 @@ import {
   deleteMyQa,
   submitQa,
   updateMyQa,
+  type QaActionResult,
   type QaFormInput,
 } from "@/app/actions/qa";
 import { Field } from "@/components/forms/Field";
@@ -129,13 +130,19 @@ export function QaForm({ mode, user, qa }: Props) {
     };
     startTransition(async () => {
       try {
-        const res =
-          mode === "create"
-            ? await submitQa(payload)
-            : qa
-              ? await updateMyQa(qa.id, payload)
-              : null;
-        if (res && !res.ok) setError(res.error);
+        let res: QaActionResult | null = null;
+        if (mode === "create") {
+          res = await submitQa(payload);
+        } else if (qa) {
+          res = await updateMyQa(qa.id, payload);
+        }
+        // submitQa/updateMyQa redirect on success, so a returned result is
+        // always a failure — surface it and stop (don't fall through to any
+        // success handling added later). Mirrors EventForm.
+        if (res && !res.ok) {
+          setError(res.error);
+          return;
+        }
       } catch (err) {
         // submitQa/updateMyQa redirect on success, throwing the internal
         // NEXT_REDIRECT; let unstable_rethrow pass that through and surface
@@ -152,8 +159,10 @@ export function QaForm({ mode, user, qa }: Props) {
     setError(null);
     startTransition(async () => {
       try {
+        // deleteMyQa redirects on success (and on an already-deleted doc),
+        // so a returned result is always the forbidden { ok: false } case.
         const res = await deleteMyQa(qa.id);
-        if (res && !res.ok) setError(res.error);
+        if (!res.ok) setError(res.error);
       } catch (err) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "削除に失敗しました");

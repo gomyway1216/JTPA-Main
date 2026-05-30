@@ -125,7 +125,7 @@ export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
       // ALREADY_EXISTS — extremely unlikely (Firestore auto-id space is
       // huge) but possible if a client retries the submit. Treat it the
       // same as a slug collision and surface a useful error.
-      const code = (err as { code?: number | string }).code;
+      const code = (err as { code?: number | string } | null)?.code;
       if (code === 6 || code === "already-exists") {
         return {
           ok: false,
