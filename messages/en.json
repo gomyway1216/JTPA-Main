@@ -614,7 +614,7 @@
       "signin": {
         "title": "Account and login",
         "paragraphs": [
-          "Use Log in in the top-right corner to sign in with a Google account. JTPA does not use email/password registration."
+          "Use Log in in the top-right corner to sign in with a <strong>Google account</strong>. JTPA does not use email/password registration."
         ],
         "items": [
           "Your profile is created automatically on first login from your Google name, icon, and email address.",
@@ -628,6 +628,7 @@
           {
             "title": "Find an event",
             "href": "/events",
+            "linkLabel": "Events",
             "body": "lists upcoming events, with past events below."
           },
           {
@@ -637,6 +638,7 @@
           {
             "title": "Review or cancel your RSVP",
             "href": "/my/rsvps",
+            "linkLabel": "Event history",
             "body": "shows your event history and upcoming registrations. You can cancel from the same screen."
           }
         ],
@@ -662,21 +664,23 @@
       "showcase": {
         "title": "Submit to the showcase",
         "paragraphs": [
-          "Share AI projects, services, and tools you built with the community."
+          "Share AI projects, services, and tools you built with the community in <showcaseLink>the showcase</showcaseLink>."
         ],
         "steps": [
           {
             "title": "Create a submission",
             "href": "/projects/new",
-            "body": "opens the submission form. Title, description, and app URL are required; images, tags, repository URL, and demo video URL are optional."
+            "linkLabel": "Project submission form",
+            "body": "opens the submission form. <strong>Title, description, and app URL</strong> are required; images, tags, repository URL, and demo video URL are optional."
           },
           {
             "title": "Wait for admin review",
-            "body": "Submissions are saved as pending. Once approved, they appear in the showcase."
+            "body": "Submissions are saved as <code>pending</code>. Once approved, they appear in the showcase."
           },
           {
             "title": "Edit your project",
             "href": "/my/projects",
+            "linkLabel": "My projects",
             "body": "lets you edit your own projects. Edits move approved projects back to pending for another review."
           }
         ]
@@ -690,40 +694,41 @@
           {
             "title": "Create an article",
             "href": "/blog/new",
+            "linkLabel": "New article",
             "body": "opens the editor. Markdown tables, code blocks, and task lists are supported, along with cover images and tags."
           },
           {
             "title": "Save a draft or request review",
-            "body": "Save work as a draft, or submit it as pending so an admin can review it."
+            "body": "Save work as a <code>draft</code>, or submit it as <code>pending</code> so an admin can review it."
           },
           {
             "title": "Publish",
-            "body": "Approved articles appear on the blog. Published articles can be edited and resubmitted without changing the original publish date."
+            "body": "Approved articles appear on <blogLink>the blog</blogLink>. Published articles can be edited and resubmitted without changing the original publish date."
           }
         ]
       },
       "qa": {
         "title": "Ask and answer in Q&A",
         "paragraphs": [
-          "Q&A is for short questions, tips, and troubleshooting notes. Posts are published immediately without admin review."
+          "Q&A is for short questions, tips, and troubleshooting notes. Posts are <strong>published immediately without admin review</strong>."
         ],
         "items": [
-          "Browse the latest posts from /qa.",
-          "Create a post from /qa/new. Markdown is supported.",
+          "Browse the latest posts from <qaListLink>Q&A</qaListLink>.",
+          "Create a post from <qaLink>new Q&A post</qaLink>. Markdown is supported.",
           "Use comments for answers and follow-up replies.",
-          "Edit your own questions from /my/qa."
+          "Edit your own questions from <myQaLink>My Q&A</myQaLink>."
         ]
       },
       "guide": {
         "title": "Read and write guides",
         "paragraphs": [
-          "Guides collect reusable AI tool setup notes, tutorials, and reference material."
+          "<guideListLink>Guides</guideListLink> collect reusable AI tool setup notes, tutorials, and reference material."
         ],
         "items": [
-          "Anyone can submit a guide from /guide/new.",
-          "First-time guides are published after admin review. Once approved, contributor access is granted automatically so future guides can be published directly.",
-          "Check your guide drafts, published guides, and rejected submissions from /my/guides.",
-          "Use blog posts for time-based stories and announcements; use guides for reference content that should remain easy to find later."
+          "Anyone can submit a guide from <guideNewLink>new guide</guideNewLink>.",
+          "First-time guides are <strong>published after admin review</strong>. Once approved, <code>contributor</code> access is granted automatically so future guides can be published directly.",
+          "Check your guide drafts, published guides, and rejected submissions from <myGuidesLink>My guides</myGuidesLink>.",
+          "<strong>Blog vs. guide:</strong> Use blog posts for time-based stories and announcements; use guides for reference content that should remain easy to find later."
         ]
       },
       "comments": {
@@ -732,17 +737,17 @@
           "Blog, guide, Q&A, showcase, and poll detail pages include comments and like buttons."
         ],
         "items": [
-          "Comments can be up to 2000 plain-text characters.",
-          "Replies are one level deep and are displayed in a flat timeline.",
-          "You can edit or delete your own comments. Deleted comments keep the author and deleted state visible.",
-          "Likes can be toggled on posts and individual comments.",
-          "See likes received on your comments from /my/likes."
+          "<strong>Comments:</strong> up to 2000 plain-text characters.",
+          "<strong>Replies:</strong> one level deep and displayed in a flat timeline.",
+          "<strong>Edit and delete:</strong> You can edit or delete your own comments. Deleted comments keep the author and deleted state visible.",
+          "<strong>Likes:</strong> toggled on posts and individual comments.",
+          "See <myLikesLink>likes received</myLikesLink> on your comments."
         ]
       },
       "profile": {
         "title": "Public profile settings",
         "paragraphs": [
-          "Use /my/profile to edit the information shown on your public profile."
+          "Use <myProfileLink>Profile settings</myProfileLink> to edit the information shown on your public profile."
         ],
         "table": {
           "headers": ["Field", "Default", "Visibility"],
@@ -766,7 +771,7 @@
       "mypage": {
         "title": "My Page",
         "paragraphs": [
-          "Open /my from the account menu to manage your registrations, submissions, settings, and received likes."
+          "Open <myPageLink>My Page</myPageLink> from the account menu to manage your registrations, submissions, settings, and received likes."
         ],
         "table": {
           "headers": ["Menu", "What it shows"],
@@ -805,7 +810,7 @@
         ],
         "items": [
           "Login is required so the team can follow up when needed.",
-          "For usage questions that may help others, post in Q&A instead."
+          "For usage questions that may help others, <qaLink>post in Q&A</qaLink> instead."
         ]
       }
     }

@@ -45,6 +45,47 @@ const SECTION_IDS = [
 ] as const;
 
 type SectionId = (typeof SECTION_IDS)[number];
+type HelpTranslations = Awaited<ReturnType<typeof getTranslations>>;
+
+const linkClassName = "text-blue-600 hover:underline";
+
+function richLink(href: string) {
+  return function RichLink(chunks: React.ReactNode) {
+    return (
+      <Link href={href} className={linkClassName}>
+        {chunks}
+      </Link>
+    );
+  };
+}
+
+const richTextComponents = {
+  strong: (chunks: React.ReactNode) => (
+    <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
+      {chunks}
+    </strong>
+  ),
+  code: (chunks: React.ReactNode) => (
+    <code className="rounded bg-zinc-100 px-1 py-0.5 text-[0.85em] dark:bg-zinc-800">
+      {chunks}
+    </code>
+  ),
+  blogLink: richLink("/blog"),
+  guideListLink: richLink("/guide"),
+  guideNewLink: richLink("/guide/new"),
+  myGuidesLink: richLink("/my/guides"),
+  myLikesLink: richLink("/my/likes"),
+  myPageLink: richLink("/my"),
+  myProfileLink: richLink("/my/profile"),
+  myQaLink: richLink("/my/qa"),
+  qaLink: richLink("/qa/new"),
+  qaListLink: richLink("/qa"),
+  showcaseLink: richLink("/showcase"),
+};
+
+function richText(t: HelpTranslations, key: string) {
+  return t.rich(key, richTextComponents);
+}
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("HelpPage");
@@ -59,7 +100,11 @@ export const dynamic = "force-dynamic";
 
 export default async function HelpPage() {
   const t = await getTranslations("HelpPage");
-  const sections = t.raw("sections") as Record<SectionId, HelpSection>;
+  const sections = (t.raw("sections") ?? {}) as Partial<Record<SectionId, HelpSection>>;
+  const visibleSections = SECTION_IDS.flatMap((id) => {
+    const section = sections[id];
+    return section ? [{ id, section }] : [];
+  });
   const user = await getSessionUser();
 
   return (
@@ -68,11 +113,7 @@ export default async function HelpPage() {
         <h1 className="text-3xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
           {t.rich("intro", {
-            qaLink: (chunks) => (
-              <Link href="/qa/new" className="text-blue-600 hover:underline">
-                {chunks}
-              </Link>
-            ),
+            qaLink: richTextComponents.qaLink,
           })}
         </p>
       </header>
@@ -80,22 +121,22 @@ export default async function HelpPage() {
       <nav className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
         <p className="mb-2 font-medium">{t("toc")}</p>
         <ul className="grid gap-1 sm:grid-cols-2">
-          {SECTION_IDS.map((id) => (
+          {visibleSections.map(({ id, section }) => (
             <li key={id}>
               <a
                 href={`#${id}`}
-                className="text-blue-600 hover:underline"
+                className={linkClassName}
               >
-                {sections[id].title}
+                {section.title}
               </a>
             </li>
           ))}
         </ul>
       </nav>
 
-      {SECTION_IDS.map((id) => (
-        <Section key={id} id={id} title={sections[id].title}>
-          <SectionBody section={sections[id]} />
+      {visibleSections.map(({ id, section }) => (
+        <Section key={id} id={id} title={section.title}>
+          <SectionBody section={section} sectionId={id} t={t} />
           {id === "feedback" && <FeedbackForm user={user} />}
         </Section>
       ))}
@@ -103,11 +144,21 @@ export default async function HelpPage() {
   );
 }
 
-function SectionBody({ section }: { section: HelpSection }) {
+function SectionBody({
+  section,
+  sectionId,
+  t,
+}: {
+  section: HelpSection;
+  sectionId: SectionId;
+  t: HelpTranslations;
+}) {
   return (
     <>
-      {section.paragraphs?.map((paragraph) => (
-        <p key={paragraph}>{paragraph}</p>
+      {section.paragraphs?.map((paragraph, index) => (
+        <p key={paragraph}>
+          {richText(t, `sections.${sectionId}.paragraphs.${index}`)}
+        </p>
       ))}
       {section.steps?.map((step, index) => (
         <Step key={`${index}-${step.title}`} n={index + 1} title={step.title}>
@@ -115,23 +166,27 @@ function SectionBody({ section }: { section: HelpSection }) {
             <>
               <Link
                 href={step.href}
-                className="text-blue-600 hover:underline"
+                className={linkClassName}
               >
                 {step.linkLabel ?? step.href}
               </Link>{" "}
             </>
           )}
-          {step.body}
+          {richText(t, `sections.${sectionId}.steps.${index}.body`)}
         </Step>
       ))}
       {section.items && (
         <ul className="list-disc pl-5 space-y-1">
-          {section.items.map((item) => (
-            <li key={item}>{item}</li>
+          {section.items.map((item, index) => (
+            <li key={item}>
+              {richText(t, `sections.${sectionId}.items.${index}`)}
+            </li>
           ))}
         </ul>
       )}
-      {section.callout && <Callout>{section.callout}</Callout>}
+      {section.callout && (
+        <Callout>{richText(t, `sections.${sectionId}.callout`)}</Callout>
+      )}
       {section.table && (
         <Table headers={section.table.headers}>
           {section.table.rows.map((row, index) => (
@@ -144,7 +199,9 @@ function SectionBody({ section }: { section: HelpSection }) {
         </Table>
       )}
       {section.note && (
-        <p className="text-sm text-zinc-500">{section.note}</p>
+        <p className="text-sm text-zinc-500">
+          {richText(t, `sections.${sectionId}.note`)}
+        </p>
       )}
     </>
   );
