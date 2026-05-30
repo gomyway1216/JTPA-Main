@@ -68,6 +68,16 @@ vi.mock("@/lib/firebase/admin", () => ({
 
 import { toggleLikeComment, toggleLikeRecord } from "@/app/actions/likes";
 
+// The toggles now return a discriminated result instead of throwing.
+async function expectError(
+  p: ReturnType<typeof toggleLikeRecord>,
+  substr: string,
+) {
+  const res = await p;
+  if (res.ok) throw new Error("expected an error result, but got ok");
+  expect(res.error).toContain(substr);
+}
+
 beforeEach(() => {
   requireUserMock.mockReset().mockResolvedValue({ uid: "u1" });
   revalidatePathMock.mockReset();
@@ -81,15 +91,17 @@ beforeEach(() => {
 
 describe("toggleLikeRecord — validation", () => {
   it("rejects an unknown parentType", async () => {
-    await expect(
+    await expectError(
       toggleLikeRecord({ parentType: "spam" as never, parentId: "p1" }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
   it("rejects an empty parentId", async () => {
-    await expect(
+    await expectError(
       toggleLikeRecord({ parentType: "post", parentId: "" }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 });
 
@@ -104,11 +116,12 @@ describe("toggleLikeRecord — happy paths", () => {
         data: () => ({ status: "published", slug: "hello", likeCount: 5 }),
       }, // parentRef
     );
-    const out = await toggleLikeRecord({
+    const res = await toggleLikeRecord({
       parentType: "post",
       parentId: "p1",
     });
-    expect(out).toEqual({ liked: false, count: 4 });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result).toEqual({ liked: false, count: 4 });
     expect(txDeleteMock).toHaveBeenCalledTimes(1);
     expect(txSetMock).not.toHaveBeenCalled();
     // Update payload uses the in-memory count, NOT FieldValue.increment
@@ -125,11 +138,12 @@ describe("toggleLikeRecord — happy paths", () => {
         data: () => ({ status: "published", slug: "hello", likeCount: 5 }),
       },
     );
-    const out = await toggleLikeRecord({
+    const res = await toggleLikeRecord({
       parentType: "post",
       parentId: "p1",
     });
-    expect(out).toEqual({ liked: true, count: 6 });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result).toEqual({ liked: true, count: 6 });
     expect(txSetMock).toHaveBeenCalledTimes(1);
     expect(txDeleteMock).not.toHaveBeenCalled();
   });
@@ -145,11 +159,12 @@ describe("toggleLikeRecord — happy paths", () => {
         data: () => ({ status: "published", slug: "hello" }),
       },
     );
-    const out = await toggleLikeRecord({
+    const res = await toggleLikeRecord({
       parentType: "post",
       parentId: "p1",
     });
-    expect(out).toEqual({ liked: true, count: 1 });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result).toEqual({ liked: true, count: 1 });
   });
 
   it("clamps the decremented count at 0 (never goes negative)", async () => {
@@ -161,20 +176,22 @@ describe("toggleLikeRecord — happy paths", () => {
         data: () => ({ status: "published", slug: "hello", likeCount: 0 }),
       },
     );
-    const out = await toggleLikeRecord({
+    const res = await toggleLikeRecord({
       parentType: "post",
       parentId: "p1",
     });
-    expect(out.count).toBe(0);
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result.count).toBe(0);
   });
 });
 
 describe("toggleLikeRecord — visibility + parent existence", () => {
-  it("throws NOT_FOUND when the parent doc is gone", async () => {
+  it("returns an error when the parent doc is gone", async () => {
     snapQueue.push({ exists: false }, { exists: false });
-    await expect(
+    await expectError(
       toggleLikeRecord({ parentType: "post", parentId: "p1" }),
-    ).rejects.toThrow("NOT_FOUND");
+      "見つかりません",
+    );
   });
 
   it("refuses likes on unpublished parents (defense in depth)", async () => {
@@ -187,9 +204,10 @@ describe("toggleLikeRecord — visibility + parent existence", () => {
         data: () => ({ status: "draft", slug: "p1" }),
       },
     );
-    await expect(
+    await expectError(
       toggleLikeRecord({ parentType: "post", parentId: "p1" }),
-    ).rejects.toThrow("公開済み");
+      "公開済み",
+    );
   });
 
   it("refuses likes on projects with status='pending'", async () => {
@@ -202,9 +220,10 @@ describe("toggleLikeRecord — visibility + parent existence", () => {
         data: () => ({ status: "pending", slug: "p1" }),
       },
     );
-    await expect(
+    await expectError(
       toggleLikeRecord({ parentType: "project", parentId: "p1" }),
-    ).rejects.toThrow("公開済み");
+      "公開済み",
+    );
   });
 });
 
@@ -226,29 +245,31 @@ describe("toggleLikeRecord — cache invalidation", () => {
 
 describe("toggleLikeComment", () => {
   it("rejects an empty commentId", async () => {
-    await expect(
+    await expectError(
       toggleLikeComment({
         parentType: "post",
         parentId: "p1",
         commentId: "",
       }),
-    ).rejects.toThrow("入力エラー");
+      "入力エラー",
+    );
   });
 
-  it("throws NOT_FOUND when the comment doesn't exist (even if parent does)", async () => {
+  it("returns an error when the comment doesn't exist (even if parent does)", async () => {
     // Order: likeRef, commentRef, parentRef.
     snapQueue.push(
       { exists: false },
       { exists: false }, // commentRef missing
       { exists: true, data: () => ({ status: "published", slug: "x" }) },
     );
-    await expect(
+    await expectError(
       toggleLikeComment({
         parentType: "post",
         parentId: "p1",
         commentId: "c1",
       }),
-    ).rejects.toThrow("NOT_FOUND");
+      "見つかりません",
+    );
   });
 
   it("turns ON when not previously liked, using the comment's likeCount", async () => {
@@ -257,12 +278,13 @@ describe("toggleLikeComment", () => {
       { exists: true, data: () => ({ likeCount: 2 }) }, // commentRef
       { exists: true, data: () => ({ status: "published", slug: "x" }) },
     );
-    const out = await toggleLikeComment({
+    const res = await toggleLikeComment({
       parentType: "post",
       parentId: "p1",
       commentId: "c1",
     });
-    expect(out).toEqual({ liked: true, count: 3 });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.result).toEqual({ liked: true, count: 3 });
     // The increment patches the COMMENT doc (not the parent).
     const [, patch] = txUpdateMock.mock.calls[0] as [unknown, { likeCount: number }];
     expect(patch.likeCount).toBe(3);
@@ -277,12 +299,13 @@ describe("toggleLikeComment", () => {
       { exists: true, data: () => ({ likeCount: 0 }) },
       { exists: true, data: () => ({ status: "draft", slug: "x" }) },
     );
-    await expect(
+    await expectError(
       toggleLikeComment({
         parentType: "post",
         parentId: "p1",
         commentId: "c1",
       }),
-    ).rejects.toThrow("公開済み");
+      "公開済み",
+    );
   });
 });

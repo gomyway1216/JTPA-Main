@@ -36,7 +36,11 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
     }
     startTransition(async () => {
       try {
-        await decideGuide(guide.id, decision, note);
+        const res = await decideGuide(guide.id, decision, note);
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
         // revalidatePath inside the Server Action invalidates the cache,
         // but the existing client-side React tree won't re-fetch until we
         // tell the router to refresh. Without this, the just-decided

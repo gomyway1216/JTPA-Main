@@ -293,16 +293,21 @@ export function GuideForm({
           status: intent,
           order,
         };
-        if (mode === "create") {
-          await submitGuide(payload, guideId);
-        } else if (guide) {
-          await updateGuide(guide.id, payload);
+        const res =
+          mode === "create"
+            ? await submitGuide(payload, guideId)
+            : guide
+              ? await updateGuide(guide.id, payload)
+              : null;
+        if (res && !res.ok) {
+          setError(res.error);
+          return;
         }
         // Update path doesn't redirect; surface explicit saved feedback
-        // feedback so the click feels acknowledged. Create path
-        // redirects via the Server Action, so this line only ever
-        // observably runs on update.
-        setSavedAt(Date.now());
+        // so the click feels acknowledged. Create redirects via
+        // the Server Action (so res is unreachable on create success);
+        // gating on res?.ok also avoids a false flash if res is null.
+        if (res?.ok) setSavedAt(Date.now());
       } catch (err) {
         // Server-Action `redirect()` (and `notFound()`, etc.) signal
         // navigation by throwing an internal Next.js error.
@@ -321,7 +326,11 @@ export function GuideForm({
     if (!confirm(t("deleteConfirm"))) return;
     startTransition(async () => {
       try {
-        await deleteGuide(guide.id);
+        const res = await deleteGuide(guide.id);
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
         // Admin / editor land on the admin guides list; everyone else
         // (contributors + plain authors) bounces back to /my/guides
         // where they can see the rest of their submissions. The admin
