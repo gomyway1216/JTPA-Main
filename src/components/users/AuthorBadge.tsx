@@ -15,29 +15,40 @@ interface Props {
 }
 
 // Single source of truth for the way a comment/post/project author is
-// shown across the app: avatar (photo or initials circle) + `@username`,
-// linked to the user's public profile. Real names are deliberately
-// absent here — they only surface on /u/[uid] when the user has opted
-// into `fullNamePublic`. Keeping this component name-agnostic means
-// renaming a user (or flipping their full-name visibility) propagates
-// to every list/detail surface on the next render, with no doc-level
-// backfill needed.
+// shown across the app: avatar (photo or initials circle), a display
+// label, and a role pill.
 //
-// Role pills (Admin / Editor / Contributor) render inline after the
-// username when the profile's `role` field is set — see RolePill below.
-// The role is denormalized from Auth custom claims on every claim
-// change AND on every sign-in bootstrap, so it stays in sync without
-// per-render Auth lookups.
+// Display label policy: when the user has opted-in to `fullNamePublic`
+// the real name (e.g. "Yudai Yaguchi") becomes the primary label —
+// that's the whole point of the opt-in, and the previous behavior of
+// hiding it everywhere except /u/[uid] meant the setting silently did
+// nothing on the surfaces most readers actually look at (comments,
+// list bylines). Falls back to `@{username}` when the user hasn't
+// opted in. Either way the badge still links to /u/[uid] so the
+// @handle remains one click away.
+//
+// Role pills (Admin / Editor / Contributor) render after the label
+// when the profile's `role` field is set — see RolePill below. The
+// role is denormalized from Auth custom claims on every claim change
+// AND on every sign-in bootstrap, so it stays in sync without per-
+// render Auth lookups.
 export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   const avatarClass = size === "sm" ? "h-5 w-5" : "h-6 w-6";
   const initialClass = size === "sm" ? "text-[10px]" : "text-xs";
 
   const username = profile?.username ?? "unknown";
-  // First Unicode code point — `slice(0,1)` would tear a surrogate pair
-  // for emoji / non-BMP usernames (mirroring the same handling on the
-  // /u/[uid] page's initials fallback). `?` covers the (theoretical)
-  // empty-username case.
-  const initial = ([...username][0] ?? "?").toUpperCase();
+  // Prefer the opted-in real name; fall back to the @handle. Empty
+  // strings (a "public but unset" full name) collapse to the @handle
+  // via `||`, so we never render `name=""`.
+  const label = profile?.fullName || `@${username}`;
+  // First Unicode code point of the underlying NAME (not the
+  // rendered `label`) — the label starts with `@` when fullName is
+  // private, which would otherwise leak a literal `@` into the
+  // initials circle for every non-photo, non-public-name user. Per
+  // PR #93 Gemini + Copilot review. `slice(0,1)` would tear a
+  // surrogate pair for emoji / non-BMP characters; the spread form
+  // walks code points correctly. `?` covers the empty-name case.
+  const initial = ([...(profile?.fullName || username)][0] ?? "?").toUpperCase();
 
   const inner = (
     <>
@@ -61,7 +72,7 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
           {initial}
         </span>
       )}
-      <span>@{username}</span>
+      <span>{label}</span>
       {profile?.role && <RolePill role={profile.role} size={size} />}
     </>
   );
