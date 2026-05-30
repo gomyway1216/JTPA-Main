@@ -18,8 +18,20 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      NPM_VERSION: 11.16.0
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.19.0
+
+      - name: Pin npm
+        run: |
+          npm install -g npm@${NPM_VERSION}
+          npm --version
 
       # Exports GOOGLE_APPLICATION_CREDENTIALS for subsequent steps so the
       # Firebase CLI picks up the service-account credentials automatically.
