@@ -79,21 +79,32 @@ export type UsernameValidationError =
   | "format"
   | "reserved";
 
+// Centralized reservation check — covers BOTH the exact-name
+// `RESERVED_USERNAMES` set AND the namespace-style
+// `RESERVED_USERNAME_PREFIXES` list. Exported so server actions can
+// re-assert the same rule in their belt-and-suspenders checks without
+// drifting from the form-side validation (per PR #94 Gemini review,
+// which spotted that `updateMyProfile` only checked the exact-name
+// set and would have happily accepted a `user-*` handle on a
+// hand-rolled payload that skipped `validateUsernameFormat`).
+//
+// Input is expected to be pre-normalized (lowercased + trimmed); the
+// helper does NOT re-normalize so the call sites stay explicit about
+// when normalization happens.
+export function isReservedUsername(normalized: string): boolean {
+  if (RESERVED_USERNAMES.has(normalized)) return true;
+  return RESERVED_USERNAME_PREFIXES.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
+}
+
 export function validateUsernameFormat(
   input: string,
 ): UsernameValidationError | null {
   const norm = normalizeUsername(input);
   if (!norm) return "empty";
   if (!USERNAME_REGEX.test(norm)) return "format";
-  if (RESERVED_USERNAMES.has(norm)) return "reserved";
-  // System-only prefixes (currently `user-`). Auto-generated default
-  // handles live in this namespace, so allowing manual claims here
-  // would let one user grab another user's auto-default by accident.
-  // `defaultUsernameFor` doesn't go through this validator, so it
-  // can still emit `user-XXXXXX` for its own use.
-  for (const prefix of RESERVED_USERNAME_PREFIXES) {
-    if (norm.startsWith(prefix)) return "reserved";
-  }
+  if (isReservedUsername(norm)) return "reserved";
   return null;
 }
 
