@@ -167,10 +167,13 @@ export async function cancelRsvp({
       // Defensive check, mirrors submitRsvp: if the event doc was
       // deleted between the original RSVP and this cancel, the later
       // `tx.update(eventRef, …)` would fail with a cryptic Firestore
-      // error. Throw the same EVENT_NOT_FOUND sentinel so callers see
-      // a consistent message (per PR #61 Gemini review).
+      // error. Return the same not-found message submitRsvp uses so the
+      // user sees a consistent reason (per PR #61, and #117 review).
       if (!eventSnap.exists) {
-        return { ok: false as const, error: "イベントが見つかりません。" };
+        return {
+          ok: false as const,
+          error: "イベントが見つかりません。削除された可能性があります。",
+        };
       }
       const event = eventSnap.data() as { title: string; slug: string };
 
@@ -229,7 +232,7 @@ export async function cancelRsvp({
       });
 
       // `event` is guaranteed non-null + properly typed after the
-      // EVENT_NOT_FOUND guard above, so no optional-chaining needed.
+      // not-found guard above, so no optional-chaining needed.
       if (promoteeDoc) {
         return {
           ok: true as const,
