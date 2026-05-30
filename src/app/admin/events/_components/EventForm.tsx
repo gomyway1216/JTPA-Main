@@ -208,10 +208,17 @@ export function EventForm({
           coverImage,
           surveyFields: fields,
         };
-        if (mode === "create") {
-          await createEvent(payload);
-        } else if (event) {
-          await updateEvent(event.id, payload);
+        const res =
+          mode === "create"
+            ? await createEvent(payload)
+            : event
+              ? await updateEvent(event.id, payload)
+              : null;
+        if (res && !res.ok) {
+          // Real validation / slug-conflict message surfaced inline,
+          // instead of the masked generic "Server Components render" crash.
+          setError(res.error);
+          return;
         }
         // Update path doesn't redirect (admin stays on /admin/events/
         // [id]/edit); surface explicit "✓ 保存しました" feedback so the

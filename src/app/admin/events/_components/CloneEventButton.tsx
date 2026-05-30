@@ -19,9 +19,11 @@ export function CloneEventButton({
     setError(null);
     startTransition(async () => {
       try {
-        // cloneEvent calls redirect() on success, so this never resolves
-        // normally — error handling only catches actual failures.
-        await cloneEvent(eventId);
+        // cloneEvent redirects on success (so the call doesn't resolve
+        // normally); a not-found returns { ok: false } with a real message
+        // instead of throwing it (which prod would mask).
+        const res = await cloneEvent(eventId);
+        if (res && !res.ok) setError(res.error);
       } catch (err) {
         // Next.js' `redirect()` throws an error whose `.digest` starts
         // with "NEXT_REDIRECT". Let those propagate so the navigation

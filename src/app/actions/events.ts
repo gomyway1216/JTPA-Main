@@ -66,20 +66,35 @@ const EventInputSchema = z.object({
 
 export type EventFormInput = z.input<typeof EventInputSchema>;
 
-function parseEventInput(input: EventFormInput): z.infer<typeof EventInputSchema> {
+// createEvent / cloneEvent redirect on success (so they only ever *return*
+// on failure); updateEvent returns { ok: true }. Returning the error rather
+// than throwing it is what lets the real message reach the admin — Next
+// masks thrown Server Action errors as a generic digest in production (same
+// reasoning as users.ts / presentations.ts, per PR #59).
+export type EventSaveResult = { ok: true } | { ok: false; error: string };
+
+type ParsedEventInput =
+  | { ok: true; data: z.infer<typeof EventInputSchema> }
+  | { ok: false; error: string };
+
+function parseEventInput(input: EventFormInput): ParsedEventInput {
   const result = EventInputSchema.safeParse(input);
-  if (result.success) return result.data;
-  // Surface a readable error so the user sees which field failed instead of
-  // the generic Server Component crash.
+  if (result.success) return { ok: true, data: result.data };
+  // Readable error so the admin sees which field failed instead of the
+  // generic Server Component crash.
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
     .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  return { ok: false, error: `入力エラー: ${issues}` };
 }
 
-export async function createEvent(input: EventFormInput): Promise<string> {
+export async function createEvent(
+  input: EventFormInput,
+): Promise<EventSaveResult> {
   const admin = await requireAdmin();
-  const parsed = parseEventInput(input);
+  const pr = parseEventInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const slug = parsed.slug || slugify(parsed.title);
   // Ensure slug uniqueness
@@ -89,7 +104,7 @@ export async function createEvent(input: EventFormInput): Promise<string> {
     .limit(1)
     .get();
   if (!existing.empty) {
-    throw new Error(`スラッグ "${slug}" は既に使用されています`);
+    return { ok: false, error: `スラッグ "${slug}" は既に使用されています` };
   }
 
   const now = Timestamp.now();
@@ -127,9 +142,11 @@ export async function createEvent(input: EventFormInput): Promise<string> {
 export async function updateEvent(
   eventId: string,
   input: EventFormInput,
-): Promise<void> {
+): Promise<EventSaveResult> {
   await requireAdmin();
-  const parsed = parseEventInput(input);
+  const pr = parseEventInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const ref = adminDb().collection("events").doc(eventId);
   const snap = await ref.get();
   const cur = snap.exists ? (snap.data() as EventDoc) : null;
@@ -141,7 +158,7 @@ export async function updateEvent(
       .limit(2)
       .get();
     if (conflict.docs.some((d) => d.id !== eventId)) {
-      throw new Error(`スラッグ "${parsed.slug}" は既に使用されています`);
+      return { ok: false, error: `スラッグ "${parsed.slug}" は既に使用されています` };
     }
   }
 
@@ -183,6 +200,7 @@ export async function updateEvent(
 
   revalidatePath("/events");
   revalidatePath("/admin/events");
+  return { ok: true };
 }
 
 export async function deleteEvent(eventId: string): Promise<void> {
@@ -228,11 +246,15 @@ async function findFreeSlug(base: string): Promise<string> {
   return `${seed}-${Date.now().toString(36)}`;
 }
 
-export async function cloneEvent(originalId: string): Promise<void> {
+export async function cloneEvent(
+  originalId: string,
+): Promise<EventSaveResult> {
   const admin = await requireAdmin();
   const srcRef = adminDb().collection("events").doc(originalId);
   const srcSnap = await srcRef.get();
-  if (!srcSnap.exists) throw new Error("NOT_FOUND");
+  if (!srcSnap.exists) {
+    return { ok: false, error: "複製元のイベントが見つかりません" };
+  }
   // Existing docs predate some of the optional fields here (visibility,
   // surveyFields, etc), so all of them get explicit defaults below before
   // we write the clone. ignoreUndefinedProperties handles undefined at the
