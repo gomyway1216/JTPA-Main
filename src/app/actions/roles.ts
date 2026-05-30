@@ -21,11 +21,16 @@ interface SetRoleArgs {
   grant: boolean;
 }
 
+// Returning the error rather than throwing it is what lets the real message
+// reach the admin — Next masks thrown Server Action errors as a generic
+// digest in production (same reasoning as events.ts / users.ts, per PR #59).
+export type RoleActionResult = { ok: true } | { ok: false; error: string };
+
 export async function setUserRole({
   uid,
   role,
   grant,
-}: SetRoleArgs): Promise<void> {
+}: SetRoleArgs): Promise<RoleActionResult> {
   const actor = await requireAdmin();
 
   // Runtime validation — TypeScript only checks the shape at compile time,
@@ -34,13 +39,13 @@ export async function setUserRole({
   // start mutating claim objects (prevents writing keys like `__proto__`
   // or whatever else slips through type erasure).
   if (typeof uid !== "string" || uid.length === 0) {
-    throw new Error("uid が指定されていません");
+    return { ok: false, error: "uid が指定されていません" };
   }
   if (!VALID_ROLES.has(role)) {
-    throw new Error(`不正なロールが指定されました: ${String(role)}`);
+    return { ok: false, error: `不正なロールが指定されました: ${String(role)}` };
   }
   if (typeof grant !== "boolean") {
-    throw new Error("grant は boolean である必要があります");
+    return { ok: false, error: "grant は boolean である必要があります" };
   }
 
   const target = await adminAuth().getUser(uid);
@@ -50,12 +55,12 @@ export async function setUserRole({
   // Idempotent no-op. Crucially: this short-circuits the "last admin"
   // guard below, so trying to revoke admin from a non-admin no longer
   // pays for a countAdmins() walk or misfires on the count check.
-  if (grant === currentlyHas) return;
+  if (grant === currentlyHas) return { ok: true };
 
   // Stop an admin from locking themselves out by mistake — they can demote
   // a fellow admin first, then ask that admin to demote them.
   if (!grant && role === "admin" && uid === actor.uid) {
-    throw new Error("自分自身の admin ロールは剥奪できません");
+    return { ok: false, error: "自分自身の admin ロールは剥奪できません" };
   }
 
   // Stop revoking the very last admin — there must always be at least
@@ -65,9 +70,11 @@ export async function setUserRole({
   if (!grant && role === "admin") {
     const adminCount = await countAdmins();
     if (adminCount <= 1) {
-      throw new Error(
-        "最後の admin ロールは剥奪できません。先に別ユーザーへ admin を付与してください。",
-      );
+      return {
+        ok: false,
+        error:
+          "最後の admin ロールは剥奪できません。先に別ユーザーへ admin を付与してください。",
+      };
     }
   }
 
@@ -86,9 +93,11 @@ export async function setUserRole({
     const remaining = await countAdmins();
     if (remaining === 0) {
       await adminAuth().setCustomUserClaims(uid, { ...next, admin: true });
-      throw new Error(
-        "別の管理者が同時に admin を剥奪したため、安全のため取り消しました。もう一度やり直してください。",
-      );
+      return {
+        ok: false,
+        error:
+          "別の管理者が同時に admin を剥奪したため、安全のため取り消しました。もう一度やり直してください。",
+      };
     }
   }
 
@@ -133,4 +142,5 @@ export async function setUserRole({
   }
 
   revalidatePath("/admin/users");
+  return { ok: true };
 }

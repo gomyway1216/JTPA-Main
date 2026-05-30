@@ -49,6 +49,20 @@ vi.mock("firebase-admin/firestore", () => ({
 
 import { setUserRole } from "@/app/actions/roles";
 
+// setUserRole now *returns* { ok: false, error } instead of throwing, so the
+// real reason reaches the admin (Next masks thrown Server Action errors as a
+// generic digest in production). This helper asserts a failed result carries
+// the expected message fragment.
+async function expectError(
+  p: Promise<{ ok: true } | { ok: false; error: string }>,
+  fragment: string,
+) {
+  const res = await p;
+  expect(res.ok).toBe(false);
+  if (res.ok) throw new Error("expected an { ok: false } result");
+  expect(res.error).toContain(fragment);
+}
+
 beforeEach(() => {
   getUserMock.mockReset();
   setCustomUserClaimsMock.mockReset();
@@ -69,32 +83,35 @@ beforeEach(() => {
 
 describe("setUserRole — input validation", () => {
   it("rejects an empty uid", async () => {
-    await expect(
+    await expectError(
       setUserRole({ uid: "", role: "admin", grant: true }),
-    ).rejects.toThrow("uid");
+      "uid",
+    );
   });
 
   it("rejects an unknown role (prevents __proto__ etc. slipping through)", async () => {
     // Server Actions can be invoked with any payload; TypeScript only
     // protects compile-time callers. The allowlist check stops
     // someone setting `customClaims.__proto__ = true`.
-    await expect(
+    await expectError(
       setUserRole({
         uid: "u1",
         role: "__proto__" as never,
         grant: true,
       }),
-    ).rejects.toThrow("不正なロール");
+      "不正なロール",
+    );
   });
 
   it("rejects when grant isn't a boolean", async () => {
-    await expect(
+    await expectError(
       setUserRole({
         uid: "u1",
         role: "admin",
         grant: "yes" as unknown as boolean,
       }),
-    ).rejects.toThrow("boolean");
+      "boolean",
+    );
   });
 });
 
@@ -131,9 +148,10 @@ describe("setUserRole — admin self-revoke guard", () => {
     getUserMock.mockResolvedValueOnce({
       customClaims: { admin: true },
     });
-    await expect(
+    await expectError(
       setUserRole({ uid: "u1", role: "admin", grant: false }),
-    ).rejects.toThrow("自分自身");
+      "自分自身",
+    );
     // We bail BEFORE touching Auth, even though the no-op short-circuit
     // didn't fire.
     expect(setCustomUserClaimsMock).not.toHaveBeenCalled();
@@ -148,9 +166,10 @@ describe("setUserRole — last-admin protection", () => {
       customClaims: { admin: true },
     });
     countAdminsMock.mockResolvedValueOnce(1);
-    await expect(
+    await expectError(
       setUserRole({ uid: "u1", role: "admin", grant: false }),
-    ).rejects.toThrow("最後の admin");
+      "最後の admin",
+    );
     expect(setCustomUserClaimsMock).not.toHaveBeenCalled();
   });
 
@@ -179,9 +198,10 @@ describe("setUserRole — last-admin protection", () => {
       customClaims: { admin: true },
     });
     countAdminsMock.mockResolvedValueOnce(2).mockResolvedValueOnce(0);
-    await expect(
+    await expectError(
       setUserRole({ uid: "u1", role: "admin", grant: false }),
-    ).rejects.toThrow("もう一度");
+      "もう一度",
+    );
 
     // Should have called setCustomUserClaims TWICE: once to revoke,
     // once to restore.
@@ -244,9 +264,11 @@ describe("setUserRole — happy paths", () => {
       .mockImplementation(() => {});
     getUserMock.mockResolvedValueOnce({ customClaims: {} });
     updateMock.mockRejectedValueOnce(new Error("NOT_FOUND"));
+    // The role change still succeeds — the audit write is best-effort, so
+    // the result is { ok: true } even when the profile doc is missing.
     await expect(
       setUserRole({ uid: "u1", role: "editor", grant: true }),
-    ).resolves.toBeUndefined();
+    ).resolves.toEqual({ ok: true });
     expect(consoleWarnSpy).toHaveBeenCalled();
     consoleWarnSpy.mockRestore();
   });
