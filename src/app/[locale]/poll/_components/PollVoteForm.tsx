@@ -62,9 +62,13 @@ export function PollVoteForm({
           pollId,
           optionIds: draft,
         });
-        setOptions(res.options);
-        setSelectedIds(res.optionIds);
-        setVoterCount(res.voterCount);
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        setOptions(res.result.options);
+        setSelectedIds(res.result.optionIds);
+        setVoterCount(res.result.voterCount);
         setEditing(false);
         // Refresh server-rendered siblings (comments count, etc.) — the
         // Server Action revalidates the route but useRouter.refresh()
@@ -187,9 +191,13 @@ export function PollVoteForm({
                   setError(null);
                   try {
                     const res = await castPollVote({ pollId, optionIds: [] });
-                    setOptions(res.options);
-                    setSelectedIds(res.optionIds);
-                    setVoterCount(res.voterCount);
+                    if (!res.ok) {
+                      setError(res.error);
+                      return;
+                    }
+                    setOptions(res.result.options);
+                    setSelectedIds(res.result.optionIds);
+                    setVoterCount(res.result.voterCount);
                     setDraft([]);
                     setEditing(true);
                     router.refresh();
