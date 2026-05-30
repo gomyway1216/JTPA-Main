@@ -658,5 +658,15 @@ service cloud.firestore {
     match /mail/{mailId} {
       allow read, write: if false;
     }
+
+    // ----- errorLogs (server-only error tracking) -----
+    // Written exclusively by the server via instrumentation's
+    // onRequestError (Admin SDK, which bypasses these rules). Entries hold
+    // stack traces, so clients may NEVER write them; admins may read for
+    // triage / a future log viewer.
+    match /errorLogs/{logId} {
+      allow read, list: if isAdmin();
+      allow write: if false;
+    }
   }
 }
