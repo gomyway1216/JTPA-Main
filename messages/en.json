@@ -1,1 +1,856 @@
-{}
+{
+  "Common": {
+    "siteTitle": "JTPA — Japanese Technology Professionals Association",
+    "siteDescription": "Community events, AI project showcases, and study sessions from JTPA.",
+    "viewAll": "View all →",
+    "edit": "Edit",
+    "coverImageAlt": "Cover image for {title}",
+    "thumbnailAlt": "Thumbnail for {title}",
+    "location": {
+      "online": "Online",
+      "offline": "In person",
+      "hybrid": "Hybrid"
+    }
+  },
+  "Header": {
+    "nav": {
+      "events": "Events",
+      "showcase": "Showcase",
+      "blog": "Blog",
+      "guide": "Guides",
+      "qa": "Q&A",
+      "poll": "Polls",
+      "about": "About JTPA",
+      "help": "Help"
+    },
+    "userMenu": "User menu",
+    "userFallback": "User",
+    "myPage": "My page",
+    "admin": "Admin",
+    "login": "Log in",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language",
+    "locale": {
+      "ja": "日本語",
+      "en": "English"
+    }
+  },
+  "Footer": {
+    "about": "About JTPA",
+    "help": "Help",
+    "guide": "Guides",
+    "qa": "Q&A"
+  },
+  "Theme": {
+    "toggle": "Change theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "Auth": {
+    "googleLogin": "Log in with Google",
+    "loggingIn": "Logging in...",
+    "loginFailed": "Login failed",
+    "logout": "Log out"
+  },
+  "Home": {
+    "eyebrow": "Bay Area tech community",
+    "headlinePrefix": " gather,",
+    "headlineSuffix": "build, and share.",
+    "intro1": "JTPA runs AI-focused events and knowledge sharing for the Bay Area tech community.",
+    "intro2": "Join online and in-person events, and explore AI projects built by community members.",
+    "eventsCta": "Browse events",
+    "showcaseCta": "View showcase",
+    "upcomingEvents": "Upcoming Events",
+    "upcomingEventsDescription": "Online and in person. Join whichever session catches your interest.",
+    "noEvents": "There are no public events right now.",
+    "noEventsHint": "Check back for the next announcement.",
+    "featuredProjects": "Featured Projects",
+    "featuredProjectsDescription": "AI projects built by JTPA members.",
+    "noProjects": "No projects are listed yet.",
+    "submitProjectPrefix": "Have an AI project?",
+    "submitProjectLink": "Submit it",
+    "submitProjectSuffix": "to the showcase."
+  },
+  "NotFound": {
+    "title": "Page not found — JTPA",
+    "heading": "Page not found",
+    "description": "The page may have been removed, or the URL may be incorrect.",
+    "home": "Back to home",
+    "report": "Report this missing page →"
+  },
+  "Error": {
+    "label": "Error",
+    "title": "Something went wrong",
+    "description": "The request was interrupted because of an error. Please try again.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "digest": "Please include this request ID when contacting us: {digest}"
+  },
+  "Login": {
+    "title": "Log in",
+    "description": "A Google account is required to RSVP for events and submit projects to the showcase."
+  },
+  "LikeButton": {
+    "loginAria": "Log in to like",
+    "loginTitle": "You need to log in to like this",
+    "unlike": "Remove like",
+    "like": "Like",
+    "error": "Update failed"
+  },
+  "Comments": {
+    "label": "Comments",
+    "heading": "Comments ({count})",
+    "empty": "No comments yet.",
+    "bodyLabel": "Comment",
+    "bodyPlaceholder": "Write a comment (max 2000 characters)",
+    "submit": "Comment",
+    "submitting": "Sending...",
+    "loginRequired": "You need to log in to comment.",
+    "googleLogin": "Log in with Google",
+    "reply": "Reply",
+    "cancelReply": "Cancel reply",
+    "replyPlaceholder": "Reply to @{name} (max 2000 characters)",
+    "replySubmit": "Reply",
+    "delete": "Delete",
+    "hardDelete": "Delete permanently",
+    "deleted": "This comment was deleted",
+    "deleteConfirm": "Delete this comment?",
+    "hardDeleteConfirm": "Permanently delete this comment? This cannot be undone.",
+    "sendError": "Failed to send",
+    "deleteError": "Failed to delete"
+  },
+  "EventsPage": {
+    "metadataTitle": "Events",
+    "upcoming": "Upcoming Events",
+    "noUpcoming": "There are no upcoming events right now.",
+    "past": "Past Events",
+    "noPast": "No past events yet.",
+    "venue": "Venue available",
+    "rsvpCount": "{count} / {capacity} going",
+    "capacityUnknown": "—"
+  },
+  "ShowcasePage": {
+    "metadataTitle": "Showcase",
+    "title": "Showcase",
+    "description": "AI projects built by JTPA community members",
+    "submit": "Submit a project",
+    "empty": "No approved projects yet.",
+    "by": "by"
+  },
+  "BlogPage": {
+    "metadataTitle": "Blog",
+    "title": "Blog",
+    "description": "Articles from JTPA community members",
+    "submit": "Submit an article",
+    "empty": "No published articles yet.",
+    "emptyHint": "Be the first to submit one."
+  },
+  "GuidePage": {
+    "metadataTitle": "Guides",
+    "title": "Guides",
+    "description": "Community-curated guides for setting up and using AI tools. Share your own know-how too.",
+    "submit": "Submit a guide",
+    "loginSubmit": "Log in to submit"
+  },
+  "GuideList": {
+    "searchLabel": "Search guides",
+    "searchPlaceholder": "Search by keyword, title, tag, or body",
+    "clearTags": "Clear tags",
+    "empty": "No published guides yet.",
+    "noMatches": "No guides match those filters.",
+    "showing": "Showing {filtered} of {total}"
+  },
+  "QaPage": {
+    "metadataTitle": "Q&A",
+    "metadataDescription": "Questions and tips from the JTPA community",
+    "title": "Q&A",
+    "description": "Ask questions and share tips. Others can respond with comments, replies, and likes.",
+    "submit": "Post",
+    "loginSubmit": "Log in to post",
+    "empty": "No posts yet.",
+    "emptyHint": "Be the first to ask a question."
+  },
+  "PollPage": {
+    "metadataTitle": "Polls",
+    "metadataDescription": "Polls and surveys from the JTPA community",
+    "title": "Polls",
+    "description": "Collect community preferences. Multiple selections are supported and votes can be changed anytime.",
+    "submit": "Create poll",
+    "loginSubmit": "Log in to create",
+    "empty": "No polls yet.",
+    "emptyHint": "Create the first poll.",
+    "voterCount": "{count, plural, =0 {No votes} =1 {# vote} other {# votes}}",
+    "optionCount": "{count, plural, =1 {# option} other {# options}}"
+  },
+  "EventDetail": {
+    "coverAlt": "Cover image for {title}",
+    "memberOnly": "Members only",
+    "start": "Start",
+    "end": "End",
+    "format": "Format",
+    "capacity": "Capacity",
+    "venue": "Venue",
+    "map": "Map",
+    "capacityUnknown": "—",
+    "cancelledNotice": "This event has been cancelled.",
+    "endedNotice": "This event has ended.",
+    "loginRequired": "Log in to register for this event."
+  },
+  "Rsvp": {
+    "title": "Registration",
+    "waitlist": "You are currently on the waitlist.",
+    "registered": "Registered ({role})",
+    "roleLabel": "Participation type",
+    "attendee": "Attendee",
+    "presenter": "Presenter",
+    "attendeeRole": "Attend",
+    "presenterRole": "Present",
+    "name": "Name",
+    "affiliation": "Affiliation",
+    "affiliationPlaceholder": "Company, school, etc.",
+    "presenterInfo": "Presenter details",
+    "presentationTitle": "Presentation title",
+    "presentationAbstract": "Abstract",
+    "choose": "Choose...",
+    "submit": "Register",
+    "update": "Update registration",
+    "submitting": "Sending...",
+    "cancel": "Cancel",
+    "cancelConfirm": "Cancel your registration?",
+    "submitError": "Failed to submit",
+    "cancelError": "Failed to cancel"
+  },
+  "Presentations": {
+    "title": "Presentation Materials",
+    "add": "+ Add material",
+    "empty": "No presentation materials have been added yet.",
+    "untitled": "(Untitled)",
+    "openFile": "Open file",
+    "externalLink": "External link",
+    "edit": "Edit",
+    "fileTooLarge": "File size must be 50MB or less",
+    "titleRequired": "Enter a title",
+    "fileOrUrlRequired": "Add a file or external URL (both are OK)",
+    "uploadFailed": "Upload failed",
+    "uploadFailedWithMessage": "Upload failed: {message}",
+    "saveFailed": "Failed to save",
+    "deleteConfirm": "Delete this presentation material?",
+    "deleteFailed": "Failed to delete",
+    "titlePlaceholder": "Title",
+    "abstractPlaceholder": "Abstract (optional)",
+    "fileLabel": "File (optional, max 50MB)",
+    "currentFile": "Current file: {name}",
+    "delete": "Delete",
+    "selectedFile": "Selected: {name} ({size} MB)",
+    "externalUrlLabel": "External URL (optional, Google Slides / YouTube, etc.)",
+    "uploading": "Uploading... {progress}%",
+    "uploadingButton": "Uploading...",
+    "saving": "Saving...",
+    "save": "Save",
+    "update": "Update",
+    "cancel": "Cancel"
+  },
+  "ShowcaseDetail": {
+    "author": "By:",
+    "coverAlt": "Cover image for {title}",
+    "screenshots": "Screenshots",
+    "openApp": "Open app →",
+    "sourceCode": "Source code",
+    "demoVideo": "Demo video"
+  },
+  "BlogDetail": {
+    "back": "← Blog",
+    "coverAlt": "Cover image for {title}"
+  },
+  "GuideDetail": {
+    "back": "← Guides",
+    "statusNoticePrefix": "This guide is currently",
+    "statusNoticeSuffix": "and is only visible to the author, admins, and editors.",
+    "lastUpdated": "Last updated: {date}",
+    "status": {
+      "pending": "pending review",
+      "rejected": "rejected",
+      "archived": "archived",
+      "draft": "draft"
+    }
+  },
+  "QaDetail": {
+    "back": "← Q&A",
+    "archivedNoticePrefix": "This post has been",
+    "archived": "archived",
+    "archivedNoticeSuffix": "by an admin. It is only visible to you."
+  },
+  "PollDetail": {
+    "back": "← Polls",
+    "archivedNoticePrefix": "This poll has been",
+    "archived": "archived",
+    "archivedNoticeSuffix": "by an admin. It is only visible to you."
+  },
+  "PollResults": {
+    "summary": "{voters, plural, =0 {No votes} =1 {# voter} other {# voters}}",
+    "summaryWithSelections": "{voters, plural, =0 {No votes} =1 {# voter} other {# voters}} / {selections, plural, =1 {# selection} other {# selections}}",
+    "yourChoice": "Your choice",
+    "votes": "{count, plural, =1 {# vote} other {# votes}}"
+  },
+  "PollVote": {
+    "loginRequired": "Log in to vote.",
+    "vote": "Vote",
+    "changeVote": "Change vote",
+    "hint": "You can choose multiple options and change your vote anytime.",
+    "cancel": "Cancel",
+    "removeVote": "Remove vote",
+    "submitting": "Sending...",
+    "voteError": "Failed to vote",
+    "removeVoteError": "Failed to remove vote"
+  },
+  "NewPost": {
+    "metadataTitle": "Submit Article",
+    "title": "Submit Article",
+    "description": "Submitted articles appear on the blog after admin approval. You can also save a draft."
+  },
+  "NewGuide": {
+    "metadataTitle": "Submit Guide",
+    "title": "Submit Guide",
+    "directDescription": "You are registered as a trusted author, so you can publish guides directly. Save a draft or publish when ready.",
+    "reviewDescription": "First-time guide submissions are published after admin review. Once approved, contributor access is granted automatically so future guides can be published directly."
+  },
+  "NewQa": {
+    "metadataTitle": "Post Q&A",
+    "title": "Post Q&A",
+    "description": "Questions, tips, and observations are all welcome. Posts are published immediately."
+  },
+  "NewPoll": {
+    "metadataTitle": "Create Poll",
+    "title": "Create Poll",
+    "description": "Create 2 to 8 options. Multiple selections are supported and votes can be changed anytime."
+  },
+  "NewProject": {
+    "metadataTitle": "Submit Project",
+    "title": "Submit Project",
+    "description": "Submitted projects appear in the showcase after admin approval."
+  },
+  "PostForm": {
+    "imageTooLarge": "Image size must be 5MB or less",
+    "imageType": "Choose PNG, JPEG, WebP, or GIF",
+    "uploadFailed": "Upload failed",
+    "saveFailed": "Failed to save",
+    "deleteConfirm": "Delete this article?",
+    "deleteFailed": "Failed to delete",
+    "title": "Title",
+    "excerpt": "Excerpt (for lists, max 300 characters)",
+    "body": "Body (Markdown)",
+    "tags": "Tags (comma-separated, max 8)",
+    "tagsPlaceholder": "Announcement, meetup, report",
+    "cover": "Cover image (optional, max 5MB)",
+    "coverPreviewAlt": "Cover preview",
+    "delete": "Delete",
+    "uploading": "Uploading... {progress}%",
+    "editReviewNotice": "Editing sends the article back to review. It will appear again after admin approval.",
+    "saveDraft": "Save draft",
+    "submitting": "Sending...",
+    "uploadingButton": "Uploading...",
+    "submitForReview": "Submit for review",
+    "updateForReview": "Update for review"
+  },
+  "ProjectForm": {
+    "imageTooLarge": "Image size must be 5MB or less",
+    "imageType": "Choose PNG, JPEG, WebP, or GIF",
+    "uploadFailed": "Upload failed",
+    "tooManyScreenshots": "Screenshots are limited to {count}",
+    "submitFailed": "Failed to submit",
+    "title": "Title",
+    "description": "Description (Markdown supported)",
+    "tags": "Tags (comma-separated)",
+    "appUrl": "App URL (optional)",
+    "appUrlPlaceholder": "https://your-app.example.com (leave blank for CLI/local-only tools)",
+    "repoUrl": "Repository URL",
+    "demoVideoUrl": "Demo video URL (YouTube, etc.)",
+    "cover": "Cover image (list thumbnail, one image, max 5MB)",
+    "thumbnailPreviewAlt": "Thumbnail preview",
+    "delete": "Delete",
+    "uploading": "Uploading... {progress}%",
+    "screenshots": "Screenshots (max {count}, 5MB each)",
+    "screenshotCount": "{current} / {max}",
+    "editReviewNotice": "Editing sends the project back to review. It will appear again after admin approval.",
+    "submitting": "Sending...",
+    "uploadingButton": "Uploading...",
+    "submitForReview": "Submit for review",
+    "updateForReview": "Update for review"
+  },
+  "QaForm": {
+    "imageTooLarge": "Image size must be 5MB or less",
+    "uploadFailed": "Upload failed",
+    "submitFailed": "Failed to submit",
+    "deleteConfirm": "Delete this question?",
+    "deleteFailed": "Failed to delete",
+    "title": "Title",
+    "titlePlaceholder": "Example: Tips for getting Claude Code to write tests?",
+    "body": "Body (Markdown)",
+    "addImage": "Add image",
+    "uploading": "Uploading...",
+    "imageHint": "{types}, 5MB or less",
+    "tags": "Tags (comma-separated, max 8)",
+    "tagsPlaceholder": "Claude Code, testing, bug",
+    "submitting": "Sending...",
+    "uploadingButton": "Uploading...",
+    "submit": "Post",
+    "update": "Update",
+    "delete": "Delete"
+  },
+  "PollForm": {
+    "minOptionsError": "Add at least {count} options",
+    "submitFailed": "Failed to submit",
+    "deleteConfirm": "Delete this poll?",
+    "deleteFailed": "Failed to delete",
+    "title": "Title",
+    "titlePlaceholder": "Example: Which AI do you use most often?",
+    "description": "Description (optional)",
+    "descriptionPlaceholder": "Notes such as \"leave other answers in comments\"",
+    "options": "Options ({min} to {max})",
+    "optionsLocked": "Options cannot be changed because votes have already been cast. You can still edit the title and description.",
+    "optionPlaceholder": "Option {number}",
+    "removeOption": "Remove option {number}",
+    "addOption": "+ Add option",
+    "submitting": "Sending...",
+    "submit": "Post",
+    "update": "Update",
+    "delete": "Delete"
+  },
+  "GuideForm": {
+    "waitForUpload": "Please wait for the previous upload to finish",
+    "uploadingCount": "Uploading {count} file(s)...",
+    "uploadedCount": "Uploaded {count} file(s)",
+    "imageUploadFailed": "Failed to upload image",
+    "saveFailed": "Failed to save",
+    "deleteConfirm": "Delete this guide?",
+    "deleteFailed": "Failed to delete",
+    "title": "Title",
+    "slug": "Slug (URL)",
+    "slugPlaceholder": "Auto-generated (lowercase letters, numbers, hyphens)",
+    "tags": "Tags (comma-separated)",
+    "tagsPlaceholder": "Claude, setup, beginner",
+    "order": "Display order (lower appears first)",
+    "body": "Body (Markdown)",
+    "uploadImage": "Upload image",
+    "uploading": "Uploading...",
+    "imageHint": "Drag & drop / paste supported ({types}, {size}MB or less)",
+    "editReviewNotice": "Click \"Submit for review\" after editing to send it back to review. It will appear again after admin approval.",
+    "saveDraft": "Save draft",
+    "saving": "Saving...",
+    "publish": "Publish",
+    "submitting": "Sending...",
+    "submitForReview": "Submit for review",
+    "resubmitForReview": "Resubmit for review",
+    "deleteGuide": "Delete guide",
+    "saved": "✓ Saved"
+  },
+  "AboutPage": {
+    "maintainer": "Maintainer",
+    "maintainerText": "Site development and operations are supported by <name>Yudai Yaguchi</name>.",
+    "feedbackPrefix": "Questions, bug reports, and improvement ideas are welcome through",
+    "feedbackLink": "Help > Feedback",
+    "feedbackSuffix": ".",
+    "sourceCode": "Source code:"
+  },
+  "PublicProfile": {
+    "notFoundTitle": "User not found",
+    "metadataTitle": "@{username}'s profile",
+    "avatarAlt": "Icon for @{username}",
+    "emptyBio": "This user has not published a bio yet."
+  },
+  "UserLinks": {
+    "portfolio": "Portfolio",
+    "ownerLabel": "{owner}'s {label}"
+  },
+  "FeedbackForm": {
+    "loginRequired": "Log in to send requests or bug reports.",
+    "bodyMin": "Enter at least {count} characters.",
+    "bodyMax": "Enter {count} characters or fewer.",
+    "success": "Sent. We'll review it soon. Thank you.",
+    "sendFailed": "Failed to send",
+    "label": "Requests, bugs, or improvement ideas",
+    "placeholder": "Example: Filter guides by author / scrolling is janky on a page",
+    "sending": "Sending...",
+    "send": "Send",
+    "privacy": "Only admin and editor members can view submitted feedback. It is not shown to other members or made public."
+  },
+  "Status": {
+    "draft": "Draft",
+    "pending": "In review",
+    "published": "Published",
+    "approved": "Published",
+    "rejected": "Rejected",
+    "archived": "Archived",
+    "archivedDone": "Archived"
+  },
+  "MyPage": {
+    "title": "My Page",
+    "rsvpsTitle": "Event History",
+    "rsvpsDescription": "Upcoming and past events",
+    "projectsTitle": "My Projects",
+    "projectsDescription": "Projects submitted to the showcase",
+    "postsTitle": "My Articles",
+    "postsDescription": "Blog articles, including drafts",
+    "likesTitle": "Likes Received",
+    "likesDescription": "Your comments that received likes",
+    "profileTitle": "Account Settings",
+    "profileDescription": "Affiliation and email notification settings"
+  },
+  "MyCommon": {
+    "newPost": "New post",
+    "newPoll": "Create poll",
+    "emptyPosts": "No posts yet.",
+    "edit": "Edit",
+    "viewPublic": "View public page",
+    "lastUpdated": "Last updated: {date}",
+    "reviewComment": "Comment: {comment}"
+  },
+  "MyRsvps": {
+    "title": "Event History",
+    "empty": "No event registrations yet."
+  },
+  "MyProjects": {
+    "title": "My Projects"
+  },
+  "MyPosts": {
+    "metadataTitle": "My Articles",
+    "title": "My Articles"
+  },
+  "MyGuides": {
+    "metadataTitle": "My Guides",
+    "title": "My Guides",
+    "writeFirst": "Write the first guide"
+  },
+  "MyQa": {
+    "metadataTitle": "My Q&A",
+    "title": "My Q&A"
+  },
+  "MyPoll": {
+    "metadataTitle": "My Polls",
+    "title": "My Polls",
+    "empty": "No polls yet.",
+    "voterCount": "{count, plural, =0 {No votes} =1 {# voter} other {# voters}}"
+  },
+  "MyLikes": {
+    "metadataTitle": "Likes Received",
+    "title": "Likes Received",
+    "description": "Your comments that received likes",
+    "empty": "None of your comments have received likes yet.",
+    "deletedPage": "Deleted page",
+    "parent": {
+      "post": "Blog",
+      "guide": "Guide",
+      "qa": "Q&A",
+      "project": "Showcase",
+      "poll": "Poll"
+    }
+  },
+  "EditPages": {
+    "post": "Edit Article",
+    "project": "Edit Project",
+    "guide": "Edit Guide",
+    "qa": "Edit Q&A",
+    "poll": "Edit Poll"
+  },
+  "ProfilePage": {
+    "title": "Account Settings",
+    "description": "Edit your username, icon, public information, links, and notification settings. Your full name and email are managed by your Google account, and your email is always private.",
+    "googleInfo": "Google Account Information (read-only)",
+    "email": "Email",
+    "googleIcon": "Google icon",
+    "googleIconAlt": "Icon for {name}"
+  },
+  "ProfileForm": {
+    "saveFailed": "Failed to save",
+    "uploadFailed": "Upload failed",
+    "deleteFailed": "Failed to delete",
+    "title": "Profile Settings",
+    "viewPublic": "View public page →",
+    "icon": "Icon",
+    "currentIconAlt": "Current icon",
+    "changeImage": "Change image",
+    "uploadImage": "Upload image",
+    "delete": "Delete",
+    "processing": "Processing...",
+    "avatarHint": "{types} / up to 2MB. If unset, your Google account icon is shown.",
+    "username": "Username",
+    "usernameHelp": "3-20 characters. Use lowercase letters, numbers, hyphens, and underscores. Start and end with a letter or number. Separators cannot be repeated.",
+    "usernameEmpty": "Enter a username",
+    "usernameReserved": "This username is reserved",
+    "fullName": "Full name (Google account)",
+    "notSet": "(Not set)",
+    "fullNamePublic": "Show full name on the public profile page",
+    "fullNameHint": "Private by default. When enabled, it appears next to your @username.",
+    "affiliation": "Affiliation (company, school, organization, etc.)",
+    "affiliationPlaceholder": "Example: Anthropic / UC Berkeley / Freelance",
+    "affiliationPublic": "Show affiliation on the public profile page",
+    "affiliationHint": "Even when off, this can still prefill event RSVP forms.",
+    "bio": "Bio",
+    "bioPlaceholder": "What you work on, topics you are interested in, etc. Line breaks are supported.",
+    "bioPublic": "Show bio on the public profile page",
+    "links": "Links",
+    "linksHint": "(shown on your public page when set)",
+    "portfolio": "Portfolio",
+    "snsPlaceholder": "X / Instagram / Threads / Bluesky / Mastodon, etc.",
+    "notifications": "Notification Settings",
+    "emailOptIn": "Receive email notifications such as event announcements",
+    "emailOptInHint": "If unchecked, you will stop receiving announcement emails from JTPA. Confirmation emails for events you RSVP to will still be sent.",
+    "saving": "Saving...",
+    "save": "Save",
+    "saved": "✓ Saved",
+    "checking": "Checking...",
+    "available": "✓ This username is available",
+    "yours": "This is your current username",
+    "taken": "This username is already taken"
+  },
+  "HelpPage": {
+    "metadataTitle": "Help",
+    "title": "Help",
+    "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Q&A</qaLink>.",
+    "toc": "Contents",
+    "sections": {
+      "signin": {
+        "title": "Account and login",
+        "paragraphs": [
+          "Use Log in in the top-right corner to sign in with a <strong>Google account</strong>. JTPA does not use email/password registration."
+        ],
+        "items": [
+          "Your profile is created automatically on first login from your Google name, icon, and email address.",
+          "Login is required for event RSVPs, submissions, comments, likes, and votes.",
+          "To log out, open your account menu in the top-right corner and choose Log out."
+        ]
+      },
+      "events": {
+        "title": "Join events",
+        "steps": [
+          {
+            "title": "Find an event",
+            "href": "/events",
+            "linkLabel": "Events",
+            "body": "lists upcoming events, with past events below."
+          },
+          {
+            "title": "RSVP from the detail page",
+            "body": "Open the event detail page and choose Join. You can register as an attendee or presenter, and answer event-specific questions when provided."
+          },
+          {
+            "title": "Review or cancel your RSVP",
+            "href": "/my/rsvps",
+            "linkLabel": "Event history",
+            "body": "shows your event history and upcoming registrations. You can cancel from the same screen."
+          }
+        ],
+        "callout": "Some events are members-only or have capacity limits. If an event is full, waitlisted users are promoted automatically when seats open."
+      },
+      "presenter": {
+        "title": "Present at an event",
+        "steps": [
+          {
+            "title": "RSVP as a presenter",
+            "body": "Choose the presenter role in the RSVP form and enter your presentation title and abstract."
+          },
+          {
+            "title": "Upload slides or links",
+            "body": "After RSVPing, use the presentation materials section to add PDF slides or external links such as YouTube. Multiple materials are supported."
+          },
+          {
+            "title": "Update materials later",
+            "body": "You can replace or add materials from the same section. Published materials are visible on the event page."
+          }
+        ]
+      },
+      "showcase": {
+        "title": "Submit to the showcase",
+        "paragraphs": [
+          "Share AI projects, services, and tools you built with the community in <showcaseLink>the showcase</showcaseLink>."
+        ],
+        "steps": [
+          {
+            "title": "Create a submission",
+            "href": "/projects/new",
+            "linkLabel": "Project submission form",
+            "body": "opens the submission form. <strong>Title, description, and app URL</strong> are required; images, tags, repository URL, and demo video URL are optional."
+          },
+          {
+            "title": "Wait for admin review",
+            "body": "Submissions are saved as <code>pending</code>. Once approved, they appear in the showcase."
+          },
+          {
+            "title": "Edit your project",
+            "href": "/my/projects",
+            "linkLabel": "My projects",
+            "body": "lets you edit your own projects. Edits move approved projects back to pending for another review."
+          }
+        ]
+      },
+      "blog": {
+        "title": "Write blog articles",
+        "paragraphs": [
+          "Publish articles for the community, such as AI experiences, tutorials, or short essays."
+        ],
+        "steps": [
+          {
+            "title": "Create an article",
+            "href": "/blog/new",
+            "linkLabel": "New article",
+            "body": "opens the editor. Markdown tables, code blocks, and task lists are supported, along with cover images and tags."
+          },
+          {
+            "title": "Save a draft or request review",
+            "body": "Save work as a <code>draft</code>, or submit it as <code>pending</code> so an admin can review it."
+          },
+          {
+            "title": "Publish",
+            "body": "Approved articles appear on <blogLink>the blog</blogLink>. Published articles can be edited and resubmitted without changing the original publish date."
+          }
+        ]
+      },
+      "qa": {
+        "title": "Ask and answer in Q&A",
+        "paragraphs": [
+          "Q&A is for short questions, tips, and troubleshooting notes. Posts are <strong>published immediately without admin review</strong>."
+        ],
+        "items": [
+          "Browse the latest posts from <qaListLink>Q&A</qaListLink>.",
+          "Create a post from <qaLink>new Q&A post</qaLink>. Markdown is supported.",
+          "Use comments for answers and follow-up replies.",
+          "Edit your own questions from <myQaLink>My Q&A</myQaLink>."
+        ]
+      },
+      "guide": {
+        "title": "Read and write guides",
+        "paragraphs": [
+          "<guideListLink>Guides</guideListLink> collect reusable AI tool setup notes, tutorials, and reference material."
+        ],
+        "items": [
+          "Anyone can submit a guide from <guideNewLink>new guide</guideNewLink>.",
+          "First-time guides are <strong>published after admin review</strong>. Once approved, <code>contributor</code> access is granted automatically so future guides can be published directly.",
+          "Check your guide drafts, published guides, and rejected submissions from <myGuidesLink>My guides</myGuidesLink>.",
+          "<strong>Blog vs. guide:</strong> Use blog posts for time-based stories and announcements; use guides for reference content that should remain easy to find later."
+        ]
+      },
+      "comments": {
+        "title": "Comments and likes",
+        "paragraphs": [
+          "Blog, guide, Q&A, showcase, and poll detail pages include comments and like buttons."
+        ],
+        "items": [
+          "<strong>Comments:</strong> up to 2000 plain-text characters.",
+          "<strong>Replies:</strong> one level deep and displayed in a flat timeline.",
+          "<strong>Edit and delete:</strong> You can edit or delete your own comments. Deleted comments keep the author and deleted state visible.",
+          "<strong>Likes:</strong> toggled on posts and individual comments.",
+          "See <myLikesLink>likes received</myLikesLink> on your comments."
+        ]
+      },
+      "profile": {
+        "title": "Public profile settings",
+        "paragraphs": [
+          "Use <myProfileLink>Profile settings</myProfileLink> to edit the information shown on your public profile."
+        ],
+        "table": {
+          "headers": ["Field", "Default", "Visibility"],
+          "rows": [
+            {
+              "cells": ["Name and icon", "Public", "Google account values. Always shown on comments and submissions."]
+            },
+            {
+              "cells": ["Affiliation", "Private", "Shown on /u/[uid] only when enabled."]
+            },
+            {
+              "cells": ["Bio", "Private", "Shown on /u/[uid] only when enabled. Line breaks are preserved."]
+            },
+            {
+              "cells": ["Email address", "Never public", "Email addresses are never shown publicly."]
+            }
+          ]
+        },
+        "note": "Click an author's name or icon to open their public profile page."
+      },
+      "mypage": {
+        "title": "My Page",
+        "paragraphs": [
+          "Open <myPageLink>My Page</myPageLink> from the account menu to manage your registrations, submissions, settings, and received likes."
+        ],
+        "table": {
+          "headers": ["Menu", "What it shows"],
+          "rows": [
+            {
+              "href": "/my/rsvps",
+              "cells": ["Event history", "Your event RSVPs and cancellation controls."]
+            },
+            {
+              "href": "/my/projects",
+              "cells": ["My projects", "Projects submitted to the showcase."]
+            },
+            {
+              "href": "/my/posts",
+              "cells": ["My articles", "Blog articles, including drafts."]
+            },
+            {
+              "href": "/my/qa",
+              "cells": ["My Q&A", "Questions you posted in Q&A."]
+            },
+            {
+              "href": "/my/likes",
+              "cells": ["Likes received", "Likes on your comments across the site."]
+            },
+            {
+              "href": "/my/profile",
+              "cells": ["Account settings", "Profile visibility and email notification settings."]
+            }
+          ]
+        }
+      },
+      "feedback": {
+        "title": "Feedback and bug reports",
+        "paragraphs": [
+          "Send site requests, bug reports, and improvement ideas from here. Only admins and editors can read submitted feedback."
+        ],
+        "items": [
+          "Login is required so the team can follow up when needed.",
+          "For usage questions that may help others, <qaLink>post in Q&A</qaLink> instead."
+        ]
+      }
+    }
+  },
+  "CheckIn": {
+    "invalidTitle": "Invalid check-in link",
+    "invalidDescription": "The QR code may be old or the URL may be incorrect. Please ask reception staff for help.",
+    "cancelledTitle": "Event cancelled",
+    "cancelledDescription": "This event was cancelled, so check-in is not available.",
+    "tooEarlyTitle": "Check-in is not open yet",
+    "tooEarlyDescription": "This event starts later.",
+    "start": "Start: {date}",
+    "tooLateTitle": "Check-in closed",
+    "tooLateDescription": "This event has ended and check-in is closed.",
+    "events": "Back to events",
+    "doneTitle": "Check-in complete",
+    "doneDescription": "Thanks for joining.",
+    "guestHintDone": "Next time, log in with Google to manage RSVPs and presentation history from My Page.",
+    "eventPage": "Event page",
+    "signedInAs": "Signed in as {name}",
+    "processing": "Processing...",
+    "checkIn": "Check in",
+    "guestPrompt": "Enter your name and email address.",
+    "namePlaceholder": "Name",
+    "emailPlaceholder": "Email address",
+    "back": "Back",
+    "googlePending": "Signing in...",
+    "googleCheckIn": "Log in with Google and check in",
+    "continueGuest": "Continue as guest",
+    "guestHint": "Log in with Google to manage RSVPs and presentation history from My Page.",
+    "errors": {
+      "invalidToken": "This check-in link is invalid. Please scan the latest QR code.",
+      "tooEarly": "Check-in is not open yet.",
+      "tooLate": "Check-in has closed.",
+      "eventCancelled": "This event was cancelled.",
+      "eventNotFound": "Event not found.",
+      "guestNameRequired": "Enter your name.",
+      "guestEmailRequired": "Enter your email address.",
+      "auth": "There was an authentication problem. Please reload the page.",
+      "unknown": "An error occurred: {message}"
+    }
+  }
+}

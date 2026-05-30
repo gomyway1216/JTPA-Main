@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 import Link from "@/i18n/navigation";
 
 // Catch-all 404 page. Replaces Next's stock black/white default so a
@@ -21,11 +22,14 @@ import Link from "@/i18n/navigation";
 //    a 404 from a broken external link has a one-click way to report
 //    it.
 
-export const metadata: Metadata = {
-  title: "ページが見つかりません — JTPA",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("NotFound");
+  return { title: t("title") };
+}
 
-export default function NotFound() {
+export default async function NotFound() {
+  const t = await getTranslations("NotFound");
+
   return (
     <div className="mx-auto flex min-h-[calc(100vh-12rem)] max-w-2xl flex-col items-center justify-center gap-6 px-4 py-20 text-center sm:py-28">
       {/* Eyebrow status code — kept small and quiet so the friendly
@@ -35,11 +39,11 @@ export default function NotFound() {
       </span>
 
       <h1 className="text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">
-        ページが見つかりません
+        {t("heading")}
       </h1>
 
       <p className="max-w-md text-base text-zinc-600 sm:text-lg dark:text-zinc-300">
-        お探しのページは削除されたか、URL が間違っているかもしれません。
+        {t("description")}
       </p>
 
       <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
@@ -47,13 +51,13 @@ export default function NotFound() {
           href="/"
           className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
         >
-          ホームに戻る
+          {t("home")}
         </Link>
         <Link
           href="/help#feedback"
           className="text-sm font-medium text-accent hover:underline"
         >
-          見つからないページの報告はこちら →
+          {t("report")}
         </Link>
       </div>
     </div>

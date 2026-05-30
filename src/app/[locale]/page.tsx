@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -11,6 +12,9 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const locale = await getLocale();
+  const t = await getTranslations("Home");
+  const common = await getTranslations("Common");
   const [events, projects] = await Promise.all([
     listEvents({ limit: 3, notEndedOnly: true }).catch(() => []),
     listProjects({ limit: 6 }).catch(() => []),
@@ -60,7 +64,7 @@ export default async function HomePage() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </span>
-            Bay Area テックコミュニティ
+            {t("eyebrow")}
           </span>
 
           {/* Display headline. `font-semibold` (not bold) + tighter
@@ -83,12 +87,13 @@ export default async function HomePage() {
             <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
               AI
             </span>
-            で集まる、<br className="hidden sm:inline" />つくる、共有する。
+            {t("headlinePrefix")}
+            <br className="hidden sm:inline" />
+            {t("headlineSuffix")}
           </h1>
 
           <p className="max-w-2xl text-lg text-zinc-600 sm:text-xl sm:leading-relaxed dark:text-zinc-300">
-            JTPAは、Bay AreaのテックコミュニティでAI関連のイベント運営・知識共有を行っています。
-            オンライン/オフラインのイベント、メンバーが作ったAIプロジェクトのショーケースをお楽しみください。
+            {t("intro1")} {t("intro2")}
           </p>
           <div className="flex flex-wrap gap-3 pt-4">
             {/* Hero-only pill variant of the primary CTA — keep the
@@ -100,13 +105,13 @@ export default async function HomePage() {
               href="/events"
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition-all hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950"
             >
-              イベント一覧
+              {t("eventsCta")}
             </Link>
             <Link
               href="/showcase"
               className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
             >
-              ショーケースを見る
+              {t("showcaseCta")}
             </Link>
           </div>
         </div>
@@ -122,22 +127,22 @@ export default async function HomePage() {
             link back on the right rail. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">直近のイベント</h2>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("upcomingEvents")}</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              オンラインも対面も。気になる回に気軽に参加してください。
+              {t("upcomingEventsDescription")}
             </p>
           </div>
           <Link
             href="/events"
             className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
-            すべて見る →
+            {common("viewAll")}
           </Link>
         </div>
         {events.length === 0 ? (
           <EmptyState
-            message="現在公開中のイベントはありません。"
-            hint="次回の告知をお楽しみに。"
+            message={t("noEvents")}
+            hint={t("noEventsHint")}
           />
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -151,16 +156,23 @@ export default async function HomePage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={e.coverImage.url}
-                      alt={`${e.title} のカバー画像`}
+                      alt={common("coverImageAlt", { title: e.title })}
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}
                   <div className="flex flex-1 flex-col p-5">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs uppercase tracking-wide text-zinc-500">
-                        {formatDateTime(e.startAt)}
+                        {formatDateTime(e.startAt, locale)}
                       </p>
-                      <LocationPill type={e.location?.type} />
+                      <LocationPill
+                        type={e.location?.type}
+                        label={
+                          e.location?.type
+                            ? common(`location.${e.location.type}`)
+                            : ""
+                        }
+                      />
                     </div>
                     <h3 className="mt-2 line-clamp-2 text-lg font-semibold">
                       {e.title}
@@ -181,28 +193,29 @@ export default async function HomePage() {
             above. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
-            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">注目のプロジェクト</h2>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t("featuredProjects")}</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-              JTPA メンバーが手がけた AI プロジェクト。
+              {t("featuredProjectsDescription")}
             </p>
           </div>
           <Link
             href="/showcase"
             className="shrink-0 text-sm font-medium text-accent hover:underline"
           >
-            すべて見る →
+            {common("viewAll")}
           </Link>
         </div>
         {projects.length === 0 ? (
           <EmptyState
-            message="掲載中のプロジェクトはありません。"
+            message={t("noProjects")}
             hint={
               <>
-                あなたの AI プロジェクトを{" "}
+                {t("submitProjectPrefix")}{" "}
                 <Link href="/projects/new" className="font-medium text-accent underline">
-                  投稿
+                  {t("submitProjectLink")}
                 </Link>
-                してみませんか？
+                {" "}
+                {t("submitProjectSuffix")}
               </>
             }
           />
@@ -218,7 +231,7 @@ export default async function HomePage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img
                       src={p.thumbnail.url}
-                      alt={`${p.title} のサムネイル`}
+                      alt={common("thumbnailAlt", { title: p.title })}
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}
@@ -251,10 +264,8 @@ export default async function HomePage() {
   );
 }
 
-function LocationPill({ type }: { type?: LocationType }) {
+function LocationPill({ type, label }: { type?: LocationType; label: string }) {
   if (!type) return null;
-  const label =
-    type === "online" ? "オンライン" : type === "hybrid" ? "ハイブリッド" : "対面";
   const classes =
     type === "online"
       ? "bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300"
@@ -269,4 +280,3 @@ function LocationPill({ type }: { type?: LocationType }) {
     </span>
   );
 }
-

@@ -1,21 +1,30 @@
 import Link from "@/i18n/navigation";
+import type { Metadata } from "next";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
+import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = {
-  title: "Q&A",
-  description: "JTPAコミュニティの質問・Tips投稿",
-};
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("QaPage");
+  return {
+    title: t("metadataTitle"),
+    description: t("metadataDescription"),
+  };
+}
 
 export default async function QaListPage() {
+  const locale = await getLocale();
+  const t = await getTranslations("QaPage");
   const [user, items] = await Promise.all([
     getSessionUser(),
     listQa({ statuses: ["published"], limit: 50 }).catch((err) => {
@@ -33,9 +42,9 @@ export default async function QaListPage() {
           subtitle gets cramped next to the CTA otherwise. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Q&amp;A</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-            気軽に質問やTipsを投稿しましょう。コメント・返信・いいねで反応できます。
+            {t("description")}
           </p>
         </div>
         {user ? (
@@ -43,22 +52,22 @@ export default async function QaListPage() {
             href="/qa/new"
             className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            投稿する
+            {t("submit")}
           </Link>
         ) : (
           <Link
-            href="/login?redirect=/qa/new"
+            href={loginHref("/qa/new", locale)}
             className="w-fit shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
-            ログインして投稿
+            {t("loginSubmit")}
           </Link>
         )}
       </header>
 
       {items.length === 0 ? (
         <EmptyState
-          message="まだ投稿はありません。"
-          hint="最初の質問を投稿してみましょう。"
+          message={t("empty")}
+          hint={t("emptyHint")}
         />
       ) : (
         <ul className="space-y-3">
@@ -83,7 +92,7 @@ export default async function QaListPage() {
               </h2>
               <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
                 <AuthorBadge profile={authorProfiles.get(q.authorUid) ?? null} />
-                <span>· {formatDate(q.createdAt)}</span>
+                <span>· {formatDate(q.createdAt, locale)}</span>
                 {(q.likeCount ?? 0) > 0 && (
                   <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
                 )}

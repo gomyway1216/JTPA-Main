@@ -1,20 +1,29 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
 import { QaForm } from "@/app/[locale]/qa/_components/QaForm";
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 
-export const metadata = { title: "Q&A を投稿" };
+export async function generateMetadata() {
+  const t = await getTranslations("NewQa");
+  return { title: t("metadataTitle") };
+}
 
 export default async function NewQaPage() {
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("NewQa"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/qa/new");
+  if (!user) redirect(loginPath("/qa/new", locale));
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">Q&amp;A を投稿</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          質問・Tips・気づき、なんでも気軽に投稿できます。投稿後すぐに公開されます。
+          {t("description")}
         </p>
       </header>
       <QaForm mode="create" user={user} />
