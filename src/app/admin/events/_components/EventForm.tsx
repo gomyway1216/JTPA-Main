@@ -246,16 +246,25 @@ export function EventForm({
   }
 
   function addField() {
-    setFields((cur) => [
-      ...cur,
-      {
-        key: `q${cur.length + 1}`,
-        label: "",
-        type: "text",
-        required: false,
-        audience: "all",
-      },
-    ]);
+    setFields((cur) => {
+      // Pick the lowest `q<n>` not already in use. Seeding from the array
+      // length alone repeats keys after a middle item is removed (e.g.
+      // delete q2 from [q1,q2,q3] then add → another q3), and duplicate
+      // keys overwrite each other's responses. Per PR #110 Gemini review.
+      const used = new Set(cur.map((f) => f.key));
+      let n = cur.length + 1;
+      while (used.has(`q${n}`)) n++;
+      return [
+        ...cur,
+        {
+          key: `q${n}`,
+          label: "",
+          type: "text",
+          required: false,
+          audience: "all",
+        },
+      ];
+    });
   }
 
   function updateField(i: number, patch: Partial<SurveyField>) {

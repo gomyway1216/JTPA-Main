@@ -74,4 +74,15 @@ describe("validateSurveyFields", () => {
     ]);
     expect(msg).toContain("アンケート項目2");
   });
+
+  it("rejects duplicate keys (responses are keyed by `key`, so a dup loses data)", () => {
+    // The form's `q${len+1}` seeding can repeat a key after a middle item
+    // is deleted — that must not silently overwrite another field's answer.
+    const msg = validateSurveyFields([
+      field({ key: "q1", label: "名前" }),
+      field({ key: "q1", label: "所属" }),
+    ]);
+    expect(msg).toContain("アンケート項目2");
+    expect(msg).toContain("重複");
+  });
 });

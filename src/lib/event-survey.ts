@@ -17,12 +17,23 @@ import type { SurveyField } from "@/lib/types";
 // Note we test the TRIMMED value: the server's `.min(1)` would accept a
 // lone space, but a whitespace-only key/label is still meaningless.
 export function validateSurveyFields(fields: SurveyField[]): string | null {
+  const seenKeys = new Set<string>();
   for (let i = 0; i < fields.length; i++) {
     const f = fields[i];
     const n = i + 1;
-    if (!f.key.trim()) {
+    const key = f.key.trim();
+    if (!key) {
       return `アンケート項目${n}: key（英数字）を入力してください`;
     }
+    // Responses are stored as a Record keyed by `key`, so a duplicate key
+    // would silently overwrite another field's answer (and double a column
+    // in the CSV export). The form seeds keys from the array length
+    // (`q${len+1}`), which can collide after a middle field is removed —
+    // reject it here rather than lose data. Per PR #110 Gemini review.
+    if (seenKeys.has(key)) {
+      return `アンケート項目${n}: key「${key}」が重複しています。別の key を指定してください`;
+    }
+    seenKeys.add(key);
     if (!f.label.trim()) {
       return `アンケート項目${n}: 表示ラベルを入力してください`;
     }
