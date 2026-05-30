@@ -20,16 +20,19 @@ export default async function ShowcasePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 space-y-8">
-      <div className="flex items-end justify-between gap-4">
+      {/* Stack on mobile so the H1 + subtitle get full width — the
+          right-rail "プロジェクトを投稿" button squeezes them into a
+          narrow column otherwise. */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ショーケース</h1>
+          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">ショーケース</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             JTPAコミュニティのメンバーが作ったAIプロジェクト
           </p>
         </div>
         <Link
           href="/projects/new"
-          className="shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+          className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
           プロジェクトを投稿
         </Link>
