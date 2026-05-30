@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import {
   ref as storageRef,
   uploadBytesResumable,
@@ -152,12 +153,20 @@ export function ProjectForm({ mode, user, project }: Props) {
           thumbnail,
           screenshots,
         };
-        if (mode === "create") {
-          await submitProject(payload);
-        } else if (project) {
-          await updateMyProject(project.id, payload);
-        }
+        const res =
+          mode === "create"
+            ? await submitProject(payload)
+            : project
+              ? await updateMyProject(project.id, payload)
+              : null;
+        // create redirects on success (so it only returns on failure); edit
+        // returns { ok: true }. Either way an { ok: false } carries the real
+        // message — surface it inline instead of the masked generic crash.
+        if (res && !res.ok) setError(res.error);
       } catch (err) {
+        // create's success throws the internal NEXT_REDIRECT — let it
+        // propagate so navigation happens. Anything else is a real failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "送信に失敗しました");
       }
     });

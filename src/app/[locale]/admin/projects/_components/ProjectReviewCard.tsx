@@ -29,7 +29,11 @@ export function ProjectReviewCard({
     }
     startTransition(async () => {
       try {
-        await decideProject(project.id, decision, note);
+        const res = await decideProject(project.id, decision, note);
+        if (!res.ok) {
+          // Surface the real reason instead of the masked generic crash.
+          setError(res.error);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "失敗しました");
       }
