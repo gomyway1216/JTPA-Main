@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   defaultUsernameFor,
   detectSnsPlatform,
+  isReservedUsername,
   normalizeUsername,
   USERNAME_REGEX,
   validateUsernameFormat,
@@ -71,6 +72,47 @@ describe("validateUsernameFormat", () => {
   it("reports reserved error for blocked top-level routes", () => {
     expect(validateUsernameFormat("admin")).toBe("reserved");
     expect(validateUsernameFormat("login")).toBe("reserved");
+  });
+  it("reports reserved error for the system `user-` prefix", () => {
+    // `defaultUsernameFor` emits `user-<6chars>` for every account
+    // that hasn't claimed an explicit handle. Allowing manual claims
+    // in that namespace would let a user grab another user's
+    // auto-default — see Yudai's bug where `user-2ex7b4` (someone
+    // else's default) was reported as available.
+    expect(validateUsernameFormat("user-2ex7b4")).toBe("reserved");
+    expect(validateUsernameFormat("user-anything-else")).toBe("reserved");
+    expect(validateUsernameFormat("user-")).toBe("format"); // trailing `-` fails regex first; covered for completeness
+  });
+  it("still allows handles that merely contain 'user'", () => {
+    // The prefix is `user-` specifically, not `user` — handles like
+    // `superuser`, `user1`, `useragent` are NOT in the auto-default
+    // namespace and should pass.
+    expect(validateUsernameFormat("superuser")).toBeNull();
+    expect(validateUsernameFormat("user1")).toBeNull();
+    expect(validateUsernameFormat("useragent")).toBeNull();
+  });
+});
+
+describe("isReservedUsername (centralized helper)", () => {
+  it("returns true for exact-name reservations", () => {
+    expect(isReservedUsername("admin")).toBe(true);
+    expect(isReservedUsername("login")).toBe(true);
+  });
+  it("returns true for prefix reservations", () => {
+    expect(isReservedUsername("user-abc123")).toBe(true);
+    expect(isReservedUsername("user-")).toBe(true); // the prefix itself
+  });
+  it("returns false for clean handles", () => {
+    expect(isReservedUsername("yudai")).toBe(false);
+    expect(isReservedUsername("useragent")).toBe(false);
+    expect(isReservedUsername("user1")).toBe(false);
+  });
+  it("expects pre-normalized input — caller normalizes", () => {
+    // Helper does not lowercase / trim; the format validator does
+    // that work upstream. This test pins the contract so a future
+    // caller that forgets to normalize fails loudly.
+    expect(isReservedUsername("USER-ABC")).toBe(false); // not lowercased
+    expect(isReservedUsername("  admin  ")).toBe(false); // not trimmed
   });
 });
 

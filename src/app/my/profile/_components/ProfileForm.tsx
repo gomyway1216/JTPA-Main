@@ -64,10 +64,17 @@ export function ProfileForm({ uid, initial }: Props) {
   // Derived synchronously from the current input — these don't need an
   // effect because they're a pure function of `username` (and the
   // initial handle, which is constant for the form's lifetime).
+  //
+  // `isCurrentHandle` is intentionally computed BEFORE (and
+  // independently of) the format check so a grandfathered handle in a
+  // reserved namespace (e.g. someone who claimed `user-foo` before
+  // the prefix rule landed in PR #94) doesn't get rejected on every
+  // re-render of their own profile. The format error is reported only
+  // when the user is actually trying to *change* the handle. Per
+  // PR #94 Copilot review.
   const usernameNorm = normalizeUsername(username);
+  const isCurrentHandle = usernameNorm === normalizeUsername(initial.username);
   const formatErr = validateUsernameFormat(usernameNorm);
-  const isCurrentHandle =
-    !formatErr && usernameNorm === normalizeUsername(initial.username);
 
   // Async-only state: the server's verdict tagged with the input it was
   // probed for. Storing the input alongside the verdict means a stale
@@ -116,14 +123,20 @@ export function ProfileForm({ uid, initial }: Props) {
   // and shows up as "probing" again, which matches user expectation
   // when they keep editing.
   const probeMatchesCurrent = serverProbe?.for === usernameNorm;
-  const availability: UsernameAvailability | null = formatErr
-    ? { status: "invalid", reason: usernameErrorMessage(formatErr) }
-    : isCurrentHandle
-      ? { status: "yours" }
+  // Resolution order matters: `isCurrentHandle` wins over `formatErr`
+  // so a grandfathered reserved handle (e.g. legacy `user-*`) reads as
+  // "yours" instead of "invalid" when the user is keeping it
+  // unchanged. The server enforces the same grandfather rule in
+  // `updateMyProfile` so the form's optimism here matches what the
+  // submit path will accept.
+  const availability: UsernameAvailability | null = isCurrentHandle
+    ? { status: "yours" }
+    : formatErr
+      ? { status: "invalid", reason: usernameErrorMessage(formatErr) }
       : probeMatchesCurrent
         ? { status: serverProbe!.status }
         : null;
-  const probing = !formatErr && !isCurrentHandle && !probeMatchesCurrent;
+  const probing = !isCurrentHandle && !formatErr && !probeMatchesCurrent;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
