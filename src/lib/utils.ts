@@ -22,21 +22,44 @@ export function toDate(value: TsLike | undefined | null): Date | null {
   return null;
 }
 
+const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const timeFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function formatterCacheKey(locale: Intl.LocalesArgument): string {
+  return Array.isArray(locale)
+    ? locale.join(",")
+    : typeof locale === "string"
+      ? locale
+      : "ja-JP";
+}
+
 function dateFormatter(locale: Intl.LocalesArgument) {
-  return new Intl.DateTimeFormat(locale, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    weekday: "short",
-  });
+  const key = formatterCacheKey(locale);
+  let formatter = dateFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "short",
+    });
+    dateFormatterCache.set(key, formatter);
+  }
+  return formatter;
 }
 
 function timeFormatter(locale: Intl.LocalesArgument) {
-  return new Intl.DateTimeFormat(locale, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  const key = formatterCacheKey(locale);
+  let formatter = timeFormatterCache.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    timeFormatterCache.set(key, formatter);
+  }
+  return formatter;
 }
 
 export function formatDate(

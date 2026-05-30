@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 
-import { AttendanceToggle } from "@/app/[locale]/admin/attendees/_components/AttendanceToggle";
-import { AttendeeExportBar } from "@/app/[locale]/admin/attendees/_components/AttendeeExportBar";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { formatDateTime } from "@/lib/utils";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
+
+import { AttendanceToggle } from "./_components/AttendanceToggle";
+import { AttendeeExportBar } from "./_components/AttendeeExportBar";
 
 export const dynamic = "force-dynamic";
 
