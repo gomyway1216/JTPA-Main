@@ -394,7 +394,14 @@ export async function updateMyAvatar(
   if (!isOwnedAvatarPath(user.uid, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なパス）" };
   }
-  if (!isCanonicalAvatarUrl(url, adminStorage().bucket().name, path)) {
+  // Take the bucket name from env (the exact value the client embeds in the
+  // download URL) rather than `adminStorage().bucket().name`: the latter
+  // throws synchronously when no default bucket is configured, and this
+  // check runs OUTSIDE the try/catch below — an unhandled throw here would
+  // surface to the client as the masked generic "Server Components render"
+  // error instead of a clean inline message.
+  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "";
+  if (!isCanonicalAvatarUrl(url, bucketName, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なURL）" };
   }
 
