@@ -22,6 +22,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { validateSurveyFields } from "@/lib/event-survey";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type {
@@ -177,6 +178,17 @@ export function EventForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    // Validate the questionnaire up front. An unfinished item (e.g. a
+    // just-added field with no label) would otherwise fail the server's
+    // Zod schema, which Next masks as the generic "Server Components
+    // render" error in production — leaving the admin unable to tell why
+    // the save failed (issue #102). Surface a precise inline message and
+    // never send the bad payload.
+    const surveyError = validateSurveyFields(fields);
+    if (surveyError) {
+      setError(surveyError);
+      return;
+    }
     startTransition(async () => {
       try {
         const payload: EventFormInput = {
