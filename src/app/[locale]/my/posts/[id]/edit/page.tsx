@@ -1,6 +1,8 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 
 import { PostForm } from "@/app/posts/_components/PostForm";
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getPostById } from "@/lib/data/posts";
 
@@ -12,8 +14,12 @@ export default async function EditMyPostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("EditPages"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect(`/login?redirect=/my/posts/${id}/edit`);
+  if (!user) redirect(loginPath(`/my/posts/${id}/edit`, locale));
 
   const post = await getPostById(id);
   if (!post) notFound();
@@ -23,7 +29,7 @@ export default async function EditMyPostPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-4">
-      <h1 className="text-2xl font-bold">記事を編集</h1>
+      <h1 className="text-2xl font-bold">{t("post")}</h1>
       <PostForm mode="edit" user={user} post={post} />
     </div>
   );

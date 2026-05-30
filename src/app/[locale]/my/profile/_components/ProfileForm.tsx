@@ -2,6 +2,7 @@
 
 import Link from "@/i18n/navigation";
 import { unstable_rethrow } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 
 import {
@@ -21,8 +22,7 @@ import {
 import type { ProjectAsset } from "@/lib/types";
 import {
   normalizeUsername,
-  USERNAME_HELP_TEXT,
-  usernameErrorMessage,
+  type UsernameValidationError,
   validateUsernameFormat,
 } from "@/lib/users-shared";
 
@@ -54,6 +54,7 @@ interface Props {
 const USERNAME_CHECK_DEBOUNCE_MS = 400;
 
 export function ProfileForm({ uid, initial }: Props) {
+  const t = useTranslations("ProfileForm");
   const [username, setUsername] = useState(initial.username);
   const [affiliation, setAffiliation] = useState(initial.affiliation);
   const [bio, setBio] = useState(initial.bio);
@@ -152,7 +153,7 @@ export function ProfileForm({ uid, initial }: Props) {
   const availability: UsernameAvailability | null = isCurrentHandle
     ? { status: "yours" }
     : formatErr
-      ? { status: "invalid", reason: usernameErrorMessage(formatErr) }
+      ? { status: "invalid", reason: usernameErrorMessage(formatErr, t) }
       : probeMatchesCurrent
         ? { status: serverProbe!.status }
         : null;
@@ -183,7 +184,7 @@ export function ProfileForm({ uid, initial }: Props) {
         // navigation by throwing an internal Next.js error — let those
         // propagate; surface anything else as a real save failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : t("saveFailed"));
       }
     });
   }
@@ -214,7 +215,7 @@ export function ProfileForm({ uid, initial }: Props) {
       }
     } catch (err) {
       setAvatarError(
-        err instanceof Error ? err.message : "アップロードに失敗しました",
+        err instanceof Error ? err.message : t("uploadFailed"),
       );
     } finally {
       setAvatarBusy(false);
@@ -232,7 +233,7 @@ export function ProfileForm({ uid, initial }: Props) {
         setAvatarError(result.error);
       }
     } catch (err) {
-      setAvatarError(err instanceof Error ? err.message : "削除に失敗しました");
+      setAvatarError(err instanceof Error ? err.message : t("deleteFailed"));
     } finally {
       setAvatarBusy(false);
     }
@@ -257,13 +258,13 @@ export function ProfileForm({ uid, initial }: Props) {
     >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-          プロフィール設定
+          {t("title")}
         </h2>
         <Link
           href={`/u/${uid}`}
           className="text-xs text-blue-600 hover:underline"
         >
-          公開ページを見る →
+          {t("viewPublic")}
         </Link>
       </div>
 
@@ -271,13 +272,13 @@ export function ProfileForm({ uid, initial }: Props) {
           Server Actions (handleAvatarPick / handleAvatarRemove), separate
           from the form's Save button below. */}
       <div className="space-y-2">
-        <p className="block text-sm font-medium">アイコン</p>
+        <p className="block text-sm font-medium">{t("icon")}</p>
         <div className="flex items-center gap-4">
           {avatar ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={avatar.url}
-              alt="現在のアイコン"
+              alt={t("currentIconAlt")}
               className="h-16 w-16 shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-800"
             />
           ) : (
@@ -307,7 +308,7 @@ export function ProfileForm({ uid, initial }: Props) {
                   onChange={handleAvatarPick}
                   className="sr-only"
                 />
-                {avatar ? "画像を変更" : "画像をアップロード"}
+                {avatar ? t("changeImage") : t("uploadImage")}
               </label>
               {avatar && (
                 <button
@@ -316,14 +317,14 @@ export function ProfileForm({ uid, initial }: Props) {
                   disabled={avatarBusy || pending}
                   className="text-xs text-red-600 hover:underline disabled:opacity-50"
                 >
-                  削除
+                  {t("delete")}
                 </button>
               )}
             </div>
             <p className="text-xs text-zinc-500">
               {avatarBusy
-                ? "処理中…"
-                : `${GUIDE_IMAGE_LABEL} / 2MB まで。未設定のときは Google アカウントのアイコンが表示されます。`}
+                ? t("processing")
+                : t("avatarHint", { types: GUIDE_IMAGE_LABEL })}
             </p>
             {avatarError && (
               <p className="text-xs text-red-600">{avatarError}</p>
@@ -338,7 +339,7 @@ export function ProfileForm({ uid, initial }: Props) {
           htmlFor="profile-username"
           className="block text-sm font-medium"
         >
-          ユーザーネーム
+          {t("username")}
         </label>
         <div className="flex items-stretch overflow-hidden rounded border border-zinc-300 bg-white dark:border-zinc-700 dark:bg-zinc-950">
           <span className="flex items-center bg-zinc-50 px-3 text-sm text-zinc-500 dark:bg-zinc-900">
@@ -359,16 +360,16 @@ export function ProfileForm({ uid, initial }: Props) {
           probing={probing}
           availability={availability}
         />
-        <p className="text-xs text-zinc-500">{USERNAME_HELP_TEXT}</p>
+        <p className="text-xs text-zinc-500">{t("usernameHelp")}</p>
       </div>
 
       {/* Full name (Google) — display + per-field publish toggle */}
       <div className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
         <p className="text-sm font-medium">
-          フルネーム (Google アカウント)
+          {t("fullName")}
         </p>
         <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          {initial.fullName || "(未設定)"}
+          {initial.fullName || t("notSet")}
         </p>
         <label className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
           <input
@@ -378,9 +379,9 @@ export function ProfileForm({ uid, initial }: Props) {
             className="mt-0.5"
           />
           <span>
-            公開プロフィールページにフルネームを表示する
+            {t("fullNamePublic")}
             <span className="mt-0.5 block text-xs text-zinc-500">
-              デフォルトでは非公開です。オンにすると @ユーザーネーム の隣に表示されます。
+              {t("fullNameHint")}
             </span>
           </span>
         </label>
@@ -392,7 +393,7 @@ export function ProfileForm({ uid, initial }: Props) {
           htmlFor="profile-affiliation"
           className="block text-sm font-medium"
         >
-          所属 (会社・大学・組織など)
+          {t("affiliation")}
         </label>
         <input
           id="profile-affiliation"
@@ -400,7 +401,7 @@ export function ProfileForm({ uid, initial }: Props) {
           maxLength={200}
           value={affiliation}
           onChange={(e) => setAffiliation(e.target.value)}
-          placeholder="例: Anthropic / UC Berkeley / フリーランス"
+          placeholder={t("affiliationPlaceholder")}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
         <label className="flex items-start gap-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -411,9 +412,9 @@ export function ProfileForm({ uid, initial }: Props) {
             className="mt-0.5"
           />
           <span>
-            公開プロフィールページに所属を表示する
+            {t("affiliationPublic")}
             <span className="mt-0.5 block text-xs text-zinc-500">
-              オフでも、イベントRSVPフォームの初期値としては引き続き使われます。
+              {t("affiliationHint")}
             </span>
           </span>
         </label>
@@ -422,7 +423,7 @@ export function ProfileForm({ uid, initial }: Props) {
       {/* Bio: textarea + per-field publish toggle */}
       <div className="space-y-2">
         <label htmlFor="profile-bio" className="block text-sm font-medium">
-          紹介文
+          {t("bio")}
         </label>
         <textarea
           id="profile-bio"
@@ -430,7 +431,7 @@ export function ProfileForm({ uid, initial }: Props) {
           maxLength={1000}
           value={bio}
           onChange={(e) => setBio(e.target.value)}
-          placeholder="どんなことをしている人か、興味のあるトピックなど。改行できます。"
+          placeholder={t("bioPlaceholder")}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
         <div className="flex items-center justify-between gap-3">
@@ -441,7 +442,7 @@ export function ProfileForm({ uid, initial }: Props) {
               onChange={(e) => setBioPublic(e.target.checked)}
               className="mt-0.5"
             />
-            <span>公開プロフィールページに紹介文を表示する</span>
+            <span>{t("bioPublic")}</span>
           </label>
           <span className="text-xs text-zinc-500">{bio.length} / 1000</span>
         </div>
@@ -450,14 +451,14 @@ export function ProfileForm({ uid, initial }: Props) {
       {/* External links — always public when set. Empty = removed. */}
       <fieldset className="space-y-3 border-t border-zinc-200 pt-4 dark:border-zinc-800">
         <legend className="text-sm font-medium">
-          リンク
+          {t("links")}
           <span className="ml-2 text-xs font-normal text-zinc-500">
-            (設定すると公開ページに表示されます)
+            {t("linksHint")}
           </span>
         </legend>
         <LinkInput
           id="profile-link-portfolio"
-          label="ポートフォリオ"
+          label={t("portfolio")}
           placeholder="https://your-portfolio.example.com"
           value={portfolio}
           onChange={setPortfolio}
@@ -479,7 +480,7 @@ export function ProfileForm({ uid, initial }: Props) {
         <LinkInput
           id="profile-link-sns"
           label="SNS"
-          placeholder="X / Instagram / Threads / Bluesky / Mastodon など"
+          placeholder={t("snsPlaceholder")}
           value={sns}
           onChange={setSns}
         />
@@ -487,7 +488,7 @@ export function ProfileForm({ uid, initial }: Props) {
 
       {/* Notifications */}
       <div className="space-y-2 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        <p className="text-sm font-medium">通知設定</p>
+        <p className="text-sm font-medium">{t("notifications")}</p>
         <label className="flex items-start gap-2 text-sm">
           <input
             type="checkbox"
@@ -496,9 +497,9 @@ export function ProfileForm({ uid, initial }: Props) {
             className="mt-0.5"
           />
           <span>
-            イベント告知などのメール通知を受け取る
+            {t("emailOptIn")}
             <span className="mt-0.5 block text-xs text-zinc-500">
-              チェックを外すと、JTPA からのお知らせメールが届かなくなります。RSVP した個別イベントの確認メールは引き続き送信されます。
+              {t("emailOptInHint")}
             </span>
           </span>
         </label>
@@ -512,9 +513,9 @@ export function ProfileForm({ uid, initial }: Props) {
           disabled={submitBlocked}
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          {pending ? "保存中..." : "保存"}
+          {pending ? t("saving") : t("save")}
         </button>
-        <SaveFlash savedAt={savedAt} />
+        <SaveFlash savedAt={savedAt} message={t("saved")} />
       </div>
     </form>
   );
@@ -565,10 +566,11 @@ function UsernameAvailabilityHint({
   probing: boolean;
   availability: UsernameAvailability | null;
 }) {
+  const t = useTranslations("ProfileForm");
   if (probing) {
     return (
       <p className="text-xs text-zinc-500" aria-live="polite">
-        確認中…
+        {t("checking")}
       </p>
     );
   }
@@ -577,19 +579,19 @@ function UsernameAvailabilityHint({
     case "available":
       return (
         <p className="text-xs text-emerald-700 dark:text-emerald-400" aria-live="polite">
-          ✓ このユーザーネームは使えます
+          {t("available")}
         </p>
       );
     case "yours":
       return (
         <p className="text-xs text-zinc-500" aria-live="polite">
-          現在のユーザーネームです
+          {t("yours")}
         </p>
       );
     case "taken":
       return (
         <p className="text-xs text-red-600" aria-live="polite">
-          このユーザーネームは既に使われています
+          {t("taken")}
         </p>
       );
     case "invalid":
@@ -598,5 +600,19 @@ function UsernameAvailabilityHint({
           {availability.reason}
         </p>
       );
+  }
+}
+
+function usernameErrorMessage(
+  err: UsernameValidationError,
+  t: (key: "usernameEmpty" | "usernameHelp" | "usernameReserved") => string,
+): string {
+  switch (err) {
+    case "empty":
+      return t("usernameEmpty");
+    case "format":
+      return t("usernameHelp");
+    case "reserved":
+      return t("usernameReserved");
   }
 }

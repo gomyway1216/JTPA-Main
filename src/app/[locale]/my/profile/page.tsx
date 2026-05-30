@@ -1,5 +1,7 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
 import { defaultUsernameFor } from "@/lib/users-shared";
@@ -9,8 +11,12 @@ import { ProfileForm } from "./_components/ProfileForm";
 export const dynamic = "force-dynamic";
 
 export default async function MyProfilePage() {
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("ProfilePage"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/profile");
+  if (!user) redirect(loginPath("/my/profile", locale));
 
   const profile = await getMyProfile(user.uid);
   // If the profile doc doesn't exist (rare — session predates the
@@ -46,27 +52,27 @@ export default async function MyProfilePage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">アカウント設定</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          ユーザーネーム・アイコン・公開する情報・リンク・通知設定を編集できます。フルネーム・メールは Google アカウント側で管理され、メールは常に非公開です。
+          {t("description")}
         </p>
       </header>
 
       <section className="rounded-lg border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-          Google アカウント情報 (編集不可)
+          {t("googleInfo")}
         </h2>
         <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm">
-          <dt className="text-zinc-500">メール</dt>
+          <dt className="text-zinc-500">{t("email")}</dt>
           <dd>{user.email}</dd>
           {user.photoURL && (
             <>
-              <dt className="text-zinc-500">Google のアイコン</dt>
+              <dt className="text-zinc-500">{t("googleIcon")}</dt>
               <dd>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={user.photoURL}
-                  alt={`${user.displayName} のアイコン`}
+                  alt={t("googleIconAlt", { name: user.displayName })}
                   className="h-10 w-10 rounded-full border border-zinc-200 dark:border-zinc-800"
                 />
               </dd>

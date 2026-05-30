@@ -1,6 +1,7 @@
 "use client";
 
 import { signInAnonymously, signInWithPopup } from "firebase/auth";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { signInWithIdToken } from "@/app/actions/auth";
@@ -29,6 +30,7 @@ export function CheckInClient({
   signedInUser,
   alreadyCheckedIn,
 }: Props) {
+  const t = useTranslations("CheckIn");
   const [view, setView] = useState<View>(alreadyCheckedIn ? "done" : "idle");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function CheckInClient({
       await selfCheckIn(eventId, token);
       setView("done");
     } catch (e) {
-      setError(prettyError(e));
+      setError(prettyError(e, t));
     } finally {
       setPending(false);
     }
@@ -61,7 +63,7 @@ export function CheckInClient({
       await selfCheckIn(eventId, token);
       setView("done");
     } catch (e) {
-      setError(prettyError(e));
+      setError(prettyError(e, t));
     } finally {
       setPending(false);
     }
@@ -84,7 +86,7 @@ export function CheckInClient({
       setWasGuest(true);
       setView("done");
     } catch (e) {
-      setError(prettyError(e));
+      setError(prettyError(e, t));
     } finally {
       setPending(false);
     }
@@ -95,10 +97,10 @@ export function CheckInClient({
       <div className="space-y-4 rounded-lg border border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-800 dark:bg-emerald-950">
         <div className="text-3xl">✓</div>
         <p className="text-lg font-medium text-emerald-900 dark:text-emerald-100">
-          チェックイン完了
+          {t("doneTitle")}
         </p>
         <p className="text-sm text-emerald-800 dark:text-emerald-200">
-          ご参加ありがとうございます。
+          {t("doneDescription")}
         </p>
         {wasGuest && (
           // Honest copy: the anonymous uid for this guest is per-device
@@ -106,14 +108,14 @@ export function CheckInClient({
           // claim history migration. Just point them at what they'd
           // *gain* by signing in next time.
           <p className="text-xs text-emerald-700 dark:text-emerald-300">
-            次回はGoogleでログインすると、マイページでRSVPや発表履歴を管理できます。
+            {t("guestHintDone")}
           </p>
         )}
         <a
           href={`/events/${eventSlug}`}
           className="inline-block text-sm text-emerald-900 underline hover:no-underline dark:text-emerald-100"
         >
-          イベントページへ
+          {t("eventPage")}
         </a>
       </div>
     );
@@ -130,7 +132,9 @@ export function CheckInClient({
       {signedInUser ? (
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center space-y-3 dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {signedInUser.displayName || signedInUser.email} としてサインイン中
+            {t("signedInAs", {
+              name: signedInUser.displayName || signedInUser.email,
+            })}
           </p>
           <button
             type="button"
@@ -138,7 +142,7 @@ export function CheckInClient({
             onClick={doSelfCheckIn}
             className="w-full rounded-md bg-zinc-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {pending ? "処理中..." : "チェックインする"}
+            {pending ? t("processing") : t("checkIn")}
           </button>
         </div>
       ) : view === "guest_form" ? (
@@ -147,12 +151,12 @@ export function CheckInClient({
           className="space-y-3 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
         >
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            お名前とメールアドレスをご入力ください。
+            {t("guestPrompt")}
           </p>
           <input
             type="text"
             required
-            placeholder="お名前"
+            placeholder={t("namePlaceholder")}
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
@@ -160,7 +164,7 @@ export function CheckInClient({
           <input
             type="email"
             required
-            placeholder="メールアドレス"
+            placeholder={t("emailPlaceholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
@@ -170,7 +174,7 @@ export function CheckInClient({
             disabled={pending}
             className="w-full rounded-md bg-zinc-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {pending ? "処理中..." : "チェックインする"}
+            {pending ? t("processing") : t("checkIn")}
           </button>
           <button
             type="button"
@@ -178,7 +182,7 @@ export function CheckInClient({
             onClick={() => setView("idle")}
             className="block w-full text-center text-xs text-zinc-500 hover:underline disabled:opacity-50"
           >
-            戻る
+            {t("back")}
           </button>
         </form>
       ) : (
@@ -189,7 +193,7 @@ export function CheckInClient({
             onClick={handleGoogle}
             className="w-full rounded-md border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-900 disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
           >
-            {pending ? "サインイン中..." : "Googleでログインしてチェックイン"}
+            {pending ? t("googlePending") : t("googleCheckIn")}
           </button>
           <button
             type="button"
@@ -197,10 +201,10 @@ export function CheckInClient({
             onClick={() => setView("guest_form")}
             className="w-full rounded-md bg-zinc-900 px-4 py-3 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            ゲストで続ける
+            {t("continueGuest")}
           </button>
           <p className="text-center text-xs text-zinc-500">
-            Googleでログインすると、マイページでRSVPや発表履歴を管理できます。
+            {t("guestHint")}
           </p>
         </div>
       )}
@@ -208,7 +212,22 @@ export function CheckInClient({
   );
 }
 
-function prettyError(e: unknown): string {
+function prettyError(
+  e: unknown,
+  t: (
+    key:
+      | "errors.invalidToken"
+      | "errors.tooEarly"
+      | "errors.tooLate"
+      | "errors.eventCancelled"
+      | "errors.eventNotFound"
+      | "errors.guestNameRequired"
+      | "errors.guestEmailRequired"
+      | "errors.auth"
+      | "errors.unknown",
+    values?: { message: string },
+  ) => string,
+): string {
   const msg = e instanceof Error ? e.message : String(e);
   // Map server-action error codes to friendly Japanese messages. Anything
   // we don't recognize falls through with the raw message — better than
@@ -216,23 +235,23 @@ function prettyError(e: unknown): string {
   switch (msg) {
     case "INVALID_TOKEN":
     case "TOKEN_NOT_SET":
-      return "チェックインリンクが無効です。最新のQRコードをスキャンしてください。";
+      return t("errors.invalidToken");
     case "TOO_EARLY":
-      return "イベント開始時刻まで時間があります。";
+      return t("errors.tooEarly");
     case "TOO_LATE":
-      return "チェックイン期間が終了しました。";
+      return t("errors.tooLate");
     case "EVENT_CANCELLED":
-      return "このイベントは中止されました。";
+      return t("errors.eventCancelled");
     case "EVENT_NOT_FOUND":
-      return "イベントが見つかりません。";
+      return t("errors.eventNotFound");
     case "GUEST_NAME_REQUIRED":
-      return "お名前を入力してください。";
+      return t("errors.guestNameRequired");
     case "GUEST_EMAIL_REQUIRED":
-      return "メールアドレスを入力してください。";
+      return t("errors.guestEmailRequired");
     case "INVALID_ID_TOKEN":
     case "NOT_ANONYMOUS":
-      return "認証に問題がありました。ページを再読み込みしてください。";
+      return t("errors.auth");
     default:
-      return `エラーが発生しました: ${msg}`;
+      return t("errors.unknown", { message: msg });
   }
 }

@@ -1,29 +1,30 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { parentRoutePrefix } from "@/lib/comments-parent";
 import {
   fetchCommentParentMetas,
   listLikedCommentsByAuthor,
 } from "@/lib/data/comments";
-import type { CommentParentType } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "もらったいいね" };
 
-const PARENT_LABEL: Record<CommentParentType, string> = {
-  post: "ブログ",
-  guide: "ガイド",
-  qa: "Q&A",
-  project: "ショーケース",
-  poll: "投票",
-};
+export async function generateMetadata() {
+  const t = await getTranslations("MyLikes");
+  return { title: t("metadataTitle") };
+}
 
 export default async function MyLikesPage() {
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("MyLikes"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/likes");
+  if (!user) redirect(loginPath("/my/likes", locale));
 
   // Missing composite indexes show up as Firestore errors with a one-click
   // "create index" link in the message — log so it's visible on first run.
@@ -39,15 +40,15 @@ export default async function MyLikesPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">もらったいいね</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-          いいねを受け取った自分のコメント
+          {t("description")}
         </p>
       </header>
 
       {comments.length === 0 ? (
         <p className="text-zinc-500">
-          まだいいねを受け取ったコメントはありません。
+          {t("empty")}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -64,7 +65,7 @@ export default async function MyLikesPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs text-zinc-500">
-                      {PARENT_LABEL[c.parentType]} ·{" "}
+                      {t(`parent.${c.parentType}`)} ·{" "}
                       {parentHref ? (
                         <Link
                           href={parentHref}
@@ -73,14 +74,14 @@ export default async function MyLikesPage() {
                           {meta?.title}
                         </Link>
                       ) : (
-                        <span className="italic">削除されたページ</span>
+                        <span className="italic">{t("deletedPage")}</span>
                       )}
                     </p>
                     <p className="mt-2 line-clamp-3 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
                       {c.body}
                     </p>
                     <p className="mt-2 text-xs text-zinc-500">
-                      {formatDateTime(c.createdAt)}
+                      {formatDateTime(c.createdAt, locale)}
                     </p>
                   </div>
                   <span className="whitespace-nowrap rounded bg-pink-100 px-2 py-1 text-xs font-medium text-pink-900 dark:bg-pink-950 dark:text-pink-200">

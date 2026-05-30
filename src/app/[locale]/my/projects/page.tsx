@@ -1,54 +1,52 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyProjects } from "@/lib/data/projects";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  pending: {
-    label: "審査中",
-    cls: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
-  },
-  approved: {
-    label: "公開中",
-    cls: "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
-  },
-  rejected: {
-    label: "却下",
-    cls: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
-  },
-  archived: {
-    label: "アーカイブ",
-    cls: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
-  },
+const STATUS_CLASSES: Record<string, string> = {
+  pending:
+    "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  approved:
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  rejected: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
+  archived: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
 };
 
 export default async function MyProjectsPage() {
+  const [locale, t, common, statusT] = await Promise.all([
+    getLocale(),
+    getTranslations("MyProjects"),
+    getTranslations("MyCommon"),
+    getTranslations("Status"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/projects");
+  if (!user) redirect(loginPath("/my/projects", locale));
 
   const projects = await listMyProjects(user.uid).catch(() => []);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">自分の投稿</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link
           href="/projects/new"
           className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
         >
-          新規投稿
+          {common("newPost")}
         </Link>
       </div>
 
       {projects.length === 0 ? (
-        <p className="text-zinc-500">まだ投稿はありません。</p>
+        <p className="text-zinc-500">{common("emptyPosts")}</p>
       ) : (
         <ul className="space-y-3">
           {projects.map((p) => {
-            const meta = STATUS_LABELS[p.status] ?? STATUS_LABELS.pending;
+            const cls = STATUS_CLASSES[p.status] ?? STATUS_CLASSES.pending;
             return (
               <li
                 key={p.id}
@@ -62,14 +60,14 @@ export default async function MyProjectsPage() {
                     </p>
                     {p.status === "rejected" && p.reviewNote && (
                       <p className="mt-2 text-sm text-red-700 dark:text-red-300">
-                        コメント: {p.reviewNote}
+                        {common("reviewComment", { comment: p.reviewNote })}
                       </p>
                     )}
                   </div>
                   <span
-                    className={`whitespace-nowrap rounded px-2 py-1 text-xs font-medium ${meta.cls}`}
+                    className={`whitespace-nowrap rounded px-2 py-1 text-xs font-medium ${cls}`}
                   >
-                    {meta.label}
+                    {statusT(p.status)}
                   </span>
                 </div>
                 <div className="mt-3 flex gap-3 text-sm">
@@ -77,14 +75,14 @@ export default async function MyProjectsPage() {
                     href={`/my/projects/${p.id}/edit`}
                     className="text-blue-600 hover:underline"
                   >
-                    編集
+                    {common("edit")}
                   </Link>
                   {p.status === "approved" && (
                     <Link
                       href={`/showcase/${p.slug}`}
                       className="text-blue-600 hover:underline"
                     >
-                      公開ページを見る
+                      {common("viewPublic")}
                     </Link>
                   )}
                 </div>

@@ -1,11 +1,17 @@
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 
 import { PollForm } from "@/app/[locale]/poll/_components/PollForm";
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getPollBySlug } from "@/lib/data/poll";
 
-export const metadata = { title: "投票を編集" };
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  const t = await getTranslations("EditPages");
+  return { title: t("poll") };
+}
 
 export default async function EditPollPage({
   params,
@@ -13,8 +19,12 @@ export default async function EditPollPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("EditPages"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect(`/login?redirect=/poll/${slug}/edit`);
+  if (!user) redirect(loginPath(`/poll/${slug}/edit`, locale));
 
   const poll = await getPollBySlug(slug);
   if (!poll) notFound();
@@ -32,7 +42,7 @@ export default async function EditPollPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">投票を編集</h1>
+        <h1 className="text-2xl font-bold">{t("poll")}</h1>
       </header>
       <PollForm mode="edit" poll={poll} optionsLocked={optionsLocked} />
     </div>

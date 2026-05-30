@@ -1,16 +1,28 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyPoll } from "@/lib/data/poll";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "自分の投票" };
+
+export async function generateMetadata() {
+  const t = await getTranslations("MyPoll");
+  return { title: t("metadataTitle") };
+}
 
 export default async function MyPollPage() {
+  const [locale, t, common, statusT] = await Promise.all([
+    getLocale(),
+    getTranslations("MyPoll"),
+    getTranslations("MyCommon"),
+    getTranslations("Status"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/poll");
+  if (!user) redirect(loginPath("/my/poll", locale));
 
   const items = await listMyPoll(user.uid).catch((err) => {
     console.error("Failed to list my polls:", err);
@@ -20,17 +32,17 @@ export default async function MyPollPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="flex items-end justify-between gap-4">
-        <h1 className="text-2xl font-bold">自分の投票</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link
           href="/poll/new"
           className="shrink-0 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          新規作成
+          {common("newPoll")}
         </Link>
       </header>
 
       {items.length === 0 ? (
-        <p className="text-zinc-500">まだ投票はありません。</p>
+        <p className="text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
           {items.map((p) => (
@@ -44,12 +56,15 @@ export default async function MyPollPage() {
                 </Link>
                 {p.status === "archived" && (
                   <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    アーカイブ済
+                    {statusT("archivedDone")}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-zinc-500">
-                最終更新: {formatDate(p.updatedAt)} · {p.voterCount ?? 0} 人が投票
+                {common("lastUpdated", {
+                  date: formatDate(p.updatedAt, locale),
+                })}{" "}
+                · {t("voterCount", { count: p.voterCount ?? 0 })}
               </p>
               {p.description && (
                 <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
@@ -61,7 +76,7 @@ export default async function MyPollPage() {
                   href={`/poll/${p.slug}/edit`}
                   className="text-blue-600 hover:underline"
                 >
-                  編集
+                  {common("edit")}
                 </Link>
               </div>
             </li>

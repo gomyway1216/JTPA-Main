@@ -1,16 +1,28 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyQa } from "@/lib/data/qa";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "自分のQ&A" };
+
+export async function generateMetadata() {
+  const t = await getTranslations("MyQa");
+  return { title: t("metadataTitle") };
+}
 
 export default async function MyQaPage() {
+  const [locale, t, common, statusT] = await Promise.all([
+    getLocale(),
+    getTranslations("MyQa"),
+    getTranslations("MyCommon"),
+    getTranslations("Status"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/qa");
+  if (!user) redirect(loginPath("/my/qa", locale));
 
   const items = await listMyQa(user.uid).catch((err) => {
     console.error("Failed to list my Q&A:", err);
@@ -20,17 +32,17 @@ export default async function MyQaPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="flex items-end justify-between gap-4">
-        <h1 className="text-2xl font-bold">自分のQ&amp;A</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link
           href="/qa/new"
           className="shrink-0 rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
-          新規投稿
+          {common("newPost")}
         </Link>
       </header>
 
       {items.length === 0 ? (
-        <p className="text-zinc-500">まだ投稿はありません。</p>
+        <p className="text-zinc-500">{common("emptyPosts")}</p>
       ) : (
         <ul className="space-y-3">
           {items.map((q) => (
@@ -44,12 +56,14 @@ export default async function MyQaPage() {
                 </Link>
                 {q.status === "archived" && (
                   <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    アーカイブ済
+                    {statusT("archivedDone")}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-xs text-zinc-500">
-                最終更新: {formatDate(q.updatedAt)}
+                {common("lastUpdated", {
+                  date: formatDate(q.updatedAt, locale),
+                })}
               </p>
               <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
                 {truncate(stripMarkdown(q.body), 200)}
@@ -59,7 +73,7 @@ export default async function MyQaPage() {
                   href={`/qa/${q.slug}/edit`}
                   className="text-blue-600 hover:underline"
                 >
-                  編集
+                  {common("edit")}
                 </Link>
               </div>
             </li>

@@ -1,6 +1,8 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventById } from "@/lib/data/events";
 import { listMyRsvpEventIds } from "@/lib/data/rsvps";
@@ -9,8 +11,12 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function MyRsvpsPage() {
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("MyRsvps"),
+  ]);
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my/rsvps");
+  if (!user) redirect(loginPath("/my/rsvps", locale));
 
   const ids = await listMyRsvpEventIds(user.uid).catch(() => []);
   const events = (await Promise.all(ids.map((id) => getEventById(id))))
@@ -18,9 +24,9 @@ export default async function MyRsvpsPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <h1 className="text-2xl font-bold">参加履歴</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
       {events.length === 0 ? (
-        <p className="text-zinc-500">参加登録履歴はありません。</p>
+        <p className="text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
           {events.map((e) => (
@@ -31,7 +37,7 @@ export default async function MyRsvpsPage() {
               >
                 <span className="font-medium">{e.title}</span>
                 <span className="text-xs text-zinc-500">
-                  {formatDateTime(e.startAt)}
+                  {formatDateTime(e.startAt, locale)}
                 </span>
               </Link>
             </li>

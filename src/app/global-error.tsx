@@ -24,14 +24,37 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const isEnglish =
+    typeof navigator !== "undefined" &&
+    navigator.language.toLowerCase().startsWith("en");
+  const copy = isEnglish
+    ? {
+        lang: "en",
+        title: "Unexpected error",
+        description:
+          "A problem occurred while loading the page. Reload, or try again later.",
+        retry: "Try again",
+        home: "Back to home",
+        digest: "Please include this request ID when contacting us:",
+      }
+    : {
+        lang: "ja",
+        title: "予期しないエラーが発生しました",
+        description:
+          "ページの読み込み中に問題が発生しました。再読み込みするか、しばらく時間をおいてからお試しください。",
+        retry: "再試行",
+        home: "ホームに戻る",
+        digest: "お問い合わせの際はこのリクエストIDをお知らせください:",
+      };
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
-    <html lang="ja">
+    <html lang={copy.lang}>
       <head>
-        <title>予期しないエラーが発生しました</title>
+        <title>{copy.title}</title>
         {/*
           Dark-mode override. The inline `style=` attributes below win
           the cascade against a stylesheet rule, so the `!important`
@@ -79,10 +102,10 @@ export default function GlobalError({
               margin: 0,
             }}
           >
-            予期しないエラーが発生しました
+            {copy.title}
           </h1>
           <p style={{ fontSize: "1rem", color: "#52525b", margin: 0 }}>
-            ページの読み込み中に問題が発生しました。再読み込みするか、しばらく時間をおいてからお試しください。
+            {copy.description}
           </p>
           <div
             style={{
@@ -107,7 +130,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              再試行
+              {copy.retry}
             </button>
             {/*
               Plain `<a>` (with a full reload) on purpose: at this
@@ -131,12 +154,12 @@ export default function GlobalError({
                 textDecoration: "none",
               }}
             >
-              ホームに戻る
+              {copy.home}
             </a>
           </div>
           {error.digest && (
             <p style={{ fontSize: "0.75rem", color: "#71717a", margin: 0 }}>
-              お問い合わせの際はこのリクエストIDをお知らせください:{" "}
+              {copy.digest}{" "}
               <span
                 style={{
                   fontFamily:
