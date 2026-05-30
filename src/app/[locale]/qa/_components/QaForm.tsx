@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { collection, doc } from "firebase/firestore";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -59,6 +60,7 @@ interface Props {
 }
 
 export function QaForm({ mode, user, qa }: Props) {
+  const t = useTranslations("QaForm");
   const [title, setTitle] = useState(qa?.title ?? "");
   const [body, setBody] = useState<string>(qa?.body ?? "");
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
@@ -93,7 +95,7 @@ export function QaForm({ mode, user, qa }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > MAX_GUIDE_IMAGE_BYTES) {
-      setError("画像サイズは 5MB 以下にしてください");
+      setError(t("imageTooLarge"));
       e.target.value = "";
       return;
     }
@@ -106,7 +108,7 @@ export function QaForm({ mode, user, qa }: Props) {
       // and the user can rearrange afterwards.
       setBody((prev) => `${prev}${prev && !prev.endsWith("\n") ? "\n\n" : ""}![${alt}](${url})\n`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロード失敗");
+      setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -140,14 +142,14 @@ export function QaForm({ mode, user, qa }: Props) {
         if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
           throw err;
         }
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!qa) return;
-    if (!confirm("この質問を削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -157,14 +159,14 @@ export function QaForm({ mode, user, qa }: Props) {
         if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
           throw err;
         }
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required htmlFor="qa-title">
+      <Field label={t("title")} required htmlFor="qa-title">
         <input
           id="qa-title"
           type="text"
@@ -173,12 +175,12 @@ export function QaForm({ mode, user, qa }: Props) {
           maxLength={120}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="例: Claude Code でテスト書かせるコツは？"
+          placeholder={t("titlePlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label="本文 (Markdown)" required>
+      <Field label={t("body")} required>
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <button
@@ -187,10 +189,10 @@ export function QaForm({ mode, user, qa }: Props) {
               disabled={pending || uploading}
               className={secondaryButtonClassSm}
             >
-              {uploading ? "アップロード中…" : "📷 画像を追加"}
+              {uploading ? t("uploading") : `📷 ${t("addImage")}`}
             </button>
             <span className="text-xs text-zinc-500">
-              {GUIDE_IMAGE_LABEL}、5MB 以下
+              {t("imageHint", { types: GUIDE_IMAGE_LABEL })}
             </span>
             <input
               ref={fileInputRef}
@@ -211,13 +213,13 @@ export function QaForm({ mode, user, qa }: Props) {
         </div>
       </Field>
 
-      <Field label="タグ (カンマ区切り・最大 8)" htmlFor="qa-tags">
+      <Field label={t("tags")} htmlFor="qa-tags">
         <input
           id="qa-tags"
           type="text"
           value={tagsInput}
           onChange={(e) => setTagsInput(e.target.value)}
-          placeholder="Claude Code, テスト, バグ"
+          placeholder={t("tagsPlaceholder")}
           className={inputClass}
         />
       </Field>
@@ -231,12 +233,12 @@ export function QaForm({ mode, user, qa }: Props) {
           className={primaryButtonClass}
         >
           {pending
-            ? "送信中…"
+            ? t("submitting")
             : uploading
-              ? "アップロード中…"
+              ? t("uploadingButton")
               : mode === "create"
-                ? "投稿する"
-                : "更新する"}
+                ? t("submit")
+                : t("update")}
         </button>
         {mode === "edit" && (
           <button
@@ -245,11 +247,10 @@ export function QaForm({ mode, user, qa }: Props) {
             onClick={handleDelete}
             className={`ml-auto ${dangerButtonClass}`}
           >
-            削除
+            {t("delete")}
           </button>
         )}
       </div>
     </form>
   );
 }
-

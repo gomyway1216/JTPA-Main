@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { loginHref } from "@/i18n/paths";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
@@ -54,6 +55,7 @@ export function CommentsSection({
   user,
 }: Props) {
   const t = useTranslations("Comments");
+  const locale = useLocale();
   const [comments, setComments] = useState<CommentDoc[]>(initialComments);
   const [body, setBody] = useState("");
   // null = top-level comment form. String = inline reply form targeting
@@ -382,7 +384,7 @@ export function CommentsSection({
               {t("loginRequired")}
             </p>
             <Link
-              href={`/login?redirect=${encodeURIComponent(loginRedirect)}`}
+              href={loginHref(loginRedirect, locale)}
               className="inline-flex rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               {t("googleLogin")}

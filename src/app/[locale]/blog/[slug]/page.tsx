@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -39,6 +40,10 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("BlogDetail"),
+  ]);
   const post = await getPostBySlug(slug);
   if (!post || post.status !== "published") notFound();
 
@@ -75,7 +80,7 @@ export default async function BlogPostPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
-        ← ブログ一覧
+        {t("back")}
       </Link>
 
       <header className="space-y-3">
@@ -85,7 +90,9 @@ export default async function BlogPostPage({
             profile={profilesByUid.get(post.authorUid) ?? null}
             size="md"
           />
-          {post.publishedAt && <span>· {formatDate(post.publishedAt)}</span>}
+          {post.publishedAt && (
+            <span>· {formatDate(post.publishedAt, locale)}</span>
+          )}
         </p>
         {post.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -116,7 +123,7 @@ export default async function BlogPostPage({
         /* eslint-disable-next-line @next/next/no-img-element */
         <img
           src={post.coverImage.url}
-          alt={`${post.title} のカバー画像`}
+          alt={t("coverAlt", { title: post.title })}
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}

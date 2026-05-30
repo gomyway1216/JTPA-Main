@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { loginHref } from "@/i18n/paths";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -33,6 +34,7 @@ type Props =
 
 export function LikeButton(props: Props) {
   const t = useTranslations("LikeButton");
+  const locale = useLocale();
   const [liked, setLiked] = useState(props.initialLiked);
   const [count, setCount] = useState(props.initialCount);
   const [pending, startTransition] = useTransition();
@@ -93,7 +95,7 @@ export function LikeButton(props: Props) {
     const redirect = `${parentRoutePrefix(props.parentType)}/${props.parentSlug}`;
     return (
       <Link
-        href={`/login?redirect=${encodeURIComponent(redirect)}`}
+        href={loginHref(redirect, locale)}
         className={`${baseCls} ${stateCls}`}
         aria-label={t("loginAria")}
         title={t("loginTitle")}

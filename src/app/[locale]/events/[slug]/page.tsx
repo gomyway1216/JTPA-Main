@@ -1,9 +1,11 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound, redirect } from "next/navigation";
 
 import { PresentationSection } from "@/app/[locale]/events/[slug]/PresentationSection";
 import { RsvpSection } from "@/app/[locale]/events/[slug]/RsvpSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { loginHref, loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
@@ -19,6 +21,12 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t, common, auth] = await Promise.all([
+    getLocale(),
+    getTranslations("EventDetail"),
+    getTranslations("Common"),
+    getTranslations("Auth"),
+  ]);
   const event = await getEventBySlug(slug);
   if (!event) notFound();
 
@@ -26,7 +34,7 @@ export default async function EventDetailPage({
   // Members-only events redirect anonymous visitors to login. Admins always
   // pass; the firestore.rules backstop already enforces the same boundary.
   if (event.visibility === "members_only" && !user) {
-    redirect(`/login?redirect=/events/${slug}`);
+    redirect(loginPath(`/events/${slug}`, locale));
   }
   // Profile load is parallel with RSVP/presentations so it doesn't add
   // latency on the warm path. Only needed to pre-fill the affiliation
@@ -53,49 +61,57 @@ export default async function EventDetailPage({
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={event.coverImage.url}
-          alt={`${event.title} のカバー画像`}
+          alt={t("coverAlt", { title: event.title })}
           className="aspect-[21/9] w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
 
       <header className="space-y-3">
-        <p className="text-sm text-zinc-500">{formatDateTime(event.startAt)}</p>
+        <p className="text-sm text-zinc-500">
+          {formatDateTime(event.startAt, locale)}
+        </p>
         <h1 className="text-3xl font-bold tracking-tight">
           {event.title}
           {event.visibility === "members_only" && (
             <span className="ml-3 align-middle rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-              メンバー限定
+              {t("memberOnly")}
             </span>
           )}
         </h1>
         <dl className="grid grid-cols-1 gap-2 text-sm text-zinc-600 dark:text-zinc-400 sm:grid-cols-2">
           <div>
-            <dt className="font-medium text-zinc-800 dark:text-zinc-200">開始</dt>
-            <dd>{formatDateTime(event.startAt)}</dd>
+            <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+              {t("start")}
+            </dt>
+            <dd>{formatDateTime(event.startAt, locale)}</dd>
           </div>
           <div>
-            <dt className="font-medium text-zinc-800 dark:text-zinc-200">終了</dt>
-            <dd>{formatDateTime(event.endAt)}</dd>
+            <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+              {t("end")}
+            </dt>
+            <dd>{formatDateTime(event.endAt, locale)}</dd>
           </div>
           <div>
-            <dt className="font-medium text-zinc-800 dark:text-zinc-200">形式</dt>
+            <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+              {t("format")}
+            </dt>
             <dd>
-              {event.location.type === "online"
-                ? "オンライン"
-                : event.location.type === "hybrid"
-                  ? "ハイブリッド"
-                  : "オフライン"}
+              {common(`location.${event.location.type}`)}
             </dd>
           </div>
           <div>
-            <dt className="font-medium text-zinc-800 dark:text-zinc-200">定員</dt>
+            <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+              {t("capacity")}
+            </dt>
             <dd>
-              {event.rsvpCount} / {event.capacity || "—"}
+              {event.rsvpCount} / {event.capacity ?? t("capacityUnknown")}
             </dd>
           </div>
           {event.location.address && (
             <div className="sm:col-span-2">
-              <dt className="font-medium text-zinc-800 dark:text-zinc-200">会場</dt>
+              <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+                {t("venue")}
+              </dt>
               <dd>
                 {event.location.address}
                 {event.location.mapUrl && (
@@ -107,7 +123,7 @@ export default async function EventDetailPage({
                       target="_blank"
                       rel="noreferrer"
                     >
-                      地図
+                      {t("map")}
                     </a>
                   </>
                 )}
@@ -135,8 +151,8 @@ export default async function EventDetailPage({
         <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 text-center text-sm dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-700 dark:text-zinc-300">
             {event.status === "cancelled"
-              ? "このイベントは中止されました。"
-              : "このイベントは終了しました。"}
+              ? t("cancelledNotice")
+              : t("endedNotice")}
           </p>
         </div>
       ) : user ? (
@@ -149,13 +165,13 @@ export default async function EventDetailPage({
       ) : (
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-700 dark:text-zinc-300 mb-3">
-            参加登録にはログインが必要です。
+            {t("loginRequired")}
           </p>
           <Link
-            href={`/login?redirect=${encodeURIComponent(`/events/${event.slug}`)}`}
+            href={loginHref(`/events/${event.slug}`, locale)}
             className="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
           >
-            Googleでログイン
+            {auth("googleLogin")}
           </Link>
         </div>
       )}

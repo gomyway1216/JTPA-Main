@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -36,6 +37,11 @@ export default async function QaDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const [locale, t, common] = await Promise.all([
+    getLocale(),
+    getTranslations("QaDetail"),
+    getTranslations("Common"),
+  ]);
   // Fetch session in parallel with the Q&A doc so the archived-status
   // check below can read the user immediately. Anonymous visitors and
   // non-owners hit the same 404 path; only the author and admins can
@@ -76,14 +82,15 @@ export default async function QaDetailPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <Link href="/qa" className="text-xs text-zinc-500 hover:underline">
-        ← Q&amp;A 一覧
+        {t("back")}
       </Link>
 
       {qa.status === "archived" && (
         // Owner/admin landed here — surface the reason the post no
         // longer appears publicly so they know it's not just gone.
         <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-          この投稿は管理者によって <strong>アーカイブ</strong> されています。あなた以外には表示されません。
+          {t("archivedNoticePrefix")} <strong>{t("archived")}</strong>{" "}
+          {t("archivedNoticeSuffix")}
         </div>
       )}
 
@@ -94,7 +101,7 @@ export default async function QaDetailPage({
             profile={profilesByUid.get(qa.authorUid) ?? null}
             size="md"
           />
-          <span>· {formatDate(qa.createdAt)}</span>
+          <span>· {formatDate(qa.createdAt, locale)}</span>
         </p>
         {qa.tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -123,7 +130,7 @@ export default async function QaDetailPage({
               href={`/qa/${qa.slug}/edit`}
               className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
             >
-              編集
+              {common("edit")}
             </Link>
           )}
         </div>
