@@ -2,63 +2,10 @@
 
 import { useState } from "react";
 
+import { buildAttendeeCsv } from "@/lib/attendee-csv";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
 
 type Filter = "confirmed" | "all";
-
-function csvEscape(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
-function formatResponse(
-  value: string | string[] | boolean | undefined,
-): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (Array.isArray(value)) return value.join("|"); // pipe-separated to survive comma split
-  return value;
-}
-
-function buildCsv(rsvps: RsvpDoc[], surveyFields: SurveyField[]): string {
-  const baseHeader = [
-    "displayName",
-    "affiliation",
-    "email",
-    "role",
-    "status",
-    "presentationTitle",
-    "presentationAbstract",
-  ];
-  // Survey columns are appended at the end, using the field key as the header
-  // (Excel/Sheets users can rename if they want the human label).
-  const surveyHeader = surveyFields.map((f) => `survey_${f.key}`);
-  const header = [...baseHeader, ...surveyHeader];
-
-  const rows = rsvps.map((r) => {
-    const base = [
-      r.displayName,
-      r.affiliation ?? "",
-      r.email,
-      r.role,
-      r.status,
-      r.presentationTitle ?? "",
-      r.presentationAbstract ?? "",
-    ];
-    const survey = surveyFields.map((f) => {
-      // Presenter-only fields are blank for plain attendees.
-      if (f.audience === "presenter" && r.role !== "presenter") return "";
-      return formatResponse(r.surveyResponses?.[f.key]);
-    });
-    return [...base, ...survey]
-      .map((v) => csvEscape(String(v ?? "")))
-      .join(",");
-  });
-  // Prepend a UTF-8 BOM so Excel opens it without garbled Japanese.
-  return "﻿" + [header.join(","), ...rows].join("\n");
-}
 
 export function AttendeeExportBar({
   rsvps,
@@ -97,7 +44,7 @@ export function AttendeeExportBar({
   }
 
   function downloadCsv() {
-    const csv = buildCsv(filtered, surveyFields);
+    const csv = buildAttendeeCsv(filtered, surveyFields);
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
