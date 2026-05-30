@@ -135,16 +135,16 @@ export default function GlobalError({
             </a>
           </div>
           {error.digest && (
-            <p
-              style={{
-                fontFamily:
-                  "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
-                fontSize: "0.75rem",
-                color: "#71717a",
-                margin: 0,
-              }}
-            >
-              error-id: {error.digest}
+            <p style={{ fontSize: "0.75rem", color: "#71717a", margin: 0 }}>
+              お問い合わせの際はこのリクエストIDをお知らせください:{" "}
+              <span
+                style={{
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, Menlo, Monaco, monospace",
+                }}
+              >
+                {error.digest}
+              </span>
             </p>
           )}
         </div>

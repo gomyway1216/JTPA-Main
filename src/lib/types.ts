@@ -508,3 +508,28 @@ export interface FeedbackDoc {
   reviewedAt: TsLike | null;
   createdAt: TsLike;
 }
+
+// ---------- error logs ----------
+// Server-error record written by instrumentation's onRequestError (see
+// src/instrumentation.ts + src/lib/data/error-logs.ts). `requestId` is the
+// SAME id Next surfaces to the client error boundary and we show the user
+// on error.tsx / global-error.tsx, so a reported id maps straight back to
+// this row. Admin-only read; never client-writable (see firestore.rules).
+export interface ErrorLogDoc {
+  id: string;
+  // Next's error `digest` — the user-facing request id. Null if Next
+  // didn't attach one.
+  requestId: string | null;
+  name: string;
+  message: string;
+  stack: string;
+  // Request + route context from onRequestError.
+  path: string;
+  method: string;
+  routePath: string;
+  // What was running when it threw: 'render' | 'route' | 'action' | 'proxy'.
+  routeType: string;
+  renderSource: string | null;
+  runtime: string;
+  createdAt: TsLike;
+}

@@ -70,16 +70,18 @@ export default function Error({
       </div>
 
       {/*
-        Production-safe error ID. Next attaches `digest` to errors that
+        Production-safe request ID. Next attaches `digest` to errors that
         bubble out of a Server Component so the actual message can stay
-        server-side; surfacing the digest here lets a user paste it into
-        a support report without exposing the underlying stack. Hidden
-        in dev (no digest) so the empty `error-id:` placeholder doesn't
-        clutter the page during local development.
+        server-side; surfacing it here lets a user quote it in a support
+        report without exposing the underlying stack. The SAME id is stored
+        on the matching `errorLogs` row by instrumentation's onRequestError,
+        so this is the lookup key. Hidden in dev (no digest) so the empty
+        placeholder doesn't clutter the page during local development.
       */}
       {error.digest && (
-        <p className="pt-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">
-          error-id: {error.digest}
+        <p className="pt-2 text-xs text-zinc-500 dark:text-zinc-400">
+          お問い合わせの際はこのリクエストIDをお知らせください:{" "}
+          <span className="font-mono">{error.digest}</span>
         </p>
       )}
     </div>
