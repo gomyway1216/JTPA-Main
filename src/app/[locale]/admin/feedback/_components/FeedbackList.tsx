@@ -120,7 +120,17 @@ function FeedbackRow({
     setError(null);
     startTransition(async () => {
       try {
-        await setFeedbackStatus({ feedbackId: entry.id, status: next });
+        const res = await setFeedbackStatus({
+          feedbackId: entry.id,
+          status: next,
+        });
+        if (!res.ok) {
+          // Revert the optimistic flip and surface the real reason (e.g.
+          // editor attempting an admin-only archive) instead of the masked
+          // generic Server Action crash.
+          setStatus(prev);
+          setError(res.error);
+        }
       } catch (err) {
         setStatus(prev);
         setError(err instanceof Error ? err.message : "更新に失敗しました");
