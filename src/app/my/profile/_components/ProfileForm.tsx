@@ -13,6 +13,7 @@ import {
 } from "@/app/actions/users";
 import { SaveFlash } from "@/components/forms/SaveFlash";
 import {
+  deleteUserAvatarObject,
   GUIDE_IMAGE_ACCEPT,
   GUIDE_IMAGE_LABEL,
   uploadUserAvatar,
@@ -191,6 +192,12 @@ export function ProfileForm({ uid, initial }: Props) {
         setAvatar(asset);
       } else {
         setAvatarError(result.error);
+        // Persisting failed after the upload already landed — delete the
+        // just-uploaded object so it doesn't orphan in the bucket. Best-
+        // effort; a leaked object is harmless next to surfacing the error.
+        void deleteUserAvatarObject(asset.path).catch((cleanupErr) => {
+          console.error("Failed to clean up orphaned avatar:", cleanupErr);
+        });
       }
     } catch (err) {
       setAvatarError(
@@ -271,18 +278,21 @@ export function ProfileForm({ uid, initial }: Props) {
           <div className="space-y-1.5">
             <div className="flex items-center gap-3">
               <label
-                className={`cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 ${
+                className={`cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 focus-within:ring-2 focus-within:ring-zinc-500 focus-within:ring-offset-2 dark:border-zinc-700 dark:hover:bg-zinc-800 dark:focus-within:ring-offset-zinc-900 ${
                   avatarBusy || pending
                     ? "pointer-events-none opacity-50"
                     : ""
                 }`}
               >
+                {/* sr-only (not hidden) keeps the input in the tab order so
+                    keyboard / screen-reader users can reach it; the visible
+                    focus ring rides on the parent label via focus-within. */}
                 <input
                   type="file"
                   accept={GUIDE_IMAGE_ACCEPT}
                   disabled={avatarBusy || pending}
                   onChange={handleAvatarPick}
-                  className="hidden"
+                  className="sr-only"
                 />
                 {avatar ? "画像を変更" : "画像をアップロード"}
               </label>

@@ -32,10 +32,19 @@ export async function getMyProfile(uid: string): Promise<UserProfile | null> {
 // request collapse to one Firestore round-trip.
 export const getMyAvatarUrl = cache(
   async (uid: string): Promise<string | null> => {
-    const snap = await adminDb().collection("users").doc(uid).get();
-    if (!snap.exists) return null;
-    const data = snap.data() as UserProfile;
-    return data.avatar?.url ?? null;
+    // Called from the root layout on EVERY logged-in request, so a
+    // transient Firestore error must NOT 500 the whole site. Swallow it and
+    // fall back to null — the caller then keeps the Google `photoURL` from
+    // the session. Per PR #96 Gemini review.
+    try {
+      const snap = await adminDb().collection("users").doc(uid).get();
+      if (!snap.exists) return null;
+      const data = snap.data() as UserProfile;
+      return data.avatar?.url ?? null;
+    } catch (err) {
+      console.error("getMyAvatarUrl failed:", err);
+      return null;
+    }
   },
 );
 

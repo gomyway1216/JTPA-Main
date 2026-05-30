@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   defaultUsernameFor,
   detectSnsPlatform,
+  isCanonicalAvatarUrl,
+  isOwnedAvatarPath,
   normalizeUsername,
   USERNAME_REGEX,
   validateUsernameFormat,
@@ -119,5 +121,71 @@ describe("detectSnsPlatform", () => {
     expect(detectSnsPlatform("https://example.com/foo")).toBe("generic");
     expect(detectSnsPlatform("not a url")).toBe("generic");
     expect(detectSnsPlatform("")).toBe("generic");
+  });
+});
+
+describe("isOwnedAvatarPath", () => {
+  it("accepts a flat avatar object directly under the user's folder", () => {
+    expect(isOwnedAvatarPath("u1", "users/u1/avatar-123-me.png")).toBe(true);
+  });
+
+  it("rejects another user's folder", () => {
+    expect(isOwnedAvatarPath("u1", "users/u2/avatar-123-me.png")).toBe(false);
+  });
+
+  it("rejects a path outside users/{uid}/", () => {
+    expect(isOwnedAvatarPath("u1", "posts/u1/x.png")).toBe(false);
+    // The folder itself (no object) and a bare prefix are not valid objects.
+    expect(isOwnedAvatarPath("u1", "users/u1")).toBe(false);
+    expect(isOwnedAvatarPath("u1", "users/u1/")).toBe(false);
+  });
+
+  it("rejects nesting and traversal under the user's folder", () => {
+    expect(isOwnedAvatarPath("u1", "users/u1/sub/x.png")).toBe(false);
+    expect(isOwnedAvatarPath("u1", "users/u1/../u2/x.png")).toBe(false);
+    expect(isOwnedAvatarPath("u1", "users/u1/..%2Fevil")).toBe(false);
+  });
+});
+
+describe("isCanonicalAvatarUrl", () => {
+  const bucket = "demo-bucket";
+  const path = "users/u1/avatar-123-me.png";
+  const enc = encodeURIComponent(path);
+
+  it("accepts the canonical production download URL for the path", () => {
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${enc}?alt=media`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(true);
+  });
+
+  it("accepts the local emulator host (any port)", () => {
+    const url = `http://127.0.0.1:9199/v0/b/${bucket}/o/${enc}?alt=media`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(true);
+  });
+
+  it("rejects an arbitrary host even when it embeds the encoded path", () => {
+    // The exact attack from the PR #96 review: the encoded path smuggled
+    // into a foreign host's URL must NOT pass.
+    const url = `https://evil.example.com/v0/b/${bucket}/o/${enc}?alt=media`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(false);
+  });
+
+  it("rejects a URL for a different bucket", () => {
+    const url = `https://firebasestorage.googleapis.com/v0/b/other-bucket/o/${enc}?alt=media`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(false);
+  });
+
+  it("rejects a URL whose object path doesn't match", () => {
+    const otherEnc = encodeURIComponent("users/u1/avatar-999-other.png");
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${otherEnc}?alt=media`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(false);
+  });
+
+  it("rejects when alt=media is missing", () => {
+    const url = `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${enc}`;
+    expect(isCanonicalAvatarUrl(url, bucket, path)).toBe(false);
+  });
+
+  it("rejects an un-parseable URL", () => {
+    expect(isCanonicalAvatarUrl("not a url", bucket, path)).toBe(false);
   });
 });

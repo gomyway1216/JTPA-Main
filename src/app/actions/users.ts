@@ -8,6 +8,8 @@ import { requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import type { ProjectAsset, UserLinks, UserProfile } from "@/lib/types";
 import {
+  isCanonicalAvatarUrl,
+  isOwnedAvatarPath,
   normalizeUsername,
   RESERVED_USERNAMES,
   USERNAME_REGEX,
@@ -328,11 +330,16 @@ export async function updateMyAvatar(
   }
   const { path, url } = parsed.data;
 
-  const prefix = `users/${user.uid}/`;
-  if (!path.startsWith(prefix) || path.includes("..")) {
+  // Re-validate both halves of the client-supplied {path, url} against the
+  // caller's own folder + the canonical Storage URL (helpers in
+  // users-shared). Per PR #96 Copilot + Gemini security review: the old
+  // `url.includes(encodeURIComponent(path))` check let a forged off-Storage
+  // host (e.g. https://evil.example.com/users%2F…) through, which would
+  // then be served to everyone viewing the avatar.
+  if (!isOwnedAvatarPath(user.uid, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なパス）" };
   }
-  if (!url.includes(encodeURIComponent(path))) {
+  if (!isCanonicalAvatarUrl(url, adminStorage().bucket().name, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なURL）" };
   }
 

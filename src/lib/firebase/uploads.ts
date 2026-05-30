@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  deleteObject,
   ref as storageRef,
   uploadBytes,
   type StorageReference,
@@ -188,4 +189,16 @@ export async function uploadUserAvatar(
   const r = storageRef(clientStorage, path);
   await uploadBytes(r, file, { contentType: file.type });
   return { path, url: publicDownloadUrl(r) };
+}
+
+/**
+ * Delete an avatar object the client just uploaded. Used to clean up an
+ * orphan when the follow-up `updateMyAvatar` Server Action fails *after* the
+ * upload already landed, so the bucket doesn't accumulate unreferenced
+ * files (per PR #96 Gemini review). The caller passes the `path` from
+ * `uploadUserAvatar`'s result — always under their own `users/{uid}/`
+ * folder, which `storage.rules` lets the owner delete.
+ */
+export async function deleteUserAvatarObject(path: string): Promise<void> {
+  await deleteObject(storageRef(clientStorage, path));
 }

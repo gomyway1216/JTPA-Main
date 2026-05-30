@@ -147,3 +147,59 @@ export function detectSnsPlatform(url: string): SnsPlatform {
   if (h === "youtube.com" || h === "youtu.be") return "youtube";
   return "generic";
 }
+
+// ---------- avatar asset validation ----------
+
+// Validate that an avatar Storage path belongs to `uid` and is a single
+// direct child of their folder. Defends `updateMyAvatar` against a forged
+// `path` that escapes `users/{uid}/` or tries to traverse/nest (`..`,
+// extra `/` or `\`). The real uploader only ever writes
+// `users/{uid}/avatar-{ts}-{file}` (see uploadUserAvatar), so a flat single
+// segment is the entire valid surface.
+export function isOwnedAvatarPath(uid: string, path: string): boolean {
+  const prefix = `users/${uid}/`;
+  if (!path.startsWith(prefix)) return false;
+  const rest = path.slice(prefix.length);
+  return (
+    rest.length > 0 &&
+    !rest.includes("/") &&
+    !rest.includes("\\") &&
+    !rest.includes("..")
+  );
+}
+
+// Validate that an avatar download URL is the canonical Firebase Storage
+// URL for `path` in `bucket` — NOT an attacker-controlled host. Without
+// this, a forged `url` would be persisted and served to everyone who views
+// the user's profile / comments / header (an arbitrary content + tracking
+// channel). Mirrors the shape `publicDownloadUrl` builds in
+// src/lib/firebase/uploads.ts:
+//   `{proto}://{host}/v0/b/{bucket}/o/{encodeURIComponent(path)}?alt=media`
+// Allowed hosts: production (`firebasestorage.googleapis.com`) plus the
+// local emulator (`localhost` / `127.0.0.1`, any port). The pathname is
+// compared in its percent-encoded form (matching encodeURIComponent) so a
+// `%2F` can't be smuggled past the path check by decoding to `/`.
+export function isCanonicalAvatarUrl(
+  url: string,
+  bucket: string,
+  path: string,
+): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const protoOk = parsed.protocol === "https:" || parsed.protocol === "http:";
+  const hostOk =
+    parsed.hostname === "firebasestorage.googleapis.com" ||
+    parsed.hostname === "localhost" ||
+    parsed.hostname === "127.0.0.1";
+  const expectedPathname = `/v0/b/${bucket}/o/${encodeURIComponent(path)}`;
+  return (
+    protoOk &&
+    hostOk &&
+    parsed.pathname === expectedPathname &&
+    parsed.searchParams.get("alt") === "media"
+  );
+}

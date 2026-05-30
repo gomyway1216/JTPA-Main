@@ -63,11 +63,16 @@ service firebase.storage {
       allow delete: if (isSignedIn() && request.auth.uid == uid) || isAdmin();
     }
 
-    // User avatars
+    // User avatars. Split delete from create/update (same as posts/ below)
+    // so the owner can clean up an orphaned upload when the follow-up
+    // updateMyAvatar Server Action fails: on delete `request.resource` is
+    // null, which would null-eval through isImage()/maxSize() and block the
+    // delete if it rode the same rule as writes.
     match /users/{uid}/{allPaths=**} {
       allow read: if true;
-      allow write: if (isSignedIn() && request.auth.uid == uid)
+      allow create, update: if (isSignedIn() && request.auth.uid == uid)
         && isImage() && maxSize(2);
+      allow delete: if isSignedIn() && request.auth.uid == uid;
     }
 
     // Guide images (embedded in Markdown body): public read. With the
