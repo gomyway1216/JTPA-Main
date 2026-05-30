@@ -13,6 +13,14 @@ export const onRequestError: Instrumentation.onRequestError = async (
   context,
 ) => {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
-  const { recordServerError } = await import("@/lib/data/error-logs");
-  await recordServerError(error, request, context);
+  // The hook must be strictly best-effort: a failure here (e.g. the dynamic
+  // import not resolving) must never bubble out and disturb Next's own
+  // error handling. recordServerError already guards its write; this also
+  // covers the import + any unexpected throw. Per PR #113 Copilot review.
+  try {
+    const { recordServerError } = await import("@/lib/data/error-logs");
+    await recordServerError(error, request, context);
+  } catch (hookErr) {
+    console.error("onRequestError logging failed:", hookErr);
+  }
 };

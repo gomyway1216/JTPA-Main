@@ -37,8 +37,12 @@ type ContextInfo = {
 // guarantee it's a real Error (it may be reshaped during RSC rendering).
 export async function recordServerError(
   error: unknown,
-  request: RequestInfo,
-  context: ContextInfo,
+  // `request`/`context` are nullable: Next doesn't guarantee them in every
+  // path that reaches onRequestError (build-time generation, init-time
+  // failures), and a nullish access here would throw inside the try and
+  // drop the log entirely. Per PR #113 Gemini review.
+  request?: RequestInfo | null,
+  context?: ContextInfo | null,
 ): Promise<void> {
   const e = (typeof error === "object" && error !== null ? error : {}) as {
     digest?: unknown;
@@ -58,11 +62,11 @@ export async function recordServerError(
         name: typeof e.name === "string" ? e.name : "Error",
         message: message.slice(0, MAX_MESSAGE),
         stack: typeof e.stack === "string" ? e.stack.slice(0, MAX_STACK) : "",
-        path: request.path ?? "",
-        method: request.method ?? "",
-        routePath: context.routePath ?? "",
-        routeType: context.routeType ?? "",
-        renderSource: context.renderSource ?? null,
+        path: request?.path ?? "",
+        method: request?.method ?? "",
+        routePath: context?.routePath ?? "",
+        routeType: context?.routeType ?? "",
+        renderSource: context?.renderSource ?? null,
         runtime: process.env.NEXT_RUNTIME ?? "nodejs",
         createdAt: FieldValue.serverTimestamp(),
       });
