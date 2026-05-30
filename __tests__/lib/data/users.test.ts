@@ -102,6 +102,34 @@ describe("projectPublicProfile (privacy boundary)", () => {
     expect(projectPublicProfile(stripped).photoURL).toBeNull();
   });
 
+  it("prefers the uploaded avatar over the Google photoURL", () => {
+    // A user who uploaded a custom icon should see it everywhere the
+    // public projection feeds (/u/[uid], author badges), regardless of
+    // what Google still has on file.
+    const out = projectPublicProfile(
+      baseProfile({
+        avatar: {
+          path: "users/u1/avatar-1-me.png",
+          url: "https://cdn.example.com/me.png",
+        },
+      }),
+    );
+    expect(out.photoURL).toBe("https://cdn.example.com/me.png");
+  });
+
+  it("uses the uploaded avatar even when the Google photoURL is absent", () => {
+    const stripped = baseProfile({
+      avatar: {
+        path: "users/u1/avatar-1-me.png",
+        url: "https://cdn.example.com/me.png",
+      },
+    });
+    delete (stripped as { photoURL?: string }).photoURL;
+    expect(projectPublicProfile(stripped).photoURL).toBe(
+      "https://cdn.example.com/me.png",
+    );
+  });
+
   it("treats absent affiliation/bio as empty string when published", () => {
     // A user could publish without typing anything — render as "" not
     // null so the consumer doesn't render a misleading "private" label.

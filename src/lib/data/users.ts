@@ -23,6 +23,31 @@ export async function getMyProfile(uid: string): Promise<UserProfile | null> {
   return plainify(snap.data() as UserProfile);
 }
 
+// Resolve just the custom-avatar URL for a user. Used by the root layout
+// to swap the header icon to an uploaded avatar without pulling the whole
+// profile doc through `getMyProfile`/`plainify` on every page render.
+// Returns the uploaded avatar URL, or null when the user hasn't set one —
+// the caller then falls back to the Google `photoURL` carried on the
+// session. Wrapped in React's `cache()` so repeated reads within a single
+// request collapse to one Firestore round-trip.
+export const getMyAvatarUrl = cache(
+  async (uid: string): Promise<string | null> => {
+    // Called from the root layout on EVERY logged-in request, so a
+    // transient Firestore error must NOT 500 the whole site. Swallow it and
+    // fall back to null — the caller then keeps the Google `photoURL` from
+    // the session. Per PR #96 Gemini review.
+    try {
+      const snap = await adminDb().collection("users").doc(uid).get();
+      if (!snap.exists) return null;
+      const data = snap.data() as UserProfile;
+      return data.avatar?.url ?? null;
+    } catch (err) {
+      console.error("getMyAvatarUrl failed:", err);
+      return null;
+    }
+  },
+);
+
 // Shape returned to logged-out / cross-user readers of /u/[uid] AND to
 // every list/detail surface that renders a name + avatar. NEVER
 // includes email, the visibility flags themselves, `emailOptIn`, or
@@ -91,7 +116,10 @@ export function projectPublicProfile(data: UserProfile): PublicProfile {
     uid: data.uid,
     username: data.username || defaultUsernameFor(data.uid),
     fullName: data.fullNamePublic ? data.displayName : null,
-    photoURL: data.photoURL ?? null,
+    // Custom uploaded avatar wins over the Google `photoURL`; both fall
+    // back to null so the UI renders the initials circle. See
+    // UserProfile.avatar for why the two are separate fields.
+    photoURL: data.avatar?.url ?? data.photoURL ?? null,
     affiliation: data.affiliationPublic ? (data.affiliation ?? "") : null,
     bio: data.bioPublic ? (data.bio ?? "") : null,
     links,

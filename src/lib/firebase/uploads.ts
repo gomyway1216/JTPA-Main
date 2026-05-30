@@ -1,10 +1,13 @@
 "use client";
 
 import {
+  deleteObject,
   ref as storageRef,
   uploadBytes,
   type StorageReference,
 } from "firebase/storage";
+
+import type { ProjectAsset } from "@/lib/types";
 
 import { clientStorage } from "./client";
 
@@ -147,4 +150,55 @@ export async function uploadQaImage(
   const r = storageRef(clientStorage, path);
   await uploadBytes(r, file, { contentType: file.type });
   return publicDownloadUrl(r);
+}
+
+// Per-user avatar cap. 2MB mirrors `maxSize(2)` for the `users/{uid}`
+// block in `storage.rules` so the client-side error fires before the
+// upload starts; the rule re-enforces it server-side as the final word.
+// Smaller than the 5MB body-image cap because an avatar only ever renders
+// at small sizes (16–64px) — a multi-MB source is pure waste.
+export const MAX_AVATAR_IMAGE_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Upload a user's profile avatar. Unlike `uploadGuideImage`/`uploadQaImage`
+ * (which return just a URL for embedding inside a Markdown body), this
+ * returns the full `{path, url}` pair: the Server Action persists the path
+ * so it can delete the previous Storage object when the avatar is replaced
+ * or removed.
+ *
+ * Path is `users/{uid}/avatar-{ts}-{filename}` so `storage.rules` can
+ * constrain writes to the owner's own folder (the `users/{uid}` match
+ * block requires `request.auth.uid == uid`). The `avatar-` prefix +
+ * timestamp keeps successive uploads from colliding and makes the object
+ * easy to spot in the bucket.
+ */
+export async function uploadUserAvatar(
+  uid: string,
+  file: File,
+): Promise<ProjectAsset> {
+  if (!uid) {
+    throw new Error("ユーザーIDが取得できませんでした");
+  }
+  if (!isAllowedType(file.type)) {
+    throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
+  }
+  if (file.size > MAX_AVATAR_IMAGE_BYTES) {
+    throw new Error("画像サイズは 2MB 以下にしてください");
+  }
+  const path = `users/${uid}/avatar-${Date.now()}-${sanitizeFilename(file.name)}`;
+  const r = storageRef(clientStorage, path);
+  await uploadBytes(r, file, { contentType: file.type });
+  return { path, url: publicDownloadUrl(r) };
+}
+
+/**
+ * Delete an avatar object the client just uploaded. Used to clean up an
+ * orphan when the follow-up `updateMyAvatar` Server Action fails *after* the
+ * upload already landed, so the bucket doesn't accumulate unreferenced
+ * files (per PR #96 Gemini review). The caller passes the `path` from
+ * `uploadUserAvatar`'s result — always under their own `users/{uid}/`
+ * folder, which `storage.rules` lets the owner delete.
+ */
+export async function deleteUserAvatarObject(path: string): Promise<void> {
+  await deleteObject(storageRef(clientStorage, path));
 }
