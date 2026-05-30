@@ -2,7 +2,9 @@ import "server-only";
 
 import { FieldValue } from "firebase-admin/firestore";
 
+import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
+import type { ErrorLogDoc } from "@/lib/types";
 
 // Cap the free-text fields so a pathological error (huge message / deep
 // stack) can't bloat the doc toward Firestore's 1 MB limit.
@@ -74,4 +76,17 @@ export async function recordServerError(
     // Swallow — the error hook is the worst place to throw.
     console.error("Failed to persist error log:", logErr);
   }
+}
+
+// Read side for the /admin/errors viewer (admin-only; see firestore.rules).
+// Newest first, capped. Timestamps are plainified for the RSC→client crossing.
+export async function listErrorLogs(max = 100): Promise<ErrorLogDoc[]> {
+  const snap = await adminDb()
+    .collection("errorLogs")
+    .orderBy("createdAt", "desc")
+    .limit(max)
+    .get();
+  return snap.docs.map((d) =>
+    plainify({ ...(d.data() as Omit<ErrorLogDoc, "id">), id: d.id }),
+  );
 }

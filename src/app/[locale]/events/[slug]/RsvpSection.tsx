@@ -64,7 +64,8 @@ export function RsvpSection({
           presentationAbstract:
             role === "presenter" ? presentationAbstract : undefined,
         });
-        setRsvp(result);
+        if (result.ok) setRsvp(result.rsvp);
+        else setError(result.error);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("submitError"));
       }
@@ -76,8 +77,9 @@ export function RsvpSection({
     if (!confirm(t("cancelConfirm"))) return;
     startTransition(async () => {
       try {
-        await cancelRsvp({ eventId: event.id });
-        setRsvp(null);
+        const result = await cancelRsvp({ eventId: event.id });
+        if (result.ok) setRsvp(null);
+        else setError(result.error);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("cancelError"));
       }

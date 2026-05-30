@@ -19,7 +19,9 @@ interface SubmitRsvpInput {
   presentationAbstract?: string;
 }
 
-export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
+export async function submitRsvp(
+  input: SubmitRsvpInput,
+): Promise<{ ok: true; rsvp: RsvpDoc } | { ok: false; error: string }> {
   const user = await requireUser();
   const eventRef = adminDb().collection("events").doc(input.eventId);
   const rsvpRef = eventRef.collection("rsvps").doc(user.uid);
@@ -29,7 +31,12 @@ export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
       tx.get(eventRef),
       tx.get(rsvpRef),
     ]);
-    if (!eventSnap.exists) throw new Error("EVENT_NOT_FOUND");
+    if (!eventSnap.exists) {
+      return {
+        ok: false as const,
+        error: "イベントが見つかりません。削除された可能性があります。",
+      };
+    }
     const event = eventSnap.data() as {
       capacity: number;
       presenterCapacity: number;
@@ -38,7 +45,12 @@ export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
       waitlistCount: number;
       status: string;
     };
-    if (event.status === "cancelled") throw new Error("EVENT_CANCELLED");
+    if (event.status === "cancelled") {
+      return {
+        ok: false as const,
+        error: "このイベントは中止されたため、参加登録できません。",
+      };
+    }
 
     const prior = rsvpSnap.exists ? (rsvpSnap.data() as RsvpDoc) : null;
     const now = Timestamp.now();
@@ -99,22 +111,27 @@ export async function submitRsvp(input: SubmitRsvpInput): Promise<RsvpDoc> {
         updatedAt: now,
       });
     }
-    return doc;
+    return { ok: true as const, doc };
   });
+
+  // Expected failures (cancelled / deleted event) come back as an error
+  // result from the transaction — return it so the form shows the real
+  // reason instead of the masked generic "Server Components render" crash.
+  if (!result.ok) return result;
 
   revalidatePath(`/events`);
   revalidatePath(`/my/rsvps`);
   // Strip Firestore Timestamp class instances before returning to the Client
   // Component; otherwise React rejects them with "Only plain objects... can be
   // passed to Client Components".
-  return plainify(result);
+  return { ok: true, rsvp: plainify(result.doc) };
 }
 
 export async function cancelRsvp({
   eventId,
 }: {
   eventId: string;
-}): Promise<void> {
+}): Promise<{ ok: true } | { ok: false; error: string }> {
   const user = await requireUser();
   const eventRef = adminDb().collection("events").doc(eventId);
   const rsvpRef = eventRef.collection("rsvps").doc(user.uid);
@@ -134,21 +151,30 @@ export async function cancelRsvp({
     role: RsvpDoc["role"];
   };
 
-  const promotion = await adminDb().runTransaction<PromotionInfo | null>(
-    async (tx) => {
+  const result = await adminDb().runTransaction<
+    { ok: false; error: string } | { ok: true; promotion: PromotionInfo | null }
+  >(async (tx) => {
       const [rsvpSnap, eventSnap] = await Promise.all([
         tx.get(rsvpRef),
         tx.get(eventRef),
       ]);
-      if (!rsvpSnap.exists) return null;
+      // No RSVP / already cancelled = nothing to do = idempotent success.
+      if (!rsvpSnap.exists) return { ok: true as const, promotion: null };
       const prior = rsvpSnap.data() as RsvpDoc;
-      if (prior.status === "cancelled") return null;
+      if (prior.status === "cancelled") {
+        return { ok: true as const, promotion: null };
+      }
       // Defensive check, mirrors submitRsvp: if the event doc was
       // deleted between the original RSVP and this cancel, the later
       // `tx.update(eventRef, …)` would fail with a cryptic Firestore
-      // error. Throw the same EVENT_NOT_FOUND sentinel so callers see
-      // a consistent message (per PR #61 Gemini review).
-      if (!eventSnap.exists) throw new Error("EVENT_NOT_FOUND");
+      // error. Return the same not-found message submitRsvp uses so the
+      // user sees a consistent reason (per PR #61, and #117 review).
+      if (!eventSnap.exists) {
+        return {
+          ok: false as const,
+          error: "イベントが見つかりません。削除された可能性があります。",
+        };
+      }
       const event = eventSnap.data() as { title: string; slug: string };
 
       // Only confirmed cancellations free a real seat — a waitlist
@@ -206,17 +232,20 @@ export async function cancelRsvp({
       });
 
       // `event` is guaranteed non-null + properly typed after the
-      // EVENT_NOT_FOUND guard above, so no optional-chaining needed.
+      // not-found guard above, so no optional-chaining needed.
       if (promoteeDoc) {
         return {
-          to: promoteeDoc.data.email,
-          displayName: promoteeDoc.data.displayName,
-          eventTitle: event.title,
-          eventSlug: event.slug,
-          role: promoteeDoc.data.role,
+          ok: true as const,
+          promotion: {
+            to: promoteeDoc.data.email,
+            displayName: promoteeDoc.data.displayName,
+            eventTitle: event.title,
+            eventSlug: event.slug,
+            role: promoteeDoc.data.role,
+          },
         };
       }
-      return null;
+      return { ok: true as const, promotion: null };
     },
   );
 
@@ -225,6 +254,9 @@ export async function cancelRsvp({
   // if Firestore mail-collection writes fail. Trigger Email is not
   // configured yet (#15), so the doc just sits queued — once #15
   // lands, the queued notification flushes through automatically.
+  // Expected failure (event deleted mid-cancel) surfaces as a real message.
+  if (!result.ok) return result;
+  const promotion = result.promotion;
   if (promotion) {
     await enqueueWaitlistPromotionNotification(promotion);
   }
@@ -232,4 +264,5 @@ export async function cancelRsvp({
   revalidatePath(`/events`);
   revalidatePath(`/events/[slug]`, "page");
   revalidatePath(`/my/rsvps`);
+  return { ok: true };
 }

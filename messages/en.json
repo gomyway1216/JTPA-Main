@@ -448,9 +448,7 @@
   },
   "AboutPage": {
     "maintainer": "Maintainer",
-    "maintainerText": "Site development and operations are supported by {name}.",
-    "maintainerPrefix": "Site development and operations are supported by",
-    "maintainerSuffix": ".",
+    "maintainerText": "Site development and operations are supported by <name>Yudai Yaguchi</name>.",
     "feedbackPrefix": "Questions, bug reports, and improvement ideas are welcome through",
     "feedbackLink": "Help > Feedback",
     "feedbackSuffix": ".",

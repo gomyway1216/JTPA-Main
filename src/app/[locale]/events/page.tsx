@@ -77,7 +77,7 @@ export default async function EventsPage() {
                     <div className="text-sm text-zinc-500">
                       {t("rsvpCount", {
                         count: e.rsvpCount,
-                        capacity: e.capacity || t("capacityUnknown"),
+                        capacity: e.capacity ?? t("capacityUnknown"),
                       })}
                     </div>
                   </div>

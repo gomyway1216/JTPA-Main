@@ -5,7 +5,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -25,6 +25,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/forms/styles";
+import { localizedPath } from "@/i18n/paths";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
@@ -67,6 +68,7 @@ interface Props {
 }
 
 export function PostForm({ mode, user, post }: Props) {
+  const locale = useLocale();
   const t = useTranslations("PostForm");
   const [title, setTitle] = useState(post?.title ?? "");
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
@@ -169,7 +171,7 @@ export function PostForm({ mode, user, post }: Props) {
     startTransition(async () => {
       try {
         await deleteMyPost(post.id);
-        window.location.href = "/my/posts";
+        window.location.href = localizedPath("/my/posts", locale);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }

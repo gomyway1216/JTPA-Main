@@ -36,6 +36,9 @@ export default async function AdminLayout({
             <AdminLink href="/admin/feedback">フィードバック</AdminLink>
             {user.isAdmin && <AdminLink href="/admin/about">JTPAとは</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/users">ユーザー</AdminLink>}
+            {user.isAdmin && (
+              <AdminLink href="/admin/errors">エラーログ</AdminLink>
+            )}
             <AdminLink href="/admin/help">ヘルプ</AdminLink>
           </nav>
         </aside>
