@@ -5,9 +5,9 @@ import { localizedPath, loginPath, safeRedirectPath } from "@/i18n/paths";
 describe("localizedPath", () => {
   it("strips an existing locale prefix before applying the target locale", () => {
     expect(localizedPath("/ja/help", "en")).toBe("/en/help");
-    expect(localizedPath("/en/help", "ja")).toBe("/help");
+    expect(localizedPath("/en/help", "ja")).toBe("/ja/help");
     expect(localizedPath("/ja", "en")).toBe("/en");
-    expect(localizedPath("/en", "ja")).toBe("/");
+    expect(localizedPath("/en", "ja")).toBe("/ja");
   });
 
   it("preserves search and hash suffixes while normalizing locale prefixes", () => {
@@ -15,7 +15,7 @@ describe("localizedPath", () => {
       "/en/help?tab=faq#top",
     );
     expect(localizedPath("/ja?from=nav", "en")).toBe("/en?from=nav");
-    expect(localizedPath("/en#main", "ja")).toBe("/#main");
+    expect(localizedPath("/en#main", "ja")).toBe("/ja#main");
   });
 
   it("leaves relative paths unchanged", () => {
@@ -33,7 +33,7 @@ describe("safeRedirectPath", () => {
   });
 
   it("keeps redirect paths internal after locale stripping", () => {
-    expect(safeRedirectPath("/en//example.com", "ja")).toBe("/");
+    expect(safeRedirectPath("/en//example.com", "ja")).toBe("/ja");
   });
 });
 

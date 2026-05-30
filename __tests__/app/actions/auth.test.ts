@@ -212,11 +212,11 @@ describe("signInWithIdToken — session cookie", () => {
 });
 
 describe("signOut", () => {
-  it("clears the session cookie and redirects to /", async () => {
+  it("clears the session cookie and redirects to the default locale root", async () => {
     // redirect() throws by design; surface it as the rejection we
     // expect rather than treating it as a real error.
-    await expect(signOut()).rejects.toThrow("__REDIRECT__:/");
+    await expect(signOut()).rejects.toThrow("__REDIRECT__:/ja");
     expect(clearSessionCookieMock).toHaveBeenCalledTimes(1);
-    expect(redirectMock).toHaveBeenCalledWith("/");
+    expect(redirectMock).toHaveBeenCalledWith("/ja");
   });
 });
