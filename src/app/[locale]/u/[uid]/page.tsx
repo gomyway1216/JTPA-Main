@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { RolePill } from "@/components/users/AuthorBadge";
@@ -12,15 +13,16 @@ export async function generateMetadata({
   params: Promise<{ uid: string }>;
 }) {
   const { uid } = await params;
+  const t = await getTranslations("PublicProfile");
   const profile = await getPublicProfile(uid);
-  if (!profile) return { title: "ユーザーが見つかりません" };
+  if (!profile) return { title: t("notFoundTitle") };
   // Title uses @username — the universal handle — rather than the full
   // name, which may be private. Falls back to the bio for description
   // when it's been opted-public; `||` not `??` so an empty published
   // bio ("") doesn't emit `<meta name="description" content="" />`,
   // suboptimal for SEO (per PR #59 Gemini review).
   return {
-    title: `@${profile.username} のプロフィール`,
+    title: t("metadataTitle", { username: profile.username }),
     description: profile.bio || undefined,
   };
 }
@@ -31,6 +33,7 @@ export default async function PublicProfilePage({
   params: Promise<{ uid: string }>;
 }) {
   const { uid } = await params;
+  const t = await getTranslations("PublicProfile");
   const profile = await getPublicProfile(uid);
   if (!profile) notFound();
 
@@ -48,7 +51,7 @@ export default async function PublicProfilePage({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={profile.photoURL}
-              alt={`@${profile.username} のアイコン`}
+              alt={t("avatarAlt", { username: profile.username })}
               className="h-16 w-16 rounded-full border border-zinc-200 dark:border-zinc-800"
             />
           ) : (
@@ -97,7 +100,7 @@ export default async function PublicProfilePage({
           // card from looking broken for users who've published nothing
           // beyond their name.
           <p className="text-sm text-zinc-500">
-            このユーザーはまだ紹介文を公開していません。
+            {t("emptyBio")}
           </p>
         )}
       </article>

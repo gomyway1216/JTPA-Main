@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 import type { PollOption } from "@/lib/types";
 
 interface Props {
@@ -15,6 +17,7 @@ interface Props {
 // produce row percentages that don't add up to 100. The voter count is
 // shown separately above so the reader can sanity-check participation.
 export function PollResults({ options, selectedIds, voterCount }: Props) {
+  const t = useTranslations("PollResults");
   const totalSelections = options.reduce(
     (sum, o) => sum + (o.voteCount ?? 0),
     0,
@@ -23,8 +26,12 @@ export function PollResults({ options, selectedIds, voterCount }: Props) {
   return (
     <div className="space-y-3">
       <p className="text-xs text-zinc-500">
-        {voterCount} 人が投票
-        {totalSelections > voterCount && ` / ${totalSelections} 件選択`}
+        {totalSelections > voterCount
+          ? t("summaryWithSelections", {
+              voters: voterCount,
+              selections: totalSelections,
+            })
+          : t("summary", { voters: voterCount })}
       </p>
       <ul className="space-y-2">
         {options.map((opt) => {
@@ -40,7 +47,7 @@ export function PollResults({ options, selectedIds, voterCount }: Props) {
                 <span className="flex items-center gap-1.5">
                   {isSelected && (
                     <span
-                      aria-label="あなたの選択"
+                      aria-label={t("yourChoice")}
                       className="text-emerald-600 dark:text-emerald-400"
                     >
                       ✓
@@ -51,7 +58,7 @@ export function PollResults({ options, selectedIds, voterCount }: Props) {
                   </span>
                 </span>
                 <span className="text-xs text-zinc-500">
-                  {count} 票 · {pct}%
+                  {t("votes", { count })} · {pct}%
                 </span>
               </div>
               <div

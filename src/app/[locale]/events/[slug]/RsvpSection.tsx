@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
@@ -20,6 +21,7 @@ export function RsvpSection({
   // different one for this specific event).
   profileAffiliation?: string;
 }) {
+  const t = useTranslations("Rsvp");
   const [rsvp, setRsvp] = useState<RsvpDoc | null>(initialRsvp);
   const [role, setRole] = useState<"attendee" | "presenter">(
     initialRsvp?.role ?? "attendee",
@@ -64,39 +66,42 @@ export function RsvpSection({
         });
         setRsvp(result);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        setError(err instanceof Error ? err.message : t("submitError"));
       }
     });
   }
 
   async function handleCancel() {
     setError(null);
-    if (!confirm("参加登録をキャンセルしますか？")) return;
+    if (!confirm(t("cancelConfirm"))) return;
     startTransition(async () => {
       try {
         await cancelRsvp({ eventId: event.id });
         setRsvp(null);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "キャンセルに失敗しました");
+        setError(err instanceof Error ? err.message : t("cancelError"));
       }
     });
   }
 
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-xl font-semibold mb-4">参加登録</h2>
+      <h2 className="text-xl font-semibold mb-4">{t("title")}</h2>
 
       {rsvp && rsvp.status !== "cancelled" && (
         <div className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
           {rsvp.status === "waitlist"
-            ? "現在キャンセル待ちです。"
-            : `登録済み (${rsvp.role === "presenter" ? "発表者" : "参加者"})`}
+            ? t("waitlist")
+            : t("registered", {
+                role:
+                  rsvp.role === "presenter" ? t("presenter") : t("attendee"),
+              })}
         </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="text-sm font-medium">参加形式</label>
+          <label className="text-sm font-medium">{t("roleLabel")}</label>
           <div className="mt-1 flex gap-3">
             <label className="inline-flex items-center gap-1 text-sm">
               <input
@@ -106,7 +111,7 @@ export function RsvpSection({
                 checked={role === "attendee"}
                 onChange={() => setRole("attendee")}
               />
-              一般参加
+              {t("attendeeRole")}
             </label>
             <label className="inline-flex items-center gap-1 text-sm">
               <input
@@ -116,12 +121,12 @@ export function RsvpSection({
                 checked={role === "presenter"}
                 onChange={() => setRole("presenter")}
               />
-              発表者として参加
+              {t("presenterRole")}
             </label>
           </div>
         </div>
 
-        <Field label="お名前">
+        <Field label={t("name")}>
           <input
             type="text"
             value={user.displayName}
@@ -130,12 +135,12 @@ export function RsvpSection({
           />
         </Field>
 
-        <Field label="所属">
+        <Field label={t("affiliation")}>
           <input
             type="text"
             value={affiliation}
             onChange={(e) => setAffiliation(e.target.value)}
-            placeholder="会社名、大学名など"
+            placeholder={t("affiliationPlaceholder")}
             className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
           />
         </Field>
@@ -153,8 +158,8 @@ export function RsvpSection({
 
         {role === "presenter" && (
           <div className="space-y-4 rounded-md bg-zinc-50 p-4 dark:bg-zinc-800/50">
-            <p className="text-sm font-medium">発表者枠の追加情報</p>
-            <Field label="発表タイトル" required>
+            <p className="text-sm font-medium">{t("presenterInfo")}</p>
+            <Field label={t("presentationTitle")} required>
               <input
                 type="text"
                 required
@@ -163,7 +168,7 @@ export function RsvpSection({
                 className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               />
             </Field>
-            <Field label="概要" required>
+            <Field label={t("presentationAbstract")} required>
               <textarea
                 required
                 rows={4}
@@ -193,7 +198,7 @@ export function RsvpSection({
             disabled={pending}
             className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
           >
-            {pending ? "送信中..." : rsvp ? "登録内容を更新" : "登録する"}
+            {pending ? t("submitting") : rsvp ? t("update") : t("submit")}
           </button>
           {rsvp && rsvp.status !== "cancelled" && (
             <button
@@ -202,7 +207,7 @@ export function RsvpSection({
               disabled={pending}
               className="rounded-md border border-zinc-300 px-4 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             >
-              キャンセル
+              {t("cancel")}
             </button>
           )}
         </div>
@@ -240,6 +245,7 @@ function SurveyInput({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const t = useTranslations("Rsvp");
   return (
     <Field label={field.label} required={field.required}>
       {field.type === "textarea" ? (
@@ -257,7 +263,7 @@ function SurveyInput({
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         >
-          <option value="">選択してください</option>
+          <option value="">{t("choose")}</option>
           {field.options?.map((o) => (
             <option key={o} value={o}>
               {o}

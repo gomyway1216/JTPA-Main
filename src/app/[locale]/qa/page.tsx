@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
+import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
@@ -55,7 +56,7 @@ export default async function QaListPage() {
           </Link>
         ) : (
           <Link
-            href="/login?redirect=/qa/new"
+            href={loginHref("/qa/new", locale)}
             className="w-fit shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
             {t("loginSubmit")}

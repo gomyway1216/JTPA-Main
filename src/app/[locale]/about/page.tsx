@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getSitePage, SITE_PAGE_DEFAULTS } from "@/lib/data/site-pages";
@@ -17,6 +18,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function AboutPage() {
+  const t = await getTranslations("AboutPage");
   const page = await getSitePage("about");
   const title = page?.title || SITE_PAGE_DEFAULTS.about.title;
   const body = page?.body || SITE_PAGE_DEFAULTS.about.body;
@@ -38,17 +40,17 @@ export default async function AboutPage() {
       */}
       <section className="border-t border-zinc-200 pt-6 text-sm dark:border-zinc-800">
         <h2 className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">
-          メンテナー
+          {t("maintainer")}
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
-          サイトの開発・運用は{" "}
+          {t("maintainerPrefix")}{" "}
           <Link
             href={`/u/${MAINTAINER_UID}`}
             className="text-blue-600 hover:underline"
           >
             Yudai Yaguchi
-          </Link>{" "}
-          がお手伝いしています。
+          </Link>
+          {t("maintainerSuffix")}
         </p>
         {/*
           Light call-to-action pointing at the /help feedback form for
@@ -58,14 +60,14 @@ export default async function AboutPage() {
           rather than a generic "contact us" panel.
         */}
         <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-          質問・不具合報告・改善案などは{" "}
+          {t("feedbackPrefix")}{" "}
           <Link
             href="/help#feedback"
             className="text-blue-600 hover:underline"
           >
-            ヘルプの「要望・不具合報告」
+            {t("feedbackLink")}
           </Link>{" "}
-          からお気軽にどうぞ。
+          {t("feedbackSuffix")}
         </p>
         {/*
           Quiet source-code link. Not a feature — just discoverability
@@ -74,7 +76,7 @@ export default async function AboutPage() {
           without leaning self-promotional.
         */}
         <p className="mt-2 text-xs text-zinc-500">
-          ソースコード:{" "}
+          {t("sourceCode")}{" "}
           <a
             href="https://github.com/gomyway1216/JTPA-Main"
             target="_blank"

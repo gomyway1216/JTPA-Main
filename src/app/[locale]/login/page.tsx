@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { SignInButton } from "@/components/auth/SignInButton";
+import { localizedPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -11,10 +12,14 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ redirect?: string }>;
 }) {
-  const t = await getTranslations("Login");
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("Login"),
+  ]);
   const user = await getSessionUser();
   const { redirect: redirectTo } = await searchParams;
-  if (user) redirect(redirectTo || "/");
+  const defaultRedirect = localizedPath("/", locale);
+  if (user) redirect(redirectTo || defaultRedirect);
 
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-4 py-16">
@@ -24,7 +29,7 @@ export default async function LoginPage({
           {t("description")}
         </p>
       </div>
-      <SignInButton redirectTo={redirectTo || "/"} />
+      <SignInButton redirectTo={redirectTo || defaultRedirect} />
     </div>
   );
 }

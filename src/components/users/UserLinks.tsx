@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 import type { UserLinks as UserLinksData } from "@/lib/types";
 import { detectSnsPlatform, type SnsPlatform } from "@/lib/users-shared";
 
@@ -14,7 +16,8 @@ interface Props {
   ownerLabel?: string;
 }
 
-export function UserLinksRow({ links, ownerLabel }: Props) {
+export async function UserLinksRow({ links, ownerLabel }: Props) {
+  const t = await getTranslations("UserLinks");
   // Build the renderable list once so the empty-case check can short-
   // circuit without rendering a stray <ul>.
   const items: { key: string; href: string; label: string; icon: React.ReactNode }[] =
@@ -23,7 +26,7 @@ export function UserLinksRow({ links, ownerLabel }: Props) {
     items.push({
       key: "portfolio",
       href: links.portfolio,
-      label: "ポートフォリオ",
+      label: t("portfolio"),
       icon: <PortfolioIcon />,
     });
   }
@@ -63,7 +66,11 @@ export function UserLinksRow({ links, ownerLabel }: Props) {
             href={it.href}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={ownerLabel ? `${ownerLabel} の${it.label}` : it.label}
+            aria-label={
+              ownerLabel
+                ? t("ownerLabel", { owner: ownerLabel, label: it.label })
+                : it.label
+            }
             title={it.label}
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 text-zinc-600 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-500 dark:hover:text-zinc-100"
           >

@@ -1,8 +1,9 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { GuideListClient } from "@/app/[locale]/guide/_components/GuideListClient";
+import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listGuides } from "@/lib/data/guides";
 
@@ -14,7 +15,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function GuideIndexPage() {
-  const t = await getTranslations("GuidePage");
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("GuidePage"),
+  ]);
   // Intentionally not catching — see the admin list rationale: a missing
   // composite index here surfaces a fix-this link in the error, swallowing
   // it would hide the easiest debug signal.
@@ -52,7 +56,7 @@ export default async function GuideIndexPage() {
           </Link>
         ) : (
           <Link
-            href="/login?redirect=/guide/new"
+            href={loginHref("/guide/new", locale)}
             className="w-fit shrink-0 rounded-full border border-zinc-300/70 px-5 py-2 text-sm hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800"
           >
             {t("loginSubmit")}
