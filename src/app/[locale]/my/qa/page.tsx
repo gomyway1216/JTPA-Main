@@ -15,14 +15,18 @@ export async function generateMetadata() {
 }
 
 export default async function MyQaPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/qa", locale));
+  }
+
   const [locale, t, common, statusT] = await Promise.all([
     getLocale(),
     getTranslations("MyQa"),
     getTranslations("MyCommon"),
     getTranslations("Status"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/qa", locale));
 
   const items = await listMyQa(user.uid).catch((err) => {
     console.error("Failed to list my Q&A:", err);

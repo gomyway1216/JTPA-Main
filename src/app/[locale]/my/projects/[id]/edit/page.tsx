@@ -14,12 +14,13 @@ export default async function EditMyProjectPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("EditPages"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath(`/my/projects/${id}/edit`, locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath(`/my/projects/${id}/edit`, locale));
+  }
+
+  const t = await getTranslations("EditPages");
 
   const project = await getProjectById(id);
   if (!project || project.ownerUid !== user.uid) notFound();

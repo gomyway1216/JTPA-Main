@@ -11,12 +11,13 @@ import { ProfileForm } from "./_components/ProfileForm";
 export const dynamic = "force-dynamic";
 
 export default async function MyProfilePage() {
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("ProfilePage"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/profile", locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/profile", locale));
+  }
+
+  const t = await getTranslations("ProfilePage");
 
   const profile = await getMyProfile(user.uid);
   // If the profile doc doesn't exist (rare — session predates the

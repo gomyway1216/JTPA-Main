@@ -8,12 +8,13 @@ import { getSessionUser } from "@/lib/auth/session";
 export const dynamic = "force-dynamic";
 
 export default async function MyPage() {
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("MyPage"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my", locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my", locale));
+  }
+
+  const t = await getTranslations("MyPage");
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Last-resort error boundary. Activates only when the root layout
 // itself throws — at that point `error.tsx` can't render because it
@@ -13,8 +13,9 @@ import { useEffect } from "react";
 //     that pulled in the broken layout would re-trigger the crash. We
 //     style with inline styles so the page is still legible even if
 //     Tailwind hasn't loaded.
-//   - `lang="ja"` matches the rest of the site for screen readers.
-//   - Plain `<a href="/">` (not next/link) so the browser does a hard
+//   - The first render stays Japanese to match SSR, then switches to
+//     English after mount if the browser language asks for it.
+//   - Plain `<a>` (not next/link) so the browser does a hard
 //     navigation, which discards any poisoned client state from the
 //     failed layout render.
 export default function GlobalError({
@@ -24,9 +25,15 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const isEnglish =
-    typeof navigator !== "undefined" &&
-    navigator.language.toLowerCase().startsWith("en");
+  const [isEnglish, setIsEnglish] = useState(false);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setIsEnglish(navigator.language.toLowerCase().startsWith("en"));
+    }, 0);
+    return () => window.clearTimeout(handle);
+  }, []);
+
   const copy = isEnglish
     ? {
         lang: "en",
@@ -46,6 +53,7 @@ export default function GlobalError({
         home: "ホームに戻る",
         digest: "お問い合わせの際はこのリクエストIDをお知らせください:",
       };
+  const homeHref = isEnglish ? "/en" : "/";
 
   useEffect(() => {
     console.error(error);
@@ -137,12 +145,10 @@ export default function GlobalError({
               error tier the root layout has already crashed, so a
               soft client navigation through next/link would keep the
               same poisoned React tree and risk re-tripping the
-              boundary. ESLint's no-html-link-for-pages doesn't know
-              that, so we disable it here.
+              boundary.
             */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
-              href="/"
+              href={homeHref}
               style={{
                 padding: "0.5rem 1.25rem",
                 borderRadius: 9999,

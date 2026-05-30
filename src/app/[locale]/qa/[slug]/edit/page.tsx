@@ -19,12 +19,13 @@ export default async function EditQaPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("EditPages"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath(`/qa/${slug}/edit`, locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath(`/qa/${slug}/edit`, locale));
+  }
+
+  const t = await getTranslations("EditPages");
 
   const qa = await getQaBySlug(slug);
   if (!qa) notFound();

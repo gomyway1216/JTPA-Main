@@ -18,14 +18,17 @@ const STATUS_CLASSES: Record<string, string> = {
 };
 
 export default async function MyProjectsPage() {
-  const [locale, t, common, statusT] = await Promise.all([
-    getLocale(),
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/projects", locale));
+  }
+
+  const [t, common, statusT] = await Promise.all([
     getTranslations("MyProjects"),
     getTranslations("MyCommon"),
     getTranslations("Status"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/projects", locale));
 
   const projects = await listMyProjects(user.uid).catch(() => []);
 

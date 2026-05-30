@@ -15,14 +15,18 @@ export async function generateMetadata() {
 }
 
 export default async function MyPollPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/poll", locale));
+  }
+
   const [locale, t, common, statusT] = await Promise.all([
     getLocale(),
     getTranslations("MyPoll"),
     getTranslations("MyCommon"),
     getTranslations("Status"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/poll", locale));
 
   const items = await listMyPoll(user.uid).catch((err) => {
     console.error("Failed to list my polls:", err);

@@ -25,12 +25,13 @@ export default async function MyGuideEditPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("EditPages"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath(`/my/guides/${id}/edit`, locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath(`/my/guides/${id}/edit`, locale));
+  }
+
+  const t = await getTranslations("EditPages");
 
   const guide = await getGuideById(id);
   if (!guide) notFound();

@@ -25,14 +25,18 @@ const STATUS_CLASSES: Record<string, string> = {
 };
 
 export default async function MyPostsPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/posts", locale));
+  }
+
   const [locale, t, common, statusT] = await Promise.all([
     getLocale(),
     getTranslations("MyPosts"),
     getTranslations("MyCommon"),
     getTranslations("Status"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/posts", locale));
 
   // Surface unexpected errors to server logs. Missing composite indexes
   // (the most common cause of failure here) show up as Firestore errors

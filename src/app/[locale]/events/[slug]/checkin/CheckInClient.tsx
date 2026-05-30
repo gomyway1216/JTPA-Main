@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/i18n/navigation";
 import { signInAnonymously, signInWithPopup } from "firebase/auth";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -111,12 +112,12 @@ export function CheckInClient({
             {t("guestHintDone")}
           </p>
         )}
-        <a
+        <Link
           href={`/events/${eventSlug}`}
           className="inline-block text-sm text-emerald-900 underline hover:no-underline dark:text-emerald-100"
         >
           {t("eventPage")}
-        </a>
+        </Link>
       </div>
     );
   }
@@ -214,19 +215,7 @@ export function CheckInClient({
 
 function prettyError(
   e: unknown,
-  t: (
-    key:
-      | "errors.invalidToken"
-      | "errors.tooEarly"
-      | "errors.tooLate"
-      | "errors.eventCancelled"
-      | "errors.eventNotFound"
-      | "errors.guestNameRequired"
-      | "errors.guestEmailRequired"
-      | "errors.auth"
-      | "errors.unknown",
-    values?: { message: string },
-  ) => string,
+  t: (key: string, values?: Record<string, string | number | Date>) => string,
 ): string {
   const msg = e instanceof Error ? e.message : String(e);
   // Map server-action error codes to friendly Japanese messages. Anything

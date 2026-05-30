@@ -14,12 +14,13 @@ export default async function EditMyPostPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("EditPages"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath(`/my/posts/${id}/edit`, locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath(`/my/posts/${id}/edit`, locale));
+  }
+
+  const t = await getTranslations("EditPages");
 
   const post = await getPostById(id);
   if (!post) notFound();

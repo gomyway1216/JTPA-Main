@@ -11,12 +11,16 @@ import { formatDateTime } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function MyRsvpsPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/rsvps", locale));
+  }
+
   const [locale, t] = await Promise.all([
     getLocale(),
     getTranslations("MyRsvps"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/rsvps", locale));
 
   const ids = await listMyRsvpEventIds(user.uid).catch(() => []);
   const events = (await Promise.all(ids.map((id) => getEventById(id))))

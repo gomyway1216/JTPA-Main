@@ -605,7 +605,7 @@ function UsernameAvailabilityHint({
 
 function usernameErrorMessage(
   err: UsernameValidationError,
-  t: (key: "usernameEmpty" | "usernameHelp" | "usernameReserved") => string,
+  t: (key: string) => string,
 ): string {
   switch (err) {
     case "empty":

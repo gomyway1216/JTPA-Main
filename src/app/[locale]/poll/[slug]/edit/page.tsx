@@ -19,12 +19,13 @@ export default async function EditPollPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [locale, t] = await Promise.all([
-    getLocale(),
-    getTranslations("EditPages"),
-  ]);
   const user = await getSessionUser();
-  if (!user) redirect(loginPath(`/poll/${slug}/edit`, locale));
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath(`/poll/${slug}/edit`, locale));
+  }
+
+  const t = await getTranslations("EditPages");
 
   const poll = await getPollBySlug(slug);
   if (!poll) notFound();

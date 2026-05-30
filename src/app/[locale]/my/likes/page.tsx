@@ -19,12 +19,16 @@ export async function generateMetadata() {
 }
 
 export default async function MyLikesPage() {
+  const user = await getSessionUser();
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my/likes", locale));
+  }
+
   const [locale, t] = await Promise.all([
     getLocale(),
     getTranslations("MyLikes"),
   ]);
-  const user = await getSessionUser();
-  if (!user) redirect(loginPath("/my/likes", locale));
 
   // Missing composite indexes show up as Firestore errors with a one-click
   // "create index" link in the message — log so it's visible on first run.
