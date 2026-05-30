@@ -21,8 +21,13 @@ export default async function HomePage() {
       {/* Hero is full-bleed so the decorative blobs + dot grid can fill
           the whole viewport width. The content inside re-applies
           `mx-auto max-w-6xl` so the text and CTAs stay aligned with the
-          centered card grid below. */}
-      <section className="relative isolate flex min-h-[calc(100vh-12rem)] items-center overflow-hidden">
+          centered card grid below.
+
+          `min-h` is capped to a comfortable hero height on mobile (so
+          short copy + 2 CTAs don't leave a giant empty rectangle below
+          the buttons) and stretches to most-of-the-viewport from `sm:`
+          up, where the heavier desktop type wants more breathing room. */}
+      <section className="relative isolate flex min-h-[36rem] items-center overflow-hidden sm:min-h-[calc(100vh-12rem)]">
         {/*
          * Three decorative layers, all `pointer-events-none` +
          * `aria-hidden`, scoped under `isolate` so their negative
@@ -66,8 +71,15 @@ export default async function HomePage() {
               slides a wider-than-text gradient across the "AI" glyphs;
               the loop is seamless because the gradient starts and ends
               on blue. `leading-[1.05]` packs the lines a touch tighter
-              so the multi-line headline reads as one phrase. */}
-          <h1 className="text-6xl font-semibold leading-[1.05] tracking-tighter sm:text-7xl lg:text-8xl">
+              so the multi-line headline reads as one phrase.
+
+              Mobile scale is `text-4xl` (36px) — the previous `text-6xl`
+              (60px) overflowed at 375px and forced an unbalanced
+              3-line wrap with "する" hanging on its own. At 36px the
+              phrase splits naturally onto two lines after the comma,
+              with no forced break required. The desktop `<br>` is
+              still suppressed below `sm` for that reason. */}
+          <h1 className="text-4xl font-semibold leading-[1.1] tracking-tighter sm:text-7xl sm:leading-[1.05] lg:text-8xl">
             <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
               AI
             </span>
@@ -103,7 +115,12 @@ export default async function HomePage() {
       <div className="mx-auto max-w-6xl space-y-20 px-4">
 
       <FadeUp as="section" className="space-y-6">
-        <div className="flex items-end justify-between gap-4">
+        {/* Section head row. On phones the "すべて見る" link slides under
+            the heading so the H2 + subtitle get the full content width
+            (otherwise "注目のプロジェクト" / "直近のイベント" wrap into a
+            narrow column and break mid-word). From `sm:` we put the
+            link back on the right rail. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">直近のイベント</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -160,7 +177,9 @@ export default async function HomePage() {
       </FadeUp>
 
       <FadeUp as="section" className="space-y-6">
-        <div className="flex items-end justify-between gap-4">
+        {/* Same stack-on-mobile rationale as the "直近のイベント" head
+            above. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">注目のプロジェクト</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">

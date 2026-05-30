@@ -23,7 +23,10 @@ export default async function BlogIndexPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 space-y-8">
-      <header className="flex items-end justify-between gap-4">
+      {/* Stack on mobile so the subtitle isn't crushed against the
+          "記事を投稿" button. From `sm:` we keep the desktop side-by-side
+          layout. */}
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ブログ</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
@@ -32,7 +35,7 @@ export default async function BlogIndexPage() {
         </div>
         <Link
           href="/blog/new"
-          className="shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+          className="w-fit shrink-0 rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
         >
           記事を投稿
         </Link>
