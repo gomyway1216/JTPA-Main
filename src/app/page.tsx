@@ -122,7 +122,7 @@ export default async function HomePage() {
             link back on the right rail. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-4xl">直近のイベント</h2>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">直近のイベント</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               オンラインも対面も。気になる回に気軽に参加してください。
             </p>
@@ -181,7 +181,7 @@ export default async function HomePage() {
             above. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-4xl">注目のプロジェクト</h2>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">注目のプロジェクト</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
               JTPA メンバーが手がけた AI プロジェクト。
             </p>

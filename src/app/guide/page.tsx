@@ -27,7 +27,7 @@ export default async function GuideIndexPage() {
           side-by-side layout. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">ガイド</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">ガイド</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             AI ツールのセットアップから使いこなしまで、コミュニティでまとめた手引き集です。
             あなたのノウハウもぜひ投稿してください。

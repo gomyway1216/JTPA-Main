@@ -33,7 +33,7 @@ export default async function QaListPage() {
           subtitle gets cramped next to the CTA otherwise. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-5xl">Q&amp;A</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">Q&amp;A</h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             気軽に質問やTipsを投稿しましょう。コメント・返信・いいねで反応できます。
           </p>

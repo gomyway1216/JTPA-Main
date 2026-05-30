@@ -31,10 +31,7 @@ export default async function EventsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-12 space-y-16">
       <section>
-        {/* H1 drops to `text-3xl` (30px) on phones so "予定されている
-            イベント" sits on a single line at 375px instead of breaking
-            into "予定されているイベン" + "ト". */}
-        <h1 className="mb-8 text-3xl font-semibold tracking-tight sm:text-5xl">予定されているイベント</h1>
+        <h1 className="mb-8 text-4xl font-semibold tracking-tight sm:text-5xl">予定されているイベント</h1>
         {upcoming.length === 0 ? (
           <p className="text-zinc-500">現在予定されているイベントはありません。</p>
         ) : (
