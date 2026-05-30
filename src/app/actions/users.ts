@@ -302,9 +302,11 @@ export async function updateMyProfile(
         // Keep `username` absent when the user is just holding onto the
         // unclaimed default placeholder (issue #104): persisting it would
         // bake a reserved `user-*` handle into the doc and leave a stray
-        // reservation slot. Leaving it off keeps the public projection
+        // reservation slot. FieldValue.delete() (rather than merely
+        // omitting the key) also scrubs any legacy stray null/"" username,
+        // so the doc is truly absent and the public projection keeps
         // falling back to defaultUsernameFor(uid), as designed.
-        ...(keepDefaultHandle ? {} : { username: desiredUsername }),
+        username: keepDefaultHandle ? FieldValue.delete() : desiredUsername,
         affiliation: parsed.data.affiliation,
         bio: parsed.data.bio,
         affiliationPublic: parsed.data.affiliationPublic,
