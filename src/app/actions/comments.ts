@@ -12,6 +12,7 @@ import {
   parentRoutePrefix,
 } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
   CommentDoc,
   GuideDoc,
@@ -42,23 +43,20 @@ const DeleteSchema = z.object({
 export type CommentInput = z.input<typeof CommentSchema>;
 export type DeleteCommentInput = z.input<typeof DeleteSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+async function readableParse<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): Promise<z.infer<T>> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 // ---------- post / list ----------
 
 export async function postComment(input: CommentInput): Promise<CommentDoc> {
   const user = await requireUser();
-  const parsed = readableParse(CommentSchema, input);
+  const parsed = await readableParse(CommentSchema, input);
 
   // Confirm the parent is published before accepting comments. Firestore
   // rules enforce the same on direct client writes, but Server Actions go
@@ -70,7 +68,7 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
   if (!parentSnap.exists) throw new Error("NOT_FOUND");
   const parentData = parentSnap.data() as PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc;
   if (!isParentPubliclyVisible(parsed.parentType, parentData)) {
-    throw new Error("コメントは公開済みのコンテンツにのみ投稿できます");
+    throw new Error(await actionError("commentPublishedOnly"));
   }
 
   // If this is a reply, validate the parent comment exists AND lives under
@@ -83,7 +81,7 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
       .doc(parsed.parentCommentId)
       .get();
     if (!parentCommentSnap.exists) {
-      throw new Error("返信先のコメントが見つかりません");
+      throw new Error(await actionError("replyCommentNotFound"));
     }
   }
 
@@ -113,14 +111,14 @@ export async function postComment(input: CommentInput): Promise<CommentDoc> {
 // ---------- delete ----------
 
 // Soft-deletes by default: clears body and stamps `deletedAt` so the UI
-// can render a "削除されました" placeholder while keeping the slot in the
+// can render a deleted-comment placeholder while keeping the slot in the
 // thread (replies stay attached to their parent). Hard delete — actually
 // removing the doc — is admin-only.
 export async function deleteComment(
   input: DeleteCommentInput,
 ): Promise<CommentDoc | null> {
   const user = await requireUser();
-  const parsed = readableParse(DeleteSchema, input);
+  const parsed = await readableParse(DeleteSchema, input);
 
   if (parsed.hard && !user.isAdmin) {
     throw new Error("FORBIDDEN");

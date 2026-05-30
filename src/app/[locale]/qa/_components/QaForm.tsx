@@ -41,7 +41,7 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
 });
 
 // Split on half-width comma plus the two common full-width JP commas so
-// `タグA、タグB，タグC` works alongside `tagA, tagB`.
+// Japanese commas work alongside ASCII commas.
 function stringToTags(s: string): string[] {
   return s
     .split(/[,、，]/)
@@ -61,6 +61,14 @@ interface Props {
 
 export function QaForm({ mode, user, qa }: Props) {
   const t = useTranslations("QaForm");
+  const actionErrors = useTranslations("ActionErrors");
+  const imageUploadMessages = {
+    missingGuideId: () => actionErrors("guideImageMissingId"),
+    missingQaId: () => actionErrors("qaImageMissingId"),
+    missingUserId: () => actionErrors("userMissingId"),
+    unsupportedType: (types: string) => actionErrors("imageType", { types }),
+    tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
+  };
   const [title, setTitle] = useState(qa?.title ?? "");
   const [body, setBody] = useState<string>(qa?.body ?? "");
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
@@ -101,7 +109,7 @@ export function QaForm({ mode, user, qa }: Props) {
     }
     setUploading(true);
     try {
-      const url = await uploadQaImage(qaId, user.uid, file);
+      const url = await uploadQaImage(qaId, user.uid, file, imageUploadMessages);
       const alt = file.name.replace(/\.[^.]+$/, "");
       // Append the image link at the end of the body. Simpler than the
       // GuideForm caret-aware insertion — Q&A bodies tend to be short

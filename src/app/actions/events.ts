@@ -2,11 +2,12 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { EventDoc } from "@/lib/types";
 
@@ -77,26 +78,24 @@ type ParsedEventInput =
   | { ok: true; data: z.infer<typeof EventInputSchema> }
   | { ok: false; error: string };
 
-function parseEventInput(input: EventFormInput): ParsedEventInput {
+async function parseEventInput(input: EventFormInput): Promise<ParsedEventInput> {
   const result = EventInputSchema.safeParse(input);
   if (result.success) return { ok: true, data: result.data };
   // Readable error so the admin sees which field failed instead of the
   // generic Server Component crash.
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  return { ok: false, error: `入力エラー: ${issues}` };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 export async function createEvent(
   input: EventFormInput,
 ): Promise<EventSaveResult> {
   const admin = await requireAdmin();
-  const pr = parseEventInput(input);
+  const pr = await parseEventInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
-  const slug = parsed.slug || slugify(parsed.title);
+  const requestedSlug = parsed.slug as string | undefined;
+  const slug = requestedSlug || slugify(parsed.title);
   // Ensure slug uniqueness
   const existing = await adminDb()
     .collection("events")
@@ -104,7 +103,7 @@ export async function createEvent(
     .limit(1)
     .get();
   if (!existing.empty) {
-    return { ok: false, error: `スラッグ "${slug}" は既に使用されています` };
+    return { ok: false, error: await actionError("slugTaken", { slug }) };
   }
 
   const now = Timestamp.now();
@@ -136,7 +135,7 @@ export async function createEvent(
 
   revalidatePath("/events");
   revalidatePath("/admin/events");
-  redirect(`/admin/events/${ref.id}/edit`);
+  return redirectToLocalizedPath(`/admin/events/${ref.id}/edit`);
 }
 
 export async function updateEvent(
@@ -144,7 +143,7 @@ export async function updateEvent(
   input: EventFormInput,
 ): Promise<EventSaveResult> {
   await requireAdmin();
-  const pr = parseEventInput(input);
+  const pr = await parseEventInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("events").doc(eventId);
@@ -155,19 +154,23 @@ export async function updateEvent(
   if (!snap.exists) {
     return {
       ok: false,
-      error: "イベントが見つかりません。削除された可能性があります。",
+      error: await actionError("eventNotFoundDeleted"),
     };
   }
   const cur = snap.data() as EventDoc;
 
-  if (parsed.slug) {
+  const requestedSlug = parsed.slug as string | undefined;
+  if (requestedSlug) {
     const conflict = await adminDb()
       .collection("events")
-      .where("slug", "==", parsed.slug)
+      .where("slug", "==", requestedSlug)
       .limit(2)
       .get();
     if (conflict.docs.some((d) => d.id !== eventId)) {
-      return { ok: false, error: `スラッグ "${parsed.slug}" は既に使用されています` };
+      return {
+        ok: false,
+        error: await actionError("slugTaken", { slug: requestedSlug }),
+      };
     }
   }
 
@@ -182,7 +185,7 @@ export async function updateEvent(
       : null;
 
   await ref.update({
-    ...(parsed.slug ? { slug: parsed.slug } : {}),
+    ...(requestedSlug ? { slug: requestedSlug } : {}),
     title: parsed.title,
     description: parsed.description,
     startAt: Timestamp.fromDate(new Date(parsed.startAt)),
@@ -234,7 +237,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
   // sees the 404 page flash before the client-side redirect lands. A
   // server redirect navigates straight to the list and never re-renders
   // the deleted event's edit page.
-  redirect("/admin/events");
+  return redirectToLocalizedPath("/admin/events");
 }
 
 // Try the base slug first, then append `-1`, `-2`, ... until we find one
@@ -262,7 +265,7 @@ export async function cloneEvent(
   const srcRef = adminDb().collection("events").doc(originalId);
   const srcSnap = await srcRef.get();
   if (!srcSnap.exists) {
-    return { ok: false, error: "複製元のイベントが見つかりません" };
+    return { ok: false, error: await actionError("cloneSourceEventNotFound") };
   }
   // Existing docs predate some of the optional fields here (visibility,
   // surveyFields, etc), so all of them get explicit defaults below before
@@ -298,8 +301,8 @@ export async function cloneEvent(
   );
   const newEnd = Timestamp.fromMillis(newStart.toMillis() + duration);
 
-  // Base the new slug on the source slug (when it exists) so a Japanese-
-  // only title like "第32回 JTPAサロン" carries the original's clean
+  // Base the new slug on the source slug (when it exists) so a localized
+  // title that does not slugify cleanly carries the original's clean
   // English slug forward as `jtpa-salon-32-1`, instead of collapsing into
   // a generic timestamp via slugify of the title.
   const slug = await findFreeSlug(src.slug || src.title);
@@ -309,7 +312,7 @@ export async function cloneEvent(
   // the original event. The new clone starts fresh.
   const newRef = await adminDb().collection("events").add({
     slug,
-    title: `${src.title} (コピー)`,
+    title: `${src.title} ${await actionError("copySuffix")}`,
     description: src.description,
     startAt: newStart,
     endAt: newEnd,
@@ -328,5 +331,5 @@ export async function cloneEvent(
   });
 
   revalidatePath("/admin/events");
-  redirect(`/admin/events/${newRef.id}/edit`);
+  return redirectToLocalizedPath(`/admin/events/${newRef.id}/edit`);
 }

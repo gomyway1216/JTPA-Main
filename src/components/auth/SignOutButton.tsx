@@ -1,7 +1,7 @@
 "use client";
 
 import { signOut as fbSignOut } from "firebase/auth";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -9,6 +9,7 @@ import { signOut } from "@/app/actions/auth";
 import { clientAuth } from "@/lib/firebase/client";
 
 export function SignOutButton({ className }: { className?: string }) {
+  const locale = useLocale();
   const t = useTranslations("Auth");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -18,7 +19,7 @@ export function SignOutButton({ className }: { className?: string }) {
     setBusy(true);
     await fbSignOut(clientAuth);
     startTransition(async () => {
-      await signOut();
+      await signOut(locale);
       router.refresh();
     });
   }

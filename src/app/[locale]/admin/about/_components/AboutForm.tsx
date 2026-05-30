@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import { unstable_rethrow } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 
@@ -29,6 +30,8 @@ export function AboutForm({
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("Admin.about");
+  const common = useTranslations("Admin.common");
 
   // Match the MDEditor theme to the OS-level dark mode preference — same
   // approach as GuideForm. The app drives dark mode off prefers-color-scheme
@@ -51,7 +54,7 @@ export function AboutForm({
         setSavedAt(Date.now());
       } catch (err) {
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : common("saveFailed"));
       }
     });
   }
@@ -60,7 +63,7 @@ export function AboutForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="about-title" className="text-sm font-medium">
-          タイトル <span className="text-red-600">*</span>
+          {t("titleLabel")} <span className="text-red-600">*</span>
         </label>
         <input
           id="about-title"
@@ -74,7 +77,7 @@ export function AboutForm({
 
       <div>
         <span className="text-sm font-medium">
-          本文 (Markdown) <span className="text-red-600">*</span>
+          {t("bodyLabel")} <span className="text-red-600">*</span>
         </span>
         <div className="mt-1" data-color-mode={colorMode}>
           <MDEditor
@@ -94,9 +97,9 @@ export function AboutForm({
           disabled={pending}
           className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900 disabled:opacity-50"
         >
-          {pending ? "保存中..." : "保存"}
+          {pending ? common("saving") : common("save")}
         </button>
-        <SaveFlash savedAt={savedAt} />
+        <SaveFlash savedAt={savedAt} message={common("saved")} />
       </div>
     </form>
   );

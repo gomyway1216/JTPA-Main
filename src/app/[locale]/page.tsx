@@ -79,7 +79,7 @@ export default async function HomePage() {
 
               Mobile scale is `text-4xl` (36px) — the previous `text-6xl`
               (60px) overflowed at 375px and forced an unbalanced
-              3-line wrap with "する" hanging on its own. At 36px the
+              awkward 3-line wrap. At 36px the
               phrase splits naturally onto two lines after the comma,
               with no forced break required. The desktop `<br>` is
               still suppressed below `sm` for that reason. */}
@@ -120,9 +120,9 @@ export default async function HomePage() {
       <div className="mx-auto max-w-6xl space-y-20 px-4">
 
       <FadeUp as="section" className="space-y-6">
-        {/* Section head row. On phones the "すべて見る" link slides under
+        {/* Section head row. On phones the view-all link slides under
             the heading so the H2 + subtitle get the full content width
-            (otherwise "注目のプロジェクト" / "直近のイベント" wrap into a
+            (otherwise the localized section titles wrap into a
             narrow column and break mid-word). From `sm:` we put the
             link back on the right rail. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
@@ -189,7 +189,7 @@ export default async function HomePage() {
       </FadeUp>
 
       <FadeUp as="section" className="space-y-6">
-        {/* Same stack-on-mobile rationale as the "直近のイベント" head
+        {/* Same stack-on-mobile rationale as the events head
             above. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
           <div>

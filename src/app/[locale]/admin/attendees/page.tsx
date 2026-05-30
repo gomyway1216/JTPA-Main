@@ -1,8 +1,9 @@
-import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
 
@@ -13,9 +14,11 @@ export const dynamic = "force-dynamic";
 
 function formatResponse(
   value: string | string[] | boolean | undefined,
+  yes: string,
+  no: string,
 ): string {
   if (value === undefined || value === null || value === "") return "—";
-  if (typeof value === "boolean") return value ? "はい" : "いいえ";
+  if (typeof value === "boolean") return value ? yes : no;
   if (Array.isArray(value)) return value.join(", ");
   return value;
 }
@@ -37,7 +40,12 @@ export default async function AdminAttendeesPage({
   searchParams: Promise<{ eventId?: string }>;
 }) {
   const user = await getSessionUser();
-  if (!user?.isAdmin) redirect("/admin/guides");
+  if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
+  const [locale, t, common] = await Promise.all([
+    getLocale(),
+    getTranslations("Admin.attendees"),
+    getTranslations("Admin.common"),
+  ]);
 
   const { eventId } = await searchParams;
   const events = await listEvents({
@@ -53,11 +61,11 @@ export default async function AdminAttendeesPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">参加者</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <form method="get" className="flex items-center gap-2">
         <label className="text-sm" htmlFor="eventId">
-          イベント:
+          {t("eventLabel")}
         </label>
         <select
           id="eventId"
@@ -67,7 +75,7 @@ export default async function AdminAttendeesPage({
         >
           {events.map((e) => (
             <option key={e.id} value={e.id}>
-              {e.title} ({formatDateTime(e.startAt)})
+              {e.title} ({formatDateTime(e.startAt, locale)})
             </option>
           ))}
         </select>
@@ -75,7 +83,7 @@ export default async function AdminAttendeesPage({
           type="submit"
           className="rounded border border-zinc-300 px-3 py-1.5 text-sm dark:border-zinc-700"
         >
-          表示
+          {t("show")}
         </button>
       </form>
 
@@ -88,18 +96,18 @@ export default async function AdminAttendeesPage({
       )}
 
       {rsvps.length === 0 ? (
-        <p className="text-sm text-zinc-500">参加者がいません。</p>
+        <p className="text-sm text-zinc-500">{t("empty")}</p>
       ) : (
         <table className="w-full text-sm">
           <thead className="text-left text-zinc-500">
             <tr>
-              <th className="py-2">名前</th>
-              <th className="py-2">所属</th>
-              <th className="py-2">メール</th>
-              <th className="py-2">役割</th>
-              <th className="py-2">ステータス</th>
-              <th className="py-2">出席</th>
-              <th className="py-2">詳細</th>
+              <th className="py-2">{t("columns.name")}</th>
+              <th className="py-2">{t("columns.affiliation")}</th>
+              <th className="py-2">{t("columns.email")}</th>
+              <th className="py-2">{t("columns.role")}</th>
+              <th className="py-2">{t("columns.status")}</th>
+              <th className="py-2">{t("columns.attendance")}</th>
+              <th className="py-2">{t("columns.details")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
@@ -115,14 +123,14 @@ export default async function AdminAttendeesPage({
                     {r.displayName}
                     {r.isGuest && (
                       <span className="ml-2 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                        ゲスト
+                        {common("guest")}
                       </span>
                     )}
                   </td>
                   <td className="py-2 text-zinc-500">{r.affiliation || "—"}</td>
                   <td className="py-2 text-zinc-500">{r.email}</td>
                   <td className="py-2">
-                    {r.role === "presenter" ? "発表者" : "参加者"}
+                    {r.role === "presenter" ? t("role.presenter") : t("role.attendee")}
                   </td>
                   <td className="py-2">{r.status}</td>
                   <td className="py-2">
@@ -144,13 +152,13 @@ export default async function AdminAttendeesPage({
                     {hasDetails ? (
                       <details>
                         <summary className="cursor-pointer text-xs text-blue-600 hover:underline">
-                          表示
+                          {common("show")}
                         </summary>
                         <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 text-xs">
                           {r.role === "presenter" && r.presentationTitle && (
                             <>
                               <dt className="font-medium text-zinc-500">
-                                発表タイトル
+                                {t("presentationTitle")}
                               </dt>
                               <dd className="whitespace-pre-wrap">
                                 {r.presentationTitle}
@@ -160,7 +168,7 @@ export default async function AdminAttendeesPage({
                           {r.role === "presenter" && r.presentationAbstract && (
                             <>
                               <dt className="font-medium text-zinc-500">
-                                発表概要
+                                {t("presentationAbstract")}
                               </dt>
                               <dd className="whitespace-pre-wrap">
                                 {r.presentationAbstract}
@@ -173,12 +181,16 @@ export default async function AdminAttendeesPage({
                                 {f.label}
                                 {f.audience === "presenter" && (
                                   <span className="ml-1 text-[10px] text-zinc-400">
-                                    (発表者のみ)
+                                    {t("presenterOnly")}
                                   </span>
                                 )}
                               </dt>
                               <dd className="whitespace-pre-wrap">
-                                {formatResponse(r.surveyResponses?.[f.key])}
+                                {formatResponse(
+                                  r.surveyResponses?.[f.key],
+                                  common("yes"),
+                                  common("no"),
+                                )}
                               </dd>
                             </span>
                           ))}

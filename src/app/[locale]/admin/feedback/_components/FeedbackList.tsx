@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useMemo, useState, useTransition } from "react";
 
 import { setFeedbackStatus } from "@/app/actions/feedback";
@@ -8,13 +9,7 @@ import { formatDate } from "@/lib/utils";
 
 type Filter = FeedbackStatus | "all";
 
-const FILTERS: { value: Filter; label: string }[] = [
-  { value: "new", label: "未対応" },
-  { value: "read", label: "確認済み" },
-  { value: "resolved", label: "対応済み" },
-  { value: "archived", label: "アーカイブ" },
-  { value: "all", label: "すべて" },
-];
+const FILTERS: Filter[] = ["new", "read", "resolved", "archived", "all"];
 
 interface Props {
   entries: FeedbackDoc[];
@@ -31,6 +26,7 @@ interface Props {
 // authoritative value on the next render.
 export function FeedbackList({ entries, viewerIsAdmin }: Props) {
   const [filter, setFilter] = useState<Filter>("new");
+  const t = useTranslations("Admin.feedback");
 
   const visible = useMemo(() => {
     if (filter === "all") return entries;
@@ -53,29 +49,29 @@ export function FeedbackList({ entries, viewerIsAdmin }: Props) {
   return (
     <div className="space-y-4">
       <nav className="flex flex-wrap gap-2 text-sm">
-        {FILTERS.map((f) => {
-          const isActive = filter === f.value;
+        {FILTERS.map((value) => {
+          const isActive = filter === value;
           const count =
-            f.value === "all" ? entries.length : counts[f.value as FeedbackStatus];
+            value === "all" ? entries.length : counts[value as FeedbackStatus];
           return (
             <button
-              key={f.value}
+              key={value}
               type="button"
-              onClick={() => setFilter(f.value)}
+              onClick={() => setFilter(value)}
               className={`rounded-md border px-3 py-1.5 text-xs ${
                 isActive
                   ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
                   : "border-zinc-300 text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
               }`}
             >
-              {f.label} ({count})
+              {t(`filters.${value}`)} ({count})
             </button>
           );
         })}
       </nav>
 
       {visible.length === 0 ? (
-        <p className="text-sm text-zinc-500">該当するエントリはありません。</p>
+        <p className="text-sm text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
           {visible.map((entry) => (
@@ -107,6 +103,7 @@ function FeedbackRow({
   // dance the local optimistic status would shadow the new server
   // value forever. Per PR #88 Gemini review.
   const [seedStatus, setSeedStatus] = useState<FeedbackStatus>(entry.status);
+  const t = useTranslations("Admin.feedback");
   if (entry.status !== seedStatus) {
     setSeedStatus(entry.status);
     setStatus(entry.status);
@@ -123,7 +120,7 @@ function FeedbackRow({
         await setFeedbackStatus({ feedbackId: entry.id, status: next });
       } catch (err) {
         setStatus(prev);
-        setError(err instanceof Error ? err.message : "更新に失敗しました");
+        setError(err instanceof Error ? err.message : t("updateFailed"));
       }
     });
   }
@@ -136,14 +133,7 @@ function FeedbackRow({
         : status === "resolved"
           ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200"
           : "border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300";
-  const statusLabel =
-    status === "new"
-      ? "未対応"
-      : status === "read"
-        ? "確認済み"
-        : status === "resolved"
-          ? "対応済み"
-          : "アーカイブ";
+  const statusLabel = t(`filters.${status}`);
 
   return (
     <li className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -152,35 +142,35 @@ function FeedbackRow({
           <span className={`mr-2 inline-flex rounded border px-1.5 py-0.5 ${statusCls}`}>
             {statusLabel}
           </span>
-          {formatDate(entry.createdAt)} · {entry.authorDisplayName ?? "(不明)"}
+          {formatDate(entry.createdAt)} · {entry.authorDisplayName ?? t("authorFallback")}
           {entry.authorUsername ? ` (@${entry.authorUsername})` : ""}
           {entry.authorEmail ? ` · ${entry.authorEmail}` : ""}
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs">
           {status !== "read" && (
             <FlipButton
-              label="確認済みに"
+              label={t("statusActions.read")}
               onClick={() => flip("read")}
               pending={pending}
             />
           )}
           {status !== "resolved" && (
             <FlipButton
-              label="対応済みに"
+              label={t("statusActions.resolved")}
               onClick={() => flip("resolved")}
               pending={pending}
             />
           )}
           {status !== "new" && (
             <FlipButton
-              label="未対応に戻す"
+              label={t("statusActions.new")}
               onClick={() => flip("new")}
               pending={pending}
             />
           )}
           {viewerIsAdmin && status !== "archived" && (
             <FlipButton
-              label="アーカイブ"
+              label={t("statusActions.archived")}
               onClick={() => flip("archived")}
               pending={pending}
             />
@@ -192,8 +182,10 @@ function FeedbackRow({
       </p>
       {entry.reviewerDisplayName && status !== "new" && (
         <p className="mt-2 text-xs text-zinc-500">
-          {entry.reviewerDisplayName} が {formatDate(entry.reviewedAt)} に
-          ステータスを変更
+          {t("statusChanged", {
+            name: entry.reviewerDisplayName,
+            date: formatDate(entry.reviewedAt),
+          })}
         </p>
       )}
       {error && (

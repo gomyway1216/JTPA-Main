@@ -5,6 +5,7 @@ import { cache } from "react";
 import { adminDb } from "@/lib/firebase/admin";
 import { plainify } from "@/lib/data/serialize";
 import type { SitePageDoc } from "@/lib/types";
+import jaMessages from "../../../messages/ja.json";
 
 // Slugs that are safe to expose through saveSitePage / getSitePage. Keeping
 // this in one place lets the server action validate inputs against the same
@@ -12,24 +13,16 @@ import type { SitePageDoc } from "@/lib/types";
 export const SITE_PAGE_SLUGS = ["about"] as const;
 export type SitePageSlug = (typeof SITE_PAGE_SLUGS)[number];
 
-// Fallback content rendered when a sitePages doc has not been saved yet.
-// Same copy that used to live inline in src/app/about/page.tsx, now also
-// pre-loaded into the admin editor so the first save edits real text rather
-// than starting from blank.
+// Default-locale fallback content. The localized pages read their fallback
+// from the message catalog directly; this export stays for data-layer tests
+// and callers that need the app's default locale without a request context.
 export const SITE_PAGE_DEFAULTS: Record<
   SitePageSlug,
   { title: string; body: string }
 > = {
   about: {
-    title: "JTPAとは",
-    body: `JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーの作ったプロジェクトの紹介などを行っています。
-
-# 活動内容
-
-- 定期的なオフライン/オンラインの勉強会
-- 発表者を募集してのライトニングトーク
-- メンバーが開発したAIプロダクトのショーケース
-`,
+    title: jaMessages.AboutPage.defaultTitle,
+    body: jaMessages.AboutPage.defaultBody,
   },
 };
 

@@ -34,7 +34,7 @@ export default async function GuideIndexPage() {
     <div className="mx-auto max-w-4xl px-4 py-12 space-y-8">
       {/* Stack the CTA below the heading on phones (otherwise the
           long subtitle gets squeezed into a narrow column next to the
-          "ガイドを投稿" button). From `sm:` we restore the desktop
+          submit-guide button). From `sm:` we restore the desktop
           side-by-side layout. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-2">

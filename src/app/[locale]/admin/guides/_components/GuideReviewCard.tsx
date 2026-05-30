@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -9,12 +10,12 @@ import type { GuideDoc } from "@/lib/types";
 import { formatDate, truncate } from "@/lib/utils";
 
 // Approve / reject card for the pending-guides queue. Mirrors
-// PostReviewCard, but with one extra "プレビュー / 編集" link that
+// PostReviewCard, but with one extra preview/edit link that
 // distinguishes guides:
-//   - プレビュー goes to the public detail page (works even pre-publish
+//   - preview goes to the public detail page (works even pre-publish
 //     for admins because the rule allows admin reads regardless of
 //     status)
-//   - 内容を編集 goes to the same admin form used for any guide edit,
+//   - edit content goes to the same admin form used for any guide edit,
 //     letting the admin fix typos before approving (matches the post
 //     review pattern)
 export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
@@ -22,11 +23,16 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
+  const locale = useLocale();
+  const t = useTranslations("Admin.guides");
+  const projectsT = useTranslations("Admin.projects");
+  const postsT = useTranslations("Admin.posts");
+  const common = useTranslations("Admin.common");
 
   function decide(decision: "published" | "rejected") {
     setError(null);
     if (decision === "rejected" && !note.trim()) {
-      if (!confirm("コメントなしで却下しますか？")) return;
+      if (!confirm(projectsT("rejectWithoutNoteConfirm"))) return;
     }
     startTransition(async () => {
       try {
@@ -34,10 +40,10 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
         // revalidatePath inside the Server Action invalidates the cache,
         // but the existing client-side React tree won't re-fetch until we
         // tell the router to refresh. Without this, the just-decided
-        // card lingers in the 審査待ち list until manual reload.
+        // card lingers in the pending list until manual reload.
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "失敗しました");
+        setError(err instanceof Error ? err.message : projectsT("failed"));
       }
     });
   }
@@ -46,7 +52,7 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
   // lists multiple cards.
   const noteId = `guide-review-note-${guide.id}`;
   const authorName =
-    guide.authorName ?? guide.createdBy?.displayName ?? "(unknown)";
+    guide.authorName ?? guide.createdBy?.displayName ?? common("unknown");
 
   return (
     <article className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -55,7 +61,14 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
           <h3 className="text-lg font-semibold">{guide.title}</h3>
           <p className="text-xs text-zinc-500">
             {authorName}
-            {guide.submittedAt && <> · 投稿 {formatDate(guide.submittedAt)}</>}
+            {guide.submittedAt && (
+              <>
+                {" · "}
+                {postsT("submitted", {
+                  date: formatDate(guide.submittedAt, locale),
+                })}
+              </>
+            )}
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
@@ -63,13 +76,13 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
             href={`/guide/${guide.slug}`}
             className="text-zinc-500 hover:underline"
           >
-            プレビュー
+            {common("preview")}
           </Link>
           <Link
             href={`/admin/guides/${guide.id}/edit`}
             className="text-zinc-500 hover:underline"
           >
-            内容を編集
+            {common("editContent")}
           </Link>
         </div>
       </header>
@@ -92,12 +105,12 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
       )}
 
       <label htmlFor={noteId} className="sr-only">
-        コメント (却下時に投稿者へ送信)
+        {projectsT("notePlaceholder")}
       </label>
       <textarea
         id={noteId}
         rows={2}
-        placeholder="コメント (却下時に投稿者へ送信)"
+        placeholder={projectsT("notePlaceholder")}
         value={note}
         onChange={(e) => setNote(e.target.value)}
         disabled={pending}
@@ -111,7 +124,7 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
           onClick={() => decide("published")}
           className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
         >
-          公開 (+ contributor 付与)
+          {t("publishWithContributor")}
         </button>
         <button
           type="button"
@@ -119,7 +132,7 @@ export function GuideReviewCard({ guide }: { guide: GuideDoc }) {
           onClick={() => decide("rejected")}
           className="rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
         >
-          却下
+          {common("reject")}
         </button>
       </div>
     </article>

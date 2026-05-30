@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -14,9 +15,10 @@ export function CloneEventButton({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const t = useTranslations("Admin.cloneEvent");
 
   function handleClick() {
-    if (!confirm(`「${eventTitle}」を複製しますか？`)) return;
+    if (!confirm(t("confirm", { title: eventTitle }))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -32,7 +34,7 @@ export function CloneEventButton({
         // ProfileForm use for this; prefer it over a hand-rolled digest
         // check for consistency. Per PR #116 Copilot review.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "複製に失敗しました");
+        setError(err instanceof Error ? err.message : t("failed"));
       }
     });
   }
@@ -45,7 +47,7 @@ export function CloneEventButton({
         onClick={handleClick}
         className="text-blue-600 hover:underline disabled:opacity-50"
       >
-        {pending ? "複製中..." : "複製"}
+        {pending ? t("cloning") : t("clone")}
       </button>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </span>

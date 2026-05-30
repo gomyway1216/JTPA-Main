@@ -452,7 +452,9 @@
     "feedbackPrefix": "質問・不具合報告・改善案などは",
     "feedbackLink": "ヘルプの「要望・不具合報告」",
     "feedbackSuffix": "からお気軽にどうぞ。",
-    "sourceCode": "ソースコード:"
+    "sourceCode": "ソースコード:",
+    "defaultTitle": "JTPAとは",
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーの作ったプロジェクトの紹介などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクトのショーケース\n"
   },
   "PublicProfile": {
     "notFoundTitle": "ユーザーが見つかりません",
@@ -750,19 +752,39 @@
           "<myProfileLink>プロフィール設定</myProfileLink>で公開プロフィールに表示する内容を編集できます。"
         ],
         "table": {
-          "headers": ["項目", "デフォルト", "公開先"],
+          "headers": [
+            "項目",
+            "デフォルト",
+            "公開先"
+          ],
           "rows": [
             {
-              "cells": ["氏名・アイコン", "公開", "Google アカウントの値。コメント・投稿に常に表示されます。"]
+              "cells": [
+                "氏名・アイコン",
+                "公開",
+                "Google アカウントの値。コメント・投稿に常に表示されます。"
+              ]
             },
             {
-              "cells": ["所属", "非公開", "オンにした場合のみ /u/[uid] に表示されます。"]
+              "cells": [
+                "所属",
+                "非公開",
+                "オンにした場合のみ /u/[uid] に表示されます。"
+              ]
             },
             {
-              "cells": ["自己紹介", "非公開", "オンにした場合のみ /u/[uid] に表示されます。改行も反映されます。"]
+              "cells": [
+                "自己紹介",
+                "非公開",
+                "オンにした場合のみ /u/[uid] に表示されます。改行も反映されます。"
+              ]
             },
             {
-              "cells": ["メールアドレス", "非公開", "メールアドレスは公開されません。"]
+              "cells": [
+                "メールアドレス",
+                "非公開",
+                "メールアドレスは公開されません。"
+              ]
             }
           ]
         },
@@ -774,31 +796,52 @@
           "右上のアカウントメニューから<myPageLink>マイページ</myPageLink>を開くと、参加履歴・投稿・設定・受け取ったいいねを管理できます。"
         ],
         "table": {
-          "headers": ["メニュー", "内容"],
+          "headers": [
+            "メニュー",
+            "内容"
+          ],
           "rows": [
             {
               "href": "/my/rsvps",
-              "cells": ["参加履歴", "イベントRSVPの一覧とキャンセル操作。"]
+              "cells": [
+                "参加履歴",
+                "イベントRSVPの一覧とキャンセル操作。"
+              ]
             },
             {
               "href": "/my/projects",
-              "cells": ["自分の投稿", "ショーケースに投稿したプロジェクト。"]
+              "cells": [
+                "自分の投稿",
+                "ショーケースに投稿したプロジェクト。"
+              ]
             },
             {
               "href": "/my/posts",
-              "cells": ["自分の記事", "ブログ記事。下書きも含みます。"]
+              "cells": [
+                "自分の記事",
+                "ブログ記事。下書きも含みます。"
+              ]
             },
             {
               "href": "/my/qa",
-              "cells": ["自分のQ&A", "自分が投稿した Q&A の質問。"]
+              "cells": [
+                "自分のQ&A",
+                "自分が投稿した Q&A の質問。"
+              ]
             },
             {
               "href": "/my/likes",
-              "cells": ["もらったいいね", "サイト内の自分のコメントに付いたいいね。"]
+              "cells": [
+                "もらったいいね",
+                "サイト内の自分のコメントに付いたいいね。"
+              ]
             },
             {
               "href": "/my/profile",
-              "cells": ["アカウント設定", "プロフィール公開範囲とメール通知設定。"]
+              "cells": [
+                "アカウント設定",
+                "プロフィール公開範囲とメール通知設定。"
+              ]
             }
           ]
         }
@@ -852,5 +895,582 @@
       "auth": "認証に問題がありました。ページを再読み込みしてください。",
       "unknown": "エラーが発生しました: {message}"
     }
+  },
+  "GlobalError": {
+    "lang": "ja",
+    "title": "予期しないエラーが発生しました",
+    "description": "ページの読み込み中に問題が発生しました。再読み込みするか、しばらく時間をおいてからお試しください。",
+    "retry": "再試行",
+    "home": "ホームに戻る",
+    "digest": "お問い合わせの際はこのリクエストIDをお知らせください:"
+  },
+  "Admin": {
+    "nav": {
+      "dashboard": "概要",
+      "events": "イベント",
+      "projects": "プロジェクト承認",
+      "posts": "ブログ管理",
+      "attendees": "参加者",
+      "guides": "ガイド",
+      "feedback": "フィードバック",
+      "about": "JTPAとは",
+      "users": "ユーザー",
+      "errors": "エラーログ",
+      "help": "ヘルプ"
+    },
+    "common": {
+      "viewAll": "すべて見る →",
+      "manage": "管理 →",
+      "triage": "triage →",
+      "createNew": "新規作成",
+      "edit": "編集",
+      "checkIn": "チェックイン",
+      "preview": "プレビュー",
+      "editContent": "内容を編集",
+      "approve": "承認",
+      "reject": "却下",
+      "publish": "公開",
+      "delete": "削除",
+      "none": "なし",
+      "unknown": "(unknown)",
+      "notAvailable": "—",
+      "memberOnly": "メンバー限定",
+      "guest": "ゲスト",
+      "yes": "はい",
+      "no": "いいえ",
+      "show": "表示",
+      "submitted": "投稿 {date}",
+      "updated": "最終更新 {date}",
+      "copiedEmails": "{count} 件のメアドをコピー",
+      "copyFailed": "コピー失敗 (HTTPS が必要かも)",
+      "noRecipients": "該当者なし",
+      "copyEmails": "メアドをコピー",
+      "downloadCsv": "CSV ダウンロード",
+      "surveyColumns": "(+{count} アンケート列)",
+      "export": "エクスポート:",
+      "countAll": "({visible} 件 / 全 {total} 件)",
+      "save": "保存",
+      "saving": "保存中...",
+      "upload": "アップロード",
+      "uploading": "アップロード中...",
+      "uploadWithProgress": "アップロード中… {progress}%",
+      "saveFailed": "保存に失敗しました",
+      "deleteFailed": "削除に失敗しました",
+      "uploadFailed": "アップロード失敗",
+      "imageType": "PNG / JPEG / WebP / GIF のいずれかを選択してください",
+      "imageTooLarge": "画像サイズは {size}MB 以下にしてください",
+      "saved": "✓ 保存しました"
+    },
+    "dashboard": {
+      "title": "管理ダッシュボード",
+      "pendingProjects": "承認待ちのプロジェクト ({count})",
+      "pendingPosts": "審査待ちの記事 ({count})",
+      "newFeedback": "新規フィードバック ({count})",
+      "events": "イベント ({count})",
+      "pendingEmpty": "承認待ちはありません。",
+      "reviewEmpty": "審査待ちはありません。",
+      "feedbackEmpty": "未対応のフィードバックはありません。",
+      "feedbackDescription": "/help から届いた要望・不具合報告です。",
+      "eventsEmpty": "イベントはありません。"
+    },
+    "about": {
+      "metadataTitle": "JTPAとは編集",
+      "title": "JTPAとは編集",
+      "viewPublic": "/about を表示 →",
+      "description": "/about ページの本文を Markdown で編集します。保存後すぐに公開ページに反映されます。",
+      "titleLabel": "タイトル",
+      "bodyLabel": "本文 (Markdown)"
+    },
+    "feedback": {
+      "metadataTitle": "フィードバック",
+      "title": "フィードバック",
+      "description": "/help から届いた要望・不具合報告の triage 画面です。新しいものから順に並びます。",
+      "filters": {
+        "new": "未対応",
+        "read": "確認済み",
+        "resolved": "対応済み",
+        "archived": "アーカイブ",
+        "all": "すべて"
+      },
+      "empty": "該当するフィードバックはありません。",
+      "authorFallback": "(名前未設定)",
+      "statusActions": {
+        "new": "未対応に戻す",
+        "read": "確認済みにする",
+        "resolved": "対応済みにする",
+        "archived": "アーカイブ"
+      },
+      "updateFailed": "更新に失敗しました",
+      "statusChanged": "{name} が {date} にステータスを変更"
+    },
+    "attendees": {
+      "title": "参加者",
+      "eventLabel": "イベント:",
+      "show": "表示",
+      "empty": "参加者がいません。",
+      "columns": {
+        "name": "名前",
+        "affiliation": "所属",
+        "email": "メール",
+        "role": "役割",
+        "status": "ステータス",
+        "attendance": "出席",
+        "details": "詳細"
+      },
+      "role": {
+        "presenter": "発表者",
+        "attendee": "参加者"
+      },
+      "presenterOnly": "(発表者のみ)",
+      "presentationTitle": "発表タイトル",
+      "presentationAbstract": "発表概要",
+      "exportConfirmed": "確定参加者のみ",
+      "exportAll": "全て (キャンセル待ち・キャンセル含む)",
+      "attendanceFailed": "失敗",
+      "attended": "✓ 出席",
+      "unattended": "未出席"
+    },
+    "events": {
+      "title": "イベント管理",
+      "empty": "イベントはまだありません。",
+      "columns": {
+        "title": "タイトル",
+        "start": "開始",
+        "status": "ステータス",
+        "rsvp": "RSVP"
+      },
+      "newTitle": "イベント新規作成",
+      "editTitle": "イベント編集"
+    },
+    "eventForm": {
+      "title": "タイトル",
+      "slug": "スラッグ (URL)",
+      "slugPlaceholder": "自動生成 (英小文字/数字/ハイフン)",
+      "description": "説明",
+      "startAt": "開始日時",
+      "endAt": "終了日時",
+      "locationType": "形式",
+      "location": {
+        "offline": "オフライン",
+        "online": "オンライン",
+        "hybrid": "ハイブリッド"
+      },
+      "address": "会場住所",
+      "mapUrl": "地図URL",
+      "meetingUrl": "ミーティングURL (Zoom等)",
+      "capacity": "定員 (0=無制限)",
+      "presenterCapacity": "発表者枠",
+      "status": "ステータス",
+      "statusOption": {
+        "draft": "下書き",
+        "published": "公開",
+        "past": "過去",
+        "cancelled": "中止"
+      },
+      "visibility": "公開範囲",
+      "visibilityOption": {
+        "public": "全員 (ログインなしでも閲覧可)",
+        "members_only": "メンバー限定 (要ログイン)"
+      },
+      "cover": "カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)",
+      "coverPreviewAlt": "{title} のカバー画像プレビュー",
+      "coverFallbackTitle": "イベント",
+      "surveyTitle": "アンケート項目",
+      "addSurveyField": "+ 項目を追加",
+      "keyPlaceholder": "key (英数字)",
+      "labelPlaceholder": "表示ラベル",
+      "fieldType": {
+        "text": "テキスト",
+        "textarea": "複数行",
+        "select": "選択肢",
+        "checkbox": "チェックボックス"
+      },
+      "audience": {
+        "all": "全員",
+        "presenter": "発表者のみ"
+      },
+      "optionsPlaceholder": "選択肢 (カンマ区切り)",
+      "required": "必須",
+      "deleteEvent": "イベントを削除",
+      "deleteConfirm": "このイベントを削除しますか？"
+    },
+    "checkIn": {
+      "title": "チェックイン",
+      "rsvpCount": "RSVP数",
+      "attendanceCount": "出席数",
+      "waitlistCount": "ウェイトリスト",
+      "noToken": "まだトークンが発行されていません。下のボタンで生成してください。",
+      "hostError": "QRコードを生成できません: ホスト名を解決できませんでした。",
+      "hostErrorAction": "NEXT_PUBLIC_SITE_URL を設定してください。",
+      "token": "トークン:",
+      "note": "QRコードは当日のみ有効です（開始の4時間前〜終了の6時間後まで）。漏洩した場合は再生成すれば即座に無効化されます。",
+      "attendeesLink": "参加者一覧で出席状況を確認",
+      "regenerateConfirm": "再生成すると現在のQRコードは無効になります。続けますか？",
+      "generating": "生成中...",
+      "regenerate": "トークンを再生成",
+      "generate": "トークンを生成",
+      "failed": "失敗しました"
+    },
+    "cloneEvent": {
+      "confirm": "「{title}」を複製しますか？",
+      "failed": "複製に失敗しました",
+      "cloning": "複製中...",
+      "clone": "複製"
+    },
+    "projects": {
+      "titlePending": "承認待ち ({count})",
+      "titleApproved": "公開中 ({count})",
+      "titleRejected": "却下済み ({count})",
+      "emptyPending": "承認待ちはありません。",
+      "openApp": "アプリを開く",
+      "repository": "リポジトリ",
+      "notePlaceholder": "コメント (却下時に投稿者へ送信)",
+      "rejectWithoutNoteConfirm": "コメントなしで却下しますか？",
+      "failed": "失敗しました",
+      "thumbnailAlt": "サムネイル",
+      "screenshotAlt": "スクリーンショット {number}"
+    },
+    "posts": {
+      "metadataTitle": "ブログ管理",
+      "titlePending": "審査待ち ({count})",
+      "titlePublished": "公開中 ({count})",
+      "titleDrafts": "下書き ({count})",
+      "titleRejected": "却下 ({count})",
+      "emptyPending": "審査待ちはありません。",
+      "emptyPublished": "公開中の記事はありません。",
+      "submitted": "投稿 {date}",
+      "updated": "最終更新 {date}",
+      "coverAlt": "{title} のカバー画像"
+    },
+    "guides": {
+      "title": "ガイド管理",
+      "newTitle": "ガイド新規作成",
+      "editTitle": "ガイド編集",
+      "titlePending": "審査待ち ({count})",
+      "pendingDescription": "コミュニティ投稿の審査キュー。承認すると初回投稿者には <role>contributor</role> 権限が自動付与されます (二度目以降は自走可)。",
+      "emptyPending": "審査待ちはありません。",
+      "titlePublished": "公開中 ({count})",
+      "emptyPublished": "公開中のガイドはありません。",
+      "titleDrafts": "下書き ({count})",
+      "titleRejected": "却下 ({count})",
+      "columns": {
+        "title": "タイトル",
+        "author": "投稿者",
+        "tags": "タグ",
+        "order": "順",
+        "updated": "更新"
+      },
+      "publishWithContributor": "公開 (+ contributor 付与)"
+    },
+    "users": {
+      "title": "ユーザー管理",
+      "count": "{count} 名",
+      "roleChangeNotice": "ロールの変更は、対象ユーザーが一度サインアウトして再ログインするまで有効になりません。",
+      "truncatedNotice": "ユーザー数が表示上限 (5000) を超えています。検索しても見つからない場合は別途追加実装が必要です。",
+      "searchAria": "ユーザーをメールアドレスまたは名前で検索",
+      "searchPlaceholder": "メールアドレス or 名前で絞り込み",
+      "empty": "該当するユーザーがいません。",
+      "columns": {
+        "user": "ユーザー",
+        "role": "ロール",
+        "lastLogin": "最終ログイン",
+        "actions": "操作"
+      },
+      "nameUnset": "(名前未設定)",
+      "you": "あなた",
+      "none": "なし",
+      "contributorHint": "自分のガイドを審査なしで公開できる",
+      "contributorGrant": "contributor 付与",
+      "contributorRevoke": "contributor 剥奪",
+      "editorGrant": "editor 付与",
+      "editorRevoke": "editor 剥奪",
+      "adminGrant": "admin 付与",
+      "adminRevoke": "admin 剥奪",
+      "cannotRevokeSelf": "自分自身の admin は剥奪できません",
+      "cannotRevokeLast": "最後の admin は剥奪できません",
+      "visibleCount": "表示中: {visible} / 全 {total} 名",
+      "roleChangeFailed": "ロール変更に失敗しました",
+      "exportTitle": "メール一斉配信用エクスポート:",
+      "exportCount": "オプトイン {recipients} 件 / 全 {total} 名",
+      "exportHelp": "プロフィールでメール通知をオプトアウトしたユーザーは含まれません。外部メール配信サービスにそのまま投入してください。"
+    },
+    "errors": {
+      "title": "エラーログ",
+      "description": "サーバ側で発生したエラーの記録です。エラー画面でユーザーに表示される「リクエストID」が各行の requestId と一致するので、報告された ID から原因を辿れます。最新 {count} 件。",
+      "empty": "エラーログはまだありません。",
+      "noMessage": "(メッセージなし)",
+      "stackTrace": "スタックトレース"
+    },
+    "help": {
+      "metadataTitle": "管理者ヘルプ",
+      "title": "管理者ヘルプ",
+      "intro": "JTPAサイトの管理機能の使い方まとめです。技術的な詳細 (Firestore のコレクション構造、デプロイ手順) はリポジトリの<docsLink>docs/</docsLink>を参照してください。",
+      "toc": "目次",
+      "sections": {
+        "roles": {
+          "title": "権限の仕組み",
+          "paragraphs": [
+            "ログインユーザーには <code>admin</code> / <code>editor</code> / <code>contributor</code> のいずれか (または複数の組み合わせ) が付与されます。これらは Firebase Auth の Custom Claim として保存され、ログインしなおさないと反映されません。"
+          ],
+          "table": {
+            "headers": [
+              "権限",
+              "できること"
+            ],
+            "rows": [
+              {
+                "cells": [
+                  "admin",
+                  "全機能 (イベント・プロジェクト・記事・参加者・ガイド・About・ユーザー権限管理)"
+                ]
+              },
+              {
+                "cells": [
+                  "editor",
+                  "他人のものを含む全ガイドの作成・編集・公開・削除 (キュレーター職)"
+                ]
+              },
+              {
+                "cells": [
+                  "contributor",
+                  "自分のガイドを審査なしで公開・編集・削除 (信頼される投稿者)"
+                ]
+              },
+              {
+                "cells": [
+                  "(なし)",
+                  "一般メンバー: RSVP・投稿 (ガイドは初回 admin 審査)・コメント・いいね"
+                ]
+              }
+            ]
+          },
+          "callout": "editor / contributor は admin の部分集合です。editor が <code>/admin</code> 配下の管理画面を直接開いた場合は <code>/admin/guides</code> にリダイレクトされます (例外: ガイド管理画面とこのヘルプページのみ editor も閲覧可)。contributor 権限は <code>/admin</code> へのアクセスを与えません。あくまで「自分のガイドの自己公開」だけです。"
+        },
+        "events": {
+          "title": "イベント運営",
+          "steps": [
+            {
+              "title": "下書き作成",
+              "href": "/admin/events/new",
+              "linkLabel": "/admin/events/new",
+              "body": "で新規作成、または<adminEventsLink>/admin/events</adminEventsLink>の既存イベント行から「複製」をクリックすると過去イベントを雛形に新しい下書きを作れます (日付は今日+7日、サブコレクションの RSVP/発表資料はコピーされません)。"
+            },
+            {
+              "title": "アンケート項目を設定",
+              "body": "任意で <code>key + label + 種類 + 対象</code> のペアを追加。対象は「全員」または「発表者のみ」を選べます。発表者のみの設問は発表者として RSVP したユーザーにだけ表示されます。"
+            },
+            {
+              "title": "公開設定",
+              "body": "公開 / メンバー限定を選択。メンバー限定にすると未ログインの訪問者からは <code>/events</code> 一覧に表示されなくなります。"
+            },
+            {
+              "title": "ステータスを「公開」に",
+              "body": "状態を <code>draft</code> から <code>published</code> に切り替えると公開イベント一覧に出ます。"
+            },
+            {
+              "title": "発表者のアップロード受付",
+              "body": "発表者が <code>/events/[slug]</code> の発表者セクションからスライドや動画リンクを登録します。発表者は1イベントにつき複数件登録できます。"
+            },
+            {
+              "title": "イベント後の整理",
+              "body": "イベント終了日時を過ぎると自動的に「過去」扱いになります (RSVP フォームは非表示、<code>/events</code> の「過去のイベント」へ移動)。管理画面の表示も「過去」にしたい場合はステータスを <code>past</code> に変更してください。"
+            }
+          ]
+        },
+        "attendees": {
+          "title": "参加者の確認とCSV出力",
+          "paragraphs": [
+            "<adminAttendeesQueryLink>/admin/attendees?eventId=...</adminAttendeesQueryLink> (またはイベント選択ドロップダウンから) で、参加者一覧とアンケート回答を確認できます。"
+          ],
+          "items": [
+            "<strong>メアドをコピー</strong>: 確定参加者のメールアドレスをカンマ区切りでクリップボードに。Gmail の BCC 欄に貼り付けると個別宛先に展開されます。",
+            "<strong>CSV ダウンロード</strong>: UTF-8 BOM 付き CSV。Excel でそのまま開けます。列は <code>displayName, affiliation, email, role, status, presentationTitle, presentationAbstract, survey_key...</code>",
+            "<strong>フィルタ</strong>: デフォルトは「確定参加者のみ」。キャンセル / ウェイトリストも見たいときは「全て」に。",
+            "<strong>詳細</strong>: 各行の「詳細」を開くとアンケート回答を確認できます。"
+          ],
+          "callout": "~500人を超える一斉メールは Gmail Web の上限に引っかかります。JTPA の既存 Google Group (約2000人) を使うか、issue #15 で予定している Trigger Email + Cloud Functions の実装を待ってください。"
+        },
+        "projects": {
+          "title": "ショーケース承認",
+          "steps": [
+            {
+              "title": "承認待ち一覧",
+              "href": "/admin/projects",
+              "linkLabel": "/admin/projects",
+              "body": "に未承認のプロジェクトが上に表示されます。"
+            },
+            {
+              "title": "内容確認",
+              "body": "「アプリを開く」リンクで実物を確認。投稿者・タグ・スクリーンショットも見られます。"
+            },
+            {
+              "title": "承認 または 却下",
+              "body": "必要なら却下コメントを記入。承認すると即座に<showcaseLink>/showcase</showcaseLink>に掲載されます。"
+            }
+          ],
+          "note": "投稿者は <code>/my/projects</code> から自分の投稿を編集できます。編集すると <code>status</code> が自動的に <code>pending</code> に戻り、再審査が必要になります。"
+        },
+        "posts": {
+          "title": "ブログ記事の審査",
+          "paragraphs": [
+            "<adminPostsLink>/admin/posts</adminPostsLink> の構成: 審査待ち / 公開中 / 下書き / 却下 の4セクション。"
+          ],
+          "items": [
+            "カバー画像プレビュー・抜粋・タグが表示されます。",
+            "「プレビュー」で公開と同じ詳細ページを確認、「内容を編集」で誤字脱字を管理者が直接修正可能。",
+            "承認すると即時公開、<code>publishedAt</code> はこのときだけセット (再公開時は維持)。",
+            "却下時のコメントは投稿者に通知されます (Trigger Email 拡張が有効化されたら送信、現状はキューに溜まるだけ)。"
+          ]
+        },
+        "guides": {
+          "title": "ガイドの審査と contributor 自動付与",
+          "paragraphs": [
+            "<adminGuidesLink>/admin/guides</adminGuidesLink> で AI ツールの解説などのガイドを管理します。ここは<strong>editor 権限のユーザーも編集可能</strong>な唯一の管理画面です。",
+            "コミュニティ投稿のガイドは<strong>審査待ち (pending)</strong>として上部に並びます。各カードからプレビュー・編集・コメント記入ができ、「公開」または「却下」ボタンで決定します。"
+          ],
+          "steps": [
+            {
+              "title": "プレビュー / 内容を編集",
+              "body": "投稿者が書いた内容を確認。typo 修正が必要なら admin 側で先に編集してから公開して構いません (editor 権限のユーザーも同じ動線で編集可)。"
+            },
+            {
+              "title": "任意でコメント",
+              "body": "却下する場合のフィードバックを記入。承認時にはコメントはメールに含まれません。"
+            },
+            {
+              "title": "公開 (+ contributor 付与)",
+              "body": "ボタンを押すとガイドが公開され、投稿者には <code>contributor: true</code> のカスタムクレームが自動付与されます (二度目以降は審査不要に)。投稿者は一度サインアウト -> 再ログインで権限が有効になります。"
+            },
+            {
+              "title": "却下",
+              "body": "コメント付きで却下できます。投稿者は <code>/my/guides</code> で却下理由を確認し、内容を修正して再投稿できます。"
+            }
+          ],
+          "items": [
+            "<code>order</code> フィールドで <code>/guide</code> での表示順を制御 (小さい順)。admin/editor のみが触れる項目です。",
+            "下書き (<code>draft</code>) や公開済み (<code>published</code>) も同じ管理画面から編集できます。",
+            "Markdown は GFM (表・コードブロック・タスクリスト) 対応、コードはシンタックスハイライトされます。",
+            "contributor を悪用するユーザーが現れた場合は<adminUsersLink>/admin/users</adminUsersLink>の「contributor 剥奪」で降格できます。既存の公開ガイドはそのまま残ります。"
+          ]
+        },
+        "about": {
+          "title": "「JTPAとは」の編集",
+          "paragraphs": [
+            "<adminAboutLink>/admin/about</adminAboutLink> で <code>/about</code> ページのタイトルと本文 (Markdown) を編集できます。まだ保存していないときはコード内のデフォルト文言が表示されます。"
+          ],
+          "note": "見出しは自動的に1段階下げて (H1 -> H2 ...) 出力されるので、本文の <code>#</code> はそのまま使って大丈夫です。"
+        },
+        "users": {
+          "title": "ユーザーと権限付与",
+          "paragraphs": [
+            "<adminUsersLink>/admin/users</adminUsersLink> で全ユーザーの一覧と最終ログイン日時、現在の権限を確認できます。"
+          ],
+          "items": [
+            "editor / admin の付与・剥奪が行えます。",
+            "自分自身からの admin 剥奪、最後の admin の剥奪は安全のため拒否されます。",
+            "権限変更はユーザーが<strong>再ログインしてから</strong>反映されます (セッションCookieに乗ってからクライアントに伝播するため)。",
+            "一度もログインしていないユーザーは一覧に出ません。事前付与はできません。"
+          ],
+          "callout": "UI が動かないなど緊急時の CLI フォールバックは<docsAdminLink>docs/admin.md</docsAdminLink>の「Granting roles (CLI fallback)」セクションを参照。"
+        },
+        "deploy": {
+          "title": "デプロイ確認",
+          "paragraphs": [
+            "<code>main</code> ブランチへの push で Firebase App Hosting が自動的にビルド&デプロイします (約2-3分)。"
+          ],
+          "items": [
+            "進行状況: <rolloutsLink>App Hosting Rollouts</rolloutsLink>",
+            "エラーログ (本番): <cloudLogsLink>Cloud Run Logs</cloudLogsLink>",
+            "本番でエラーが出たら直前のリリースに「Roll back」可能 (Cloud Run の旧イメージが残っているため即時)。"
+          ]
+        }
+      }
+    }
+  },
+  "ActionErrors": {
+    "input": "入力エラー: {issues}",
+    "fileOrUrlRequired": "ファイル または 外部URL のどちらかを指定してください",
+    "presenterOnly": "発表者として登録されていません",
+    "presentationNotFound": "発表資料が見つかりません",
+    "presentationForbidden": "この発表資料を編集する権限がありません",
+    "slugTaken": "スラッグ \"{slug}\" は既に使用されています",
+    "eventNotFoundDeleted": "イベントが見つかりません。削除された可能性があります。",
+    "eventCancelledRsvp": "このイベントは中止されたため、参加登録できません。",
+    "cloneSourceEventNotFound": "複製元のイベントが見つかりません",
+    "invalidDraftId": "不正な下書きIDが指定されました",
+    "draftIdTaken": "下書きIDが既に使われています",
+    "publishedOnlyLike": "公開済みのコンテンツのみにいいねできます",
+    "commentPublishedOnly": "コメントは公開済みのコンテンツにのみ投稿できます",
+    "replyCommentNotFound": "返信先のコメントが見つかりません",
+    "qaInvalidId": "不正なIDが指定されました",
+    "qaSaveRetry": "投稿の保存に失敗しました。もう一度やり直してください。",
+    "pollMinOptions": "選択肢は{count}つ以上必要です",
+    "pollMaxOptions": "選択肢は{count}つまでです",
+    "pollDedupeMinOptions": "重複を除いた選択肢が{count}つ未満です",
+    "pollPublishedOnly": "公開中の投票のみ受け付けています",
+    "pollInvalidOptions": "不正な選択肢が含まれています",
+    "feedbackArchiveAdminOnly": "アーカイブできるのは admin だけです",
+    "roleUidRequired": "uid が指定されていません",
+    "roleInvalid": "不正なロールが指定されました: {role}",
+    "roleGrantBoolean": "grant は boolean である必要があります",
+    "roleSelfAdminRevoke": "自分自身の admin ロールは剥奪できません",
+    "roleLastAdminRevoke": "最後の admin ロールは剥奪できません。先に別ユーザーへ admin を付与してください。",
+    "roleConcurrentAdminRevoke": "別の管理者が同時に admin を剥奪したため、安全のため取り消しました。もう一度やり直してください。",
+    "userLinkMax": "リンクは{count}文字以内で入力してください",
+    "userUrlInvalid": "URLの形式が正しくありません",
+    "userUrlProtocol": "http:// または https:// で始まるURLを入力してください",
+    "userAffiliationMax": "所属は{count}文字以内で入力してください",
+    "userBioMax": "紹介文は{count}文字以内で入力してください",
+    "usernameEmpty": "ユーザーネームを入力してください",
+    "usernameHelp": "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。区切り文字は連続不可。",
+    "usernameFormatInvalid": "ユーザーネームの形式が正しくありません",
+    "usernameValidationFailed": "ユーザーネームの検証に失敗しました",
+    "usernameTaken": "そのユーザーネームは既に使われています。別の名前を入力してください。",
+    "usernameReserved": "このユーザーネームは予約済みです",
+    "profileMissingRelogin": "プロフィールが見つかりません。一度ログアウトして再ログインしてください。",
+    "saveRetry": "保存に失敗しました。時間を置いて再試行してください。",
+    "avatarInvalidInput": "アイコンの保存に失敗しました（不正な入力）",
+    "avatarInvalidPath": "アイコンの保存に失敗しました（不正なパス）",
+    "avatarConfigError": "アイコンの保存に失敗しました（システム設定エラー）",
+    "avatarInvalidUrl": "アイコンの保存に失敗しました（不正なURL）",
+    "avatarSaveRetry": "アイコンの保存に失敗しました。時間を置いて再試行してください。",
+    "avatarDeleteRetry": "アイコンの削除に失敗しました。時間を置いて再試行してください。",
+    "surveyMissingKey": "アンケート項目{index}: key（英数字）を入力してください",
+    "surveyDuplicateKey": "アンケート項目{index}: key「{key}」が重複しています。別の key を指定してください",
+    "surveyMissingLabel": "アンケート項目{index}: 表示ラベルを入力してください",
+    "surveyMissingOption": "アンケート項目{index}: 選択肢を1つ以上入力してください",
+    "guideImageMissingId": "ガイドIDが取得できませんでした",
+    "qaImageMissingId": "Q&A IDが取得できませんでした",
+    "userMissingId": "ユーザーIDが取得できませんでした",
+    "imageType": "画像形式は {types} のみ対応しています",
+    "imageTooLarge": "画像サイズは {size}MB 以下にしてください",
+    "copySuffix": "(コピー)"
+  },
+  "Mail": {
+    "noteBlock": "\n\nコメント: {note}",
+    "adminNewProjectSubject": "[JTPA] 新規プロジェクト投稿: {title}",
+    "adminNewProjectText": "{ownerName} ({ownerEmail}) が新しいプロジェクトを投稿しました。\n\nタイトル: {title}\n\n承認: /admin/projects/pending",
+    "projectApprovedSubject": "[JTPA] プロジェクトが承認されました: {title}",
+    "projectRejectedSubject": "[JTPA] プロジェクトのレビュー結果について: {title}",
+    "projectApprovedText": "プロジェクト「{title}」が承認され、ショーケースに掲載されました。",
+    "projectRejectedText": "プロジェクト「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
+    "adminNewPostSubject": "[JTPA] 新規ブログ記事の審査依頼: {title}",
+    "adminNewPostText": "{authorName} ({authorEmail}) が新しい記事を投稿しました。\n\nタイトル: {title}\n\n審査: /admin/posts",
+    "postPublishedSubject": "[JTPA] ブログ記事が公開されました: {title}",
+    "postRejectedSubject": "[JTPA] ブログ記事のレビュー結果について: {title}",
+    "postPublishedText": "記事「{title}」が公開されました。",
+    "postRejectedText": "記事「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
+    "adminNewGuideSubject": "[JTPA] 新規ガイドの審査依頼: {title}",
+    "adminNewGuideText": "{authorName} ({authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: {title}\n\n審査: /admin/guides",
+    "guidePublishedSubject": "[JTPA] ガイドが公開されました: {title}",
+    "guideRejectedSubject": "[JTPA] ガイドのレビュー結果について: {title}",
+    "guidePublishedText": "ガイド「{title}」が公開されました。",
+    "guidePromotedAppend": "\n\nおめでとうございます！コミュニティへの貢献を確認できたので、今後はガイドを審査なしで直接公開できるようになりました (contributor 権限を付与しました)。\n\n権限の反映には一度サインアウトして再ログインが必要です。",
+    "guideRejectedText": "ガイド「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
+    "adminNewFeedbackSubject": "[JTPA] 新規フィードバックが届きました",
+    "adminNewFeedbackText": "{authorName} ({authorEmail}) からフィードバックが届きました。\n\n{preview}\n\ntriage: {triageUrl}",
+    "waitlistSubject": "[JTPA] 繰り上げ参加のお知らせ: {eventTitle}",
+    "presenterRoleSuffix": "（発表者枠）",
+    "waitlistText": "{displayName} さん\n\nイベント「{eventTitle}」のキャンセル待ちから繰り上げで参加が確定しました。{roleSuffix}\n\n詳細はこちら: {eventUrl}\n\n参加できなくなった場合は、イベントページから登録をキャンセルしてください。"
   }
 }

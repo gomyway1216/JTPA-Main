@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /**
- * Inline "✓ 保存しました" toast for forms whose save action stays on the
+ * Inline saved-state toast for forms whose save action stays on the
  * same page (no redirect after save). Hides itself after a few seconds
  * so the form doesn't keep showing a stale confirmation. The caller
  * passes a timestamp (`Date.now()` on success) — re-using the same
@@ -17,11 +17,11 @@ import { useEffect, useState } from "react";
  */
 export function SaveFlash({
   savedAt,
-  message = "✓ 保存しました",
+  message,
   hideAfterMs = 3000,
 }: {
   savedAt: number | null;
-  message?: string;
+  message: string;
   hideAfterMs?: number;
 }) {
   // Track which savedAt value we've already let expire. Visibility is

@@ -7,6 +7,7 @@ import * as z from "zod";
 import { requireEditor, requireUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import {
   enqueueAdminNewFeedbackNotification,
 } from "@/lib/notifications";
@@ -28,16 +29,13 @@ const StatusSchema = z.object({
 
 export type SetFeedbackStatusInput = z.input<typeof StatusSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+async function readableParse<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): Promise<z.infer<T>> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 /**
@@ -51,7 +49,7 @@ export async function submitFeedback(
   input: SubmitFeedbackInput,
 ): Promise<{ id: string }> {
   const user = await requireUser();
-  const parsed = readableParse(SubmitSchema, input);
+  const parsed = await readableParse(SubmitSchema, input);
 
   // Pull the latest username/displayName from the profile doc rather
   // than trust the session — the session is cached and may not reflect
@@ -103,15 +101,15 @@ export async function setFeedbackStatus(
   input: SetFeedbackStatusInput,
 ): Promise<void> {
   const actor = await requireEditor();
-  const parsed = readableParse(StatusSchema, input);
+  const parsed = await readableParse(StatusSchema, input);
 
   // `archived` is the "hide from default triage" terminal status —
   // gated to admins only so editors can't unilaterally remove entries
-  // from the queue. Matches the UI (the アーカイブ button only renders
+  // from the queue. Matches the UI (the archive button only renders
   // for admins) and the Firestore rule. Per PR #88 Gemini security
   // review — the UI guard alone isn't load-bearing.
   if (parsed.status === "archived" && !actor.isAdmin) {
-    throw new Error("アーカイブできるのは admin だけです");
+    throw new Error(await actionError("feedbackArchiveAdminOnly"));
   }
 
   const ref = adminDb().collection("feedback").doc(parsed.feedbackId);

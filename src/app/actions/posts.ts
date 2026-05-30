@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { PostDoc, PostStatus, ProjectAsset } from "@/lib/types";
 
@@ -35,15 +36,12 @@ const PostInputSchema = z.object({
 
 export type PostFormInput = z.input<typeof PostInputSchema>;
 
-function parsePostInput(
+async function parsePostInput(
   input: PostFormInput,
-): z.infer<typeof PostInputSchema> {
+): Promise<z.infer<typeof PostInputSchema>> {
   const result = PostInputSchema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -88,7 +86,7 @@ function orphanPaths(
 
 export async function submitPost(input: PostFormInput): Promise<void> {
   const user = await requireUser();
-  const parsed = parsePostInput(input);
+  const parsed = await parsePostInput(input);
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
@@ -124,7 +122,7 @@ export async function submitPost(input: PostFormInput): Promise<void> {
   revalidatePath("/blog");
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
-  redirect("/my/posts");
+  return redirectToLocalizedPath("/my/posts");
 }
 
 // ---------- update (owner) ----------
@@ -134,7 +132,7 @@ export async function updateMyPost(
   input: PostFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = parsePostInput(input);
+  const parsed = await parsePostInput(input);
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");
@@ -175,7 +173,7 @@ export async function updateMyPost(
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
-  redirect("/my/posts");
+  return redirectToLocalizedPath("/my/posts");
 }
 
 // ---------- delete (owner) ----------
@@ -304,7 +302,7 @@ export async function decidePost(
   revalidatePath("/admin/posts");
 }
 
-// Not wired into the UI yet — kept ready for the published-list "アーカイブ"
+// Not wired into the UI yet — kept ready for the published-list archive
 // button (planned follow-up) so older posts can be retired without losing
 // the doc (vs deleteMyPost which removes it entirely).
 export async function archivePost(postId: string): Promise<void> {

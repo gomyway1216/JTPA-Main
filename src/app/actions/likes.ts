@@ -11,6 +11,7 @@ import {
   parentRoutePrefix,
 } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
   GuideDoc,
   PollDoc,
@@ -38,16 +39,13 @@ export interface LikeResult {
   count: number;
 }
 
-function readableParse<T extends z.ZodTypeAny>(
+async function readableParse<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): Promise<z.infer<T>> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 /**
@@ -63,7 +61,7 @@ export async function toggleLikeRecord(
   input: LikeRecordInput,
 ): Promise<LikeResult> {
   const user = await requireUser();
-  const parsed = readableParse(RecordSchema, input);
+  const parsed = await readableParse(RecordSchema, input);
 
   const parentRef = adminDb()
     .collection(parentCollection(parsed.parentType))
@@ -81,7 +79,7 @@ export async function toggleLikeRecord(
     // gate; otherwise drafts/rejected items could accrue likes that
     // would surface if they're later published.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      throw new Error("公開済みのコンテンツのみにいいねできます");
+      throw new Error(await actionError("publishedOnlyLike"));
     }
     const wasLiked = likeSnap.exists;
     // Compute the new count in memory and write it directly. The original
@@ -118,7 +116,7 @@ export async function toggleLikeComment(
   input: LikeCommentInput,
 ): Promise<LikeResult> {
   const user = await requireUser();
-  const parsed = readableParse(CommentSchema, input);
+  const parsed = await readableParse(CommentSchema, input);
 
   const parentRef = adminDb()
     .collection(parentCollection(parsed.parentType))
@@ -141,7 +139,7 @@ export async function toggleLikeComment(
     // likes are left in place — flipping the parent's status back to
     // published shouldn't lose them.
     if (!isParentPubliclyVisible(parsed.parentType, parent)) {
-      throw new Error("公開済みのコンテンツのみにいいねできます");
+      throw new Error(await actionError("publishedOnlyLike"));
     }
     const wasLiked = likeSnap.exists;
     // In-memory compute for the same reason as toggleLikeRecord — keeps

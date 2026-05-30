@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { unstable_rethrow } from "next/navigation";
 import {
   deleteObject,
@@ -93,17 +94,20 @@ export function EventForm({
   // visibility-timer logic.
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("Admin.eventForm");
+  const common = useTranslations("Admin.common");
+  const actionErrors = useTranslations("ActionErrors");
 
   function uploadCover(
     file: File,
     onProgress: (pct: number) => void,
   ): Promise<ProjectAsset> {
     if (file.size > MAX_IMAGE_BYTES) {
-      return Promise.reject(new Error("画像サイズは 10MB 以下にしてください"));
+      return Promise.reject(new Error(common("imageTooLarge", { size: 10 })));
     }
     if (!(ALLOWED_MIME as readonly string[]).includes(file.type)) {
       return Promise.reject(
-        new Error("PNG / JPEG / WebP / GIF のいずれかを選択してください"),
+        new Error(common("imageType")),
       );
     }
     const safeName = file.name.replace(/[^\p{L}\p{N}._-]+/gu, "_");
@@ -166,7 +170,7 @@ export function EventForm({
       const asset = await uploadCover(file, setCoverProgress);
       setCoverImage(asset);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロード失敗");
+      setError(err instanceof Error ? err.message : common("uploadFailed"));
     } finally {
       setCoverProgress(null);
       e.target.value = "";
@@ -184,7 +188,13 @@ export function EventForm({
     // render" error in production — leaving the admin unable to tell why
     // the save failed (issue #102). Surface a precise inline message and
     // never send the bad payload.
-    const surveyError = validateSurveyFields(fields);
+    const surveyError = validateSurveyFields(fields, {
+      missingKey: (index) => actionErrors("surveyMissingKey", { index }),
+      duplicateKey: (index, key) =>
+        actionErrors("surveyDuplicateKey", { index, key }),
+      missingLabel: (index) => actionErrors("surveyMissingLabel", { index }),
+      missingOption: (index) => actionErrors("surveyMissingOption", { index }),
+    });
     if (surveyError) {
       setError(surveyError);
       return;
@@ -222,7 +232,7 @@ export function EventForm({
         }
         // Only an actual update returns here with `res.ok` (create redirects
         // via the Server Action, so it never reaches this line). Gating on
-        // `res?.ok` also avoids a false "✓ 保存しました" if `res` is null —
+        // `res?.ok` also avoids a false saved state if `res` is null —
         // i.e. an edit somehow rendered without an `event`. Per PR #116
         // Copilot review.
         if (res?.ok) setSavedAt(Date.now());
@@ -234,14 +244,14 @@ export function EventForm({
         // and returns silently for anything else, which we then
         // surface as a real save failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "保存に失敗しました");
+        setError(err instanceof Error ? err.message : common("saveFailed"));
       }
     });
   }
 
   async function handleDelete() {
     if (!event) return;
-    if (!confirm("このイベントを削除しますか？")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     startTransition(async () => {
       try {
         // deleteEvent redirects to /admin/events on success, so there's no
@@ -252,7 +262,7 @@ export function EventForm({
         // the navigation actually happens (mirrors handleSubmit). Anything
         // else is a real delete failure.
         unstable_rethrow(err);
-        setError(err instanceof Error ? err.message : "削除に失敗しました");
+        setError(err instanceof Error ? err.message : common("deleteFailed"));
       }
     });
   }
@@ -289,7 +299,7 @@ export function EventForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label="タイトル" required htmlFor="event-title">
+      <Field label={t("title")} required htmlFor="event-title">
         <input
           id="event-title"
           type="text"
@@ -299,17 +309,17 @@ export function EventForm({
           className={inputClass}
         />
       </Field>
-      <Field label="スラッグ (URL)" htmlFor="event-slug">
+      <Field label={t("slug")} htmlFor="event-slug">
         <input
           id="event-slug"
           type="text"
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
-          placeholder="自動生成 (英小文字/数字/ハイフン)"
+          placeholder={t("slugPlaceholder")}
           className={inputClass}
         />
       </Field>
-      <Field label="説明" required htmlFor="event-description">
+      <Field label={t("description")} required htmlFor="event-description">
         <textarea
           id="event-description"
           required
@@ -320,7 +330,7 @@ export function EventForm({
         />
       </Field>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="開始日時" required htmlFor="event-start">
+        <Field label={t("startAt")} required htmlFor="event-start">
           <input
             id="event-start"
             type="datetime-local"
@@ -330,7 +340,7 @@ export function EventForm({
             className={inputClass}
           />
         </Field>
-        <Field label="終了日時" required htmlFor="event-end">
+        <Field label={t("endAt")} required htmlFor="event-end">
           <input
             id="event-end"
             type="datetime-local"
@@ -341,21 +351,21 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="形式" htmlFor="event-location-type">
+      <Field label={t("locationType")} htmlFor="event-location-type">
         <select
           id="event-location-type"
           value={locationType}
           onChange={(e) => setLocationType(e.target.value as EventFormInput["locationType"])}
           className={inputClass}
         >
-          <option value="offline">オフライン</option>
-          <option value="online">オンライン</option>
-          <option value="hybrid">ハイブリッド</option>
+          <option value="offline">{t("location.offline")}</option>
+          <option value="online">{t("location.online")}</option>
+          <option value="hybrid">{t("location.hybrid")}</option>
         </select>
       </Field>
       {(locationType === "offline" || locationType === "hybrid") && (
         <>
-          <Field label="会場住所" htmlFor="event-address">
+          <Field label={t("address")} htmlFor="event-address">
             <input
               id="event-address"
               type="text"
@@ -364,7 +374,7 @@ export function EventForm({
               className={inputClass}
             />
           </Field>
-          <Field label="地図URL" htmlFor="event-map-url">
+          <Field label={t("mapUrl")} htmlFor="event-map-url">
             <input
               id="event-map-url"
               type="url"
@@ -376,7 +386,7 @@ export function EventForm({
         </>
       )}
       {(locationType === "online" || locationType === "hybrid") && (
-        <Field label="ミーティングURL (Zoom等)" htmlFor="event-meeting-url">
+        <Field label={t("meetingUrl")} htmlFor="event-meeting-url">
           <input
             id="event-meeting-url"
             type="url"
@@ -387,7 +397,7 @@ export function EventForm({
         </Field>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Field label="定員 (0=無制限)" htmlFor="event-capacity">
+        <Field label={t("capacity")} htmlFor="event-capacity">
           <input
             id="event-capacity"
             type="number"
@@ -397,7 +407,7 @@ export function EventForm({
             className={inputClass}
           />
         </Field>
-        <Field label="発表者枠" htmlFor="event-presenter-capacity">
+        <Field label={t("presenterCapacity")} htmlFor="event-presenter-capacity">
           <input
             id="event-presenter-capacity"
             type="number"
@@ -408,20 +418,20 @@ export function EventForm({
           />
         </Field>
       </div>
-      <Field label="ステータス" htmlFor="event-status">
+      <Field label={t("status")} htmlFor="event-status">
         <select
           id="event-status"
           value={status}
           onChange={(e) => setStatus(e.target.value as EventFormInput["status"])}
           className={inputClass}
         >
-          <option value="draft">下書き</option>
-          <option value="published">公開</option>
-          <option value="past">過去</option>
-          <option value="cancelled">中止</option>
+          <option value="draft">{t("statusOption.draft")}</option>
+          <option value="published">{t("statusOption.published")}</option>
+          <option value="past">{t("statusOption.past")}</option>
+          <option value="cancelled">{t("statusOption.cancelled")}</option>
         </select>
       </Field>
-      <Field label="公開範囲" htmlFor="event-visibility">
+      <Field label={t("visibility")} htmlFor="event-visibility">
         <select
           id="event-visibility"
           value={visibility}
@@ -432,19 +442,21 @@ export function EventForm({
           }
           className={inputClass}
         >
-          <option value="public">全員 (ログインなしでも閲覧可)</option>
-          <option value="members_only">メンバー限定 (要ログイン)</option>
+          <option value="public">{t("visibilityOption.public")}</option>
+          <option value="members_only">{t("visibilityOption.members_only")}</option>
         </select>
       </Field>
 
-      <Field label="カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)">
+      <Field label={t("cover")}>
         <div className="space-y-2">
           {coverImage && (
             <div className="flex items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={coverImage.url}
-                alt={`${title || "イベント"} のカバー画像プレビュー`}
+                alt={t("coverPreviewAlt", {
+                  title: title || t("coverFallbackTitle"),
+                })}
                 className="h-24 w-40 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
@@ -460,7 +472,7 @@ export function EventForm({
                 }}
                 className="text-xs text-red-600 hover:underline"
               >
-                削除
+                {common("delete")}
               </button>
             </div>
           )}
@@ -473,7 +485,9 @@ export function EventForm({
           />
           {coverProgress !== null && (
             <p className="text-xs text-zinc-500">
-              アップロード中… {coverProgress.toFixed(0)}%
+              {common("uploadWithProgress", {
+                progress: coverProgress.toFixed(0),
+              })}
             </p>
           )}
         </div>
@@ -481,17 +495,17 @@ export function EventForm({
 
       <div className="space-y-3 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold">アンケート項目</h3>
+          <h3 className="font-semibold">{t("surveyTitle")}</h3>
           <button
             type="button"
             onClick={addField}
             className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
           >
-            + 項目を追加
+            {t("addSurveyField")}
           </button>
         </div>
         {fields.length === 0 ? (
-          <p className="text-sm text-zinc-500">なし</p>
+          <p className="text-sm text-zinc-500">{common("none")}</p>
         ) : (
           <ul className="space-y-3">
             {fields.map((f, i) => (
@@ -499,14 +513,14 @@ export function EventForm({
                 <div className="grid grid-cols-2 gap-2">
                   <input
                     type="text"
-                    placeholder="key (英数字)"
+                    placeholder={t("keyPlaceholder")}
                     value={f.key}
                     onChange={(e) => updateField(i, { key: e.target.value })}
                     className={inputClass}
                   />
                   <input
                     type="text"
-                    placeholder="表示ラベル"
+                    placeholder={t("labelPlaceholder")}
                     value={f.label}
                     onChange={(e) => updateField(i, { label: e.target.value })}
                     className={inputClass}
@@ -520,10 +534,10 @@ export function EventForm({
                     }
                     className={inputClass}
                   >
-                    <option value="text">テキスト</option>
-                    <option value="textarea">複数行</option>
-                    <option value="select">選択肢</option>
-                    <option value="checkbox">チェックボックス</option>
+                    <option value="text">{t("fieldType.text")}</option>
+                    <option value="textarea">{t("fieldType.textarea")}</option>
+                    <option value="select">{t("fieldType.select")}</option>
+                    <option value="checkbox">{t("fieldType.checkbox")}</option>
                   </select>
                   <select
                     value={f.audience}
@@ -534,14 +548,14 @@ export function EventForm({
                     }
                     className={inputClass}
                   >
-                    <option value="all">全員</option>
-                    <option value="presenter">発表者のみ</option>
+                    <option value="all">{t("audience.all")}</option>
+                    <option value="presenter">{t("audience.presenter")}</option>
                   </select>
                 </div>
                 {f.type === "select" && (
                   <input
                     type="text"
-                    placeholder="選択肢 (カンマ区切り)"
+                    placeholder={t("optionsPlaceholder")}
                     value={f.options?.join(", ") ?? ""}
                     onChange={(e) =>
                       updateField(i, {
@@ -561,14 +575,14 @@ export function EventForm({
                       checked={f.required}
                       onChange={(e) => updateField(i, { required: e.target.checked })}
                     />{" "}
-                    必須
+                    {t("required")}
                   </label>
                   <button
                     type="button"
                     onClick={() => removeField(i)}
                     className="text-xs text-red-600 hover:underline"
                   >
-                    削除
+                    {common("delete")}
                   </button>
                 </div>
               </li>
@@ -586,9 +600,9 @@ export function EventForm({
             disabled={pending || uploading}
             className={primaryButtonClass}
           >
-            {pending ? "保存中..." : uploading ? "アップロード中..." : "保存"}
+            {pending ? common("saving") : uploading ? common("uploading") : common("save")}
           </button>
-          <SaveFlash savedAt={savedAt} />
+          <SaveFlash savedAt={savedAt} message={common("saved")} />
         </div>
         {mode === "edit" && (
           <button
@@ -596,11 +610,10 @@ export function EventForm({
             onClick={handleDelete}
             className={dangerButtonClass}
           >
-            イベントを削除
+            {t("deleteEvent")}
           </button>
         )}
       </div>
     </form>
   );
 }
-

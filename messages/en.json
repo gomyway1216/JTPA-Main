@@ -452,7 +452,9 @@
     "feedbackPrefix": "Questions, bug reports, and improvement ideas are welcome through",
     "feedbackLink": "Help > Feedback",
     "feedbackSuffix": ".",
-    "sourceCode": "Source code:"
+    "sourceCode": "Source code:",
+    "defaultTitle": "About JTPA",
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and showcases of projects built by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Showcases of AI products built by members\n"
   },
   "PublicProfile": {
     "notFoundTitle": "User not found",
@@ -750,19 +752,39 @@
           "Use <myProfileLink>Profile settings</myProfileLink> to edit the information shown on your public profile."
         ],
         "table": {
-          "headers": ["Field", "Default", "Visibility"],
+          "headers": [
+            "Field",
+            "Default",
+            "Visibility"
+          ],
           "rows": [
             {
-              "cells": ["Name and icon", "Public", "Google account values. Always shown on comments and submissions."]
+              "cells": [
+                "Name and icon",
+                "Public",
+                "Google account values. Always shown on comments and submissions."
+              ]
             },
             {
-              "cells": ["Affiliation", "Private", "Shown on /u/[uid] only when enabled."]
+              "cells": [
+                "Affiliation",
+                "Private",
+                "Shown on /u/[uid] only when enabled."
+              ]
             },
             {
-              "cells": ["Bio", "Private", "Shown on /u/[uid] only when enabled. Line breaks are preserved."]
+              "cells": [
+                "Bio",
+                "Private",
+                "Shown on /u/[uid] only when enabled. Line breaks are preserved."
+              ]
             },
             {
-              "cells": ["Email address", "Never public", "Email addresses are never shown publicly."]
+              "cells": [
+                "Email address",
+                "Never public",
+                "Email addresses are never shown publicly."
+              ]
             }
           ]
         },
@@ -774,31 +796,52 @@
           "Open <myPageLink>My Page</myPageLink> from the account menu to manage your registrations, submissions, settings, and received likes."
         ],
         "table": {
-          "headers": ["Menu", "What it shows"],
+          "headers": [
+            "Menu",
+            "What it shows"
+          ],
           "rows": [
             {
               "href": "/my/rsvps",
-              "cells": ["Event history", "Your event RSVPs and cancellation controls."]
+              "cells": [
+                "Event history",
+                "Your event RSVPs and cancellation controls."
+              ]
             },
             {
               "href": "/my/projects",
-              "cells": ["My projects", "Projects submitted to the showcase."]
+              "cells": [
+                "My projects",
+                "Projects submitted to the showcase."
+              ]
             },
             {
               "href": "/my/posts",
-              "cells": ["My articles", "Blog articles, including drafts."]
+              "cells": [
+                "My articles",
+                "Blog articles, including drafts."
+              ]
             },
             {
               "href": "/my/qa",
-              "cells": ["My Q&A", "Questions you posted in Q&A."]
+              "cells": [
+                "My Q&A",
+                "Questions you posted in Q&A."
+              ]
             },
             {
               "href": "/my/likes",
-              "cells": ["Likes received", "Likes on your comments across the site."]
+              "cells": [
+                "Likes received",
+                "Likes on your comments across the site."
+              ]
             },
             {
               "href": "/my/profile",
-              "cells": ["Account settings", "Profile visibility and email notification settings."]
+              "cells": [
+                "Account settings",
+                "Profile visibility and email notification settings."
+              ]
             }
           ]
         }
@@ -852,5 +895,582 @@
       "auth": "There was an authentication problem. Please reload the page.",
       "unknown": "An error occurred: {message}"
     }
+  },
+  "GlobalError": {
+    "lang": "en",
+    "title": "Unexpected error",
+    "description": "A problem occurred while loading the page. Reload, or try again later.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "digest": "Please include this request ID when contacting us:"
+  },
+  "Admin": {
+    "nav": {
+      "dashboard": "Overview",
+      "events": "Events",
+      "projects": "Project review",
+      "posts": "Blog admin",
+      "attendees": "Attendees",
+      "guides": "Guides",
+      "feedback": "Feedback",
+      "about": "About JTPA",
+      "users": "Users",
+      "errors": "Error logs",
+      "help": "Help"
+    },
+    "common": {
+      "viewAll": "View all →",
+      "manage": "Manage →",
+      "triage": "Triage →",
+      "createNew": "New",
+      "edit": "Edit",
+      "checkIn": "Check-in",
+      "preview": "Preview",
+      "editContent": "Edit content",
+      "approve": "Approve",
+      "reject": "Reject",
+      "publish": "Publish",
+      "delete": "Delete",
+      "none": "None",
+      "unknown": "(unknown)",
+      "notAvailable": "—",
+      "memberOnly": "Members only",
+      "guest": "Guest",
+      "yes": "Yes",
+      "no": "No",
+      "show": "Show",
+      "submitted": "Submitted {date}",
+      "updated": "Updated {date}",
+      "copiedEmails": "Copied {count} email addresses",
+      "copyFailed": "Copy failed (HTTPS may be required)",
+      "noRecipients": "No recipients",
+      "copyEmails": "Copy emails",
+      "downloadCsv": "Download CSV",
+      "surveyColumns": "(+{count} survey columns)",
+      "export": "Export:",
+      "countAll": "({visible} / {total})",
+      "save": "Save",
+      "saving": "Saving...",
+      "upload": "Upload",
+      "uploading": "Uploading...",
+      "uploadWithProgress": "Uploading... {progress}%",
+      "saveFailed": "Failed to save",
+      "deleteFailed": "Failed to delete",
+      "uploadFailed": "Upload failed",
+      "imageType": "Choose PNG, JPEG, WebP, or GIF",
+      "imageTooLarge": "Image must be {size}MB or smaller",
+      "saved": "✓ Saved"
+    },
+    "dashboard": {
+      "title": "Admin dashboard",
+      "pendingProjects": "Pending projects ({count})",
+      "pendingPosts": "Posts awaiting review ({count})",
+      "newFeedback": "New feedback ({count})",
+      "events": "Events ({count})",
+      "pendingEmpty": "No pending items.",
+      "reviewEmpty": "No items awaiting review.",
+      "feedbackEmpty": "No unread feedback.",
+      "feedbackDescription": "Requests and bug reports submitted from /help.",
+      "eventsEmpty": "No events."
+    },
+    "about": {
+      "metadataTitle": "Edit About JTPA",
+      "title": "Edit About JTPA",
+      "viewPublic": "View /about →",
+      "description": "Edit the /about page body in Markdown. Changes are published immediately after saving.",
+      "titleLabel": "Title",
+      "bodyLabel": "Body (Markdown)"
+    },
+    "feedback": {
+      "metadataTitle": "Feedback",
+      "title": "Feedback",
+      "description": "Triage requests and bug reports submitted from /help. Newest entries appear first.",
+      "filters": {
+        "new": "New",
+        "read": "Read",
+        "resolved": "Resolved",
+        "archived": "Archived",
+        "all": "All"
+      },
+      "empty": "No feedback matches this filter.",
+      "authorFallback": "(name not set)",
+      "statusActions": {
+        "new": "Move to new",
+        "read": "Mark as read",
+        "resolved": "Mark resolved",
+        "archived": "Archive"
+      },
+      "updateFailed": "Failed to update",
+      "statusChanged": "{name} changed status on {date}"
+    },
+    "attendees": {
+      "title": "Attendees",
+      "eventLabel": "Event:",
+      "show": "Show",
+      "empty": "No attendees.",
+      "columns": {
+        "name": "Name",
+        "affiliation": "Affiliation",
+        "email": "Email",
+        "role": "Role",
+        "status": "Status",
+        "attendance": "Attendance",
+        "details": "Details"
+      },
+      "role": {
+        "presenter": "Presenter",
+        "attendee": "Attendee"
+      },
+      "presenterOnly": "(presenters only)",
+      "presentationTitle": "Presentation title",
+      "presentationAbstract": "Presentation abstract",
+      "exportConfirmed": "Confirmed only",
+      "exportAll": "All (including waitlist and cancelled)",
+      "attendanceFailed": "Failed",
+      "attended": "✓ Attended",
+      "unattended": "Not attended"
+    },
+    "events": {
+      "title": "Event admin",
+      "empty": "No events yet.",
+      "columns": {
+        "title": "Title",
+        "start": "Start",
+        "status": "Status",
+        "rsvp": "RSVP"
+      },
+      "newTitle": "New event",
+      "editTitle": "Edit event"
+    },
+    "eventForm": {
+      "title": "Title",
+      "slug": "Slug (URL)",
+      "slugPlaceholder": "Auto-generated (lowercase letters, numbers, hyphens)",
+      "description": "Description",
+      "startAt": "Start date/time",
+      "endAt": "End date/time",
+      "locationType": "Format",
+      "location": {
+        "offline": "Offline",
+        "online": "Online",
+        "hybrid": "Hybrid"
+      },
+      "address": "Venue address",
+      "mapUrl": "Map URL",
+      "meetingUrl": "Meeting URL (Zoom, etc.)",
+      "capacity": "Capacity (0 = unlimited)",
+      "presenterCapacity": "Presenter slots",
+      "status": "Status",
+      "statusOption": {
+        "draft": "Draft",
+        "published": "Published",
+        "past": "Past",
+        "cancelled": "Cancelled"
+      },
+      "visibility": "Visibility",
+      "visibilityOption": {
+        "public": "Public (viewable without login)",
+        "members_only": "Members only (login required)"
+      },
+      "cover": "Cover image (optional, 10MB max, PNG/JPEG/WebP/GIF)",
+      "coverPreviewAlt": "Cover image preview for {title}",
+      "coverFallbackTitle": "event",
+      "surveyTitle": "Survey fields",
+      "addSurveyField": "+ Add field",
+      "keyPlaceholder": "key (letters/numbers)",
+      "labelPlaceholder": "Display label",
+      "fieldType": {
+        "text": "Text",
+        "textarea": "Multiline",
+        "select": "Select",
+        "checkbox": "Checkbox"
+      },
+      "audience": {
+        "all": "Everyone",
+        "presenter": "Presenters only"
+      },
+      "optionsPlaceholder": "Options (comma-separated)",
+      "required": "Required",
+      "deleteEvent": "Delete event",
+      "deleteConfirm": "Delete this event?"
+    },
+    "checkIn": {
+      "title": "Check-in",
+      "rsvpCount": "RSVPs",
+      "attendanceCount": "Attended",
+      "waitlistCount": "Waitlist",
+      "noToken": "No token has been issued yet. Generate one with the button below.",
+      "hostError": "Cannot generate QR code: host name could not be resolved.",
+      "hostErrorAction": "Set NEXT_PUBLIC_SITE_URL.",
+      "token": "Token:",
+      "note": "QR codes are valid only on the event day, from 4 hours before start to 6 hours after end. Regenerate the token if it leaks.",
+      "attendeesLink": "Review attendance in the attendee list",
+      "regenerateConfirm": "Regenerating invalidates the current QR code. Continue?",
+      "generating": "Generating...",
+      "regenerate": "Regenerate token",
+      "generate": "Generate token",
+      "failed": "Failed"
+    },
+    "cloneEvent": {
+      "confirm": "Clone “{title}”?",
+      "failed": "Failed to clone",
+      "cloning": "Cloning...",
+      "clone": "Clone"
+    },
+    "projects": {
+      "titlePending": "Pending ({count})",
+      "titleApproved": "Published ({count})",
+      "titleRejected": "Rejected ({count})",
+      "emptyPending": "No pending projects.",
+      "openApp": "Open app",
+      "repository": "Repository",
+      "notePlaceholder": "Comment (sent to the author when rejected)",
+      "rejectWithoutNoteConfirm": "Reject without a comment?",
+      "failed": "Failed",
+      "thumbnailAlt": "Thumbnail",
+      "screenshotAlt": "Screenshot {number}"
+    },
+    "posts": {
+      "metadataTitle": "Blog admin",
+      "titlePending": "Awaiting review ({count})",
+      "titlePublished": "Published ({count})",
+      "titleDrafts": "Drafts ({count})",
+      "titleRejected": "Rejected ({count})",
+      "emptyPending": "No posts awaiting review.",
+      "emptyPublished": "No published posts.",
+      "submitted": "Submitted {date}",
+      "updated": "Updated {date}",
+      "coverAlt": "Cover image for {title}"
+    },
+    "guides": {
+      "title": "Guide admin",
+      "newTitle": "New guide",
+      "editTitle": "Edit guide",
+      "titlePending": "Awaiting review ({count})",
+      "pendingDescription": "Review queue for community submissions. Approving a first-time author automatically grants the <role>contributor</role> role so future guides can be self-published.",
+      "emptyPending": "No guides awaiting review.",
+      "titlePublished": "Published ({count})",
+      "emptyPublished": "No published guides.",
+      "titleDrafts": "Drafts ({count})",
+      "titleRejected": "Rejected ({count})",
+      "columns": {
+        "title": "Title",
+        "author": "Author",
+        "tags": "Tags",
+        "order": "Order",
+        "updated": "Updated"
+      },
+      "publishWithContributor": "Publish (+ grant contributor)"
+    },
+    "users": {
+      "title": "User admin",
+      "count": "{count} users",
+      "roleChangeNotice": "Role changes do not take effect until the target user signs out and signs in again.",
+      "truncatedNotice": "The user count exceeds the display limit (5000). If search cannot find someone, additional implementation is required.",
+      "searchAria": "Search users by email address or name",
+      "searchPlaceholder": "Filter by email or name",
+      "empty": "No matching users.",
+      "columns": {
+        "user": "User",
+        "role": "Role",
+        "lastLogin": "Last login",
+        "actions": "Actions"
+      },
+      "nameUnset": "(name not set)",
+      "you": "You",
+      "none": "None",
+      "contributorHint": "Can publish own guides without review",
+      "contributorGrant": "Grant contributor",
+      "contributorRevoke": "Revoke contributor",
+      "editorGrant": "Grant editor",
+      "editorRevoke": "Revoke editor",
+      "adminGrant": "Grant admin",
+      "adminRevoke": "Revoke admin",
+      "cannotRevokeSelf": "You cannot revoke your own admin role",
+      "cannotRevokeLast": "You cannot revoke the last admin",
+      "visibleCount": "Showing {visible} / {total} users",
+      "roleChangeFailed": "Failed to change role",
+      "exportTitle": "Bulk email export:",
+      "exportCount": "{recipients} opted in / {total} users",
+      "exportHelp": "Users who opted out of email notifications in their profile are excluded. Import this list into your external email delivery tool."
+    },
+    "errors": {
+      "title": "Error logs",
+      "description": "Server-side error records. The request ID shown to users on the error page matches the requestId in each row, so you can trace reported IDs. Latest {count} entries.",
+      "empty": "No error logs yet.",
+      "noMessage": "(no message)",
+      "stackTrace": "Stack trace"
+    },
+    "help": {
+      "metadataTitle": "Admin help",
+      "title": "Admin help",
+      "intro": "A guide to JTPA site administration. For technical details such as Firestore collections and deployment steps, see the repository <docsLink>docs/</docsLink>.",
+      "toc": "Contents",
+      "sections": {
+        "roles": {
+          "title": "Role model",
+          "paragraphs": [
+            "Signed-in users can have <code>admin</code>, <code>editor</code>, <code>contributor</code>, or a combination of those roles. They are stored as Firebase Auth custom claims and take effect after the user signs in again."
+          ],
+          "table": {
+            "headers": [
+              "Role",
+              "Capabilities"
+            ],
+            "rows": [
+              {
+                "cells": [
+                  "admin",
+                  "Full access to events, projects, posts, attendees, guides, About, and user role management."
+                ]
+              },
+              {
+                "cells": [
+                  "editor",
+                  "Create, edit, publish, and delete all guides, including guides written by other users."
+                ]
+              },
+              {
+                "cells": [
+                  "contributor",
+                  "Publish, edit, and delete their own guides without review."
+                ]
+              },
+              {
+                "cells": [
+                  "(none)",
+                  "Regular member: RSVP, submit content, comment, like, and submit first-time guides for admin review."
+                ]
+              }
+            ]
+          },
+          "callout": "editor and contributor are subsets of admin. If an editor opens a restricted <code>/admin</code> page directly, they are redirected to <code>/admin/guides</code> (exceptions: guide management and this help page). contributor access does not grant <code>/admin</code> access; it only allows self-publishing the user's own guides."
+        },
+        "events": {
+          "title": "Event operations",
+          "steps": [
+            {
+              "title": "Create a draft",
+              "href": "/admin/events/new",
+              "linkLabel": "/admin/events/new",
+              "body": "creates a new draft. You can also click Clone on an existing row in <adminEventsLink>/admin/events</adminEventsLink> to use a past event as the starting point (date becomes today + 7 days; RSVP/presentation subcollections are not copied)."
+            },
+            {
+              "title": "Configure survey questions",
+              "body": "Optionally add <code>key + label + type + audience</code> pairs. The audience can be everyone or presenters only. Presenter-only questions appear only to users who RSVP as presenters."
+            },
+            {
+              "title": "Set visibility",
+              "body": "Choose public or members-only visibility. Members-only events are hidden from the <code>/events</code> list for signed-out visitors."
+            },
+            {
+              "title": "Move status to published",
+              "body": "Changing status from <code>draft</code> to <code>published</code> shows the event in the public event list."
+            },
+            {
+              "title": "Collect presenter materials",
+              "body": "Presenters upload slide or video links from the presenter section on <code>/events/[slug]</code>. A presenter can attach multiple materials to one event."
+            },
+            {
+              "title": "Wrap up after the event",
+              "body": "After the event end time, it is treated as past automatically (the RSVP form is hidden and the event moves to Past events on <code>/events</code>). If you also want the admin view to show it as past, change status to <code>past</code>."
+            }
+          ]
+        },
+        "attendees": {
+          "title": "Attendees and CSV export",
+          "paragraphs": [
+            "<adminAttendeesQueryLink>/admin/attendees?eventId=...</adminAttendeesQueryLink> (or the event selector) shows attendees and survey responses."
+          ],
+          "items": [
+            "<strong>Copy emails</strong>: copies confirmed attendee emails as a comma-separated list. Paste it into Gmail BCC to expand individual recipients.",
+            "<strong>Download CSV</strong>: UTF-8 BOM CSV that opens directly in Excel. Columns include <code>displayName, affiliation, email, role, status, presentationTitle, presentationAbstract, survey_key...</code>",
+            "<strong>Filter</strong>: defaults to confirmed attendees only. Switch to all when you need canceled or waitlisted registrations.",
+            "<strong>Details</strong>: open Details on each row to review survey responses."
+          ],
+          "callout": "Gmail Web can hit limits around bulk sends above ~500 recipients. Use the existing JTPA Google Group (about 2,000 members) or wait for the Trigger Email + Cloud Functions implementation planned in issue #15."
+        },
+        "projects": {
+          "title": "Showcase review",
+          "steps": [
+            {
+              "title": "Open the pending list",
+              "href": "/admin/projects",
+              "linkLabel": "/admin/projects",
+              "body": "shows unapproved projects at the top."
+            },
+            {
+              "title": "Review the submission",
+              "body": "Use the Open app link to inspect the actual app. The author, tags, and screenshots are shown as context."
+            },
+            {
+              "title": "Approve or reject",
+              "body": "Add a rejection comment when needed. Approval immediately publishes the project to <showcaseLink>/showcase</showcaseLink>."
+            }
+          ],
+          "note": "Authors can edit their own submissions from <code>/my/projects</code>. Editing an approved project automatically returns <code>status</code> to <code>pending</code>, so another review is required."
+        },
+        "posts": {
+          "title": "Blog post review",
+          "paragraphs": [
+            "<adminPostsLink>/admin/posts</adminPostsLink> is organized into four sections: pending review, published, draft, and rejected."
+          ],
+          "items": [
+            "Cover image previews, excerpts, and tags are shown.",
+            "Preview opens the public detail page; Edit content lets an admin directly fix typos or wording.",
+            "Approval publishes immediately. <code>publishedAt</code> is set only on first publication and is preserved on republish.",
+            "Rejection comments are queued for author notification (sent once the Trigger Email extension is enabled; currently they only accumulate in the queue)."
+          ]
+        },
+        "guides": {
+          "title": "Guide review and contributor grants",
+          "paragraphs": [
+            "<adminGuidesLink>/admin/guides</adminGuidesLink> manages guides such as AI tool explainers. It is the only admin page that <strong>editor users can also edit</strong>.",
+            "Community guide submissions appear at the top as <strong>pending</strong>. Each card supports preview, edit, comments, and the Publish or Reject decision."
+          ],
+          "steps": [
+            {
+              "title": "Preview or edit content",
+              "body": "Review what the author wrote. If typo fixes are needed, it is fine to edit from the admin side before publishing (editors use the same flow)."
+            },
+            {
+              "title": "Optionally add a comment",
+              "body": "Add feedback when rejecting. Approval comments are not included in email."
+            },
+            {
+              "title": "Publish and grant contributor",
+              "body": "Publishing the guide also grants the author the <code>contributor: true</code> custom claim automatically, so future guides no longer need review. The author must sign out and sign in again before the role becomes active."
+            },
+            {
+              "title": "Reject",
+              "body": "Reject with a comment. The author can read the reason from <code>/my/guides</code>, revise, and resubmit."
+            }
+          ],
+          "items": [
+            "The <code>order</code> field controls display order on <code>/guide</code> (ascending). Only admins and editors can change it.",
+            "Draft (<code>draft</code>) and published (<code>published</code>) guides can be edited from the same admin page.",
+            "Markdown supports GFM tables, code blocks, and task lists; code is syntax-highlighted.",
+            "If someone abuses contributor access, downgrade them from <adminUsersLink>/admin/users</adminUsersLink> with Revoke contributor. Existing published guides remain published."
+          ]
+        },
+        "about": {
+          "title": "Editing About JTPA",
+          "paragraphs": [
+            "<adminAboutLink>/admin/about</adminAboutLink> edits the title and Markdown body for <code>/about</code>. Until content is saved, the page uses the default copy from code."
+          ],
+          "note": "Headings are lowered one level automatically (H1 -> H2 ...), so using <code>#</code> in the body is safe."
+        },
+        "users": {
+          "title": "Users and roles",
+          "paragraphs": [
+            "<adminUsersLink>/admin/users</adminUsersLink> lists all users with last login time and current roles."
+          ],
+          "items": [
+            "You can grant or revoke editor and admin roles.",
+            "Removing admin from yourself, or removing the last remaining admin, is rejected for safety.",
+            "Role changes take effect only after the user <strong>signs in again</strong> because claims must propagate through the session cookie and client state.",
+            "Users who have never signed in do not appear in the list, so roles cannot be pre-granted there."
+          ],
+          "callout": "If the UI is unavailable, see the Granting roles (CLI fallback) section in <docsAdminLink>docs/admin.md</docsAdminLink>."
+        },
+        "deploy": {
+          "title": "Deployment checks",
+          "paragraphs": [
+            "A push to the <code>main</code> branch automatically builds and deploys through Firebase App Hosting (about 2-3 minutes)."
+          ],
+          "items": [
+            "Progress: <rolloutsLink>App Hosting Rollouts</rolloutsLink>",
+            "Production error logs: <cloudLogsLink>Cloud Run Logs</cloudLogsLink>",
+            "If production errors appear, you can roll back to the previous release because the older Cloud Run image is still available."
+          ]
+        }
+      }
+    }
+  },
+  "ActionErrors": {
+    "input": "Input error: {issues}",
+    "fileOrUrlRequired": "Specify either a file or an external URL.",
+    "presenterOnly": "You are not registered as a presenter.",
+    "presentationNotFound": "Presentation material was not found.",
+    "presentationForbidden": "You do not have permission to edit this presentation material.",
+    "slugTaken": "Slug \"{slug}\" is already in use.",
+    "eventNotFoundDeleted": "The event was not found. It may have been deleted.",
+    "eventCancelledRsvp": "This event has been cancelled, so registration is closed.",
+    "cloneSourceEventNotFound": "The source event to clone was not found.",
+    "invalidDraftId": "The draft ID is invalid.",
+    "draftIdTaken": "That draft ID is already in use.",
+    "publishedOnlyLike": "You can only like published content.",
+    "commentPublishedOnly": "Comments can only be posted on published content.",
+    "replyCommentNotFound": "The comment you are replying to was not found.",
+    "qaInvalidId": "The ID is invalid.",
+    "qaSaveRetry": "Could not save the post. Please try again.",
+    "pollMinOptions": "At least {count} options are required.",
+    "pollMaxOptions": "You can add up to {count} options.",
+    "pollDedupeMinOptions": "After removing duplicates, fewer than {count} options remain.",
+    "pollPublishedOnly": "Only published polls are accepting votes.",
+    "pollInvalidOptions": "The vote includes an invalid option.",
+    "feedbackArchiveAdminOnly": "Only admins can archive feedback.",
+    "roleUidRequired": "uid is required.",
+    "roleInvalid": "Invalid role: {role}",
+    "roleGrantBoolean": "grant must be a boolean.",
+    "roleSelfAdminRevoke": "You cannot revoke your own admin role.",
+    "roleLastAdminRevoke": "You cannot revoke the last admin role. Grant admin to another user first.",
+    "roleConcurrentAdminRevoke": "Another admin was revoked at the same time, so this change was rolled back for safety. Please try again.",
+    "userLinkMax": "Links must be {count} characters or less.",
+    "userUrlInvalid": "Enter a valid URL.",
+    "userUrlProtocol": "Enter a URL that starts with http:// or https://.",
+    "userAffiliationMax": "Affiliation must be {count} characters or less.",
+    "userBioMax": "Bio must be {count} characters or less.",
+    "usernameEmpty": "Enter a username.",
+    "usernameHelp": "Use 3-20 lowercase letters, numbers, hyphens, or underscores. Start and end with a letter or number. Separators cannot repeat.",
+    "usernameFormatInvalid": "The username format is invalid.",
+    "usernameValidationFailed": "Username validation failed.",
+    "usernameTaken": "That username is already taken. Choose a different one.",
+    "usernameReserved": "This username is reserved.",
+    "profileMissingRelogin": "Your profile was not found. Please log out and sign in again.",
+    "saveRetry": "Could not save. Please try again later.",
+    "avatarInvalidInput": "Could not save the icon (invalid input).",
+    "avatarInvalidPath": "Could not save the icon (invalid path).",
+    "avatarConfigError": "Could not save the icon (system configuration error).",
+    "avatarInvalidUrl": "Could not save the icon (invalid URL).",
+    "avatarSaveRetry": "Could not save the icon. Please try again later.",
+    "avatarDeleteRetry": "Could not delete the icon. Please try again later.",
+    "surveyMissingKey": "Survey item {index}: enter a key (letters and numbers).",
+    "surveyDuplicateKey": "Survey item {index}: key \"{key}\" is duplicated. Choose another key.",
+    "surveyMissingLabel": "Survey item {index}: enter a display label.",
+    "surveyMissingOption": "Survey item {index}: enter at least one option.",
+    "guideImageMissingId": "Could not determine the guide ID.",
+    "qaImageMissingId": "Could not determine the Q&A ID.",
+    "userMissingId": "Could not determine the user ID.",
+    "imageType": "Only {types} images are supported.",
+    "imageTooLarge": "Image size must be {size}MB or less.",
+    "copySuffix": "(copy)"
+  },
+  "Mail": {
+    "noteBlock": "\n\nComment: {note}",
+    "adminNewProjectSubject": "[JTPA] New project submission: {title}",
+    "adminNewProjectText": "{ownerName} ({ownerEmail}) submitted a new project.\n\nTitle: {title}\n\nReview: /admin/projects/pending",
+    "projectApprovedSubject": "[JTPA] Project approved: {title}",
+    "projectRejectedSubject": "[JTPA] Project review result: {title}",
+    "projectApprovedText": "Your project \"{title}\" was approved and published in the showcase.",
+    "projectRejectedText": "Here is the review result for your project \"{title}\".{noteBlock}\n\nYou can edit the submission and send it for review again.",
+    "adminNewPostSubject": "[JTPA] New blog post review request: {title}",
+    "adminNewPostText": "{authorName} ({authorEmail}) submitted a new article.\n\nTitle: {title}\n\nReview: /admin/posts",
+    "postPublishedSubject": "[JTPA] Blog post published: {title}",
+    "postRejectedSubject": "[JTPA] Blog post review result: {title}",
+    "postPublishedText": "Your article \"{title}\" was published.",
+    "postRejectedText": "Here is the review result for your article \"{title}\".{noteBlock}\n\nYou can edit the article and submit it for review again.",
+    "adminNewGuideSubject": "[JTPA] New guide review request: {title}",
+    "adminNewGuideText": "{authorName} ({authorEmail}) submitted a new guide.\n\nTitle: {title}\n\nReview: /admin/guides",
+    "guidePublishedSubject": "[JTPA] Guide published: {title}",
+    "guideRejectedSubject": "[JTPA] Guide review result: {title}",
+    "guidePublishedText": "Your guide \"{title}\" was published.",
+    "guidePromotedAppend": "\n\nThanks for contributing to the community. You can now publish future guides directly without review (contributor access was granted).\n\nSign out and sign in again for the role to take effect.",
+    "guideRejectedText": "Here is the review result for your guide \"{title}\".{noteBlock}\n\nYou can edit the guide and submit it for review again.",
+    "adminNewFeedbackSubject": "[JTPA] New feedback received",
+    "adminNewFeedbackText": "{authorName} ({authorEmail}) submitted feedback.\n\n{preview}\n\ntriage: {triageUrl}",
+    "waitlistSubject": "[JTPA] Waitlist promotion: {eventTitle}",
+    "presenterRoleSuffix": " (presenter slot)",
+    "waitlistText": "Hi {displayName},\n\nA seat opened for \"{eventTitle}\" and your waitlist registration has been promoted to confirmed.{roleSuffix}\n\nDetails: {eventUrl}\n\nIf you can no longer attend, please cancel from the event page."
   }
 }

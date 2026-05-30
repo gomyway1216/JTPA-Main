@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { ProjectAsset, ProjectDoc } from "@/lib/types";
 
@@ -43,15 +44,12 @@ const ProjectInputSchema = z.object({
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
 
-function parseProjectInput(
+async function parseProjectInput(
   input: ProjectFormInput,
-): z.infer<typeof ProjectInputSchema> {
+): Promise<z.infer<typeof ProjectInputSchema>> {
   const result = ProjectInputSchema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -102,7 +100,7 @@ function diffAssetPaths(
 
 export async function submitProject(input: ProjectFormInput): Promise<string> {
   const user = await requireUser();
-  const parsed = parseProjectInput(input);
+  const parsed = await parseProjectInput(input);
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
@@ -135,7 +133,7 @@ export async function submitProject(input: ProjectFormInput): Promise<string> {
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
   revalidatePath("/admin/projects");
-  redirect(`/my/projects`);
+  return redirectToLocalizedPath("/my/projects");
 }
 
 export async function updateMyProject(
@@ -143,7 +141,7 @@ export async function updateMyProject(
   input: ProjectFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = parseProjectInput(input);
+  const parsed = await parseProjectInput(input);
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");

@@ -52,7 +52,7 @@ export default async function GuideDetailPage({
   if (!guide) notFound();
 
   // Non-published guides are reachable via this route for admin / editor
-  // (cross-author preview, e.g. clicking プレビュー from /admin/guides
+  // (cross-author preview, e.g. clicking preview from /admin/guides
   // pending queue) AND the author themselves (so an author can preview
   // their draft / pending / rejected guide via /my/guides). Anonymous
   // visitors and other signed-in users see the same 404 they would for

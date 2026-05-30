@@ -86,9 +86,17 @@ export function GuideForm({
   guide?: GuideDoc;
 }) {
   const t = useTranslations("GuideForm");
+  const actionErrors = useTranslations("ActionErrors");
+  const imageUploadMessages = {
+    missingGuideId: () => actionErrors("guideImageMissingId"),
+    missingQaId: () => actionErrors("qaImageMissingId"),
+    missingUserId: () => actionErrors("userMissingId"),
+    unsupportedType: (types: string) => actionErrors("imageType", { types }),
+    tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
+  };
   // Admin / editor / contributor — anyone trusted to self-publish without
   // going through the admin review queue. Plain signed-in users see the
-  // "審査に出す" button instead of "公開する".
+  // submit-for-review button instead of the direct-publish button.
   const canPublishDirectly =
     user.isAdmin || user.isEditor || user.isContributor;
   // Subset of `canPublishDirectly`: only admin/editor have `/admin/*`
@@ -177,7 +185,12 @@ export function GuideForm({
         // there to the uploader, which lets non-admin contributors
         // attach body images without granting them access to anyone
         // else's guide assets.
-        const url = await uploadGuideImage(guideId, user.uid, file);
+        const url = await uploadGuideImage(
+          guideId,
+          user.uid,
+          file,
+          imageUploadMessages,
+        );
         const altRaw = file.name.replace(/\.[^.]+$/, "");
         inserts.push(`\n![${escapeAlt(altRaw)}](${url})\n`);
       }
@@ -285,7 +298,7 @@ export function GuideForm({
         } else if (guide) {
           await updateGuide(guide.id, payload);
         }
-        // Update path doesn't redirect; surface explicit "✓ 保存しました"
+        // Update path doesn't redirect; surface explicit saved feedback
         // feedback so the click feels acknowledged. Create path
         // redirects via the Server Action, so this line only ever
         // observably runs on update.

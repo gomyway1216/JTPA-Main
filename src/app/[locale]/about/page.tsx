@@ -3,7 +3,7 @@ import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
-import { getSitePage, SITE_PAGE_DEFAULTS } from "@/lib/data/site-pages";
+import { getSitePage } from "@/lib/data/site-pages";
 
 // Yudai's JTPA uid. Hardcoded because the maintainer attribution is
 // a specific, stable individual — using an env var or DB lookup would
@@ -13,15 +13,18 @@ import { getSitePage, SITE_PAGE_DEFAULTS } from "@/lib/data/site-pages";
 const MAINTAINER_UID = "FQe7JWGETbTm9w9sAZgacemC1aC3";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const page = await getSitePage("about");
-  return { title: page?.title || SITE_PAGE_DEFAULTS.about.title };
+  const [page, t] = await Promise.all([
+    getSitePage("about"),
+    getTranslations("AboutPage"),
+  ]);
+  return { title: page?.title || t("defaultTitle") };
 }
 
 export default async function AboutPage() {
   const t = await getTranslations("AboutPage");
   const page = await getSitePage("about");
-  const title = page?.title || SITE_PAGE_DEFAULTS.about.title;
-  const body = page?.body || SITE_PAGE_DEFAULTS.about.body;
+  const title = page?.title || t("defaultTitle");
+  const body = page?.body || t("defaultBody");
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 space-y-6">
       <h1 className="text-3xl font-bold">{title}</h1>

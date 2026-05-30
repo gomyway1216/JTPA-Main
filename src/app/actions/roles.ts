@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/session";
 import { countAdmins } from "@/lib/data/users-admin";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { actionError } from "@/lib/i18n/action-errors";
 
 export type ManagedRole = "admin" | "editor" | "contributor";
 
@@ -34,13 +35,15 @@ export async function setUserRole({
   // start mutating claim objects (prevents writing keys like `__proto__`
   // or whatever else slips through type erasure).
   if (typeof uid !== "string" || uid.length === 0) {
-    throw new Error("uid が指定されていません");
+    throw new Error(await actionError("roleUidRequired"));
   }
   if (!VALID_ROLES.has(role)) {
-    throw new Error(`不正なロールが指定されました: ${String(role)}`);
+    throw new Error(
+      await actionError("roleInvalid", { role: String(role) }),
+    );
   }
   if (typeof grant !== "boolean") {
-    throw new Error("grant は boolean である必要があります");
+    throw new Error(await actionError("roleGrantBoolean"));
   }
 
   const target = await adminAuth().getUser(uid);
@@ -55,7 +58,7 @@ export async function setUserRole({
   // Stop an admin from locking themselves out by mistake — they can demote
   // a fellow admin first, then ask that admin to demote them.
   if (!grant && role === "admin" && uid === actor.uid) {
-    throw new Error("自分自身の admin ロールは剥奪できません");
+    throw new Error(await actionError("roleSelfAdminRevoke"));
   }
 
   // Stop revoking the very last admin — there must always be at least
@@ -65,9 +68,7 @@ export async function setUserRole({
   if (!grant && role === "admin") {
     const adminCount = await countAdmins();
     if (adminCount <= 1) {
-      throw new Error(
-        "最後の admin ロールは剥奪できません。先に別ユーザーへ admin を付与してください。",
-      );
+      throw new Error(await actionError("roleLastAdminRevoke"));
     }
   }
 
@@ -86,9 +87,7 @@ export async function setUserRole({
     const remaining = await countAdmins();
     if (remaining === 0) {
       await adminAuth().setCustomUserClaims(uid, { ...next, admin: true });
-      throw new Error(
-        "別の管理者が同時に admin を剥奪したため、安全のため取り消しました。もう一度やり直してください。",
-      );
+      throw new Error(await actionError("roleConcurrentAdminRevoke"));
     }
   }
 

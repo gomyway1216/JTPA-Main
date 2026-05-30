@@ -29,7 +29,7 @@ export default async function ShowcasePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 space-y-8">
       {/* Stack on mobile so the H1 + subtitle get full width — the
-          right-rail "プロジェクトを投稿" button squeezes them into a
+          right-rail submit-project button squeezes them into a
           narrow column otherwise. */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

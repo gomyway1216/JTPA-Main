@@ -1,15 +1,17 @@
-import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { ProjectReviewCard } from "@/app/[locale]/admin/projects/_components/ProjectReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listProjects } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminProjectsPage() {
   const user = await getSessionUser();
-  if (!user?.isAdmin) redirect("/admin/guides");
+  if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
+  const t = await getTranslations("Admin.projects");
 
   const [pending, approved, rejected] = await Promise.all([
     listProjects({ status: "pending", limit: 50 }).catch(() => []),
@@ -30,11 +32,11 @@ export default async function AdminProjectsPage() {
     <div className="space-y-8">
       <section>
         <h1 className="text-2xl font-bold">
-          承認待ち ({pending.length})
+          {t("titlePending", { count: pending.length })}
         </h1>
         <div className="mt-4 space-y-3">
           {pending.length === 0 ? (
-            <p className="text-sm text-zinc-500">承認待ちはありません。</p>
+            <p className="text-sm text-zinc-500">{t("emptyPending")}</p>
           ) : (
             pending.map((p) => (
               <ProjectReviewCard
@@ -48,7 +50,9 @@ export default async function AdminProjectsPage() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold">公開中 ({approved.length})</h2>
+        <h2 className="text-lg font-semibold">
+          {t("titleApproved", { count: approved.length })}
+        </h2>
         <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
           {approved.map((p) => (
             <li key={p.id} className="py-2 text-sm flex justify-between gap-3">
@@ -63,7 +67,9 @@ export default async function AdminProjectsPage() {
 
       {rejected.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold">却下済み ({rejected.length})</h2>
+          <h2 className="text-lg font-semibold">
+            {t("titleRejected", { count: rejected.length })}
+          </h2>
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
             {rejected.map((p) => (
               <li key={p.id} className="py-2 text-sm flex justify-between gap-3">

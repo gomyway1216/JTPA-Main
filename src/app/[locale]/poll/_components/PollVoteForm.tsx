@@ -19,10 +19,10 @@ interface Props {
   user: SessionUser | null;
 }
 
-// Multi-select ballot UI. Editing mode shows checkboxes; the "投票する"
+// Multi-select ballot UI. Editing mode shows checkboxes; the vote button
 // button submits the full selection (Server Action computes the diff).
 // Default view (after first render or after a successful submit) shows
-// the results bar with a small "編集" trigger to re-enter the edit mode.
+// the results bar with a small edit trigger to re-enter the edit mode.
 export function PollVoteForm({
   pollId,
   pollSlug,
@@ -39,7 +39,7 @@ export function PollVoteForm({
     useState<string[]>(initialSelectedIds);
   const [voterCount, setVoterCount] = useState(initialVoterCount);
   // Everyone — including signed-in users who haven't voted yet — lands
-  // on the results view by default. The "投票する" / "投票を変更" button
+  // on the results view by default. The vote / change-vote button
   // opens the edit form. This keeps the PR's "results visible from
   // page load" guarantee for non-voters too (an earlier version
   // auto-entered edit mode for them and hid the bars until they

@@ -4,11 +4,12 @@ import { randomUUID } from "node:crypto";
 
 import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type {
   PollDoc,
   PollOption,
@@ -19,6 +20,8 @@ import { slugify } from "@/lib/utils";
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 8;
+const POLL_MIN_OPTIONS = "pollMinOptions";
+const POLL_MAX_OPTIONS = "pollMaxOptions";
 
 const OptionInputSchema = z.object({
   // Present on edit so existing options keep their stable ids (and their
@@ -36,8 +39,8 @@ const PollFormSchema = z.object({
   description: z.string().trim().max(2000).default(""),
   options: z
     .array(OptionInputSchema)
-    .min(MIN_OPTIONS, `選択肢は${MIN_OPTIONS}つ以上必要です`)
-    .max(MAX_OPTIONS, `選択肢は${MAX_OPTIONS}つまでです`),
+    .min(MIN_OPTIONS, POLL_MIN_OPTIONS)
+    .max(MAX_OPTIONS, POLL_MAX_OPTIONS),
   slug: z.string().trim().min(2).max(80).optional(),
 });
 
@@ -60,16 +63,24 @@ const VoteSchema = z.object({
 
 export type CastPollVoteInput = z.input<typeof VoteSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+async function readableParse<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): Promise<z.infer<T>> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  const issues = await Promise.all(
+    result.error.issues.map(async (issue) => {
+      let message = issue.message;
+      if (message === POLL_MIN_OPTIONS) {
+        message = await actionError("pollMinOptions", { count: MIN_OPTIONS });
+      } else if (message === POLL_MAX_OPTIONS) {
+        message = await actionError("pollMaxOptions", { count: MAX_OPTIONS });
+      }
+      return { path: issue.path, message };
+    }),
+  );
+  throw new Error(await inputError(issues));
 }
 
 // Generate a short stable id for a poll option. Lifted out so future
@@ -98,7 +109,7 @@ async function findFreePollSlug(seed: string): Promise<string> {
 
 export async function submitPoll(input: PollFormInput): Promise<string> {
   const user = await requireUser();
-  const parsed = readableParse(PollFormSchema, input);
+  const parsed = await readableParse(PollFormSchema, input);
 
   // Strip empty/duplicate option labels — the form sends raw text inputs
   // and a user may have deleted the contents of an option without
@@ -123,7 +134,9 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
     });
   }
   if (cleanedOptions.length < MIN_OPTIONS) {
-    throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
+    throw new Error(
+      await actionError("pollDedupeMinOptions", { count: MIN_OPTIONS }),
+    );
   }
 
   const slug = await findFreePollSlug(parsed.slug || parsed.title);
@@ -148,7 +161,7 @@ export async function submitPoll(input: PollFormInput): Promise<string> {
 
   revalidatePath("/poll");
   revalidatePath(`/poll/${slug}`);
-  redirect(`/poll/${slug}`);
+  return redirectToLocalizedPath(`/poll/${slug}`);
 }
 
 /**
@@ -167,7 +180,7 @@ export async function updateMyPoll(
   input: PollFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = readableParse(PollFormSchema, input);
+  const parsed = await readableParse(PollFormSchema, input);
   const isAdminCaller = user.isAdmin;
 
   const ref = adminDb().collection("polls").doc(pollId);
@@ -229,7 +242,9 @@ export async function updateMyPoll(
         cleaned.push({ id, label: opt.label, voteCount: 0 });
       }
       if (cleaned.length < MIN_OPTIONS) {
-        throw new Error(`重複を除いた選択肢が${MIN_OPTIONS}つ未満です`);
+        throw new Error(
+          await actionError("pollDedupeMinOptions", { count: MIN_OPTIONS }),
+        );
       }
       nextOptions = cleaned;
     }
@@ -250,7 +265,7 @@ export async function updateMyPoll(
   if (committed.slug !== committed.prevSlug) {
     revalidatePath(`/poll/${committed.slug}`);
   }
-  redirect(`/poll/${committed.slug}`);
+  return redirectToLocalizedPath(`/poll/${committed.slug}`);
 }
 
 export async function deleteMyPoll(pollId: string): Promise<void> {
@@ -268,12 +283,12 @@ export async function deleteMyPoll(pollId: string): Promise<void> {
   await ref.delete();
   revalidatePath("/poll");
   revalidatePath(`/poll/${cur.slug}`);
-  redirect("/poll");
+  return redirectToLocalizedPath("/poll");
 }
 
 export async function setPollStatus(input: SetPollStatusInput): Promise<void> {
   await requireAdmin();
-  const parsed = readableParse(StatusSchema, input);
+  const parsed = await readableParse(StatusSchema, input);
 
   const ref = adminDb().collection("polls").doc(parsed.pollId);
   const snap = await ref.get();
@@ -311,7 +326,7 @@ export async function castPollVote(
   input: CastPollVoteInput,
 ): Promise<CastVoteResult> {
   const user = await requireUser();
-  const parsed = readableParse(VoteSchema, input);
+  const parsed = await readableParse(VoteSchema, input);
 
   const pollRef = adminDb().collection("polls").doc(parsed.pollId);
   const voteRef = pollRef.collection("votes").doc(user.uid);
@@ -324,7 +339,7 @@ export async function castPollVote(
     if (!pollSnap.exists) throw new Error("NOT_FOUND");
     const poll = pollSnap.data() as PollDoc;
     if (poll.status !== "published") {
-      throw new Error("公開中の投票のみ受け付けています");
+      throw new Error(await actionError("pollPublishedOnly"));
     }
 
     // Validate every incoming optionId actually exists on the poll.
@@ -335,7 +350,7 @@ export async function castPollVote(
     const dedupedNewIds = [...new Set(parsed.optionIds)];
     for (const id of dedupedNewIds) {
       if (!validIds.has(id)) {
-        throw new Error("不正な選択肢が含まれています");
+        throw new Error(await actionError("pollInvalidOptions"));
       }
     }
 

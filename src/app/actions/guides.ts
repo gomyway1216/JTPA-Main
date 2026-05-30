@@ -2,7 +2,6 @@
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import {
@@ -11,6 +10,8 @@ import {
   requireUser,
 } from "@/lib/auth/session";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import {
   enqueueAdminNewGuideNotification,
   enqueueGuideDecisionNotification,
@@ -57,15 +58,12 @@ const GuideInputSchema = z.object({
 
 export type GuideFormInput = z.input<typeof GuideInputSchema>;
 
-function parseGuideInput(
+async function parseGuideInput(
   input: GuideFormInput,
-): z.infer<typeof GuideInputSchema> {
+): Promise<z.infer<typeof GuideInputSchema>> {
   const result = GuideInputSchema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  throw new Error(await inputError(result.error.issues));
 }
 
 function authorRef(user: {
@@ -224,7 +222,7 @@ export async function submitGuide(
   draftId?: string,
 ): Promise<string> {
   const user = await requireUser();
-  const parsed = parseGuideInput(input);
+  const parsed = await parseGuideInput(input);
   const resolvedStatus = resolveStatus(user, parsed.status);
   const isCurator = hasCuratorAccess(user);
 
@@ -240,7 +238,7 @@ export async function submitGuide(
       .limit(1)
       .get();
     if (!existing.empty) {
-      throw new Error(`スラッグ "${slug}" は既に使用されています`);
+      throw new Error(await actionError("slugTaken", { slug }));
     }
   }
 
@@ -283,7 +281,7 @@ export async function submitGuide(
     // `guides/{guideId}/{uid}/...` before saving. Validate the shape so
     // arbitrary strings don't slip into doc().set().
     if (!FIRESTORE_AUTO_ID.test(draftId)) {
-      throw new Error("不正な下書きIDが指定されました");
+      throw new Error(await actionError("invalidDraftId"));
     }
     const ref = adminDb().collection("guides").doc(draftId);
     // `create()` is atomic — fails with ALREADY_EXISTS instead of
@@ -294,7 +292,7 @@ export async function submitGuide(
     } catch (err) {
       const e = err as { code?: number | string };
       if (e.code === 6 || e.code === "already-exists") {
-        throw new Error("下書きIDが既に使われています");
+        throw new Error(await actionError("draftIdTaken"));
       }
       throw err;
     }
@@ -328,9 +326,9 @@ export async function submitGuide(
   // admin layout would bounce contributors away to "/" (they don't
   // unlock any `/admin/*` route despite being a trusted-author tier).
   if (isCurator) {
-    redirect(`/admin/guides/${guideId}/edit`);
+    return redirectToLocalizedPath(`/admin/guides/${guideId}/edit`);
   }
-  redirect("/my/guides");
+  return redirectToLocalizedPath("/my/guides");
 }
 
 // Legacy alias kept so existing admin/editor form callers compile during
@@ -350,7 +348,7 @@ export async function updateGuide(
   input: GuideFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = parseGuideInput(input);
+  const parsed = await parseGuideInput(input);
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
   if (!snap.exists) throw new Error("NOT_FOUND");
@@ -374,7 +372,7 @@ export async function updateGuide(
       .limit(2)
       .get();
     if (conflict.docs.some((d) => d.id !== guideId)) {
-      throw new Error(`スラッグ "${requestedSlug}" は既に使用されています`);
+      throw new Error(await actionError("slugTaken", { slug: requestedSlug }));
     }
   }
 
@@ -397,7 +395,7 @@ export async function updateGuide(
   // the edit form (pending → published) we need to run the same side
   // effects `decideGuide` would: stamp reviewer + reviewedAt, auto-
   // promote the author to contributor on first approval, and queue the
-  // decision-notification email. Without this, the form's "公開する"
+  // decision-notification email. Without this, the form's publish button
   // button is a silent bypass.
   const isApprovingPending =
     isCurator &&
@@ -570,7 +568,7 @@ export async function publishGuide(guideId: string): Promise<void> {
 }
 
 // Admin-only retire. Same shape as `archivePost`. Not wired into the UI
-// yet — kept ready for an "アーカイブ" button on the published guides
+// yet — kept ready for an archive button on the published guides
 // list so guides can be retired without losing the doc.
 export async function archiveGuide(guideId: string): Promise<void> {
   await requireAdmin();

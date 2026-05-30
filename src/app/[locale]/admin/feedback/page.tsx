@@ -1,11 +1,20 @@
-import { redirect } from "next/navigation";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
 
 import { FeedbackList } from "@/app/[locale]/admin/feedback/_components/FeedbackList";
 import { getSessionUser } from "@/lib/auth/session";
 import { listFeedback } from "@/lib/data/feedback";
+import {
+  redirectToLocalizedPath,
+  redirectToLoginPath,
+} from "@/lib/i18n/redirects";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "フィードバック" };
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("Admin.feedback");
+  return { title: t("metadataTitle") };
+}
 
 // Admin + editor triage page for /help submissions. Editors get this
 // view (and the matching write Server Action gate is `requireEditor`)
@@ -20,8 +29,9 @@ export const metadata = { title: "フィードバック" };
 // either/or of a separate query per tab.
 export default async function AdminFeedbackPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/admin/feedback");
-  if (!user.isAdmin && !user.isEditor) redirect("/");
+  if (!user) return redirectToLoginPath("/admin/feedback");
+  if (!user.isAdmin && !user.isEditor) return redirectToLocalizedPath("/");
+  const t = await getTranslations("Admin.feedback");
 
   // Always include archived in the read so the "all" filter in the
   // client component has the docs available without a re-fetch when
@@ -38,10 +48,9 @@ export default async function AdminFeedbackPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="text-2xl font-bold">フィードバック</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-500">
-          /help から届いた要望・不具合報告の triage 画面です。
-          新しいものから順に並びます。
+          {t("description")}
         </p>
       </header>
 

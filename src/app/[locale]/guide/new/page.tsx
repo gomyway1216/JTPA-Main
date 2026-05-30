@@ -16,8 +16,8 @@ export async function generateMetadata() {
 //
 // Anyone signed in can land here. The form (and the server action) take
 // care of selecting the right intent buttons + final status for the
-// caller's role: plain users see "審査に出す" and submit to the admin
-// review queue, while admin / editor / contributor see "公開する" and
+// caller's role: plain users submit to the admin review queue, while
+// admin / editor / contributor can publish directly and
 // skip the queue. The same `GuideForm` powers the admin route, so this
 // page is just the public wrapper + a contextual blurb.
 export default async function NewCommunityGuidePage() {

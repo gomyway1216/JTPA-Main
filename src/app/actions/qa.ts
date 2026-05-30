@@ -2,11 +2,12 @@
 
 import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import * as z from "zod";
 
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type { QaDoc, QaStatus } from "@/lib/types";
 import { slugify } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ import { slugify } from "@/lib/utils";
 // against the same regex Firestore uses on auto-ids (20 chars, no
 // special punctuation) keeps anything weirder out of doc().set().
 const FIRESTORE_AUTO_ID = /^[A-Za-z0-9_-]{1,40}$/;
+const QA_INVALID_ID = "qaInvalidId";
 
 const QaFormSchema = z.object({
   // Pre-generated client-side id. When present, `submitQa` writes the
@@ -24,7 +26,7 @@ const QaFormSchema = z.object({
   // can still hit the action without owning an id ahead of time.
   id: z
     .string()
-    .regex(FIRESTORE_AUTO_ID, "不正なIDが指定されました")
+    .regex(FIRESTORE_AUTO_ID, QA_INVALID_ID)
     .optional(),
   title: z.string().trim().min(2).max(120),
   body: z.string().trim().min(1).max(20000),
@@ -47,16 +49,22 @@ const StatusSchema = z.object({
 
 export type SetQaStatusInput = z.input<typeof StatusSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+async function readableParse<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): Promise<z.infer<T>> {
   const result = schema.safeParse(input);
   if (result.success) return result.data;
-  const issues = result.error.issues
-    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-    .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  const issues = await Promise.all(
+    result.error.issues.map(async (issue) => ({
+      path: issue.path,
+      message:
+        issue.message === QA_INVALID_ID
+          ? await actionError("qaInvalidId")
+          : issue.message,
+    })),
+  );
+  throw new Error(await inputError(issues));
 }
 
 // Resolve a free slug under /qa. Mirrors the pattern in
@@ -80,7 +88,7 @@ async function findFreeQaSlug(seed: string): Promise<string> {
 
 export async function submitQa(input: QaFormInput): Promise<string> {
   const user = await requireUser();
-  const parsed = readableParse(QaFormSchema, input);
+  const parsed = await readableParse(QaFormSchema, input);
 
   const slug = await findFreeQaSlug(parsed.slug || parsed.title);
   const now = Timestamp.now();
@@ -118,7 +126,7 @@ export async function submitQa(input: QaFormInput): Promise<string> {
       // same as a slug collision and surface a useful error.
       const code = (err as { code?: number | string }).code;
       if (code === 6 || code === "already-exists") {
-        throw new Error("投稿の保存に失敗しました。もう一度やり直してください。");
+        throw new Error(await actionError("qaSaveRetry"));
       }
       throw err;
     }
@@ -128,7 +136,7 @@ export async function submitQa(input: QaFormInput): Promise<string> {
 
   revalidatePath("/qa");
   revalidatePath(`/qa/${slug}`);
-  redirect(`/qa/${slug}`);
+  return redirectToLocalizedPath(`/qa/${slug}`);
 }
 
 export async function updateMyQa(
@@ -136,7 +144,7 @@ export async function updateMyQa(
   input: QaFormInput,
 ): Promise<void> {
   const user = await requireUser();
-  const parsed = readableParse(QaFormSchema, input);
+  const parsed = await readableParse(QaFormSchema, input);
 
   const ref = adminDb().collection("qa").doc(qaId);
   const snap = await ref.get();
@@ -165,7 +173,7 @@ export async function updateMyQa(
   revalidatePath("/qa");
   revalidatePath(`/qa/${cur.slug}`);
   if (newSlug !== cur.slug) revalidatePath(`/qa/${newSlug}`);
-  redirect(`/qa/${newSlug}`);
+  return redirectToLocalizedPath(`/qa/${newSlug}`);
 }
 
 export async function deleteMyQa(qaId: string): Promise<void> {
@@ -184,7 +192,7 @@ export async function deleteMyQa(qaId: string): Promise<void> {
   await ref.delete();
   revalidatePath("/qa");
   revalidatePath(`/qa/${cur.slug}`);
-  redirect("/qa");
+  return redirectToLocalizedPath("/qa");
 }
 
 /**
@@ -194,7 +202,7 @@ export async function deleteMyQa(qaId: string): Promise<void> {
  */
 export async function setQaStatus(input: SetQaStatusInput): Promise<void> {
   await requireAdmin();
-  const parsed = readableParse(StatusSchema, input);
+  const parsed = await readableParse(StatusSchema, input);
 
   const ref = adminDb().collection("qa").doc(parsed.qaId);
   const snap = await ref.get();

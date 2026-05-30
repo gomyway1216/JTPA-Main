@@ -49,7 +49,7 @@ const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
 });
 
 // Splits on half-width comma plus the two common full-width JP commas so
-// `タグA、タグB，タグC` works alongside `tagA, tagB`.
+// Japanese commas work alongside ASCII commas.
 function stringToTags(s: string): string[] {
   return s
     .split(/[,、，]/)

@@ -78,6 +78,14 @@ export const GUIDE_IMAGE_LABEL = "PNG / JPEG / WebP / GIF";
 // server-side as the final word.
 export const MAX_GUIDE_IMAGE_BYTES = 5 * 1024 * 1024;
 
+export type ImageUploadErrorMessages = {
+  missingGuideId(): string;
+  missingQaId(): string;
+  missingUserId(): string;
+  unsupportedType(types: string): string;
+  tooLarge(sizeMb: number): string;
+};
+
 function isAllowedType(t: string): t is GuideImageType {
   return (GUIDE_IMAGE_TYPES as readonly string[]).includes(t);
 }
@@ -102,18 +110,19 @@ export async function uploadGuideImage(
   guideId: string,
   uid: string,
   file: File,
+  messages: ImageUploadErrorMessages,
 ): Promise<string> {
   if (!guideId) {
-    throw new Error("ガイドIDが取得できませんでした");
+    throw new Error(messages.missingGuideId());
   }
   if (!uid) {
-    throw new Error("ユーザーIDが取得できませんでした");
+    throw new Error(messages.missingUserId());
   }
   if (!isAllowedType(file.type)) {
-    throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
+    throw new Error(messages.unsupportedType(GUIDE_IMAGE_LABEL));
   }
   if (file.size > MAX_GUIDE_IMAGE_BYTES) {
-    throw new Error("画像サイズは 5MB 以下にしてください");
+    throw new Error(messages.tooLarge(5));
   }
   // Path is `guides/{guideId}/{uid}/{filename}` so Storage rules can
   // constrain writes to the uploader's own sub-folder — mirrors the Q&A
@@ -136,15 +145,16 @@ export async function uploadQaImage(
   qaId: string,
   uid: string,
   file: File,
+  messages: ImageUploadErrorMessages,
 ): Promise<string> {
   if (!qaId) {
-    throw new Error("Q&A IDが取得できませんでした");
+    throw new Error(messages.missingQaId());
   }
   if (!isAllowedType(file.type)) {
-    throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
+    throw new Error(messages.unsupportedType(GUIDE_IMAGE_LABEL));
   }
   if (file.size > MAX_GUIDE_IMAGE_BYTES) {
-    throw new Error("画像サイズは 5MB 以下にしてください");
+    throw new Error(messages.tooLarge(5));
   }
   const path = `qa/${qaId}/${uid}/${Date.now()}-${sanitizeFilename(file.name)}`;
   const r = storageRef(clientStorage, path);
@@ -175,15 +185,16 @@ export const MAX_AVATAR_IMAGE_BYTES = 2 * 1024 * 1024;
 export async function uploadUserAvatar(
   uid: string,
   file: File,
+  messages: ImageUploadErrorMessages,
 ): Promise<ProjectAsset> {
   if (!uid) {
-    throw new Error("ユーザーIDが取得できませんでした");
+    throw new Error(messages.missingUserId());
   }
   if (!isAllowedType(file.type)) {
-    throw new Error(`画像形式は ${GUIDE_IMAGE_LABEL} のみ対応しています`);
+    throw new Error(messages.unsupportedType(GUIDE_IMAGE_LABEL));
   }
   if (file.size > MAX_AVATAR_IMAGE_BYTES) {
-    throw new Error("画像サイズは 2MB 以下にしてください");
+    throw new Error(messages.tooLarge(2));
   }
   const path = `users/${uid}/avatar-${Date.now()}-${sanitizeFilename(file.name)}`;
   const r = storageRef(clientStorage, path);

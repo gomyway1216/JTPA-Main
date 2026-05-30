@@ -55,6 +55,14 @@ const USERNAME_CHECK_DEBOUNCE_MS = 400;
 
 export function ProfileForm({ uid, initial }: Props) {
   const t = useTranslations("ProfileForm");
+  const actionErrors = useTranslations("ActionErrors");
+  const imageUploadMessages = {
+    missingGuideId: () => actionErrors("guideImageMissingId"),
+    missingQaId: () => actionErrors("qaImageMissingId"),
+    missingUserId: () => actionErrors("userMissingId"),
+    unsupportedType: (types: string) => actionErrors("imageType", { types }),
+    tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
+  };
   const [username, setUsername] = useState(initial.username);
   const [affiliation, setAffiliation] = useState(initial.affiliation);
   const [bio, setBio] = useState(initial.bio);
@@ -200,7 +208,7 @@ export function ProfileForm({ uid, initial }: Props) {
       // Upload to Storage first (client → `users/{uid}/...`), then persist
       // the resulting {path, url} via the Server Action, which also sweeps
       // the previous object. Two awaits, one spinner.
-      const asset = await uploadUserAvatar(uid, file);
+      const asset = await uploadUserAvatar(uid, file, imageUploadMessages);
       const result = await updateMyAvatar(asset);
       if (result.ok) {
         setAvatar(asset);

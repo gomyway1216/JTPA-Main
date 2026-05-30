@@ -1,6 +1,11 @@
 import "server-only";
 
+import { getLocale } from "next-intl/server";
+
+import { routing, type AppLocale } from "@/i18n/routing";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import enMessages from "../../messages/en.json";
+import jaMessages from "../../messages/ja.json";
 
 // The Firebase "Trigger Email" extension watches a configured collection
 // (default: `mail`) and sends queued messages via SMTP/SendGrid/Resend.
@@ -19,6 +24,57 @@ interface MailDoc {
   // Optional metadata for our own logging.
   category?: string;
   metadata?: Record<string, unknown>;
+}
+
+const mailMessagesByLocale = {
+  en: enMessages.Mail,
+  ja: jaMessages.Mail,
+};
+
+type MailMessageKey = keyof typeof jaMessages.Mail;
+type MailMessageValues = Record<
+  string,
+  string | number | boolean | null | undefined
+>;
+
+function isAppLocale(locale: string): locale is AppLocale {
+  return (routing.locales as readonly string[]).includes(locale);
+}
+
+async function getMailLocale(): Promise<AppLocale> {
+  try {
+    const locale = await getLocale();
+    if (isAppLocale(locale)) return locale;
+  } catch {
+    // Notification tests and background-ish calls may not have a next-intl
+    // request context. Keep the app's default language for those paths.
+  }
+  return routing.defaultLocale;
+}
+
+function formatMailMessage(
+  locale: AppLocale,
+  key: MailMessageKey,
+  values: MailMessageValues = {},
+): string {
+  const template =
+    mailMessagesByLocale[locale][key] ??
+    mailMessagesByLocale[routing.defaultLocale][key];
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => {
+    const value = values[name];
+    return value === undefined || value === null ? match : String(value);
+  });
+}
+
+async function mailMessage(
+  key: MailMessageKey,
+  values?: MailMessageValues,
+): Promise<string> {
+  return formatMailMessage(await getMailLocale(), key, values);
+}
+
+async function mailNoteBlock(note?: string): Promise<string> {
+  return note ? mailMessage("noteBlock", { note }) : "";
 }
 
 export async function enqueueMail(mail: MailDoc): Promise<void> {
@@ -139,8 +195,14 @@ export async function enqueueAdminNewProjectNotification(opts: {
   await enqueueMail({
     to: recipients,
     message: {
-      subject: `[JTPA] 新規プロジェクト投稿: ${opts.title}`,
-      text: `${opts.ownerName} (${opts.ownerEmail}) が新しいプロジェクトを投稿しました。\n\nタイトル: ${opts.title}\n\n承認: /admin/projects/pending`,
+      subject: await mailMessage("adminNewProjectSubject", {
+        title: opts.title,
+      }),
+      text: await mailMessage("adminNewProjectText", {
+        ownerName: opts.ownerName,
+        ownerEmail: opts.ownerEmail,
+        title: opts.title,
+      }),
     },
     category: "admin_project_pending",
     metadata: { projectId: opts.projectId },
@@ -155,12 +217,16 @@ export async function enqueueProjectDecisionNotification(opts: {
 }): Promise<void> {
   const subj =
     opts.decision === "approved"
-      ? `[JTPA] プロジェクトが承認されました: ${opts.title}`
-      : `[JTPA] プロジェクトのレビュー結果について: ${opts.title}`;
+      ? await mailMessage("projectApprovedSubject", { title: opts.title })
+      : await mailMessage("projectRejectedSubject", { title: opts.title });
+  const noteBlock = await mailNoteBlock(opts.note);
   const body =
     opts.decision === "approved"
-      ? `プロジェクト「${opts.title}」が承認され、ショーケースに掲載されました。`
-      : `プロジェクト「${opts.title}」のレビュー結果をお知らせします。${opts.note ? `\n\nコメント: ${opts.note}` : ""}\n\n内容を修正して再投稿いただけます。`;
+      ? await mailMessage("projectApprovedText", { title: opts.title })
+      : await mailMessage("projectRejectedText", {
+          title: opts.title,
+          noteBlock,
+        });
   await enqueueMail({
     to: opts.to,
     message: { subject: subj, text: body },
@@ -200,8 +266,14 @@ export async function enqueueAdminNewPostNotification(opts: {
   await enqueueMail({
     to: recipients,
     message: {
-      subject: `[JTPA] 新規ブログ記事の審査依頼: ${opts.title}`,
-      text: `${opts.authorName} (${opts.authorEmail}) が新しい記事を投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/posts`,
+      subject: await mailMessage("adminNewPostSubject", {
+        title: opts.title,
+      }),
+      text: await mailMessage("adminNewPostText", {
+        authorName: opts.authorName,
+        authorEmail: opts.authorEmail,
+        title: opts.title,
+      }),
     },
     category: "admin_post_pending",
     metadata: { postId: opts.postId },
@@ -216,12 +288,16 @@ export async function enqueuePostDecisionNotification(opts: {
 }): Promise<void> {
   const subj =
     opts.decision === "published"
-      ? `[JTPA] ブログ記事が公開されました: ${opts.title}`
-      : `[JTPA] ブログ記事のレビュー結果について: ${opts.title}`;
+      ? await mailMessage("postPublishedSubject", { title: opts.title })
+      : await mailMessage("postRejectedSubject", { title: opts.title });
+  const noteBlock = await mailNoteBlock(opts.note);
   const body =
     opts.decision === "published"
-      ? `記事「${opts.title}」が公開されました。`
-      : `記事「${opts.title}」のレビュー結果をお知らせします。${opts.note ? `\n\nコメント: ${opts.note}` : ""}\n\n内容を修正して再投稿いただけます。`;
+      ? await mailMessage("postPublishedText", { title: opts.title })
+      : await mailMessage("postRejectedText", {
+          title: opts.title,
+          noteBlock,
+        });
   await enqueueMail({
     to: opts.to,
     message: { subject: subj, text: body },
@@ -240,8 +316,14 @@ export async function enqueueAdminNewGuideNotification(opts: {
   await enqueueMail({
     to: recipients,
     message: {
-      subject: `[JTPA] 新規ガイドの審査依頼: ${opts.title}`,
-      text: `${opts.authorName} (${opts.authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: ${opts.title}\n\n審査: /admin/guides`,
+      subject: await mailMessage("adminNewGuideSubject", {
+        title: opts.title,
+      }),
+      text: await mailMessage("adminNewGuideText", {
+        authorName: opts.authorName,
+        authorEmail: opts.authorEmail,
+        title: opts.title,
+      }),
     },
     category: "admin_guide_pending",
     metadata: { guideId: opts.guideId },
@@ -262,20 +344,19 @@ export async function enqueueGuideDecisionNotification(opts: {
 }): Promise<void> {
   const subj =
     opts.decision === "published"
-      ? `[JTPA] ガイドが公開されました: ${opts.title}`
-      : `[JTPA] ガイドのレビュー結果について: ${opts.title}`;
+      ? await mailMessage("guidePublishedSubject", { title: opts.title })
+      : await mailMessage("guideRejectedSubject", { title: opts.title });
   let body: string;
   if (opts.decision === "published") {
-    body = `ガイド「${opts.title}」が公開されました。`;
+    body = await mailMessage("guidePublishedText", { title: opts.title });
     if (opts.promoted) {
-      body +=
-        `\n\nおめでとうございます！コミュニティへの貢献を確認できたので、` +
-        `今後はガイドを審査なしで直接公開できるようになりました ` +
-        `(contributor 権限を付与しました)。\n\n` +
-        `権限の反映には一度サインアウトして再ログインが必要です。`;
+      body += await mailMessage("guidePromotedAppend");
     }
   } else {
-    body = `ガイド「${opts.title}」のレビュー結果をお知らせします。${opts.note ? `\n\nコメント: ${opts.note}` : ""}\n\n内容を修正して再投稿いただけます。`;
+    body = await mailMessage("guideRejectedText", {
+      title: opts.title,
+      noteBlock: await mailNoteBlock(opts.note),
+    });
   }
   await enqueueMail({
     to: opts.to,
@@ -312,11 +393,13 @@ export async function enqueueAdminNewFeedbackNotification(opts: {
   await enqueueMail({
     to: recipients,
     message: {
-      subject: `[JTPA] 新規フィードバックが届きました`,
-      text:
-        `${opts.authorName} (${opts.authorEmail}) からフィードバックが届きました。\n\n` +
-        `${preview}\n\n` +
-        `triage: ${triageUrl}`,
+      subject: await mailMessage("adminNewFeedbackSubject"),
+      text: await mailMessage("adminNewFeedbackText", {
+        authorName: opts.authorName,
+        authorEmail: opts.authorEmail,
+        preview,
+        triageUrl,
+      }),
     },
     category: "admin_feedback_new",
     metadata: { feedbackId: opts.feedbackId },
@@ -344,13 +427,18 @@ export async function enqueueWaitlistPromotionNotification(opts: {
   await enqueueMail({
     to: opts.to,
     message: {
-      subject: `[JTPA] 繰り上げ参加のお知らせ: ${opts.eventTitle}`,
-      text:
-        `${opts.displayName} さん\n\n` +
-        `イベント「${opts.eventTitle}」のキャンセル待ちから繰り上げで参加が確定しました。` +
-        (opts.role === "presenter" ? "（発表者枠）" : "") +
-        `\n\n詳細はこちら: ${eventUrl}\n\n` +
-        `参加できなくなった場合は、イベントページから登録をキャンセルしてください。`,
+      subject: await mailMessage("waitlistSubject", {
+        eventTitle: opts.eventTitle,
+      }),
+      text: await mailMessage("waitlistText", {
+        displayName: opts.displayName,
+        eventTitle: opts.eventTitle,
+        roleSuffix:
+          opts.role === "presenter"
+            ? await mailMessage("presenterRoleSuffix")
+            : "",
+        eventUrl,
+      }),
     },
     category: "waitlist_promotion",
   });

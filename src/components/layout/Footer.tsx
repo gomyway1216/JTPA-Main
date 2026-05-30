@@ -9,7 +9,7 @@ export async function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
         {/*
           Copyright only. The maintainer credit lives on /about under
-          the "メンテナー" section — putting it on every page through
+          the maintainer section — putting it on every page through
           the footer read as self-promotional on a community-branded
           site. /about is where someone asking "who's behind this?"
           would actually look.

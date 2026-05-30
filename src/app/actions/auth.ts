@@ -1,7 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
-
 import { FieldValue } from "firebase-admin/firestore";
 
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
@@ -9,6 +7,7 @@ import {
   clearSessionCookie,
   createSessionCookie,
 } from "@/lib/auth/session";
+import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 
 export async function signInWithIdToken(idToken: string): Promise<void> {
   const decoded = await adminAuth().verifyIdToken(idToken, true);
@@ -89,7 +88,7 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
   await createSessionCookie(idToken);
 }
 
-export async function signOut(): Promise<void> {
+export async function signOut(locale?: string): Promise<void> {
   await clearSessionCookie();
-  redirect("/");
+  return redirectToLocalizedPath("/", locale);
 }
