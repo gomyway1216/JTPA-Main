@@ -67,7 +67,7 @@ describe("buildAttendeeCsv", () => {
       [],
     );
     // BOM + header + exactly one data row → 2 physical lines, no more.
-    const lines = csv.replace(/^﻿/, "").split("\n");
+    const lines = csv.replace(/^\uFEFF/, "").split("\n");
     expect(lines).toHaveLength(2);
     expect(lines[1]).toContain("First line. Second line. Third.");
     expect(lines[1]).not.toContain("\r");
@@ -87,7 +87,7 @@ describe("buildAttendeeCsv", () => {
       [rsvp({ surveyResponses: { comments: "one\ntwo\nthree" } })],
       fields,
     );
-    const lines = csv.replace(/^﻿/, "").split("\n");
+    const lines = csv.replace(/^\uFEFF/, "").split("\n");
     expect(lines).toHaveLength(2); // header + 1 row
     expect(lines[1]).toContain("one two three");
   });
@@ -97,7 +97,7 @@ describe("buildAttendeeCsv", () => {
       [rsvp({ affiliation: "Acme, Inc.", presentationAbstract: "a\nb" })],
       [],
     );
-    const row = csv.replace(/^﻿/, "").split("\n")[1];
+    const row = csv.replace(/^\uFEFF/, "").split("\n")[1];
     expect(row).toContain('"Acme, Inc."');
     // The abstract folded to a single space-joined field (no quoting needed
     // once the newline is gone).
@@ -113,7 +113,7 @@ describe("buildAttendeeCsv", () => {
       ],
       [],
     );
-    const lines = csv.replace(/^﻿/, "").split("\n");
+    const lines = csv.replace(/^\uFEFF/, "").split("\n");
     expect(lines).toHaveLength(4); // header + 3 rows
   });
 });

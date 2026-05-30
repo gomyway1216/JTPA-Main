@@ -15,7 +15,13 @@ import type { RsvpDoc, SurveyField } from "@/lib/types";
 // whitespace hugging them) keeps the export one-row-per-attendee. Per
 // issue #105.
 export function toSingleLine(value: string): string {
-  return value.replace(/\s*[\r\n]+\s*/g, " ").trim();
+  // `[^\S\r\n]*` matches only horizontal whitespace (spaces/tabs) so it
+  // can't overlap the following `[\r\n]+` — that overlap (when the leading
+  // group was a plain `\s*`) risked polynomial backtracking / ReDoS on
+  // long whitespace-heavy input. Behavior is unchanged: a run containing
+  // at least one line break, plus the whitespace hugging it, folds to one
+  // space; multiple spaces on a single line are left intact.
+  return value.replace(/[^\S\r\n]*[\r\n]+\s*/g, " ").trim();
 }
 
 // RFC 4180 escaping: wrap a field in double quotes when it contains a
@@ -77,5 +83,5 @@ export function buildAttendeeCsv(
       .join(",");
   });
   // Prepend a UTF-8 BOM so Excel opens it without garbled Japanese.
-  return "﻿" + [header.join(","), ...rows].join("\n");
+  return "\uFEFF" + [header.join(","), ...rows].join("\n");
 }
