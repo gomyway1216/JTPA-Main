@@ -32,10 +32,51 @@ function getByPath(messages, path) {
   return path.split(".").reduce((cur, part) => cur?.[part], messages);
 }
 
-function braceArguments(message) {
-  const args = new Set();
+function splitTopLevelCommas(value, limit = Number.POSITIVE_INFINITY) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let i = 0; i < value.length; i += 1) {
+    const ch = value[i];
+    if (ch === "{") depth += 1;
+    if (ch === "}") depth -= 1;
+    if (ch === "," && depth === 0 && parts.length < limit - 1) {
+      parts.push(value.slice(start, i));
+      start = i + 1;
+    }
+  }
+
+  parts.push(value.slice(start));
+  return parts;
+}
+
+function collectNestedOptionArguments(content, args) {
+  let depth = 0;
+  let start = -1;
+
+  for (let i = 0; i < content.length; i += 1) {
+    const ch = content[i];
+    if (ch === "{") {
+      if (depth === 0) start = i + 1;
+      depth += 1;
+      continue;
+    }
+
+    if (ch !== "}") continue;
+
+    depth -= 1;
+    if (depth === 0 && start >= 0) {
+      collectBraceArguments(content.slice(start, i), args);
+      start = -1;
+    }
+  }
+}
+
+function collectBraceArguments(message, args) {
   for (let i = 0; i < message.length; i += 1) {
     if (message[i] !== "{") continue;
+
     let depth = 1;
     let content = "";
     for (let j = i + 1; j < message.length; j += 1) {
@@ -43,20 +84,32 @@ function braceArguments(message) {
       if (ch === "{") depth += 1;
       if (ch === "}") depth -= 1;
       if (depth === 0) {
-        const name = content.split(",")[0]?.trim();
+        const [rawName, rawType] = splitTopLevelCommas(content, 3);
+        const name = rawName?.trim();
+        const type = rawType?.trim();
+
         if (name && !name.startsWith("#")) args.add(name);
+        if (type === "plural" || type === "select") {
+          collectNestedOptionArguments(content, args);
+        }
+
         i = j;
         break;
       }
       content += ch;
     }
   }
+}
+
+function braceArguments(message) {
+  const args = new Set();
+  collectBraceArguments(message, args);
   return [...args].sort();
 }
 
 function richTags(message) {
-  return [...message.matchAll(/<([A-Za-z][A-Za-z0-9_.-]*)>/g)]
-    .map((match) => match[1])
+  return [...message.matchAll(/<\/?[A-Za-z][A-Za-z0-9_.-]*\s*\/?>/g)]
+    .map((match) => match[0].replace(/\s+\/>$/, "/>"))
     .sort();
 }
 
