@@ -22,32 +22,47 @@ export function toDate(value: TsLike | undefined | null): Date | null {
   return null;
 }
 
-const dateFormatter = new Intl.DateTimeFormat("ja-JP", {
-  year: "numeric",
-  month: "long",
-  day: "numeric",
-  weekday: "short",
-});
-
-const timeFormatter = new Intl.DateTimeFormat("ja-JP", {
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
-export function formatDate(value: TsLike | undefined | null): string {
-  const d = toDate(value);
-  return d ? dateFormatter.format(d) : "";
+function dateFormatter(locale: Intl.LocalesArgument) {
+  return new Intl.DateTimeFormat(locale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    weekday: "short",
+  });
 }
 
-export function formatDateTime(value: TsLike | undefined | null): string {
-  const d = toDate(value);
-  return d ? `${dateFormatter.format(d)} ${timeFormatter.format(d)}` : "";
+function timeFormatter(locale: Intl.LocalesArgument) {
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
-export function formatTime(value: TsLike | undefined | null): string {
+export function formatDate(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
   const d = toDate(value);
-  return d ? timeFormatter.format(d) : "";
+  return d ? dateFormatter(locale).format(d) : "";
+}
+
+export function formatDateTime(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
+  const d = toDate(value);
+  return d
+    ? `${dateFormatter(locale).format(d)} ${timeFormatter(locale).format(d)}`
+    : "";
+}
+
+export function formatTime(
+  value: TsLike | undefined | null,
+  locale: Intl.LocalesArgument = "ja-JP",
+): string {
+  const d = toDate(value);
+  return d ? timeFormatter(locale).format(d) : "";
 }
 
 export function slugify(input: string, fallbackPrefix = "event"): string {

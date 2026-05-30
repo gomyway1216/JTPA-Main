@@ -1,6 +1,7 @@
 "use client";
 
 import { signInWithPopup } from "firebase/auth";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -10,12 +11,13 @@ import { clientAuth, googleProvider } from "@/lib/firebase/client";
 export function SignInButton({
   redirectTo = "/",
   className,
-  label = "Googleでログイン",
+  label,
 }: {
   redirectTo?: string;
   className?: string;
   label?: string;
 }) {
+  const t = useTranslations("Auth");
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +33,7 @@ export function SignInButton({
       router.refresh();
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "ログインに失敗しました");
+      setError(e instanceof Error ? e.message : t("loginFailed"));
       setPending(false);
     }
   }
@@ -48,7 +50,7 @@ export function SignInButton({
         }
       >
         <GoogleMark />
-        {pending ? "ログイン中..." : label}
+        {pending ? t("loggingIn") : (label ?? t("googleLogin"))}
       </button>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>

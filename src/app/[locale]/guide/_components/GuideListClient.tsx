@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -9,6 +10,8 @@ import type { GuideDoc } from "@/lib/types";
 import { stripMarkdown, truncate } from "@/lib/utils";
 
 export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
+  const t = useTranslations("GuideList");
+  const locale = useLocale();
   const [query, setQuery] = useState("");
   // Multi-select tag filter with OR semantics: clicking 2 tags shows
   // guides that match either one.
@@ -27,9 +30,9 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
       for (const t of g.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
     }
     return Array.from(counts.entries()).sort((a, b) =>
-      b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0], "ja"),
+      b[1] !== a[1] ? b[1] - a[1] : a[0].localeCompare(b[0], locale),
     );
-  }, [guides]);
+  }, [guides, locale]);
 
   // Pre-build a lowercased haystack per guide once. Running `.toLowerCase()`
   // on every guide's full body on every keystroke would be a lot of
@@ -72,8 +75,8 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
     <div className="space-y-4">
       <input
         type="search"
-        aria-label="ガイドを検索"
-        placeholder="キーワードで検索（タイトル・タグ・本文）"
+        aria-label={t("searchLabel")}
+        placeholder={t("searchPlaceholder")}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
@@ -106,7 +109,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
               onClick={clearTags}
               className="ml-1 text-xs text-zinc-500 hover:underline"
             >
-              タグをクリア
+              {t("clearTags")}
             </button>
           )}
         </div>
@@ -114,9 +117,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
 
       {filtered.length === 0 ? (
         <p className="rounded-md border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700">
-          {guides.length === 0
-            ? "まだ公開済みのガイドはありません。"
-            : "条件に一致するガイドがありません。"}
+          {guides.length === 0 ? t("empty") : t("noMatches")}
         </p>
       ) : (
         <ul className="space-y-3">
@@ -149,7 +150,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
       )}
 
       <p className="text-xs text-zinc-500">
-        表示中: {filtered.length} / 全 {guides.length} 件
+        {t("showing", { filtered: filtered.length, total: guides.length })}
       </p>
     </div>
   );
