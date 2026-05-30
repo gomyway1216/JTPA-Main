@@ -82,6 +82,17 @@ beforeEach(() => {
 });
 
 describe("setUserRole — input validation", () => {
+  it("returns an error (not a destructuring crash) on a nullish payload", async () => {
+    // Server Actions accept arbitrary runtime payloads. A null/undefined
+    // one must not throw a TypeError from signature destructuring (which
+    // Next would mask as the generic digest) — it comes back as { ok: false }.
+    await expectError(
+      setUserRole(null as unknown as Parameters<typeof setUserRole>[0]),
+      "uid",
+    );
+    expect(setCustomUserClaimsMock).not.toHaveBeenCalled();
+  });
+
   it("rejects an empty uid", async () => {
     await expectError(
       setUserRole({ uid: "", role: "admin", grant: true }),

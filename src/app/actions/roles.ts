@@ -26,12 +26,20 @@ interface SetRoleArgs {
 // digest in production (same reasoning as events.ts / users.ts, per PR #59).
 export type RoleActionResult = { ok: true } | { ok: false; error: string };
 
-export async function setUserRole({
-  uid,
-  role,
-  grant,
-}: SetRoleArgs): Promise<RoleActionResult> {
+export async function setUserRole(
+  args: SetRoleArgs,
+): Promise<RoleActionResult> {
   const actor = await requireAdmin();
+
+  // Server Actions can be invoked with an arbitrary runtime payload —
+  // including null/undefined or a non-object. Destructuring in the
+  // signature would throw a TypeError on a nullish payload, which Next
+  // masks as the generic production digest; guard the payload first so a
+  // bad one comes back as a real { ok: false } error instead.
+  if (args == null || typeof args !== "object") {
+    return { ok: false, error: "uid が指定されていません" };
+  }
+  const { uid, role, grant } = args;
 
   // Runtime validation — TypeScript only checks the shape at compile time,
   // and Server Actions can be invoked with any payload. Reject anything
