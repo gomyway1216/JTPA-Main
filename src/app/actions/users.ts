@@ -11,6 +11,7 @@ import {
   isCanonicalAvatarUrl,
   isOwnedAvatarPath,
   isReservedUsername,
+  isUnclaimedDefaultUsername,
   normalizeUsername,
   USERNAME_REGEX,
   usernameErrorMessage,
@@ -223,16 +224,33 @@ export async function updateMyProfile(
       const userData = userSnap.data() as UserProfile;
       const currentUsername = userData.username;
 
+      // A user who never explicitly picked a handle has no stored
+      // `username`; the form pre-fills the reserved `user-*` default
+      // placeholder, so an untouched save submits a reserved handle that
+      // doesn't match their (absent) current one. Treat that as
+      // "username unchanged" rather than a forbidden claim — otherwise
+      // every profile edit by such a user fails (issue #104). See
+      // isUnclaimedDefaultUsername for the full rationale.
+      const keepDefaultHandle = isUnclaimedDefaultUsername(
+        user.uid,
+        currentUsername,
+        desiredUsername,
+      );
+
       // Grandfather: a reserved-by-rule handle is still allowed as
       // long as it matches the user's CURRENT username (i.e. they're
-      // saving the rest of their profile without renaming). New
-      // claims into the reserved namespace are still blocked. Per
-      // PR #94 Copilot review.
-      if (desiredIsReserved && currentUsername !== desiredUsername) {
+      // saving the rest of their profile without renaming), or it's the
+      // unclaimed default placeholder above. New claims into the
+      // reserved namespace are still blocked. Per PR #94 Copilot review.
+      if (
+        desiredIsReserved &&
+        currentUsername !== desiredUsername &&
+        !keepDefaultHandle
+      ) {
         throw new Error("USERNAME_RESERVED");
       }
 
-      if (currentUsername !== desiredUsername) {
+      if (currentUsername !== desiredUsername && !keepDefaultHandle) {
         // Firestore transactions require ALL reads to happen before
         // ANY writes — interleaving throws "Firestore transactions
         // require all reads to be executed before all writes" at
@@ -281,7 +299,14 @@ export async function updateMyProfile(
       }
 
       tx.update(userRef, {
-        username: desiredUsername,
+        // Keep `username` absent when the user is just holding onto the
+        // unclaimed default placeholder (issue #104): persisting it would
+        // bake a reserved `user-*` handle into the doc and leave a stray
+        // reservation slot. FieldValue.delete() (rather than merely
+        // omitting the key) also scrubs any legacy stray null/"" username,
+        // so the doc is truly absent and the public projection keeps
+        // falling back to defaultUsernameFor(uid), as designed.
+        username: keepDefaultHandle ? FieldValue.delete() : desiredUsername,
         affiliation: parsed.data.affiliation,
         bio: parsed.data.bio,
         affiliationPublic: parsed.data.affiliationPublic,
@@ -394,7 +419,27 @@ export async function updateMyAvatar(
   if (!isOwnedAvatarPath(user.uid, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なパス）" };
   }
-  if (!isCanonicalAvatarUrl(url, adminStorage().bucket().name, path)) {
+  // Take the bucket name from env (the exact value the client embeds in the
+  // download URL) rather than `adminStorage().bucket().name`: the latter
+  // throws synchronously when no default bucket is configured, and this
+  // check runs OUTSIDE the try/catch below — an unhandled throw here would
+  // surface to the client as the masked generic "Server Components render"
+  // error instead of a clean inline message.
+  const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  if (!bucketName) {
+    // Env not wired up at all — distinct from a tampered URL. Log it so the
+    // misconfiguration is debuggable, and tell the user it's a system/config
+    // error rather than surfacing a misleading "invalid URL". Per PR #109
+    // Gemini review.
+    console.error(
+      "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET is not set; cannot validate avatar URL.",
+    );
+    return {
+      ok: false,
+      error: "アイコンの保存に失敗しました（システム設定エラー）",
+    };
+  }
+  if (!isCanonicalAvatarUrl(url, bucketName, path)) {
     return { ok: false, error: "アイコンの保存に失敗しました（不正なURL）" };
   }
 
