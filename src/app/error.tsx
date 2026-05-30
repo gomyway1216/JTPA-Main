@@ -42,7 +42,7 @@ export default function Error({
   return (
     <div className="mx-auto flex min-h-[calc(100vh-12rem)] max-w-2xl flex-col items-center justify-center gap-6 px-4 py-20 text-center sm:py-28">
       <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50/80 px-3 py-1 text-xs font-medium text-red-700 backdrop-blur dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
-        Something went wrong
+        エラー
       </span>
 
       <h1 className="text-5xl font-semibold leading-tight tracking-tight sm:text-6xl">
@@ -78,7 +78,7 @@ export default function Error({
         clutter the page during local development.
       */}
       {error.digest && (
-        <p className="pt-2 font-mono text-xs text-zinc-500 dark:text-zinc-500">
+        <p className="pt-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">
           error-id: {error.digest}
         </p>
       )}

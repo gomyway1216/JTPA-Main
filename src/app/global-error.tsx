@@ -30,6 +30,24 @@ export default function GlobalError({
 
   return (
     <html lang="ja">
+      <head>
+        <title>予期しないエラーが発生しました</title>
+        {/*
+          Dark-mode override. The inline `style=` attributes below win
+          the cascade against a stylesheet rule, so the `!important`
+          flags are load-bearing — without them a `prefers-color-scheme:
+          dark` user would still see the white background and dark text
+          from the inline styles. Selectors are tied to the specific
+          elements rendered below (body / the description <p> / the
+          home-link <a>); keep them in sync if the markup changes.
+        */}
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              "@media (prefers-color-scheme: dark) { body { background: #0a0a0a !important; color: #fafafa !important; } p { color: #a1a1aa !important; } a { background: #18181b !important; color: #fafafa !important; border-color: #27272a !important; } }",
+          }}
+        />
+      </head>
       <body
         style={{
           margin: 0,
