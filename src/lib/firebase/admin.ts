@@ -21,7 +21,12 @@ function getAdminApp(): App {
   // built client-side and validated server-side reference the identical
   // bucket name (e.g. `jtpa-main.firebasestorage.app`, NOT the legacy
   // `*.appspot.com` the SDK would otherwise have guessed).
-  const storageBucket = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+  // `|| undefined` so an empty-string env var isn't passed as a literal
+  // (invalid) bucket name — undefined lets `.bucket()` fail loudly only when
+  // actually used, rather than the SDK treating "" as a real bucket. Per
+  // PR #109 Gemini review.
+  const storageBucket =
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || undefined;
 
   // FIREBASE_SERVICE_ACCOUNT lets you inject a JSON-stringified key in CI/dev.
   // In production (App Hosting / Cloud Run / GCE), ADC is picked up automatically.
