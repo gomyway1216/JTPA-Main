@@ -171,7 +171,14 @@ export async function updatePresentation(
     await deleteStorageFile(prev.filePath);
   }
 
-  const patch: Omit<PresentationDoc, "id" | "createdAt"> = {
+  // Full-document replace (NOT `{ merge: true }`). The Admin SDK runs with
+  // `ignoreUndefinedProperties`, so a merge write silently drops the
+  // undefined (cleared) fields and leaves their OLD values in place — e.g.
+  // switching from an uploaded file to a URL-only deck would keep the stale
+  // filePath/fileUrl/fileName pointing at the object we just deleted above.
+  // Replacing the whole doc (carrying `createdAt` forward) actually removes
+  // the cleared fields. Per PR #111 Gemini review.
+  const updatedDoc: Omit<PresentationDoc, "id"> = {
     eventId: parsed.data.eventId,
     presenterUid: prev.presenterUid,
     presenterName: prev.presenterName,
@@ -181,14 +188,15 @@ export async function updatePresentation(
     fileUrl: parsed.data.fileUrl,
     fileName: parsed.data.fileName,
     externalSlidesUrl: parsed.data.externalSlidesUrl,
+    createdAt: prev.createdAt,
     updatedAt: Timestamp.now(),
   };
-  await ref.set(patch, { merge: true });
+  await ref.set(updatedDoc);
 
   revalidatePath(`/events/${parsed.data.eventSlug}`);
   return {
     ok: true,
-    presentation: plainify({ ...patch, id: ref.id, createdAt: prev.createdAt }),
+    presentation: plainify({ ...updatedDoc, id: ref.id }),
   };
 }
 
