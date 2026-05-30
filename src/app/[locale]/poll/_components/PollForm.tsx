@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
@@ -85,18 +86,17 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
     };
     startTransition(async () => {
       try {
-        if (mode === "create") {
-          await submitPoll(payload);
-        } else if (poll) {
-          await updateMyPoll(poll.id, payload);
-        }
+        const res =
+          mode === "create"
+            ? await submitPoll(payload)
+            : poll
+              ? await updateMyPoll(poll.id, payload)
+              : null;
+        if (res && !res.ok) setError(res.error);
       } catch (err) {
-        // `redirect()` throws an internal error to trigger navigation;
-        // let those re-throw. Other errors surface to the user.
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        // submit/update redirect on success (throwing NEXT_REDIRECT); let
+        // unstable_rethrow pass that through and surface anything else.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
@@ -108,12 +108,10 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await deleteMyPoll(poll.id);
+        const res = await deleteMyPoll(poll.id);
+        if (res && !res.ok) setError(res.error);
       } catch (err) {
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });

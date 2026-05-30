@@ -38,7 +38,12 @@ export function PostReviewCard({
     }
     startTransition(async () => {
       try {
-        await decidePost(post.id, decision, note);
+        const res = await decidePost(post.id, decision, note);
+        if (!res.ok) {
+          // Surface the real reason instead of the masked generic crash.
+          setError(res.error);
+          return;
+        }
         // revalidatePath inside the Server Action invalidates the cache,
         // but the existing client-side React tree won't re-fetch until we
         // tell the router to refresh. Without this the just-decided card

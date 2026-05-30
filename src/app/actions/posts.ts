@@ -10,7 +10,7 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
-import { inputError } from "@/lib/i18n/action-errors";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { PostDoc, PostStatus, ProjectAsset } from "@/lib/types";
@@ -36,12 +36,21 @@ const PostInputSchema = z.object({
 
 export type PostFormInput = z.input<typeof PostInputSchema>;
 
-async function parsePostInput(
-  input: PostFormInput,
-): Promise<z.infer<typeof PostInputSchema>> {
+// submitPost / updateMyPost redirect on success (so they only ever *return*
+// on failure); the remaining actions return { ok: true }. Returning the
+// error rather than throwing it is what lets the real message reach the
+// user — Next masks thrown Server Action errors as a generic digest in
+// production (same reasoning as events.ts / users.ts, per PR #59).
+export type PostSaveResult = { ok: true } | { ok: false; error: string };
+
+type ParsedPostInput =
+  | { ok: true; data: z.infer<typeof PostInputSchema> }
+  | { ok: false; error: string };
+
+async function parsePostInput(input: PostFormInput): Promise<ParsedPostInput> {
   const result = PostInputSchema.safeParse(input);
-  if (result.success) return result.data;
-  throw new Error(await inputError(result.error.issues));
+  if (result.success) return { ok: true, data: result.data };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -84,9 +93,13 @@ function orphanPaths(
 
 // ---------- create ----------
 
-export async function submitPost(input: PostFormInput): Promise<void> {
+export async function submitPost(
+  input: PostFormInput,
+): Promise<PostSaveResult> {
   const user = await requireUser();
-  const parsed = await parsePostInput(input);
+  const pr = await parsePostInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
@@ -130,15 +143,17 @@ export async function submitPost(input: PostFormInput): Promise<void> {
 export async function updateMyPost(
   postId: string,
   input: PostFormInput,
-): Promise<void> {
+): Promise<PostSaveResult> {
   const user = await requireUser();
-  const parsed = await parsePostInput(input);
+  const pr = await parsePostInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: await actionError("postEditForbidden") };
   }
 
   const orphans = orphanPaths(cur.coverImage, parsed.coverImage);
@@ -178,14 +193,15 @@ export async function updateMyPost(
 
 // ---------- delete (owner) ----------
 
-export async function deleteMyPost(postId: string): Promise<void> {
+export async function deleteMyPost(postId: string): Promise<PostSaveResult> {
   const user = await requireUser();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) return;
+  // Already gone — nothing to do, treat as success so the UI navigates away.
+  if (!snap.exists) return { ok: true };
   const cur = snap.data() as PostDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: await actionError("postDeleteForbidden") };
   }
 
   const paths: string[] = [];
@@ -200,15 +216,16 @@ export async function deleteMyPost(postId: string): Promise<void> {
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
+  return { ok: true };
 }
 
 // ---------- admin shortcuts ----------
 
-export async function publishPost(postId: string): Promise<void> {
+export async function publishPost(postId: string): Promise<PostSaveResult> {
   const admin = await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
 
   // Check the timestamp directly so re-publishing a post that was edited
@@ -244,17 +261,18 @@ export async function publishPost(postId: string): Promise<void> {
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/admin/posts");
+  return { ok: true };
 }
 
 export async function decidePost(
   postId: string,
   decision: "published" | "rejected",
   note?: string,
-): Promise<void> {
+): Promise<PostSaveResult> {
   const admin = await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
 
   // Same first-publish detection as publishPost — anchored on the actual
@@ -300,16 +318,17 @@ export async function decidePost(
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
+  return { ok: true };
 }
 
 // Not wired into the UI yet — kept ready for the published-list archive
 // button (planned follow-up) so older posts can be retired without losing
 // the doc (vs deleteMyPost which removes it entirely).
-export async function archivePost(postId: string): Promise<void> {
+export async function archivePost(postId: string): Promise<PostSaveResult> {
   await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("postNotFound") };
   const cur = snap.data() as PostDoc;
   await ref.update({
     status: "archived" as const,
@@ -318,4 +337,5 @@ export async function archivePost(postId: string): Promise<void> {
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/admin/posts");
+  return { ok: true };
 }

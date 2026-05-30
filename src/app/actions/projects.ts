@@ -10,7 +10,7 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
-import { inputError } from "@/lib/i18n/action-errors";
+import { actionError, inputError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { ProjectAsset, ProjectDoc } from "@/lib/types";
@@ -44,12 +44,21 @@ const ProjectInputSchema = z.object({
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
 
-async function parseProjectInput(
-  input: ProjectFormInput,
-): Promise<z.infer<typeof ProjectInputSchema>> {
+// submitProject / updateMyProject redirect on success (so they only ever
+// *return* on failure); the remaining actions return { ok: true }. Returning
+// the error rather than throwing it is what lets the real message reach the
+// user — Next masks thrown Server Action errors as a generic digest in
+// production (same reasoning as events.ts / users.ts, per PR #59).
+export type ProjectSaveResult = { ok: true } | { ok: false; error: string };
+
+type ParsedProjectInput =
+  | { ok: true; data: z.infer<typeof ProjectInputSchema> }
+  | { ok: false; error: string };
+
+async function parseProjectInput(input: ProjectFormInput): Promise<ParsedProjectInput> {
   const result = ProjectInputSchema.safeParse(input);
-  if (result.success) return result.data;
-  throw new Error(await inputError(result.error.issues));
+  if (result.success) return { ok: true, data: result.data };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 async function uniqueSlug(base: string, existingId?: string): Promise<string> {
@@ -98,9 +107,13 @@ function diffAssetPaths(
   return orphans;
 }
 
-export async function submitProject(input: ProjectFormInput): Promise<string> {
+export async function submitProject(
+  input: ProjectFormInput,
+): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const parsed = await parseProjectInput(input);
+  const pr = await parseProjectInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const now = Timestamp.now();
   const slug = await uniqueSlug(parsed.title);
 
@@ -139,14 +152,18 @@ export async function submitProject(input: ProjectFormInput): Promise<string> {
 export async function updateMyProject(
   projectId: string,
   input: ProjectFormInput,
-): Promise<void> {
+): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const parsed = await parseProjectInput(input);
+  const pr = await parseProjectInput(input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
   const cur = snap.data() as ProjectDoc;
-  if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
+  if (cur.ownerUid !== user.uid) {
+    return { ok: false, error: await actionError("projectEditForbidden") };
+  }
 
   // Compute orphans now — they're whatever paths the previous version
   // referenced but the new payload doesn't — but defer the actual Storage
@@ -183,15 +200,23 @@ export async function updateMyProject(
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
   revalidatePath("/admin/projects");
+  // Redirect on success — mirrors updateMyPost so the author lands back on
+  // their list instead of sitting on a now-stale edit form (per #129 review).
+  return redirectToLocalizedPath("/my/projects");
 }
 
-export async function deleteMyProject(projectId: string): Promise<void> {
+export async function deleteMyProject(
+  projectId: string,
+): Promise<ProjectSaveResult> {
   const user = await requireUser();
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
-  if (!snap.exists) return;
+  // Already gone — nothing to do, treat as success so the UI navigates away.
+  if (!snap.exists) return { ok: true };
   const cur = snap.data() as ProjectDoc;
-  if (cur.ownerUid !== user.uid) throw new Error("FORBIDDEN");
+  if (cur.ownerUid !== user.uid) {
+    return { ok: false, error: await actionError("projectDeleteForbidden") };
+  }
 
   // Collect the asset paths now, but defer the Storage cleanup until AFTER
   // the doc is deleted. If the Storage cleanup runs first and the doc
@@ -206,17 +231,18 @@ export async function deleteMyProject(projectId: string): Promise<void> {
 
   revalidatePath("/showcase");
   revalidatePath("/my/projects");
+  return { ok: true };
 }
 
 export async function decideProject(
   projectId: string,
   decision: "approved" | "rejected",
   note?: string,
-): Promise<void> {
+): Promise<ProjectSaveResult> {
   const admin = await requireAdmin();
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
   const cur = snap.data() as { ownerUid: string; title: string };
 
   await ref.update({
@@ -244,4 +270,5 @@ export async function decideProject(
 
   revalidatePath("/showcase");
   revalidatePath("/admin/projects");
+  return { ok: true };
 }

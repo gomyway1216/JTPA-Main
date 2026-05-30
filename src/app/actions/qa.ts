@@ -49,12 +49,19 @@ const StatusSchema = z.object({
 
 export type SetQaStatusInput = z.input<typeof StatusSchema>;
 
-async function readableParse<T extends z.ZodTypeAny>(
+// Mutations return a result rather than throwing so the real reason
+// reaches the user — Next masks thrown Server Action errors as a generic
+// digest in production (same pattern as users/events/rsvps/presentations).
+// The create/update/delete paths redirect on success, so they only ever
+// *return* on failure; setQaStatus returns { ok: true }.
+export type QaActionResult = { ok: true } | { ok: false; error: string };
+
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): Promise<z.infer<T>> {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) return { ok: true, data: result.data };
   const issues = await Promise.all(
     result.error.issues.map(async (issue) => ({
       path: issue.path,
@@ -64,7 +71,7 @@ async function readableParse<T extends z.ZodTypeAny>(
           : issue.message,
     })),
   );
-  throw new Error(await inputError(issues));
+  return { ok: false, error: await inputError(issues) };
 }
 
 // Resolve a free slug under /qa. Mirrors the pattern in
@@ -86,9 +93,11 @@ async function findFreeQaSlug(seed: string): Promise<string> {
   return `${base}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-export async function submitQa(input: QaFormInput): Promise<string> {
+export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
   const user = await requireUser();
-  const parsed = await readableParse(QaFormSchema, input);
+  const pr = await parseOrError(QaFormSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const slug = await findFreeQaSlug(parsed.slug || parsed.title);
   const now = Timestamp.now();
@@ -124,9 +133,9 @@ export async function submitQa(input: QaFormInput): Promise<string> {
       // ALREADY_EXISTS — extremely unlikely (Firestore auto-id space is
       // huge) but possible if a client retries the submit. Treat it the
       // same as a slug collision and surface a useful error.
-      const code = (err as { code?: number | string }).code;
+      const code = (err as { code?: number | string } | null)?.code;
       if (code === 6 || code === "already-exists") {
-        throw new Error(await actionError("qaSaveRetry"));
+        return { ok: false, error: await actionError("qaSaveRetry") };
       }
       throw err;
     }
@@ -142,16 +151,18 @@ export async function submitQa(input: QaFormInput): Promise<string> {
 export async function updateMyQa(
   qaId: string,
   input: QaFormInput,
-): Promise<void> {
+): Promise<QaActionResult> {
   const user = await requireUser();
-  const parsed = await readableParse(QaFormSchema, input);
+  const pr = await parseOrError(QaFormSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const ref = adminDb().collection("qa").doc(qaId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+    return { ok: false, error: await actionError("qaEditForbidden") };
   }
 
   // Slug changes only when the author explicitly chose a new value AND
@@ -176,22 +187,23 @@ export async function updateMyQa(
   return redirectToLocalizedPath(`/qa/${newSlug}`);
 }
 
-export async function deleteMyQa(qaId: string): Promise<void> {
+export async function deleteMyQa(qaId: string): Promise<QaActionResult> {
   const user = await requireUser();
   const ref = adminDb().collection("qa").doc(qaId);
   const snap = await ref.get();
-  if (!snap.exists) return;
-  const cur = snap.data() as QaDoc;
-  if (cur.authorUid !== user.uid && !user.isAdmin) {
-    throw new Error("FORBIDDEN");
+  if (snap.exists) {
+    const cur = snap.data() as QaDoc;
+    if (cur.authorUid !== user.uid && !user.isAdmin) {
+      return { ok: false, error: await actionError("qaDeleteForbidden") };
+    }
+    // We don't recursively delete the comments/likes subcollections here —
+    // Firestore doesn't cascade. Admin can do that out-of-band if a Q&A
+    // is being deleted for moderation reasons; in practice the parent
+    // doc going away makes the subcollection unreachable anyway.
+    await ref.delete();
+    revalidatePath("/qa");
+    revalidatePath(`/qa/${cur.slug}`);
   }
-  // We don't recursively delete the comments/likes subcollections here —
-  // Firestore doesn't cascade. Admin can do that out-of-band if a Q&A
-  // is being deleted for moderation reasons; in practice the parent
-  // doc going away makes the subcollection unreachable anyway.
-  await ref.delete();
-  revalidatePath("/qa");
-  revalidatePath(`/qa/${cur.slug}`);
   return redirectToLocalizedPath("/qa");
 }
 
@@ -200,16 +212,20 @@ export async function deleteMyQa(qaId: string): Promise<void> {
  * Archived items disappear from public listings + detail but the author
  * still sees them on `/my/qa` so they know why their post went dark.
  */
-export async function setQaStatus(input: SetQaStatusInput): Promise<void> {
+export async function setQaStatus(
+  input: SetQaStatusInput,
+): Promise<QaActionResult> {
   await requireAdmin();
-  const parsed = await readableParse(StatusSchema, input);
+  const pr = await parseOrError(StatusSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   const ref = adminDb().collection("qa").doc(parsed.qaId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("NOT_FOUND");
+  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
 
-  if (cur.status === parsed.status) return; // no-op
+  if (cur.status === parsed.status) return { ok: true }; // no-op
   await ref.update({
     status: parsed.status as QaStatus,
     updatedAt: Timestamp.now(),
@@ -217,4 +233,5 @@ export async function setQaStatus(input: SetQaStatusInput): Promise<void> {
 
   revalidatePath("/qa");
   revalidatePath(`/qa/${cur.slug}`);
+  return { ok: true };
 }

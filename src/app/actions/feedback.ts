@@ -29,13 +29,21 @@ const StatusSchema = z.object({
 
 export type SetFeedbackStatusInput = z.input<typeof StatusSchema>;
 
-async function readableParse<T extends z.ZodTypeAny>(
+// Returning the error rather than throwing it is what lets the real message
+// reach the user — Next masks thrown Server Action errors as a generic
+// digest in production (same reasoning as events.ts / users.ts, per PR #59).
+export type FeedbackActionResult = { ok: true } | { ok: false; error: string };
+export type SubmitFeedbackResult =
+  | { ok: true; id: string }
+  | { ok: false; error: string };
+
+async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): Promise<z.infer<T>> {
+): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
-  throw new Error(await inputError(result.error.issues));
+  if (result.success) return { ok: true, data: result.data };
+  return { ok: false, error: await inputError(result.error.issues) };
 }
 
 /**
@@ -43,13 +51,16 @@ async function readableParse<T extends z.ZodTypeAny>(
  * identity is taken from the session, NOT from the client payload, so
  * the `authorUid` on the saved doc is always authentic.
  *
- * Returns the new doc id so the caller can show a confirmation toast.
+ * Returns { ok: true, id } on success so the caller can show a confirmation
+ * toast; { ok: false, error } carries a readable validation message inline.
  */
 export async function submitFeedback(
   input: SubmitFeedbackInput,
-): Promise<{ id: string }> {
+): Promise<SubmitFeedbackResult> {
   const user = await requireUser();
-  const parsed = await readableParse(SubmitSchema, input);
+  const pr = await parseOrError(SubmitSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   // Pull the latest username/displayName from the profile doc rather
   // than trust the session — the session is cached and may not reflect
@@ -86,7 +97,7 @@ export async function submitFeedback(
 
   revalidatePath("/admin/feedback");
   revalidatePath("/admin");
-  return { id: ref.id };
+  return { ok: true, id: ref.id };
 }
 
 /**
@@ -99,9 +110,11 @@ export async function submitFeedback(
  */
 export async function setFeedbackStatus(
   input: SetFeedbackStatusInput,
-): Promise<void> {
+): Promise<FeedbackActionResult> {
   const actor = await requireEditor();
-  const parsed = await readableParse(StatusSchema, input);
+  const pr = await parseOrError(StatusSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   // `archived` is the "hide from default triage" terminal status —
   // gated to admins only so editors can't unilaterally remove entries
@@ -109,7 +122,7 @@ export async function setFeedbackStatus(
   // for admins) and the Firestore rule. Per PR #88 Gemini security
   // review — the UI guard alone isn't load-bearing.
   if (parsed.status === "archived" && !actor.isAdmin) {
-    throw new Error(await actionError("feedbackArchiveAdminOnly"));
+    return { ok: false, error: await actionError("feedbackArchiveAdminOnly") };
   }
 
   const ref = adminDb().collection("feedback").doc(parsed.feedbackId);
@@ -127,4 +140,5 @@ export async function setFeedbackStatus(
 
   revalidatePath("/admin/feedback");
   revalidatePath("/admin");
+  return { ok: true };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -12,6 +13,7 @@ import {
   deleteMyQa,
   submitQa,
   updateMyQa,
+  type QaActionResult,
   type QaFormInput,
 } from "@/app/actions/qa";
 import { Field } from "@/components/forms/Field";
@@ -138,18 +140,24 @@ export function QaForm({ mode, user, qa }: Props) {
     };
     startTransition(async () => {
       try {
+        let res: QaActionResult | null = null;
         if (mode === "create") {
-          await submitQa(payload);
+          res = await submitQa(payload);
         } else if (qa) {
-          await updateMyQa(qa.id, payload);
+          res = await updateMyQa(qa.id, payload);
+        }
+        // submitQa/updateMyQa redirect on success, so a returned result is
+        // always a failure — surface it and stop (don't fall through to any
+        // success handling added later). Mirrors EventForm.
+        if (res && !res.ok) {
+          setError(res.error);
+          return;
         }
       } catch (err) {
-        // `redirect()` throws an internal error to trigger navigation;
-        // let those re-throw. Other errors surface to the user.
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        // submitQa/updateMyQa redirect on success, throwing the internal
+        // NEXT_REDIRECT; let unstable_rethrow pass that through and surface
+        // anything else as a real failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("submitFailed"));
       }
     });
@@ -161,12 +169,12 @@ export function QaForm({ mode, user, qa }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await deleteMyQa(qa.id);
+        // deleteMyQa redirects on success (and on an already-deleted doc),
+        // so a returned result is always the forbidden { ok: false } case.
+        const res = await deleteMyQa(qa.id);
+        if (!res.ok) setError(res.error);
       } catch (err) {
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
