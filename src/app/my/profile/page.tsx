@@ -34,6 +34,7 @@ export default async function MyProfilePage() {
     bioPublic: profile?.bioPublic ?? false,
     fullNamePublic: profile?.fullNamePublic ?? false,
     emailOptIn: profile?.emailOptIn ?? true,
+    avatar: profile?.avatar ?? null,
     links: {
       portfolio: profile?.links?.portfolio ?? "",
       github: profile?.links?.github ?? "",
@@ -47,7 +48,7 @@ export default async function MyProfilePage() {
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">アカウント設定</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          ユーザーネーム・公開する情報・リンク・通知設定を編集できます。フルネーム・メール・アイコンは Google アカウント側で管理され、メールは常に非公開です。
+          ユーザーネーム・アイコン・公開する情報・リンク・通知設定を編集できます。フルネーム・メールは Google アカウント側で管理され、メールは常に非公開です。
         </p>
       </header>
 
@@ -60,7 +61,7 @@ export default async function MyProfilePage() {
           <dd>{user.email}</dd>
           {user.photoURL && (
             <>
-              <dt className="text-zinc-500">アイコン</dt>
+              <dt className="text-zinc-500">Google のアイコン</dt>
               <dd>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img

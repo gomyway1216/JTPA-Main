@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/theme/ThemeProvider";
 import { getSessionUser } from "@/lib/auth/session";
+import { getMyAvatarUrl } from "@/lib/data/users";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,19 @@ export const metadata: Metadata = {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const user = await getSessionUser();
+  const sessionUser = await getSessionUser();
+  // The session cookie only carries the Google `photoURL` (decoded from
+  // the cookie — never a Firestore read). Override it with a user-uploaded
+  // avatar when one is set, so the header icon — and any future auth
+  // consumer — shows the custom image. Costs one cached Firestore read per
+  // request for logged-in users; anonymous visitors skip it entirely.
+  const user = sessionUser
+    ? {
+        ...sessionUser,
+        photoURL:
+          (await getMyAvatarUrl(sessionUser.uid)) ?? sessionUser.photoURL,
+      }
+    : null;
 
   return (
     <html

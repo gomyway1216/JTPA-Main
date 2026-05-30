@@ -6,10 +6,18 @@ import { useEffect, useState, useTransition } from "react";
 
 import {
   checkUsernameAvailable,
+  removeMyAvatar,
+  updateMyAvatar,
   updateMyProfile,
   type UsernameAvailability,
 } from "@/app/actions/users";
 import { SaveFlash } from "@/components/forms/SaveFlash";
+import {
+  GUIDE_IMAGE_ACCEPT,
+  GUIDE_IMAGE_LABEL,
+  uploadUserAvatar,
+} from "@/lib/firebase/uploads";
+import type { ProjectAsset } from "@/lib/types";
 import {
   normalizeUsername,
   USERNAME_HELP_TEXT,
@@ -28,6 +36,7 @@ interface Props {
     bioPublic: boolean;
     fullNamePublic: boolean;
     emailOptIn: boolean;
+    avatar: ProjectAsset | null;
     links: {
       portfolio: string;
       github: string;
@@ -60,6 +69,16 @@ export function ProfileForm({ uid, initial }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Avatar is saved immediately on pick/remove through its own Server
+  // Actions, independent of the form's Save button — it must NOT ride the
+  // username-reservation transaction (a pending handle change shouldn't
+  // block changing your icon, and vice versa). `avatarBusy` spans both the
+  // Storage upload and the follow-up persist so the controls disable as a
+  // single unit.
+  const [avatar, setAvatar] = useState<ProjectAsset | null>(initial.avatar);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   // Derived synchronously from the current input — these don't need an
   // effect because they're a pure function of `username` (and the
@@ -155,6 +174,55 @@ export function ProfileForm({ uid, initial }: Props) {
     });
   }
 
+  async function handleAvatarPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setAvatarError(null);
+    const file = e.target.files?.[0];
+    // Reset the input so picking the SAME file again still fires onChange.
+    e.target.value = "";
+    if (!file) return;
+    setAvatarBusy(true);
+    try {
+      // Upload to Storage first (client → `users/{uid}/...`), then persist
+      // the resulting {path, url} via the Server Action, which also sweeps
+      // the previous object. Two awaits, one spinner.
+      const asset = await uploadUserAvatar(uid, file);
+      const result = await updateMyAvatar(asset);
+      if (result.ok) {
+        setAvatar(asset);
+      } else {
+        setAvatarError(result.error);
+      }
+    } catch (err) {
+      setAvatarError(
+        err instanceof Error ? err.message : "アップロードに失敗しました",
+      );
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function handleAvatarRemove() {
+    setAvatarError(null);
+    setAvatarBusy(true);
+    try {
+      const result = await removeMyAvatar();
+      if (result.ok) {
+        setAvatar(null);
+      } else {
+        setAvatarError(result.error);
+      }
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "削除に失敗しました");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  // Initials fallback for the avatar preview — same surrogate-safe
+  // `[...str][0]` handling as AuthorBadge and the /u/[uid] page. Tracks the
+  // live username field so the placeholder matches what the user is typing.
+  const avatarInitial = ([...username][0] ?? "?").toUpperCase();
+
   const submitBlocked =
     pending ||
     probing ||
@@ -177,6 +245,68 @@ export function ProfileForm({ uid, initial }: Props) {
         >
           公開ページを見る →
         </Link>
+      </div>
+
+      {/* Avatar: upload / preview / remove. Saved immediately via its own
+          Server Actions (handleAvatarPick / handleAvatarRemove), separate
+          from the form's Save button below. */}
+      <div className="space-y-2">
+        <p className="block text-sm font-medium">アイコン</p>
+        <div className="flex items-center gap-4">
+          {avatar ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={avatar.url}
+              alt="現在のアイコン"
+              className="h-16 w-16 shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-800"
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-lg font-semibold text-zinc-600 dark:border-zinc-800 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              {avatarInitial}
+            </span>
+          )}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <label
+                className={`cursor-pointer rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800 ${
+                  avatarBusy || pending
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }`}
+              >
+                <input
+                  type="file"
+                  accept={GUIDE_IMAGE_ACCEPT}
+                  disabled={avatarBusy || pending}
+                  onChange={handleAvatarPick}
+                  className="hidden"
+                />
+                {avatar ? "画像を変更" : "画像をアップロード"}
+              </label>
+              {avatar && (
+                <button
+                  type="button"
+                  onClick={handleAvatarRemove}
+                  disabled={avatarBusy || pending}
+                  className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                >
+                  削除
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-zinc-500">
+              {avatarBusy
+                ? "処理中…"
+                : `${GUIDE_IMAGE_LABEL} / 2MB まで。未設定のときは Google アカウントのアイコンが表示されます。`}
+            </p>
+            {avatarError && (
+              <p className="text-xs text-red-600">{avatarError}</p>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Username: unique handle + live availability check */}

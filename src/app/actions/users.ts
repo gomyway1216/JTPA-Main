@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { requireUser } from "@/lib/auth/session";
-import { adminDb } from "@/lib/firebase/admin";
-import type { UserLinks, UserProfile } from "@/lib/types";
+import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import type { ProjectAsset, UserLinks, UserProfile } from "@/lib/types";
 import {
   normalizeUsername,
   RESERVED_USERNAMES,
@@ -276,5 +276,134 @@ export async function updateMyProfile(
   revalidatePath("/events/[slug]", "page");
   revalidatePath(`/u/${user.uid}`);
 
+  return { ok: true };
+}
+
+// ---------- avatar ----------
+
+// Result shape for the avatar mutations. Mirrors UpdateProfileResult: the
+// client renders `error` inline rather than relying on a thrown message
+// (which Next masks as a generic 500 in production builds).
+export type UpdateAvatarResult = { ok: true } | { ok: false; error: string };
+
+// Loose shape check for the {path, url} the client sends after uploading
+// to Storage. The real authorization guard is the per-caller path/url
+// pinning inside updateMyAvatar — this just bounds the payload.
+const AvatarAssetSchema = z.object({
+  path: z.string().min(1).max(500),
+  url: z.string().max(1000).url(),
+});
+
+// Best-effort delete of a single Storage object — reclaims the previous
+// avatar when it's replaced or removed. Same swallow-and-log posture as
+// `deleteStoragePaths` in actions/posts.ts: the Firestore `avatar` field
+// is the source of truth for what's shown, so a stray object is at worst
+// wasted bucket space and must never surface as a user-facing error.
+async function deleteAvatarObject(path: string): Promise<void> {
+  await adminStorage()
+    .bucket()
+    .file(path)
+    .delete()
+    .catch((err) => {
+      console.warn("Failed to delete avatar object:", path, err);
+    });
+}
+
+// Persist a freshly-uploaded avatar. The client has already pushed the
+// file to `users/{uid}/...` in Storage (allowed by storage.rules) and
+// passes back the resulting {path, url}. We re-validate ownership here
+// because that payload is client-controlled:
+//   - `path` must live under the caller's own `users/{uid}/` folder
+//   - `url` must be the download URL FOR that path (it embeds the
+//     percent-encoded path), so a tampered payload can't repoint the
+//     avatar at someone else's object or an arbitrary off-Storage host.
+export async function updateMyAvatar(
+  asset: ProjectAsset,
+): Promise<UpdateAvatarResult> {
+  const user = await requireUser();
+
+  const parsed = AvatarAssetSchema.safeParse(asset);
+  if (!parsed.success) {
+    return { ok: false, error: "アイコンの保存に失敗しました（不正な入力）" };
+  }
+  const { path, url } = parsed.data;
+
+  const prefix = `users/${user.uid}/`;
+  if (!path.startsWith(prefix) || path.includes("..")) {
+    return { ok: false, error: "アイコンの保存に失敗しました（不正なパス）" };
+  }
+  if (!url.includes(encodeURIComponent(path))) {
+    return { ok: false, error: "アイコンの保存に失敗しました（不正なURL）" };
+  }
+
+  const userRef = adminDb().collection("users").doc(user.uid);
+  try {
+    // Read the prior avatar first so we can sweep its Storage object after
+    // the field is repointed (orphan cleanup, mirroring orphanPaths in
+    // actions/posts.ts).
+    const snap = await userRef.get();
+    if (!snap.exists) {
+      return {
+        ok: false,
+        error:
+          "プロフィールが見つかりません。一度ログアウトして再ログインしてください。",
+      };
+    }
+    const prev = (snap.data() as UserProfile).avatar;
+
+    await userRef.update({
+      avatar: { path, url },
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    // Delete the old object only after the field is repointed, and only
+    // when the path actually changed (re-uploading the same path would
+    // otherwise delete the object we just wrote).
+    if (prev?.path && prev.path !== path) {
+      await deleteAvatarObject(prev.path);
+    }
+  } catch (err) {
+    console.error("updateMyAvatar failed:", err);
+    return {
+      ok: false,
+      error: "アイコンの保存に失敗しました。時間を置いて再試行してください。",
+    };
+  }
+
+  revalidatePath("/my/profile");
+  revalidatePath(`/u/${user.uid}`);
+  return { ok: true };
+}
+
+// Clear a custom avatar, falling the user's icon back to the Google
+// `photoURL` (or the initials circle). Deletes the Storage object too.
+export async function removeMyAvatar(): Promise<UpdateAvatarResult> {
+  const user = await requireUser();
+
+  const userRef = adminDb().collection("users").doc(user.uid);
+  try {
+    const snap = await userRef.get();
+    const prev = snap.exists
+      ? (snap.data() as UserProfile).avatar
+      : undefined;
+
+    await userRef.update({
+      avatar: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    if (prev?.path) {
+      await deleteAvatarObject(prev.path);
+    }
+  } catch (err) {
+    console.error("removeMyAvatar failed:", err);
+    return {
+      ok: false,
+      error: "アイコンの削除に失敗しました。時間を置いて再試行してください。",
+    };
+  }
+
+  revalidatePath("/my/profile");
+  revalidatePath(`/u/${user.uid}`);
   return { ok: true };
 }

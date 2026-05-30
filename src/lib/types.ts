@@ -34,6 +34,16 @@ export interface UserProfile {
   // by default everywhere else.
   displayName: string;
   photoURL?: string;
+  // User-uploaded avatar, set from /my/profile. Takes precedence over the
+  // Google-account `photoURL` everywhere an icon is shown (see
+  // `projectPublicProfile` in src/lib/data/users.ts and the header avatar
+  // resolution in the root layout). Stored as {path, url} — the same
+  // shape as ProjectDoc.thumbnail — so the Server Action can delete the
+  // underlying Storage object on replace/removal. Crucially, unlike
+  // `photoURL` (which signInWithIdToken overwrites from `decoded.picture`
+  // on every sign-in), this field is never touched by auth, so a custom
+  // icon survives re-login.
+  avatar?: ProjectAsset;
   // Stable, user-facing handle (e.g. "yudai"). Unique across all users
   // via a transactional reservation in `usernames/{username}` →
   // `{uid}`. Format enforced by USERNAME_REGEX. Bootstrapped to

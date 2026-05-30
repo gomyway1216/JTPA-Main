@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // uploads.ts is "use client" and pulls in firebase/storage. The
 // publicDownloadUrl helper is pure — it only reads ref.storage._host /
@@ -16,14 +16,16 @@ vi.mock("@/lib/firebase/client", () => ({
   clientStorage: {},
 }));
 
-import type { StorageReference } from "firebase/storage";
+import { ref, uploadBytes, type StorageReference } from "firebase/storage";
 
 import {
   GUIDE_IMAGE_ACCEPT,
   GUIDE_IMAGE_LABEL,
   GUIDE_IMAGE_TYPES,
+  MAX_AVATAR_IMAGE_BYTES,
   MAX_GUIDE_IMAGE_BYTES,
   publicDownloadUrl,
+  uploadUserAvatar,
 } from "@/lib/firebase/uploads";
 
 function makeRef(opts: {
@@ -131,5 +133,74 @@ describe("guide image allowlist", () => {
 
   it("ships a human-readable label that matches the allowlist", () => {
     expect(GUIDE_IMAGE_LABEL).toBe("PNG / JPEG / WebP / GIF");
+  });
+});
+
+describe("uploadUserAvatar", () => {
+  // The function only inspects file.name / file.type / file.size, so a
+  // plain object stands in for a real File (constructing one with a
+  // controlled byte size isn't ergonomic in the test env).
+  const file = (
+    over: Partial<{ name: string; type: string; size: number }> = {},
+  ): File =>
+    ({
+      name: over.name ?? "pic.png",
+      type: over.type ?? "image/png",
+      size: over.size ?? 1234,
+    }) as unknown as File;
+
+  beforeEach(() => {
+    vi.mocked(uploadBytes).mockReset();
+    vi.mocked(uploadBytes).mockResolvedValue({} as never);
+    vi.mocked(ref).mockReset();
+    // Echo the generated path back through a ref stub whose internal
+    // fields publicDownloadUrl reads, so the test can assert on the path.
+    vi.mocked(ref).mockImplementation((_storage, path) =>
+      makeRef({
+        bucket: "demo-bucket",
+        fullPath: String(path ?? ""),
+        host: "firebasestorage.googleapis.com",
+        protocol: "https",
+      }),
+    );
+  });
+
+  it("caps the avatar at 2 MiB (matches storage.rules maxSize(2))", () => {
+    expect(MAX_AVATAR_IMAGE_BYTES).toBe(2 * 1024 * 1024);
+  });
+
+  it("rejects a missing uid before touching Storage", async () => {
+    await expect(uploadUserAvatar("", file())).rejects.toThrow();
+    expect(uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-raster types such as SVG", async () => {
+    await expect(
+      uploadUserAvatar("u1", file({ type: "image/svg+xml" })),
+    ).rejects.toThrow();
+    expect(uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("rejects files larger than 2 MiB", async () => {
+    await expect(
+      uploadUserAvatar("u1", file({ size: MAX_AVATAR_IMAGE_BYTES + 1 })),
+    ).rejects.toThrow();
+    expect(uploadBytes).not.toHaveBeenCalled();
+  });
+
+  it("uploads under users/{uid}/avatar-… and returns the {path, url} pair", async () => {
+    const result = await uploadUserAvatar("u1", file({ name: "me.png" }));
+    expect(result.path).toMatch(/^users\/u1\/avatar-\d+-me\.png$/);
+    expect(result.url).toContain(
+      `/o/${encodeURIComponent(result.path)}?alt=media`,
+    );
+    expect(uploadBytes).toHaveBeenCalledOnce();
+  });
+
+  it("scopes the path to the uid (one user can't target another's folder)", async () => {
+    const a = await uploadUserAvatar("alice", file());
+    const b = await uploadUserAvatar("bob", file());
+    expect(a.path.startsWith("users/alice/")).toBe(true);
+    expect(b.path.startsWith("users/bob/")).toBe(true);
   });
 });
