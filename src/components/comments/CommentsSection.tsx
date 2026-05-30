@@ -59,6 +59,11 @@ export function CommentsSection({
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // Separate error slot for the inline reply form so a failed reply shows
+  // its message next to that form, not only under the main comment box at
+  // the bottom of the thread. Only one reply form is open at a time
+  // (replyingTo is a single id), so one slot is enough. Per #128 review.
+  const [replyError, setReplyError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -115,7 +120,10 @@ export function CommentsSection({
     opts: { parentCommentId: string | null },
   ) {
     e.preventDefault();
-    setError(null);
+    // Route feedback to the form the user actually submitted: the inline
+    // reply form (replyError) vs the main comment box (error).
+    const showError = opts.parentCommentId ? setReplyError : setError;
+    showError(null);
     if (!user) return;
     const text = opts.parentCommentId ? replyBody.trim() : body.trim();
     if (!text) return;
@@ -128,7 +136,7 @@ export function CommentsSection({
           parentCommentId: opts.parentCommentId,
         });
         if (!res.ok) {
-          setError(res.error);
+          showError(res.error);
           return;
         }
         setComments((cur) => [...cur, res.comment]);
@@ -140,7 +148,7 @@ export function CommentsSection({
         }
         router.refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "送信に失敗しました");
+        showError(err instanceof Error ? err.message : "送信に失敗しました");
       }
     });
   }
@@ -271,6 +279,9 @@ export function CommentsSection({
             <button
               type="button"
               onClick={() => {
+                // Clear any stale reply error when opening/closing or
+                // switching which comment's reply form is shown.
+                setReplyError(null);
                 if (isReplyOpen) {
                   setReplyingTo(null);
                   setReplyBody("");
@@ -314,6 +325,7 @@ export function CommentsSection({
                 {pending ? "送信中..." : "返信する"}
               </button>
             </div>
+            {replyError && <p className={errorTextClass}>{replyError}</p>}
           </form>
         )}
       </article>
