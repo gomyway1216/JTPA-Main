@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState, useTransition } from "react";
 
 import { setUserRole, type ManagedRole } from "@/app/actions/roles";
@@ -118,9 +119,8 @@ export function UserTable({
                   <tr key={u.uid}>
                     <td className="py-2">
                       <div className="flex items-center gap-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         {u.photoURL ? (
-                          <img
+                          <Image
                             src={u.photoURL}
                             alt=""
                             width={28}
