@@ -135,6 +135,33 @@ export function defaultUsernameFor(uid: string): string {
   return `user-${uid.slice(0, 6).toLowerCase()}`;
 }
 
+// A user who has never explicitly claimed a handle has no stored
+// `username` — `signInWithIdToken` bootstraps the profile doc WITHOUT one
+// (see src/app/actions/auth.ts), leaving the `usernames/{handle}`
+// reservation slot free and letting the public projection fall back to
+// `defaultUsernameFor(uid)` for display. The profile form still has to
+// show something editable, so it pre-fills that same default placeholder.
+//
+// The catch: that placeholder lives in the reserved `user-` namespace. So
+// when such a user saves their profile WITHOUT touching the username field
+// (e.g. just toggling email opt-in or adding a LinkedIn URL), the
+// submitted handle is a reserved one that doesn't match their stored
+// username (which is absent) — and `updateMyProfile` rejected it as a
+// forbidden claim with "このユーザーネームは予約済みです" (issue #104).
+//
+// This helper recognizes that exact no-op: stored handle absent AND the
+// desired handle is precisely this user's own default. Callers treat it as
+// "username unchanged" — no reservation write, and the `username` field
+// stays absent. `desiredUsername` is expected pre-normalized (lowercased +
+// trimmed), matching the other username helpers here.
+export function isUnclaimedDefaultUsername(
+  uid: string,
+  currentUsername: string | null | undefined,
+  desiredUsername: string,
+): boolean {
+  return !currentUsername && desiredUsername === defaultUsernameFor(uid);
+}
+
 // ---------- link host detection ----------
 
 // Maps a URL string to a SNS platform key for icon rendering on
