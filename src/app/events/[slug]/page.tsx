@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { PresentationSection } from "@/app/events/[slug]/PresentationSection";
 import { RsvpSection } from "@/app/events/[slug]/RsvpSection";
+import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
@@ -116,11 +117,13 @@ export default async function EventDetailPage({
         </dl>
       </header>
 
-      {/* Plain-text description (not Markdown) — `whitespace-pre-wrap` preserves
-          author-entered newlines, `break-words` handles long URLs/tokens. The
-          `prose-jtpa` styles are Markdown-specific and would not help here. */}
-      <section className="whitespace-pre-wrap break-words leading-relaxed">
-        {event.description}
+      {/* Markdown description — same renderer as Guides (issue #101), so an
+          event body gets GFM tables/lists, syntax highlighting, heading
+          demotion, and external links opening in a new tab, all styled by
+          `prose-jtpa`. Authors write Markdown (blank line between
+          paragraphs); plain text still renders fine. */}
+      <section>
+        <MarkdownBody source={event.description} />
       </section>
 
       <hr className="border-zinc-200 dark:border-zinc-800" />
