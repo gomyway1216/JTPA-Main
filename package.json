@@ -13,6 +13,7 @@
     "set-admin": "node scripts/set-admin.mjs",
     "set-editor": "node scripts/set-editor.mjs",
     "set-contributor": "node scripts/set-contributor.mjs",
+    "sync-role-badges": "node scripts/sync-role-badges.mjs",
     "seed-guides": "node scripts/seed-guides.mjs"
   },
   "dependencies": {

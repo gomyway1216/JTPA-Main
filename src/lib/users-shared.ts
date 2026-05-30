@@ -19,6 +19,19 @@ export const USERNAME_REGEX =
 export const USERNAME_HELP_TEXT =
   "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。区切り文字は連続不可。";
 
+// Prefixes the system uses for auto-generated handles (currently just
+// `user-<6 chars of uid>` via `defaultUsernameFor` below). Anyone
+// claiming a handle that starts with one of these would risk
+// collisions with someone else's default — including the literal
+// case where `user-abcdef` is auto-shown for one user but explicitly
+// claimable by another in the username form. So we block the whole
+// prefix space from being explicitly typed. `defaultUsernameFor` is
+// the only place that's allowed to emit handles starting with this
+// prefix, and it bypasses `validateUsernameFormat`. Per the bug Yudai
+// hit where typing `user-2ex7b4` (another user's auto-default) was
+// reported as available.
+export const RESERVED_USERNAME_PREFIXES: readonly string[] = ["user-"];
+
 // Handles that must never become a username because they'd collide with a
 // top-level route or admin surface. The match is exact (post-normalize) so
 // "admin-stuff" is fine but "admin" itself is blocked.
@@ -66,13 +79,32 @@ export type UsernameValidationError =
   | "format"
   | "reserved";
 
+// Centralized reservation check — covers BOTH the exact-name
+// `RESERVED_USERNAMES` set AND the namespace-style
+// `RESERVED_USERNAME_PREFIXES` list. Exported so server actions can
+// re-assert the same rule in their belt-and-suspenders checks without
+// drifting from the form-side validation (per PR #94 Gemini review,
+// which spotted that `updateMyProfile` only checked the exact-name
+// set and would have happily accepted a `user-*` handle on a
+// hand-rolled payload that skipped `validateUsernameFormat`).
+//
+// Input is expected to be pre-normalized (lowercased + trimmed); the
+// helper does NOT re-normalize so the call sites stay explicit about
+// when normalization happens.
+export function isReservedUsername(normalized: string): boolean {
+  if (RESERVED_USERNAMES.has(normalized)) return true;
+  return RESERVED_USERNAME_PREFIXES.some((prefix) =>
+    normalized.startsWith(prefix),
+  );
+}
+
 export function validateUsernameFormat(
   input: string,
 ): UsernameValidationError | null {
   const norm = normalizeUsername(input);
   if (!norm) return "empty";
   if (!USERNAME_REGEX.test(norm)) return "format";
-  if (RESERVED_USERNAMES.has(norm)) return "reserved";
+  if (isReservedUsername(norm)) return "reserved";
   return null;
 }
 
@@ -83,6 +115,11 @@ export function usernameErrorMessage(err: UsernameValidationError): string {
     case "format":
       return USERNAME_HELP_TEXT;
     case "reserved":
+      // Single message covers both exact-name reservations (`admin`,
+      // `login`, …) and prefix reservations (`user-…`) — the user
+      // experience is the same: "pick another one". Mentioning the
+      // prefix space explicitly would be over-sharing the system's
+      // internal naming convention.
       return "このユーザーネームは予約済みです";
   }
 }
