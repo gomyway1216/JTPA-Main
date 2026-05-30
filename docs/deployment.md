@@ -41,8 +41,17 @@ Three sources, in order of precedence at runtime:
 | Source | Used for | Visibility |
 |---|---|---|
 | `apphosting.yaml` `env:` | Static config (currently none beyond comments) | Checked into git |
-| App Hosting Console UI → Environment variables | `NEXT_PUBLIC_FIREBASE_*`, `ADMIN_NOTIFICATION_EMAILS` (optional fallback — see [admin.md](admin.md#notification-recipients-who-gets-the-admin-emails); admin / editor users from Auth are always auto-included) | Not in git |
+| App Hosting Console UI → Environment variables | `NEXT_PUBLIC_FIREBASE_*`, `ADMIN_NOTIFICATION_EMAILS` (optional fallback — see [admin.md](admin.md#notification-recipients-who-gets-the-admin-emails); admin / editor users from Auth are always auto-included), `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` (see below) | Not in git |
 | Google Secret Manager (`secret:` ref in `apphosting.yaml`) | True secrets — currently NONE used by app code | Not in git, IAM-gated |
+
+### `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
+
+Stabilizes the encryption Next.js uses for Server Action references so a form opened on one revision still POSTs cleanly after a deploy. Without it Next generates a random key per build, which causes "Server Action … was not found on the server" the next time anyone submits a form they had open across a deploy (see issue #95 for the original report).
+
+- Generate once with `openssl rand -base64 32`
+- Set as a Console UI env var (NOT `NEXT_PUBLIC_*` — the key is decoded server-side only and must NEVER reach the client bundle)
+- Pick the most restrictive visibility scope ("Server only" / "Backend only") so the value is excluded from the client bundle even if a `NEXT_PUBLIC_*` regression sneaks in
+- Rotate manually when you want to invalidate every in-flight action (rare — old forms then show the same error until reload, which is the trade-off)
 
 The `NEXT_PUBLIC_FIREBASE_*` values used to be in `apphosting.yaml` but were moved to the Console UI in PR #5 to keep the repo source-code free of identifiers (even though they end up in the client bundle anyway). This is a soft hardening — adjust if it ever gets in the way.
 
