@@ -149,7 +149,16 @@ export async function updateEvent(
   const parsed = pr.data;
   const ref = adminDb().collection("events").doc(eventId);
   const snap = await ref.get();
-  const cur = snap.exists ? (snap.data() as EventDoc) : null;
+  // If the event was deleted out from under the editor, `ref.update` would
+  // throw a Firestore NOT_FOUND that prod masks as the generic crash —
+  // surface it instead. Per PR #116 Gemini review.
+  if (!snap.exists) {
+    return {
+      ok: false,
+      error: "イベントが見つかりません。削除された可能性があります。",
+    };
+  }
+  const cur = snap.data() as EventDoc;
 
   if (parsed.slug) {
     const conflict = await adminDb()
@@ -167,7 +176,7 @@ export async function updateEvent(
   // (pattern from PR #24): if the doc update fails, we don't want to have
   // already deleted the file the doc still points to.
   const orphan =
-    cur?.coverImage &&
+    cur.coverImage &&
     cur.coverImage.path !== parsed.coverImage?.path
       ? cur.coverImage.path
       : null;

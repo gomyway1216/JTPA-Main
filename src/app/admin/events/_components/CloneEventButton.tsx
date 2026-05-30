@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { cloneEvent } from "@/app/actions/events";
@@ -25,15 +26,12 @@ export function CloneEventButton({
         const res = await cloneEvent(eventId);
         if (res && !res.ok) setError(res.error);
       } catch (err) {
-        // Next.js' `redirect()` throws an error whose `.digest` starts
-        // with "NEXT_REDIRECT". Let those propagate so the navigation
-        // actually happens. (Next.js exposes `isRedirectError` only via
-        // an internal path in Next 16; the digest check is the stable
-        // contract.)
-        const digest = (err as { digest?: unknown })?.digest;
-        if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) {
-          throw err;
-        }
+        // cloneEvent redirects on success — let Next's internal
+        // control-flow error (NEXT_REDIRECT) propagate so the navigation
+        // happens. `unstable_rethrow` is the same helper EventForm /
+        // ProfileForm use for this; prefer it over a hand-rolled digest
+        // check for consistency. Per PR #116 Copilot review.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "複製に失敗しました");
       }
     });
