@@ -896,14 +896,6 @@
       "unknown": "An error occurred: {message}"
     }
   },
-  "GlobalError": {
-    "lang": "en",
-    "title": "Unexpected error",
-    "description": "A problem occurred while loading the page. Reload, or try again later.",
-    "retry": "Try again",
-    "home": "Back to home",
-    "digest": "Please include this request ID when contacting us:"
-  },
   "Admin": {
     "nav": {
       "dashboard": "Overview",

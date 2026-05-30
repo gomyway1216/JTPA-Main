@@ -6,7 +6,11 @@ import * as z from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
-import { actionError, inputError } from "@/lib/i18n/action-errors";
+import {
+  actionError,
+  defaultActionError,
+  inputError,
+} from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { EventDoc } from "@/lib/types";
@@ -312,7 +316,7 @@ export async function cloneEvent(
   // the original event. The new clone starts fresh.
   const newRef = await adminDb().collection("events").add({
     slug,
-    title: `${src.title} ${await actionError("copySuffix")}`,
+    title: `${src.title} ${defaultActionError("copySuffix")}`,
     description: src.description,
     startAt: newStart,
     endAt: newEnd,

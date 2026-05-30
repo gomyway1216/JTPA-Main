@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import enMessages from "../../messages/en.json";
-import jaMessages from "../../messages/ja.json";
+import { globalErrorCopy } from "@/i18n/global-error-copy";
 
 // Last-resort error boundary. Activates only when the root layout
 // itself throws — at that point `error.tsx` can't render because it
@@ -37,7 +36,7 @@ export default function GlobalError({
     return () => window.clearTimeout(handle);
   }, []);
 
-  const copy = isEnglish ? enMessages.GlobalError : jaMessages.GlobalError;
+  const copy = isEnglish ? globalErrorCopy.en : globalErrorCopy.ja;
   const homeHref = isEnglish ? "/en" : "/";
 
   useEffect(() => {

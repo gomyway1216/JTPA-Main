@@ -56,6 +56,13 @@ export function formatActionError(
   });
 }
 
+export function defaultActionError(
+  key: ActionErrorKey,
+  values?: ActionErrorValues,
+): string {
+  return formatActionError(routing.defaultLocale, key, values);
+}
+
 export async function actionError(
   key: ActionErrorKey,
   values?: ActionErrorValues,
