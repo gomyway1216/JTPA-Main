@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CheckInClient } from "@/app/[locale]/events/[slug]/checkin/CheckInClient";
@@ -18,6 +19,10 @@ export default async function CheckInPage({
   searchParams: Promise<{ t?: string }>;
 }) {
   const [{ slug }, { t: token }] = await Promise.all([params, searchParams]);
+  const [locale, t] = await Promise.all([
+    getLocale(),
+    getTranslations("CheckIn"),
+  ]);
   const event = await getEventBySlug(slug);
   if (!event) notFound();
 
@@ -30,15 +35,15 @@ export default async function CheckInPage({
   // page is read-only and clients can't bypass the action gate.
   if (!event.checkInToken || !token || event.checkInToken !== token) {
     return (
-      <ErrorShell title="チェックインリンクが無効です">
-        QRコードが古いか、URLが正しくありません。受付スタッフにお声がけください。
+      <ErrorShell title={t("invalidTitle")} eventsLabel={t("events")}>
+        {t("invalidDescription")}
       </ErrorShell>
     );
   }
   if (event.status === "cancelled") {
     return (
-      <ErrorShell title="イベントは中止されました">
-        このイベントは中止されたため、チェックインできません。
+      <ErrorShell title={t("cancelledTitle")} eventsLabel={t("events")}>
+        {t("cancelledDescription")}
       </ErrorShell>
     );
   }
@@ -46,18 +51,18 @@ export default async function CheckInPage({
   const window = checkInWindowState(event);
   if (window === "too_early") {
     return (
-      <ErrorShell title="開始まで時間があります">
-        <p>このイベントの開始時刻はまだ先です。</p>
+      <ErrorShell title={t("tooEarlyTitle")} eventsLabel={t("events")}>
+        <p>{t("tooEarlyDescription")}</p>
         <p className="mt-2 text-zinc-500">
-          開始: {formatDateTime(event.startAt)}
+          {t("start", { date: formatDateTime(event.startAt, locale) })}
         </p>
       </ErrorShell>
     );
   }
   if (window === "too_late") {
     return (
-      <ErrorShell title="チェックイン期間が終了しました">
-        <p>このイベントは終了しており、チェックインを受け付けていません。</p>
+      <ErrorShell title={t("tooLateTitle")} eventsLabel={t("events")}>
+        <p>{t("tooLateDescription")}</p>
       </ErrorShell>
     );
   }
@@ -67,7 +72,7 @@ export default async function CheckInPage({
       <header className="space-y-1 text-center">
         <h1 className="text-2xl font-bold">{event.title}</h1>
         <p className="text-sm text-zinc-500">
-          {formatDateTime(event.startAt)}
+          {formatDateTime(event.startAt, locale)}
         </p>
       </header>
       <CheckInClient
@@ -91,9 +96,11 @@ export default async function CheckInPage({
 
 function ErrorShell({
   title,
+  eventsLabel,
   children,
 }: {
   title: string;
+  eventsLabel: string;
   children: React.ReactNode;
 }) {
   return (
@@ -106,7 +113,7 @@ function ErrorShell({
         href="/events"
         className="inline-block text-sm text-blue-600 hover:underline"
       >
-        イベント一覧へ
+        {eventsLabel}
       </Link>
     </div>
   );

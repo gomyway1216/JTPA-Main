@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 // Last-resort error boundary. Activates only when the root layout
 // itself throws — at that point `error.tsx` can't render because it
@@ -13,8 +13,9 @@ import { useEffect } from "react";
 //     that pulled in the broken layout would re-trigger the crash. We
 //     style with inline styles so the page is still legible even if
 //     Tailwind hasn't loaded.
-//   - `lang="ja"` matches the rest of the site for screen readers.
-//   - Plain `<a href="/">` (not next/link) so the browser does a hard
+//   - The first render stays Japanese to match SSR, then switches to
+//     English after mount if the browser language asks for it.
+//   - Plain `<a>` (not next/link) so the browser does a hard
 //     navigation, which discards any poisoned client state from the
 //     failed layout render.
 export default function GlobalError({
@@ -24,14 +25,44 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const [isEnglish, setIsEnglish] = useState(false);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setIsEnglish(navigator.language.toLowerCase().startsWith("en"));
+    }, 0);
+    return () => window.clearTimeout(handle);
+  }, []);
+
+  const copy = isEnglish
+    ? {
+        lang: "en",
+        title: "Unexpected error",
+        description:
+          "A problem occurred while loading the page. Reload, or try again later.",
+        retry: "Try again",
+        home: "Back to home",
+        digest: "Please include this request ID when contacting us:",
+      }
+    : {
+        lang: "ja",
+        title: "予期しないエラーが発生しました",
+        description:
+          "ページの読み込み中に問題が発生しました。再読み込みするか、しばらく時間をおいてからお試しください。",
+        retry: "再試行",
+        home: "ホームに戻る",
+        digest: "お問い合わせの際はこのリクエストIDをお知らせください:",
+      };
+  const homeHref = isEnglish ? "/en" : "/";
+
   useEffect(() => {
     console.error(error);
   }, [error]);
 
   return (
-    <html lang="ja">
+    <html lang={copy.lang}>
       <head>
-        <title>予期しないエラーが発生しました</title>
+        <title>{copy.title}</title>
         {/*
           Dark-mode override. The inline `style=` attributes below win
           the cascade against a stylesheet rule, so the `!important`
@@ -79,10 +110,10 @@ export default function GlobalError({
               margin: 0,
             }}
           >
-            予期しないエラーが発生しました
+            {copy.title}
           </h1>
           <p style={{ fontSize: "1rem", color: "#52525b", margin: 0 }}>
-            ページの読み込み中に問題が発生しました。再読み込みするか、しばらく時間をおいてからお試しください。
+            {copy.description}
           </p>
           <div
             style={{
@@ -107,19 +138,17 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              再試行
+              {copy.retry}
             </button>
             {/*
               Plain `<a>` (with a full reload) on purpose: at this
               error tier the root layout has already crashed, so a
               soft client navigation through next/link would keep the
               same poisoned React tree and risk re-tripping the
-              boundary. ESLint's no-html-link-for-pages doesn't know
-              that, so we disable it here.
+              boundary.
             */}
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
             <a
-              href="/"
+              href={homeHref}
               style={{
                 padding: "0.5rem 1.25rem",
                 borderRadius: 9999,
@@ -131,12 +160,12 @@ export default function GlobalError({
                 textDecoration: "none",
               }}
             >
-              ホームに戻る
+              {copy.home}
             </a>
           </div>
           {error.digest && (
             <p style={{ fontSize: "0.75rem", color: "#71717a", margin: 0 }}>
-              お問い合わせの際はこのリクエストIDをお知らせください:{" "}
+              {copy.digest}{" "}
               <span
                 style={{
                   fontFamily:

@@ -475,5 +475,172 @@
     "sending": "Sending...",
     "send": "Send",
     "privacy": "Only admin and editor members can view submitted feedback. It is not shown to other members or made public."
+  },
+  "Status": {
+    "draft": "Draft",
+    "pending": "In review",
+    "published": "Published",
+    "approved": "Published",
+    "rejected": "Rejected",
+    "archived": "Archived",
+    "archivedDone": "Archived"
+  },
+  "MyPage": {
+    "title": "My Page",
+    "rsvpsTitle": "Event History",
+    "rsvpsDescription": "Upcoming and past events",
+    "projectsTitle": "My Projects",
+    "projectsDescription": "Projects submitted to the showcase",
+    "postsTitle": "My Articles",
+    "postsDescription": "Blog articles, including drafts",
+    "likesTitle": "Likes Received",
+    "likesDescription": "Your comments that received likes",
+    "profileTitle": "Account Settings",
+    "profileDescription": "Affiliation and email notification settings"
+  },
+  "MyCommon": {
+    "newPost": "New post",
+    "newPoll": "Create poll",
+    "emptyPosts": "No posts yet.",
+    "edit": "Edit",
+    "viewPublic": "View public page",
+    "lastUpdated": "Last updated: {date}",
+    "reviewComment": "Comment: {comment}"
+  },
+  "MyRsvps": {
+    "title": "Event History",
+    "empty": "No event registrations yet."
+  },
+  "MyProjects": {
+    "title": "My Projects"
+  },
+  "MyPosts": {
+    "metadataTitle": "My Articles",
+    "title": "My Articles"
+  },
+  "MyGuides": {
+    "metadataTitle": "My Guides",
+    "title": "My Guides",
+    "writeFirst": "Write the first guide"
+  },
+  "MyQa": {
+    "metadataTitle": "My Q&A",
+    "title": "My Q&A"
+  },
+  "MyPoll": {
+    "metadataTitle": "My Polls",
+    "title": "My Polls",
+    "empty": "No polls yet.",
+    "voterCount": "{count, plural, =0 {No votes} =1 {# voter} other {# voters}}"
+  },
+  "MyLikes": {
+    "metadataTitle": "Likes Received",
+    "title": "Likes Received",
+    "description": "Your comments that received likes",
+    "empty": "None of your comments have received likes yet.",
+    "deletedPage": "Deleted page",
+    "parent": {
+      "post": "Blog",
+      "guide": "Guide",
+      "qa": "Q&A",
+      "project": "Showcase",
+      "poll": "Poll"
+    }
+  },
+  "EditPages": {
+    "post": "Edit Article",
+    "project": "Edit Project",
+    "guide": "Edit Guide",
+    "qa": "Edit Q&A",
+    "poll": "Edit Poll"
+  },
+  "ProfilePage": {
+    "title": "Account Settings",
+    "description": "Edit your username, icon, public information, links, and notification settings. Your full name and email are managed by your Google account, and your email is always private.",
+    "googleInfo": "Google Account Information (read-only)",
+    "email": "Email",
+    "googleIcon": "Google icon",
+    "googleIconAlt": "Icon for {name}"
+  },
+  "ProfileForm": {
+    "saveFailed": "Failed to save",
+    "uploadFailed": "Upload failed",
+    "deleteFailed": "Failed to delete",
+    "title": "Profile Settings",
+    "viewPublic": "View public page →",
+    "icon": "Icon",
+    "currentIconAlt": "Current icon",
+    "changeImage": "Change image",
+    "uploadImage": "Upload image",
+    "delete": "Delete",
+    "processing": "Processing...",
+    "avatarHint": "{types} / up to 2MB. If unset, your Google account icon is shown.",
+    "username": "Username",
+    "usernameHelp": "3-20 characters. Use lowercase letters, numbers, hyphens, and underscores. Start and end with a letter or number. Separators cannot be repeated.",
+    "usernameEmpty": "Enter a username",
+    "usernameReserved": "This username is reserved",
+    "fullName": "Full name (Google account)",
+    "notSet": "(Not set)",
+    "fullNamePublic": "Show full name on the public profile page",
+    "fullNameHint": "Private by default. When enabled, it appears next to your @username.",
+    "affiliation": "Affiliation (company, school, organization, etc.)",
+    "affiliationPlaceholder": "Example: Anthropic / UC Berkeley / Freelance",
+    "affiliationPublic": "Show affiliation on the public profile page",
+    "affiliationHint": "Even when off, this can still prefill event RSVP forms.",
+    "bio": "Bio",
+    "bioPlaceholder": "What you work on, topics you are interested in, etc. Line breaks are supported.",
+    "bioPublic": "Show bio on the public profile page",
+    "links": "Links",
+    "linksHint": "(shown on your public page when set)",
+    "portfolio": "Portfolio",
+    "snsPlaceholder": "X / Instagram / Threads / Bluesky / Mastodon, etc.",
+    "notifications": "Notification Settings",
+    "emailOptIn": "Receive email notifications such as event announcements",
+    "emailOptInHint": "If unchecked, you will stop receiving announcement emails from JTPA. Confirmation emails for events you RSVP to will still be sent.",
+    "saving": "Saving...",
+    "save": "Save",
+    "saved": "✓ Saved",
+    "checking": "Checking...",
+    "available": "✓ This username is available",
+    "yours": "This is your current username",
+    "taken": "This username is already taken"
+  },
+  "CheckIn": {
+    "invalidTitle": "Invalid check-in link",
+    "invalidDescription": "The QR code may be old or the URL may be incorrect. Please ask reception staff for help.",
+    "cancelledTitle": "Event cancelled",
+    "cancelledDescription": "This event was cancelled, so check-in is not available.",
+    "tooEarlyTitle": "Check-in is not open yet",
+    "tooEarlyDescription": "This event starts later.",
+    "start": "Start: {date}",
+    "tooLateTitle": "Check-in closed",
+    "tooLateDescription": "This event has ended and check-in is closed.",
+    "events": "Back to events",
+    "doneTitle": "Check-in complete",
+    "doneDescription": "Thanks for joining.",
+    "guestHintDone": "Next time, log in with Google to manage RSVPs and presentation history from My Page.",
+    "eventPage": "Event page",
+    "signedInAs": "Signed in as {name}",
+    "processing": "Processing...",
+    "checkIn": "Check in",
+    "guestPrompt": "Enter your name and email address.",
+    "namePlaceholder": "Name",
+    "emailPlaceholder": "Email address",
+    "back": "Back",
+    "googlePending": "Signing in...",
+    "googleCheckIn": "Log in with Google and check in",
+    "continueGuest": "Continue as guest",
+    "guestHint": "Log in with Google to manage RSVPs and presentation history from My Page.",
+    "errors": {
+      "invalidToken": "This check-in link is invalid. Please scan the latest QR code.",
+      "tooEarly": "Check-in is not open yet.",
+      "tooLate": "Check-in has closed.",
+      "eventCancelled": "This event was cancelled.",
+      "eventNotFound": "Event not found.",
+      "guestNameRequired": "Enter your name.",
+      "guestEmailRequired": "Enter your email address.",
+      "auth": "There was an authentication problem. Please reload the page.",
+      "unknown": "An error occurred: {message}"
+    }
   }
 }

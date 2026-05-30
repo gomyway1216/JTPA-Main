@@ -1,18 +1,25 @@
 import Link from "@/i18n/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
+import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyPage() {
   const user = await getSessionUser();
-  if (!user) redirect("/login?redirect=/my");
+  if (!user) {
+    const locale = await getLocale();
+    redirect(loginPath("/my", locale));
+  }
+
+  const t = await getTranslations("MyPage");
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
       <header>
-        <h1 className="text-2xl font-bold">マイページ</h1>
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           {user.displayName} ({user.email})
         </p>
@@ -23,45 +30,45 @@ export default async function MyPage() {
           href="/my/rsvps"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <h2 className="text-lg font-semibold">参加履歴</h2>
+          <h2 className="text-lg font-semibold">{t("rsvpsTitle")}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            参加予定・過去のイベント
+            {t("rsvpsDescription")}
           </p>
         </Link>
         <Link
           href="/my/projects"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <h2 className="text-lg font-semibold">自分の投稿</h2>
+          <h2 className="text-lg font-semibold">{t("projectsTitle")}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            ショーケースに投稿したプロジェクト
+            {t("projectsDescription")}
           </p>
         </Link>
         <Link
           href="/my/posts"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <h2 className="text-lg font-semibold">自分の記事</h2>
+          <h2 className="text-lg font-semibold">{t("postsTitle")}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            ブログに投稿した記事 (下書き含む)
+            {t("postsDescription")}
           </p>
         </Link>
         <Link
           href="/my/likes"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <h2 className="text-lg font-semibold">もらったいいね</h2>
+          <h2 className="text-lg font-semibold">{t("likesTitle")}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            いいねを受け取った自分のコメント
+            {t("likesDescription")}
           </p>
         </Link>
         <Link
           href="/my/profile"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
         >
-          <h2 className="text-lg font-semibold">アカウント設定</h2>
+          <h2 className="text-lg font-semibold">{t("profileTitle")}</h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            所属・メール通知の設定
+            {t("profileDescription")}
           </p>
         </Link>
       </nav>

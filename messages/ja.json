@@ -475,5 +475,172 @@
     "sending": "送信中...",
     "send": "送信",
     "privacy": "送信内容は admin / editor 権限のメンバーだけが閲覧できます。他のメンバーや一般公開はされません。"
+  },
+  "Status": {
+    "draft": "下書き",
+    "pending": "審査中",
+    "published": "公開中",
+    "approved": "公開中",
+    "rejected": "却下",
+    "archived": "アーカイブ",
+    "archivedDone": "アーカイブ済"
+  },
+  "MyPage": {
+    "title": "マイページ",
+    "rsvpsTitle": "参加履歴",
+    "rsvpsDescription": "参加予定・過去のイベント",
+    "projectsTitle": "自分の投稿",
+    "projectsDescription": "ショーケースに投稿したプロジェクト",
+    "postsTitle": "自分の記事",
+    "postsDescription": "ブログに投稿した記事 (下書き含む)",
+    "likesTitle": "もらったいいね",
+    "likesDescription": "いいねを受け取った自分のコメント",
+    "profileTitle": "アカウント設定",
+    "profileDescription": "所属・メール通知の設定"
+  },
+  "MyCommon": {
+    "newPost": "新規投稿",
+    "newPoll": "新規作成",
+    "emptyPosts": "まだ投稿はありません。",
+    "edit": "編集",
+    "viewPublic": "公開ページを見る",
+    "lastUpdated": "最終更新: {date}",
+    "reviewComment": "コメント: {comment}"
+  },
+  "MyRsvps": {
+    "title": "参加履歴",
+    "empty": "参加登録履歴はありません。"
+  },
+  "MyProjects": {
+    "title": "自分の投稿"
+  },
+  "MyPosts": {
+    "metadataTitle": "自分の記事",
+    "title": "自分の記事"
+  },
+  "MyGuides": {
+    "metadataTitle": "自分のガイド",
+    "title": "自分のガイド",
+    "writeFirst": "最初のガイドを書く"
+  },
+  "MyQa": {
+    "metadataTitle": "自分のQ&A",
+    "title": "自分のQ&A"
+  },
+  "MyPoll": {
+    "metadataTitle": "自分の投票",
+    "title": "自分の投票",
+    "empty": "まだ投票はありません。",
+    "voterCount": "{count} 人が投票"
+  },
+  "MyLikes": {
+    "metadataTitle": "もらったいいね",
+    "title": "もらったいいね",
+    "description": "いいねを受け取った自分のコメント",
+    "empty": "まだいいねを受け取ったコメントはありません。",
+    "deletedPage": "削除されたページ",
+    "parent": {
+      "post": "ブログ",
+      "guide": "ガイド",
+      "qa": "Q&A",
+      "project": "ショーケース",
+      "poll": "投票"
+    }
+  },
+  "EditPages": {
+    "post": "記事を編集",
+    "project": "プロジェクトを編集",
+    "guide": "ガイド編集",
+    "qa": "Q&A を編集",
+    "poll": "投票を編集"
+  },
+  "ProfilePage": {
+    "title": "アカウント設定",
+    "description": "ユーザーネーム・アイコン・公開する情報・リンク・通知設定を編集できます。フルネーム・メールは Google アカウント側で管理され、メールは常に非公開です。",
+    "googleInfo": "Google アカウント情報 (編集不可)",
+    "email": "メール",
+    "googleIcon": "Google のアイコン",
+    "googleIconAlt": "{name} のアイコン"
+  },
+  "ProfileForm": {
+    "saveFailed": "保存に失敗しました",
+    "uploadFailed": "アップロードに失敗しました",
+    "deleteFailed": "削除に失敗しました",
+    "title": "プロフィール設定",
+    "viewPublic": "公開ページを見る →",
+    "icon": "アイコン",
+    "currentIconAlt": "現在のアイコン",
+    "changeImage": "画像を変更",
+    "uploadImage": "画像をアップロード",
+    "delete": "削除",
+    "processing": "処理中...",
+    "avatarHint": "{types} / 2MB まで。未設定のときは Google アカウントのアイコンが表示されます。",
+    "username": "ユーザーネーム",
+    "usernameHelp": "3〜20文字。半角英小文字・数字・ハイフン・アンダースコアのみ。先頭・末尾は英数字。区切り文字は連続不可。",
+    "usernameEmpty": "ユーザーネームを入力してください",
+    "usernameReserved": "このユーザーネームは予約済みです",
+    "fullName": "フルネーム (Google アカウント)",
+    "notSet": "(未設定)",
+    "fullNamePublic": "公開プロフィールページにフルネームを表示する",
+    "fullNameHint": "デフォルトでは非公開です。オンにすると @ユーザーネーム の隣に表示されます。",
+    "affiliation": "所属 (会社・大学・組織など)",
+    "affiliationPlaceholder": "例: Anthropic / UC Berkeley / フリーランス",
+    "affiliationPublic": "公開プロフィールページに所属を表示する",
+    "affiliationHint": "オフでも、イベントRSVPフォームの初期値としては引き続き使われます。",
+    "bio": "紹介文",
+    "bioPlaceholder": "どんなことをしている人か、興味のあるトピックなど。改行できます。",
+    "bioPublic": "公開プロフィールページに紹介文を表示する",
+    "links": "リンク",
+    "linksHint": "(設定すると公開ページに表示されます)",
+    "portfolio": "ポートフォリオ",
+    "snsPlaceholder": "X / Instagram / Threads / Bluesky / Mastodon など",
+    "notifications": "通知設定",
+    "emailOptIn": "イベント告知などのメール通知を受け取る",
+    "emailOptInHint": "チェックを外すと、JTPA からのお知らせメールが届かなくなります。RSVP した個別イベントの確認メールは引き続き送信されます。",
+    "saving": "保存中...",
+    "save": "保存",
+    "saved": "✓ 保存しました",
+    "checking": "確認中...",
+    "available": "✓ このユーザーネームは使えます",
+    "yours": "現在のユーザーネームです",
+    "taken": "このユーザーネームは既に使われています"
+  },
+  "CheckIn": {
+    "invalidTitle": "チェックインリンクが無効です",
+    "invalidDescription": "QRコードが古いか、URLが正しくありません。受付スタッフにお声がけください。",
+    "cancelledTitle": "イベントは中止されました",
+    "cancelledDescription": "このイベントは中止されたため、チェックインできません。",
+    "tooEarlyTitle": "開始まで時間があります",
+    "tooEarlyDescription": "このイベントの開始時刻はまだ先です。",
+    "start": "開始: {date}",
+    "tooLateTitle": "チェックイン期間が終了しました",
+    "tooLateDescription": "このイベントは終了しており、チェックインを受け付けていません。",
+    "events": "イベント一覧へ",
+    "doneTitle": "チェックイン完了",
+    "doneDescription": "ご参加ありがとうございます。",
+    "guestHintDone": "次回はGoogleでログインすると、マイページでRSVPや発表履歴を管理できます。",
+    "eventPage": "イベントページへ",
+    "signedInAs": "{name} としてサインイン中",
+    "processing": "処理中...",
+    "checkIn": "チェックインする",
+    "guestPrompt": "お名前とメールアドレスをご入力ください。",
+    "namePlaceholder": "お名前",
+    "emailPlaceholder": "メールアドレス",
+    "back": "戻る",
+    "googlePending": "サインイン中...",
+    "googleCheckIn": "Googleでログインしてチェックイン",
+    "continueGuest": "ゲストで続ける",
+    "guestHint": "Googleでログインすると、マイページでRSVPや発表履歴を管理できます。",
+    "errors": {
+      "invalidToken": "チェックインリンクが無効です。最新のQRコードをスキャンしてください。",
+      "tooEarly": "イベント開始時刻まで時間があります。",
+      "tooLate": "チェックイン期間が終了しました。",
+      "eventCancelled": "このイベントは中止されました。",
+      "eventNotFound": "イベントが見つかりません。",
+      "guestNameRequired": "お名前を入力してください。",
+      "guestEmailRequired": "メールアドレスを入力してください。",
+      "auth": "認証に問題がありました。ページを再読み込みしてください。",
+      "unknown": "エラーが発生しました: {message}"
+    }
   }
 }
