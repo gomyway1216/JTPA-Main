@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 import proxy from "@/proxy";
@@ -20,6 +20,10 @@ function runProxy(pathname: string) {
 }
 
 describe("proxy", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it.each(["/ja", "/ja/help"])(
     "serves default-locale internal paths without redirecting: %s",
     (pathname) => {
