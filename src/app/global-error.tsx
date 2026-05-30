@@ -37,7 +37,7 @@ export default function GlobalError({
   }, []);
 
   const copy = isEnglish ? globalErrorCopy.en : globalErrorCopy.ja;
-  const homeHref = isEnglish ? "/en" : "/";
+  const homeHref = isEnglish ? "/en" : "/ja";
 
   useEffect(() => {
     console.error(error);

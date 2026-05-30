@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { RefMDEditor } from "@uiw/react-md-editor";
@@ -26,6 +26,7 @@ import {
   secondaryButtonClass,
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
+import { localizedPath } from "@/i18n/paths";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -85,6 +86,7 @@ export function GuideForm({
   user: SessionUser;
   guide?: GuideDoc;
 }) {
+  const locale = useLocale();
   const t = useTranslations("GuideForm");
   const actionErrors = useTranslations("ActionErrors");
   const imageUploadMessages = {
@@ -337,8 +339,8 @@ export function GuideForm({
         // layout redirects contributors away from `/admin/*` so sending
         // them there would be a worse experience.
         window.location.href = hasAdminAccess
-          ? "/admin/guides"
-          : "/my/guides";
+          ? localizedPath("/admin/guides", locale)
+          : localizedPath("/my/guides", locale);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }

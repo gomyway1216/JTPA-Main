@@ -4,7 +4,18 @@ import { NextRequest } from "next/server";
 import proxy from "@/proxy";
 
 const middlewareMocks = vi.hoisted(() => {
-  const intlProxy = vi.fn(() => new Response(null, { headers: { "x-intl-proxy": "1" } }));
+  const intlProxy = vi.fn((request: NextRequest) => {
+    const pathname = request.nextUrl.pathname;
+    if (pathname !== "/ja" && !pathname.startsWith("/ja/") && pathname !== "/en" && !pathname.startsWith("/en/")) {
+      const target = new URL(request.url);
+      target.pathname = pathname === "/" ? "/ja" : `/ja${pathname}`;
+      return new Response(null, {
+        status: 307,
+        headers: { location: target.toString() },
+      });
+    }
+    return new Response(null, { headers: { "x-middleware-next": "1" } });
+  });
   return {
     createMiddleware: vi.fn(() => intlProxy),
     intlProxy,
@@ -21,25 +32,41 @@ function runProxy(pathname: string) {
 
 describe("proxy", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    middlewareMocks.intlProxy.mockClear();
   });
 
-  it.each(["/ja", "/ja/help"])(
-    "serves default-locale internal paths without redirecting: %s",
+  it("configures next-intl to require locale prefixes for every locale", () => {
+    expect(middlewareMocks.createMiddleware).toHaveBeenCalledWith(
+      expect.objectContaining({
+        defaultLocale: "ja",
+        localePrefix: "always",
+        locales: ["ja", "en"],
+      }),
+    );
+  });
+
+  it.each([
+    ["/", "https://example.com/ja"],
+    ["/help", "https://example.com/ja/help"],
+  ])(
+    "redirects unprefixed paths to the default locale prefix: %s",
+    (pathname, location) => {
+      const response = runProxy(pathname);
+
+      expect(response.status).toBe(307);
+      expect(response.headers.get("location")).toBe(location);
+      expect(middlewareMocks.intlProxy).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["/ja", "/ja/help", "/en", "/en/help"])(
+    "serves locale-prefixed paths without redirecting: %s",
     (pathname) => {
       const response = runProxy(pathname);
 
       expect(response.headers.get("location")).toBeNull();
       expect(response.headers.get("x-middleware-next")).toBe("1");
-      expect(response.headers.get("x-middleware-request-x-next-intl-locale")).toBe("ja");
-      expect(middlewareMocks.intlProxy).not.toHaveBeenCalled();
+      expect(middlewareMocks.intlProxy).toHaveBeenCalledOnce();
     },
   );
-
-  it("delegates other paths to next-intl middleware", () => {
-    const response = runProxy("/en/help");
-
-    expect(response.headers.get("x-intl-proxy")).toBe("1");
-    expect(middlewareMocks.intlProxy).toHaveBeenCalledOnce();
-  });
 });

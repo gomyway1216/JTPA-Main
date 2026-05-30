@@ -23,11 +23,14 @@ function addLocalePrefix(path: string, locale: string): string {
   return `/${locale}${path}`;
 }
 
+function isUnsafeRedirectPath(path: string): boolean {
+  return !path.startsWith("/") || path.startsWith("//") || path.includes("\\");
+}
+
 export function localizedPath(path: string, locale: string): string {
   if (!path.startsWith("/")) return path;
 
   const unlocalized = stripLocalePrefix(path);
-  if (locale === routing.defaultLocale) return unlocalized;
   return addLocalePrefix(unlocalized, locale);
 }
 
@@ -35,23 +38,15 @@ export function safeRedirectPath(
   redirectTo: string | undefined,
   locale: string,
 ): string {
-  if (
-    !redirectTo ||
-    !redirectTo.startsWith("/") ||
-    redirectTo.startsWith("//") ||
-    redirectTo.includes("\\")
-  ) {
+  if (!redirectTo || isUnsafeRedirectPath(redirectTo)) {
     return localizedPath("/", locale);
   }
-  const path = localizedPath(redirectTo, locale);
-  if (
-    !path.startsWith("/") ||
-    path.startsWith("//") ||
-    path.includes("\\")
-  ) {
+
+  const unlocalized = stripLocalePrefix(redirectTo);
+  if (isUnsafeRedirectPath(unlocalized)) {
     return localizedPath("/", locale);
   }
-  return path;
+  return localizedPath(unlocalized, locale);
 }
 
 export function loginHref(redirectTo: string, locale: string): string {
