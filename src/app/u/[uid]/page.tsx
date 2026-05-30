@@ -57,25 +57,23 @@ export default async function PublicProfilePage({
             </div>
           )}
           <div className="min-w-0 flex-1 space-y-1">
+            {/*
+              Heading hierarchy follows the user's `fullNamePublic`
+              choice. When the real name is public, it leads (matching
+              the `AuthorBadge` policy elsewhere in the app) and the
+              @handle becomes the secondary label. When it's private,
+              the @handle gets the H1 slot. Either way the role pill
+              sits next to whichever label takes the H1 — one notch
+              larger than the inline AuthorBadge so it doesn't look
+              like an afterthought next to the heading.
+            */}
             <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold break-all">
-              <span>@{profile.username}</span>
-              {/*
-                Role pill mirrors the one `AuthorBadge` renders inline
-                next to a comment author — same color palette + label
-                conventions, but a notch larger to sit next to the
-                heading text without looking like an afterthought.
-              */}
+              <span>{profile.fullName || `@${profile.username}`}</span>
               {profile.role && <RolePill role={profile.role} size="lg" />}
             </h1>
-            {/*
-              The real name is a secondary label, shown only when the
-              user opted into `fullNamePublic`. Style is intentionally
-              quieter than the username so the @handle stays the
-              primary surface even when both are visible.
-            */}
             {profile.fullName && (
               <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                {profile.fullName}
+                @{profile.username}
               </p>
             )}
             {profile.affiliation && (

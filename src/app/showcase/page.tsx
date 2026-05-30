@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listProjects } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 
@@ -56,8 +57,20 @@ export default async function ShowcasePage() {
                 )}
                 <div className="flex flex-1 flex-col p-5">
                   <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
-                  <p className="mt-1 text-xs text-zinc-500">
-                    by @{ownerProfiles.get(p.ownerUid)?.username ?? "unknown"}
+                  {/*
+                    AuthorBadge instead of a hand-rolled `by @username`
+                    so role pills (Admin / Editor / Contributor) and
+                    opted-in real names propagate here too. `linkable=
+                    false` because the card itself is already a single
+                    big `<Link>` to /showcase/[slug] — a nested anchor
+                    would be invalid HTML.
+                  */}
+                  <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                    <span>by</span>
+                    <AuthorBadge
+                      profile={ownerProfiles.get(p.ownerUid) ?? null}
+                      linkable={false}
+                    />
                   </p>
                   <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
                     {p.description}

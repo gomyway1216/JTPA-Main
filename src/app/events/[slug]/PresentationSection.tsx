@@ -11,6 +11,7 @@ import {
   deletePresentation,
   updatePresentation,
 } from "@/app/actions/presentations";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import type { PublicProfile } from "@/lib/data/users";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
@@ -137,8 +138,18 @@ export function PresentationSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{p.title || "(タイトル未設定)"}</p>
+                  {/*
+                    AuthorBadge instead of a raw `@username` so role
+                    pills and opted-in real names show up here. Each
+                    list entry already wraps its own action affordances
+                    so the badge is rendered as a non-link (the
+                    presenter's profile is reachable from the byline
+                    on every other surface).
+                  */}
                   <p className="text-xs text-zinc-500">
-                    @{presenterProfiles[p.presenterUid]?.username ?? "unknown"}
+                    <AuthorBadge
+                      profile={presenterProfiles[p.presenterUid] ?? null}
+                    />
                   </p>
                   {p.abstract && (
                     <p className="mt-1 whitespace-pre-wrap text-xs text-zinc-600 dark:text-zinc-400">
