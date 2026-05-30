@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { unstable_rethrow } from "next/navigation";
 import {
   ref as storageRef,
   uploadBytesResumable,
@@ -151,12 +152,20 @@ export function PostForm({ mode, user, post }: Props) {
           coverImage,
           intent,
         };
-        if (mode === "create") {
-          await submitPost(payload);
-        } else if (post) {
-          await updateMyPost(post.id, payload);
-        }
+        const res =
+          mode === "create"
+            ? await submitPost(payload)
+            : post
+              ? await updateMyPost(post.id, payload)
+              : null;
+        // Both create and edit redirect on success, so a returned result is
+        // always a failure — surface the real message inline instead of the
+        // masked generic "Server Components render" crash.
+        if (res && !res.ok) setError(res.error);
       } catch (err) {
+        // Success throws the internal NEXT_REDIRECT — let it propagate so the
+        // navigation actually happens. Anything else is a real save failure.
+        unstable_rethrow(err);
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
@@ -168,7 +177,13 @@ export function PostForm({ mode, user, post }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        await deleteMyPost(post.id);
+        const res = await deleteMyPost(post.id);
+        if (!res.ok) {
+          // Surface the real reason (e.g. permission) instead of the masked
+          // generic Server Action crash; navigate away only on success.
+          setError(res.error);
+          return;
+        }
         window.location.href = "/my/posts";
       } catch (err) {
         setError(err instanceof Error ? err.message : "削除に失敗しました");
