@@ -51,30 +51,51 @@ const UpdateSchema = z
 export type CreatePresentationInput = z.input<typeof CreateSchema>;
 export type UpdatePresentationInput = z.input<typeof UpdateSchema>;
 
-function readableParse<T extends z.ZodTypeAny>(
+// Mutations return a discriminated result rather than throwing. Next.js
+// masks thrown Server Action error messages as the generic "An error
+// occurred in the Server Components render" digest in production, so a
+// thrown validation/permission message never reaches the presenter — they
+// just see an opaque crash and "can't proceed" when adding slides
+// (issue #103). Returning the message lets the form render it. Same
+// pattern as src/app/actions/users.ts (per PR #59 Gemini review).
+export type PresentationResult =
+  | { ok: true; presentation: PresentationDoc }
+  | { ok: false; error: string };
+
+// Zod parse that yields a readable error string instead of throwing, so
+// the message survives to the client (see PresentationResult above).
+function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
-): z.infer<T> {
+): { ok: true; data: z.infer<T> } | { ok: false; error: string } {
   const result = schema.safeParse(input);
-  if (result.success) return result.data;
+  if (result.success) return { ok: true, data: result.data };
   const issues = result.error.issues
     .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
     .join("; ");
-  throw new Error(`入力エラー: ${issues}`);
+  return { ok: false, error: `入力エラー: ${issues}` };
 }
 
-async function ensurePresenter(eventId: string, uid: string): Promise<void> {
+async function ensurePresenter(
+  eventId: string,
+  uid: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const denied = {
+    ok: false as const,
+    error: "発表者として登録されていません",
+  };
   const rsvpSnap = await adminDb()
     .collection("events")
     .doc(eventId)
     .collection("rsvps")
     .doc(uid)
     .get();
-  if (!rsvpSnap.exists) throw new Error("発表者として登録されていません");
+  if (!rsvpSnap.exists) return denied;
   const rsvp = rsvpSnap.data() as RsvpDoc;
   if (rsvp.role !== "presenter" || rsvp.status !== "confirmed") {
-    throw new Error("発表者として登録されていません");
+    return denied;
   }
+  return { ok: true };
 }
 
 async function deleteStorageFile(path: string): Promise<void> {
@@ -89,76 +110,94 @@ async function deleteStorageFile(path: string): Promise<void> {
 
 export async function createPresentation(
   input: CreatePresentationInput,
-): Promise<PresentationDoc> {
+): Promise<PresentationResult> {
   const user = await requireUser();
-  const parsed = readableParse(CreateSchema, input);
-  await ensurePresenter(parsed.eventId, user.uid);
+  const parsed = parseOrError(CreateSchema, input);
+  if (!parsed.ok) return parsed;
+  const presenter = await ensurePresenter(parsed.data.eventId, user.uid);
+  if (!presenter.ok) return presenter;
 
   const now = Timestamp.now();
   const ref = adminDb()
     .collection("events")
-    .doc(parsed.eventId)
+    .doc(parsed.data.eventId)
     .collection("presentations")
     .doc(); // auto-id → multiple presentations per presenter
 
   const doc: Omit<PresentationDoc, "id"> = {
-    eventId: parsed.eventId,
+    eventId: parsed.data.eventId,
     presenterUid: user.uid,
     presenterName: user.displayName,
-    title: parsed.title,
-    abstract: parsed.abstract,
-    filePath: parsed.filePath,
-    fileUrl: parsed.fileUrl,
-    fileName: parsed.fileName,
-    externalSlidesUrl: parsed.externalSlidesUrl,
+    title: parsed.data.title,
+    abstract: parsed.data.abstract,
+    filePath: parsed.data.filePath,
+    fileUrl: parsed.data.fileUrl,
+    fileName: parsed.data.fileName,
+    externalSlidesUrl: parsed.data.externalSlidesUrl,
     createdAt: now,
     updatedAt: now,
   };
   await ref.set(doc);
 
-  revalidatePath(`/events/${parsed.eventSlug}`);
-  return plainify({ ...doc, id: ref.id });
+  revalidatePath(`/events/${parsed.data.eventSlug}`);
+  return { ok: true, presentation: plainify({ ...doc, id: ref.id }) };
 }
 
 export async function updatePresentation(
   input: UpdatePresentationInput,
-): Promise<PresentationDoc> {
+): Promise<PresentationResult> {
   const user = await requireUser();
-  const parsed = readableParse(UpdateSchema, input);
+  const parsed = parseOrError(UpdateSchema, input);
+  if (!parsed.ok) return parsed;
 
   const ref = adminDb()
     .collection("events")
-    .doc(parsed.eventId)
+    .doc(parsed.data.eventId)
     .collection("presentations")
-    .doc(parsed.presentationId);
+    .doc(parsed.data.presentationId);
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("発表資料が見つかりません");
+  if (!snap.exists) {
+    return { ok: false, error: "発表資料が見つかりません" };
+  }
   const prev = snap.data() as PresentationDoc;
-  if (prev.presenterUid !== user.uid) throw new Error("FORBIDDEN");
+  if (prev.presenterUid !== user.uid) {
+    return { ok: false, error: "この発表資料を編集する権限がありません" };
+  }
 
   // If the caller replaced an uploaded file (different filePath, or
   // switched to URL-only), drop the previous Storage object so we don't
   // leak bytes.
-  if (prev.filePath && prev.filePath !== parsed.filePath) {
+  if (prev.filePath && prev.filePath !== parsed.data.filePath) {
     await deleteStorageFile(prev.filePath);
   }
 
-  const patch: Omit<PresentationDoc, "id" | "createdAt"> = {
-    eventId: parsed.eventId,
+  // Full-document replace (NOT `{ merge: true }`). The Admin SDK runs with
+  // `ignoreUndefinedProperties`, so a merge write silently drops the
+  // undefined (cleared) fields and leaves their OLD values in place — e.g.
+  // switching from an uploaded file to a URL-only deck would keep the stale
+  // filePath/fileUrl/fileName pointing at the object we just deleted above.
+  // Replacing the whole doc (carrying `createdAt` forward) actually removes
+  // the cleared fields. Per PR #111 Gemini review.
+  const updatedDoc: Omit<PresentationDoc, "id"> = {
+    eventId: parsed.data.eventId,
     presenterUid: prev.presenterUid,
     presenterName: prev.presenterName,
-    title: parsed.title,
-    abstract: parsed.abstract,
-    filePath: parsed.filePath,
-    fileUrl: parsed.fileUrl,
-    fileName: parsed.fileName,
-    externalSlidesUrl: parsed.externalSlidesUrl,
+    title: parsed.data.title,
+    abstract: parsed.data.abstract,
+    filePath: parsed.data.filePath,
+    fileUrl: parsed.data.fileUrl,
+    fileName: parsed.data.fileName,
+    externalSlidesUrl: parsed.data.externalSlidesUrl,
+    createdAt: prev.createdAt,
     updatedAt: Timestamp.now(),
   };
-  await ref.set(patch, { merge: true });
+  await ref.set(updatedDoc);
 
-  revalidatePath(`/events/${parsed.eventSlug}`);
-  return plainify({ ...patch, id: ref.id, createdAt: prev.createdAt });
+  revalidatePath(`/events/${parsed.data.eventSlug}`);
+  return {
+    ok: true,
+    presentation: plainify({ ...updatedDoc, id: ref.id }),
+  };
 }
 
 export async function deletePresentation(args: {

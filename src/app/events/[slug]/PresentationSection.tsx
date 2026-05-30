@@ -328,15 +328,25 @@ function PresentationForm({
           fileName: fileFields?.fileName,
           externalSlidesUrl: draft.externalSlidesUrl.trim() || undefined,
         };
-        const saved =
+        const result =
           mode === "create"
             ? await createPresentation(payload)
             : await updatePresentation({
                 ...payload,
                 presentationId: presentationId!,
               });
-        onSaved(saved);
+        if (result.ok) {
+          onSaved(result.presentation);
+        } else {
+          // Validation / permission problems come back as a readable
+          // message here instead of a thrown error, which Next would
+          // otherwise mask as the generic "Server Components render"
+          // crash in production (issue #103).
+          setError(result.error);
+        }
       } catch (err) {
+        // Only unexpected failures reach here now (e.g. an expired
+        // session throwing in requireUser, or a network blip).
         setError(err instanceof Error ? err.message : "保存に失敗しました");
       }
     });
