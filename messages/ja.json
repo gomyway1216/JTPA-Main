@@ -448,9 +448,7 @@
   },
   "AboutPage": {
     "maintainer": "メンテナー",
-    "maintainerText": "サイトの開発・運用は{name}がお手伝いしています。",
-    "maintainerPrefix": "サイトの開発・運用は",
-    "maintainerSuffix": "がお手伝いしています。",
+    "maintainerText": "サイトの開発・運用は<name>Yudai Yaguchi</name>がお手伝いしています。",
     "feedbackPrefix": "質問・不具合報告・改善案などは",
     "feedbackLink": "ヘルプの「要望・不具合報告」",
     "feedbackSuffix": "からお気軽にどうぞ。",

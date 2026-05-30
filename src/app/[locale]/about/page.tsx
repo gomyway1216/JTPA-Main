@@ -43,14 +43,16 @@ export default async function AboutPage() {
           {t("maintainer")}
         </h2>
         <p className="text-zinc-600 dark:text-zinc-400">
-          {t("maintainerPrefix")}{" "}
-          <Link
-            href={`/u/${MAINTAINER_UID}`}
-            className="text-blue-600 hover:underline"
-          >
-            Yudai Yaguchi
-          </Link>
-          {t("maintainerSuffix")}
+          {t.rich("maintainerText", {
+            name: (chunks) => (
+              <Link
+                href={`/u/${MAINTAINER_UID}`}
+                className="text-blue-600 hover:underline"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
         {/*
           Light call-to-action pointing at the /help feedback form for

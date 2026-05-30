@@ -104,7 +104,7 @@ export default async function EventDetailPage({
               {t("capacity")}
             </dt>
             <dd>
-              {event.rsvpCount} / {event.capacity || t("capacityUnknown")}
+              {event.rsvpCount} / {event.capacity ?? t("capacityUnknown")}
             </dd>
           </div>
           {event.location.address && (
