@@ -1,7 +1,7 @@
 {
   "Common": {
     "siteTitle": "JTPA — Japanese Technology Professionals Association",
-    "siteDescription": "Community events, AI project showcases, and study sessions from JTPA.",
+    "siteDescription": "JTPA events, member AI projects, and community questions, notes, and know-how.",
     "viewAll": "View all →",
     "edit": "Edit",
     "coverImageAlt": "Cover image for {title}",
@@ -15,12 +15,12 @@
   "Header": {
     "nav": {
       "events": "Events",
-      "showcase": "Showcase",
-      "community": "Community",
-      "blog": "Blog",
-      "guide": "Guides",
-      "qa": "Q&A",
-      "poll": "Polls",
+      "showcase": "Projects",
+      "community": "Community Posts",
+      "blog": "Articles",
+      "guide": "Notes & Know-how",
+      "qa": "Questions",
+      "poll": "Ask Everyone",
       "about": "About JTPA",
       "help": "Help"
     },
@@ -40,8 +40,8 @@
   "Footer": {
     "about": "About JTPA",
     "help": "Help",
-    "guide": "Guides",
-    "qa": "Q&A"
+    "guide": "Notes & Know-how",
+    "qa": "Questions"
   },
   "Theme": {
     "toggle": "Change theme",
@@ -61,7 +61,7 @@
     "headlineSuffix": "get better when people share them.",
     "intro1": "JTPA is a Bay Area community where Japanese technology professionals bring what they are learning and building with AI.",
     "intro2": "It does not need to be polished. Share a question, a note, a small discovery, or a project in progress.",
-    "communityCta": "Share a question or note",
+    "communityCta": "Share a question or discovery",
     "eventsCta": "See upcoming events",
     "showcaseCta": "Explore projects",
     "upcomingEvents": "Upcoming Events",
@@ -92,7 +92,7 @@
   },
   "Login": {
     "title": "Log in",
-    "description": "A Google account is required to RSVP for events and submit projects to the showcase."
+    "description": "A Google account is required to RSVP for events, share projects, and post to the community."
   },
   "LikeButton": {
     "loginAria": "Log in to like",
@@ -134,86 +134,86 @@
     "capacityUnknown": "—"
   },
   "ShowcasePage": {
-    "metadataTitle": "Showcase",
-    "title": "Showcase",
-    "description": "AI projects built by JTPA community members",
-    "submit": "Submit a project",
+    "metadataTitle": "Projects",
+    "title": "Projects",
+    "description": "AI projects JTPA members are building. Finished work, prototypes, and work in progress are all welcome.",
+    "submit": "Share a project",
     "empty": "No approved projects yet.",
     "by": "by"
   },
   "BlogPage": {
-    "metadataTitle": "Blog",
-    "title": "Blog",
-    "description": "Articles from JTPA community members",
-    "submit": "Submit an article",
+    "metadataTitle": "Articles",
+    "title": "Articles",
+    "description": "Longer posts, writeups, and reflections from JTPA members.",
+    "submit": "Write an article",
     "empty": "No published articles yet.",
     "emptyHint": "Be the first to submit one."
   },
   "CommunityPage": {
-    "metadataTitle": "Community",
-    "metadataDescription": "Guides, Q&A, polls, and blog posts from the JTPA community.",
-    "title": "Community",
-    "description": "Questions, notes, prompts you tried, useful patterns, and polls. You do not need a finished article; leave the trail of what you are figuring out.",
+    "metadataTitle": "Community Posts",
+    "metadataDescription": "Questions, notes, know-how, Ask Everyone posts, and articles from JTPA members.",
+    "title": "Community Posts",
+    "description": "Questions, notes, prompts you tried, useful patterns, and things you want to ask everyone. You do not need a finished article; share the trail while you are figuring it out.",
     "actions": {
-      "qa": "Write a question or note",
+      "qa": "Share a question or discovery",
       "guide": "Share know-how",
-      "poll": "Ask the community"
+      "poll": "Ask everyone"
     },
     "filtersLabel": "Filter community posts",
     "filters": {
       "all": "All",
-      "guide": "Guides",
-      "qa": "Q&A",
-      "poll": "Polls",
-      "blog": "Blog"
+      "guide": "Notes & Know-how",
+      "qa": "Questions",
+      "poll": "Ask Everyone",
+      "blog": "Articles"
     },
     "kind": {
-      "guide": "Guide",
-      "qa": "Q&A",
-      "poll": "Poll",
-      "blog": "Blog"
+      "guide": "Notes & Know-how",
+      "qa": "Question",
+      "poll": "Ask Everyone",
+      "blog": "Article"
     },
     "showing": "Showing {filtered} of {total}",
     "empty": "No community posts yet.",
     "emptyHint": "Start with something you tried, something you are stuck on, or a small discovery.",
     "noMatches": "No posts in this category yet.",
-    "pollMeta": "{voters, plural, =0 {No votes} =1 {# vote} other {# votes}} · {options, plural, =1 {# option} other {# options}}"
+    "pollMeta": "{voters, plural, =0 {No responses} =1 {# response} other {# responses}} · {options, plural, =1 {# option} other {# options}}"
   },
   "GuidePage": {
-    "metadataTitle": "Guides",
-    "title": "Guides",
-    "description": "Community-curated guides for setting up and using AI tools. Share your own know-how too.",
-    "submit": "Submit a guide",
-    "loginSubmit": "Log in to submit"
+    "metadataTitle": "Notes & Know-how",
+    "title": "Notes & Know-how",
+    "description": "A place to leave AI tool notes, prompts you tried, setup tips, and practical patterns. Short notes are welcome too.",
+    "submit": "Share know-how",
+    "loginSubmit": "Log in to write"
   },
   "GuideList": {
-    "searchLabel": "Search guides",
+    "searchLabel": "Search notes and know-how",
     "searchPlaceholder": "Search by keyword, title, tag, or body",
     "clearTags": "Clear tags",
-    "empty": "No published guides yet.",
-    "noMatches": "No guides match those filters.",
+    "empty": "No published notes or know-how yet.",
+    "noMatches": "No notes or know-how match those filters.",
     "showing": "Showing {filtered} of {total}"
   },
   "QaPage": {
-    "metadataTitle": "Q&A",
-    "metadataDescription": "Questions and tips from the JTPA community",
-    "title": "Q&A",
-    "description": "Ask questions and share tips. Others can respond with comments, replies, and likes.",
-    "submit": "Post",
-    "loginSubmit": "Log in to post",
+    "metadataTitle": "Questions",
+    "metadataDescription": "Questions, advice, and notes from JTPA members",
+    "title": "Questions",
+    "description": "Write what you are stuck on, what you tried, or what you want to ask the community. Others can respond with comments, replies, and likes.",
+    "submit": "Share a question or discovery",
+    "loginSubmit": "Log in to write",
     "empty": "No posts yet.",
-    "emptyHint": "Be the first to ask a question."
+    "emptyHint": "Be the first to write a question or note."
   },
   "PollPage": {
-    "metadataTitle": "Polls",
-    "metadataDescription": "Polls and surveys from the JTPA community",
-    "title": "Polls",
-    "description": "Collect community preferences. Multiple selections are supported and votes can be changed anytime.",
-    "submit": "Create poll",
+    "metadataTitle": "Ask Everyone",
+    "metadataDescription": "Questions to ask JTPA members",
+    "title": "Ask Everyone",
+    "description": "Ask what others are using, choosing, or thinking about. Multiple selections are supported and responses can be changed anytime.",
+    "submit": "Ask everyone",
     "loginSubmit": "Log in to create",
-    "empty": "No polls yet.",
-    "emptyHint": "Create the first poll.",
-    "voterCount": "{count, plural, =0 {No votes} =1 {# vote} other {# votes}}",
+    "empty": "No questions for everyone yet.",
+    "emptyHint": "Ask the first one.",
+    "voterCount": "{count, plural, =0 {No responses} =1 {# response} other {# responses}}",
     "optionCount": "{count, plural, =1 {# option} other {# options}}"
   },
   "EventDetail": {
@@ -293,12 +293,12 @@
     "demoVideo": "Demo video"
   },
   "BlogDetail": {
-    "back": "← Blog",
+    "back": "← Articles",
     "coverAlt": "Cover image for {title}"
   },
   "GuideDetail": {
-    "back": "← Guides",
-    "statusNoticePrefix": "This guide is currently",
+    "back": "← Notes & Know-how",
+    "statusNoticePrefix": "This note is currently",
     "statusNoticeSuffix": "and is only visible to the author, admins, and editors.",
     "lastUpdated": "Last updated: {date}",
     "status": {
@@ -309,59 +309,59 @@
     }
   },
   "QaDetail": {
-    "back": "← Q&A",
+    "back": "← Questions",
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."
   },
   "PollDetail": {
-    "back": "← Polls",
-    "archivedNoticePrefix": "This poll has been",
+    "back": "← Ask Everyone",
+    "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."
   },
   "PollResults": {
-    "summary": "{voters, plural, =0 {No votes} =1 {# voter} other {# voters}}",
-    "summaryWithSelections": "{voters, plural, =0 {No votes} =1 {# voter} other {# voters}} / {selections, plural, =1 {# selection} other {# selections}}",
-    "yourChoice": "Your choice",
-    "votes": "{count, plural, =1 {# vote} other {# votes}}"
+    "summary": "{voters, plural, =0 {No responses} =1 {# response} other {# responses}}",
+    "summaryWithSelections": "{voters, plural, =0 {No responses} =1 {# response} other {# responses}} / {selections, plural, =1 {# selection} other {# selections}}",
+    "yourChoice": "Your response",
+    "votes": "{count, plural, =1 {# selection} other {# selections}}"
   },
   "PollVote": {
-    "loginRequired": "Log in to vote.",
-    "vote": "Vote",
-    "changeVote": "Change vote",
-    "hint": "You can choose multiple options and change your vote anytime.",
+    "loginRequired": "Log in to respond.",
+    "vote": "Respond",
+    "changeVote": "Change response",
+    "hint": "You can choose multiple options and change your response anytime.",
     "cancel": "Cancel",
-    "removeVote": "Remove vote",
+    "removeVote": "Remove response",
     "submitting": "Sending...",
-    "voteError": "Failed to vote",
-    "removeVoteError": "Failed to remove vote"
+    "voteError": "Failed to respond",
+    "removeVoteError": "Failed to remove response"
   },
   "NewPost": {
     "metadataTitle": "Submit Article",
     "title": "Submit Article",
-    "description": "Submitted articles appear on the blog after admin approval. You can also save a draft."
+    "description": "Submitted articles appear after admin approval. You can also save a draft."
   },
   "NewGuide": {
-    "metadataTitle": "Submit Guide",
-    "title": "Submit Guide",
-    "directDescription": "You are registered as a trusted author, so you can publish guides directly. Save a draft or publish when ready.",
-    "reviewDescription": "First-time guide submissions are published after admin review. Once approved, contributor access is granted automatically so future guides can be published directly."
+    "metadataTitle": "Submit Notes & Know-how",
+    "title": "Submit Notes & Know-how",
+    "directDescription": "You are registered as a trusted contributor, so you can publish notes and know-how directly. Save a draft or publish when ready.",
+    "reviewDescription": "First-time notes and know-how submissions are published after admin review. Once approved, contributor access is granted automatically so future notes can be published directly."
   },
   "NewQa": {
-    "metadataTitle": "Post Q&A",
-    "title": "Post Q&A",
-    "description": "Questions, tips, and observations are all welcome. Posts are published immediately."
+    "metadataTitle": "Post a Question",
+    "title": "Post a Question",
+    "description": "Questions, advice, tips, and observations are all welcome. Posts are published immediately."
   },
   "NewPoll": {
-    "metadataTitle": "Create Poll",
-    "title": "Create Poll",
-    "description": "Create 2 to 8 options. Multiple selections are supported and votes can be changed anytime."
+    "metadataTitle": "Ask Everyone",
+    "title": "Ask Everyone",
+    "description": "Create a question with 2 to 8 answer options. Multiple selections are supported and responses can be changed anytime."
   },
   "NewProject": {
     "metadataTitle": "Submit Project",
     "title": "Submit Project",
-    "description": "Submitted projects appear in the showcase after admin approval."
+    "description": "Submitted projects appear on the Projects page after admin approval."
   },
   "PostForm": {
     "imageTooLarge": "Image size must be 5MB or less",
@@ -437,14 +437,14 @@
   "PollForm": {
     "minOptionsError": "Add at least {count} options",
     "submitFailed": "Failed to submit",
-    "deleteConfirm": "Delete this poll?",
+    "deleteConfirm": "Delete this question?",
     "deleteFailed": "Failed to delete",
     "title": "Title",
     "titlePlaceholder": "Example: Which AI do you use most often?",
     "description": "Description (optional)",
     "descriptionPlaceholder": "Notes such as \"leave other answers in comments\"",
     "options": "Options ({min} to {max})",
-    "optionsLocked": "Options cannot be changed because votes have already been cast. You can still edit the title and description.",
+    "optionsLocked": "Options cannot be changed because responses have already been submitted. You can still edit the title and description.",
     "optionPlaceholder": "Option {number}",
     "removeOption": "Remove option {number}",
     "addOption": "+ Add option",
@@ -459,7 +459,7 @@
     "uploadedCount": "Uploaded {count} file(s)",
     "imageUploadFailed": "Failed to upload image",
     "saveFailed": "Failed to save",
-    "deleteConfirm": "Delete this guide?",
+    "deleteConfirm": "Delete this note?",
     "deleteFailed": "Failed to delete",
     "title": "Title",
     "slug": "Slug (URL)",
@@ -478,7 +478,7 @@
     "submitting": "Sending...",
     "submitForReview": "Submit for review",
     "resubmitForReview": "Resubmit for review",
-    "deleteGuide": "Delete guide",
+    "deleteGuide": "Delete note",
     "saved": "✓ Saved"
   },
   "AboutPage": {
@@ -489,7 +489,7 @@
     "feedbackSuffix": ".",
     "sourceCode": "Source code:",
     "defaultTitle": "About JTPA",
-    "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and showcases of projects built by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Showcases of AI products built by members\n"
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and project sharing by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Sharing AI products and projects built by members\n"
   },
   "PublicProfile": {
     "notFoundTitle": "User not found",
@@ -508,7 +508,7 @@
     "success": "Sent. We'll review it soon. Thank you.",
     "sendFailed": "Failed to send",
     "label": "Requests, bugs, or improvement ideas",
-    "placeholder": "Example: Filter guides by author / scrolling is janky on a page",
+    "placeholder": "Example: Filter notes by author / scrolling is janky on a page",
     "sending": "Sending...",
     "send": "Send",
     "privacy": "Only admin and editor members can view submitted feedback. It is not shown to other members or made public."
@@ -527,9 +527,9 @@
     "rsvpsTitle": "Event History",
     "rsvpsDescription": "Upcoming and past events",
     "projectsTitle": "My Projects",
-    "projectsDescription": "Projects submitted to the showcase",
+    "projectsDescription": "Projects you shared",
     "postsTitle": "My Articles",
-    "postsDescription": "Blog articles, including drafts",
+    "postsDescription": "Articles you posted, including drafts",
     "likesTitle": "Likes Received",
     "likesDescription": "Your comments that received likes",
     "profileTitle": "Account Settings",
@@ -537,7 +537,7 @@
   },
   "MyCommon": {
     "newPost": "New post",
-    "newPoll": "Create poll",
+    "newPoll": "Ask everyone",
     "emptyPosts": "No posts yet.",
     "edit": "Edit",
     "viewPublic": "View public page",
@@ -556,19 +556,19 @@
     "title": "My Articles"
   },
   "MyGuides": {
-    "metadataTitle": "My Guides",
-    "title": "My Guides",
-    "writeFirst": "Write the first guide"
+    "metadataTitle": "My Notes & Know-how",
+    "title": "My Notes & Know-how",
+    "writeFirst": "Write the first note"
   },
   "MyQa": {
-    "metadataTitle": "My Q&A",
-    "title": "My Q&A"
+    "metadataTitle": "My Questions",
+    "title": "My Questions"
   },
   "MyPoll": {
-    "metadataTitle": "My Polls",
-    "title": "My Polls",
-    "empty": "No polls yet.",
-    "voterCount": "{count, plural, =0 {No votes} =1 {# voter} other {# voters}}"
+    "metadataTitle": "Things I Asked",
+    "title": "Things I Asked",
+    "empty": "You have not asked everyone anything yet.",
+    "voterCount": "{count, plural, =0 {No responses} =1 {# response} other {# responses}}"
   },
   "MyLikes": {
     "metadataTitle": "Likes Received",
@@ -577,19 +577,19 @@
     "empty": "None of your comments have received likes yet.",
     "deletedPage": "Deleted page",
     "parent": {
-      "post": "Blog",
-      "guide": "Guide",
-      "qa": "Q&A",
-      "project": "Showcase",
-      "poll": "Poll"
+      "post": "Article",
+      "guide": "Notes & Know-how",
+      "qa": "Question",
+      "project": "Project",
+      "poll": "Ask Everyone"
     }
   },
   "EditPages": {
     "post": "Edit Article",
     "project": "Edit Project",
-    "guide": "Edit Guide",
-    "qa": "Edit Q&A",
-    "poll": "Edit Poll"
+    "guide": "Edit Notes & Know-how",
+    "qa": "Edit Question",
+    "poll": "Edit Ask Everyone"
   },
   "ProfilePage": {
     "title": "Account Settings",
@@ -645,7 +645,7 @@
   "HelpPage": {
     "metadataTitle": "Help",
     "title": "Help",
-    "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Q&A</qaLink>.",
+    "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Questions</qaLink>.",
     "toc": "Contents",
     "sections": {
       "signin": {
@@ -655,7 +655,7 @@
         ],
         "items": [
           "Your profile is created automatically on first login from your Google name, icon, and email address.",
-          "Login is required for event RSVPs, submissions, comments, likes, and votes.",
+          "Login is required for event RSVPs, submissions, comments, likes, and Ask Everyone responses.",
           "To log out, open your account menu in the top-right corner and choose Log out."
         ]
       },
@@ -699,9 +699,9 @@
         ]
       },
       "showcase": {
-        "title": "Submit to the showcase",
+        "title": "Share a project",
         "paragraphs": [
-          "Share AI projects, services, and tools you built with the community in <showcaseLink>the showcase</showcaseLink>."
+          "Share AI projects, services, and tools you built with the community in <showcaseLink>Projects</showcaseLink>. Finished work, prototypes, and work in progress are all welcome."
         ],
         "steps": [
           {
@@ -712,7 +712,7 @@
           },
           {
             "title": "Wait for admin review",
-            "body": "Submissions are saved as <code>pending</code>. Once approved, they appear in the showcase."
+            "body": "Submissions are saved as <code>pending</code>. Once approved, they appear on the Projects page."
           },
           {
             "title": "Edit your project",
@@ -723,7 +723,7 @@
         ]
       },
       "blog": {
-        "title": "Write blog articles",
+        "title": "Write articles",
         "paragraphs": [
           "Publish articles for the community, such as AI experiences, tutorials, or short essays."
         ],
@@ -740,38 +740,38 @@
           },
           {
             "title": "Publish",
-            "body": "Approved articles appear on <blogLink>the blog</blogLink>. Published articles can be edited and resubmitted without changing the original publish date."
+            "body": "Approved articles appear in <blogLink>Articles</blogLink>. Published articles can be edited and resubmitted without changing the original publish date."
           }
         ]
       },
       "qa": {
-        "title": "Ask and answer in Q&A",
+        "title": "Post questions",
         "paragraphs": [
-          "Q&A is for short questions, tips, and troubleshooting notes. Posts are <strong>published immediately without admin review</strong>."
+          "Questions is for short questions, advice, tips, troubleshooting notes, and observations. Posts are <strong>published immediately without admin review</strong>."
         ],
         "items": [
-          "Browse the latest posts from <qaListLink>Q&A</qaListLink>.",
-          "Create a post from <qaLink>new Q&A post</qaLink>. Markdown is supported.",
+          "Browse the latest posts from <qaListLink>Questions</qaListLink>.",
+          "Create a post from <qaLink>new question</qaLink>. Markdown is supported.",
           "Use comments for answers and follow-up replies.",
-          "Edit your own questions from <myQaLink>My Q&A</myQaLink>."
+          "Edit your own questions from <myQaLink>My Questions</myQaLink>."
         ]
       },
       "guide": {
-        "title": "Read and write guides",
+        "title": "Read and write notes",
         "paragraphs": [
-          "<guideListLink>Guides</guideListLink> collect reusable AI tool setup notes, tutorials, and reference material."
+          "<guideListLink>Notes & Know-how</guideListLink> collects AI tool setup notes, prompts people tried, and practical patterns worth finding later. Short notes are welcome too."
         ],
         "items": [
-          "Anyone can submit a guide from <guideNewLink>new guide</guideNewLink>.",
-          "First-time guides are <strong>published after admin review</strong>. Once approved, <code>contributor</code> access is granted automatically so future guides can be published directly.",
-          "Check your guide drafts, published guides, and rejected submissions from <myGuidesLink>My guides</myGuidesLink>.",
-          "<strong>Blog vs. guide:</strong> Use blog posts for time-based stories and announcements; use guides for reference content that should remain easy to find later."
+          "Anyone can submit from <guideNewLink>new notes and know-how</guideNewLink>.",
+          "First-time notes are <strong>published after admin review</strong>. Once approved, <code>contributor</code> access is granted automatically so future notes can be published directly.",
+          "Check your drafts, published notes, and rejected submissions from <myGuidesLink>My Notes & Know-how</myGuidesLink>.",
+          "<strong>Articles vs. notes:</strong> Use articles for longer stories and reflections; use notes and know-how for reusable steps, setup notes, and reference material."
         ]
       },
       "comments": {
         "title": "Comments and likes",
         "paragraphs": [
-          "Blog, guide, Q&A, showcase, and poll detail pages include comments and like buttons."
+          "Articles, Notes & Know-how, Questions, Projects, and Ask Everyone detail pages include comments and like buttons."
         ],
         "items": [
           "<strong>Comments:</strong> up to 2000 plain-text characters.",
@@ -847,21 +847,21 @@
               "href": "/my/projects",
               "cells": [
                 "My projects",
-                "Projects submitted to the showcase."
+                "Projects you shared."
               ]
             },
             {
               "href": "/my/posts",
               "cells": [
                 "My articles",
-                "Blog articles, including drafts."
+                "Articles you posted, including drafts."
               ]
             },
             {
               "href": "/my/qa",
               "cells": [
-                "My Q&A",
-                "Questions you posted in Q&A."
+                "My Questions",
+                "Questions you posted."
               ]
             },
             {
@@ -888,7 +888,7 @@
         ],
         "items": [
           "Login is required so the team can follow up when needed.",
-          "For usage questions that may help others, <qaLink>post in Q&A</qaLink> instead."
+          "For usage questions that may help others, <qaLink>post in Questions</qaLink> instead."
         ]
       }
     }
@@ -936,9 +936,9 @@
       "dashboard": "Overview",
       "events": "Events",
       "projects": "Project review",
-      "posts": "Blog admin",
+      "posts": "Articles admin",
       "attendees": "Attendees",
-      "guides": "Guides",
+      "guides": "Notes & Know-how",
       "feedback": "Feedback",
       "about": "About JTPA",
       "users": "Users",
@@ -1158,7 +1158,7 @@
       "screenshotAlt": "Screenshot {number}"
     },
     "posts": {
-      "metadataTitle": "Blog admin",
+      "metadataTitle": "Articles admin",
       "titlePending": "Awaiting review ({count})",
       "titlePublished": "Published ({count})",
       "titleDrafts": "Drafts ({count})",
@@ -1170,14 +1170,14 @@
       "coverAlt": "Cover image for {title}"
     },
     "guides": {
-      "title": "Guide admin",
-      "newTitle": "New guide",
-      "editTitle": "Edit guide",
+      "title": "Notes & Know-how admin",
+      "newTitle": "New Notes & Know-how",
+      "editTitle": "Edit Notes & Know-how",
       "titlePending": "Awaiting review ({count})",
-      "pendingDescription": "Review queue for community submissions. Approving a first-time author automatically grants the <role>contributor</role> role so future guides can be self-published.",
-      "emptyPending": "No guides awaiting review.",
+      "pendingDescription": "Review queue for community submissions. Approving a first-time author automatically grants the <role>contributor</role> role so future notes can be self-published.",
+      "emptyPending": "No notes awaiting review.",
       "titlePublished": "Published ({count})",
-      "emptyPublished": "No published guides.",
+      "emptyPublished": "No published notes.",
       "titleDrafts": "Drafts ({count})",
       "titleRejected": "Rejected ({count})",
       "columns": {
@@ -1206,7 +1206,7 @@
       "nameUnset": "(name not set)",
       "you": "You",
       "none": "None",
-      "contributorHint": "Can publish own guides without review",
+      "contributorHint": "Can publish own notes without review",
       "contributorGrant": "Grant contributor",
       "contributorRevoke": "Revoke contributor",
       "editorGrant": "Grant editor",
@@ -1231,7 +1231,7 @@
     "help": {
       "metadataTitle": "Admin help",
       "title": "Admin help",
-      "intro": "A guide to JTPA site administration. For technical details such as Firestore collections and deployment steps, see the repository <docsLink>docs/</docsLink>.",
+      "intro": "A reference for JTPA site administration. For technical details such as Firestore collections and deployment steps, see the repository <docsLink>docs/</docsLink>.",
       "toc": "Contents",
       "sections": {
         "roles": {
@@ -1248,30 +1248,30 @@
               {
                 "cells": [
                   "admin",
-                  "Full access to events, projects, posts, attendees, guides, About, and user role management."
+                  "Full access to events, projects, articles, attendees, notes and know-how, About, and user role management."
                 ]
               },
               {
                 "cells": [
                   "editor",
-                  "Create, edit, publish, and delete all guides, including guides written by other users."
+                  "Create, edit, publish, and delete all notes and know-how, including submissions written by other users."
                 ]
               },
               {
                 "cells": [
                   "contributor",
-                  "Publish, edit, and delete their own guides without review."
+                  "Publish, edit, and delete their own notes without review."
                 ]
               },
               {
                 "cells": [
                   "(none)",
-                  "Regular member: RSVP, submit content, comment, like, and submit first-time guides for admin review."
+                  "Regular member: RSVP, submit content, comment, like, and submit first-time notes for admin review."
                 ]
               }
             ]
           },
-          "callout": "editor and contributor are subsets of admin. If an editor opens a restricted <code>/admin</code> page directly, they are redirected to <code>/admin/guides</code> (exceptions: guide management and this help page). contributor access does not grant <code>/admin</code> access; it only allows self-publishing the user's own guides."
+          "callout": "editor and contributor are subsets of admin. If an editor opens a restricted <code>/admin</code> page directly, they are redirected to <code>/admin/guides</code> (exceptions: Notes & Know-how management and this help page). contributor access does not grant <code>/admin</code> access; it only allows self-publishing the user's own notes."
         },
         "events": {
           "title": "Event operations",
@@ -1318,7 +1318,7 @@
           "callout": "Gmail Web can hit limits around bulk sends above ~500 recipients. Use the existing JTPA Google Group (about 2,000 members) or wait for the Trigger Email + Cloud Functions implementation planned in issue #15."
         },
         "projects": {
-          "title": "Showcase review",
+          "title": "Project review",
           "steps": [
             {
               "title": "Open the pending list",
@@ -1338,7 +1338,7 @@
           "note": "Authors can edit their own submissions from <code>/my/projects</code>. Editing an approved project automatically returns <code>status</code> to <code>pending</code>, so another review is required."
         },
         "posts": {
-          "title": "Blog post review",
+          "title": "Article review",
           "paragraphs": [
             "<adminPostsLink>/admin/posts</adminPostsLink> is organized into four sections: pending review, published, draft, and rejected."
           ],
@@ -1350,10 +1350,10 @@
           ]
         },
         "guides": {
-          "title": "Guide review and contributor grants",
+          "title": "Notes review and contributor grants",
           "paragraphs": [
-            "<adminGuidesLink>/admin/guides</adminGuidesLink> manages guides such as AI tool explainers. It is the only admin page that <strong>editor users can also edit</strong>.",
-            "Community guide submissions appear at the top as <strong>pending</strong>. Each card supports preview, edit, comments, and the Publish or Reject decision."
+            "<adminGuidesLink>/admin/guides</adminGuidesLink> manages AI tool explainers, setup notes, and reusable know-how. It is the only admin page that <strong>editor users can also edit</strong>.",
+            "Community notes and know-how submissions appear at the top as <strong>pending</strong>. Each card supports preview, edit, comments, and the Publish or Reject decision."
           ],
           "steps": [
             {
@@ -1366,7 +1366,7 @@
             },
             {
               "title": "Publish and grant contributor",
-              "body": "Publishing the guide also grants the author the <code>contributor: true</code> custom claim automatically, so future guides no longer need review. The author must sign out and sign in again before the role becomes active."
+              "body": "Publishing the note also grants the author the <code>contributor: true</code> custom claim automatically, so future notes no longer need review. The author must sign out and sign in again before the role becomes active."
             },
             {
               "title": "Reject",
@@ -1375,9 +1375,9 @@
           ],
           "items": [
             "The <code>order</code> field controls display order on <code>/guide</code> (ascending). Only admins and editors can change it.",
-            "Draft (<code>draft</code>) and published (<code>published</code>) guides can be edited from the same admin page.",
+            "Draft (<code>draft</code>) and published (<code>published</code>) notes can be edited from the same admin page.",
             "Markdown supports GFM tables, code blocks, and task lists; code is syntax-highlighted.",
-            "If someone abuses contributor access, downgrade them from <adminUsersLink>/admin/users</adminUsersLink> with Revoke contributor. Existing published guides remain published."
+            "If someone abuses contributor access, downgrade them from <adminUsersLink>/admin/users</adminUsersLink> with Revoke contributor. Existing published notes remain published."
           ]
         },
         "about": {
@@ -1426,9 +1426,9 @@
     "cloneSourceEventNotFound": "The source event to clone was not found.",
     "invalidDraftId": "The draft ID is invalid.",
     "draftIdTaken": "That draft ID is already in use.",
-    "guideNotFound": "The guide was not found.",
-    "guideEditForbidden": "You do not have permission to edit this guide.",
-    "guideDeleteForbidden": "You do not have permission to delete this guide.",
+    "guideNotFound": "The note was not found.",
+    "guideEditForbidden": "You do not have permission to edit this note.",
+    "guideDeleteForbidden": "You do not have permission to delete this note.",
     "publishedOnlyLike": "You can only like published content.",
     "likeTargetNotFound": "The target was not found.",
     "commentParentNotFound": "The target post was not found.",
@@ -1444,11 +1444,11 @@
     "pollMinOptions": "At least {count} options are required.",
     "pollMaxOptions": "You can add up to {count} options.",
     "pollDedupeMinOptions": "After removing duplicates, fewer than {count} options remain.",
-    "pollNotFound": "The poll was not found.",
-    "pollEditForbidden": "You do not have permission to edit this poll.",
-    "pollDeleteForbidden": "You do not have permission to delete this poll.",
-    "pollPublishedOnly": "Only published polls are accepting votes.",
-    "pollInvalidOptions": "The vote includes an invalid option.",
+    "pollNotFound": "The question was not found.",
+    "pollEditForbidden": "You do not have permission to edit this question.",
+    "pollDeleteForbidden": "You do not have permission to delete this question.",
+    "pollPublishedOnly": "Only published questions are accepting responses.",
+    "pollInvalidOptions": "The response includes an invalid option.",
     "projectNotFound": "The project was not found.",
     "projectEditForbidden": "You do not have permission to edit this project.",
     "projectDeleteForbidden": "You do not have permission to delete this project.",
@@ -1485,8 +1485,8 @@
     "surveyDuplicateKey": "Survey item {index}: key \"{key}\" is duplicated. Choose another key.",
     "surveyMissingLabel": "Survey item {index}: enter a display label.",
     "surveyMissingOption": "Survey item {index}: enter at least one option.",
-    "guideImageMissingId": "Could not determine the guide ID.",
-    "qaImageMissingId": "Could not determine the Q&A ID.",
+    "guideImageMissingId": "Could not determine the note ID.",
+    "qaImageMissingId": "Could not determine the question ID.",
     "userMissingId": "Could not determine the user ID.",
     "imageType": "Only {types} images are supported.",
     "imageTooLarge": "Image size must be {size}MB or less.",
@@ -1498,21 +1498,21 @@
     "adminNewProjectText": "{ownerName} ({ownerEmail}) submitted a new project.\n\nTitle: {title}\n\nReview: /admin/projects/pending",
     "projectApprovedSubject": "[JTPA] Project approved: {title}",
     "projectRejectedSubject": "[JTPA] Project review result: {title}",
-    "projectApprovedText": "Your project \"{title}\" was approved and published in the showcase.",
+    "projectApprovedText": "Your project \"{title}\" was approved and published on the Projects page.",
     "projectRejectedText": "Here is the review result for your project \"{title}\".{noteBlock}\n\nYou can edit the submission and send it for review again.",
-    "adminNewPostSubject": "[JTPA] New blog post review request: {title}",
+    "adminNewPostSubject": "[JTPA] New article review request: {title}",
     "adminNewPostText": "{authorName} ({authorEmail}) submitted a new article.\n\nTitle: {title}\n\nReview: /admin/posts",
-    "postPublishedSubject": "[JTPA] Blog post published: {title}",
-    "postRejectedSubject": "[JTPA] Blog post review result: {title}",
+    "postPublishedSubject": "[JTPA] Article published: {title}",
+    "postRejectedSubject": "[JTPA] Article review result: {title}",
     "postPublishedText": "Your article \"{title}\" was published.",
     "postRejectedText": "Here is the review result for your article \"{title}\".{noteBlock}\n\nYou can edit the article and submit it for review again.",
-    "adminNewGuideSubject": "[JTPA] New guide review request: {title}",
-    "adminNewGuideText": "{authorName} ({authorEmail}) submitted a new guide.\n\nTitle: {title}\n\nReview: /admin/guides",
-    "guidePublishedSubject": "[JTPA] Guide published: {title}",
-    "guideRejectedSubject": "[JTPA] Guide review result: {title}",
-    "guidePublishedText": "Your guide \"{title}\" was published.",
-    "guidePromotedAppend": "\n\nThanks for contributing to the community. You can now publish future guides directly without review (contributor access was granted).\n\nSign out and sign in again for the role to take effect.",
-    "guideRejectedText": "Here is the review result for your guide \"{title}\".{noteBlock}\n\nYou can edit the guide and submit it for review again.",
+    "adminNewGuideSubject": "[JTPA] New note review request: {title}",
+    "adminNewGuideText": "{authorName} ({authorEmail}) submitted a new note.\n\nTitle: {title}\n\nReview: /admin/guides",
+    "guidePublishedSubject": "[JTPA] Note published: {title}",
+    "guideRejectedSubject": "[JTPA] Note review result: {title}",
+    "guidePublishedText": "Your note \"{title}\" was published.",
+    "guidePromotedAppend": "\n\nThanks for contributing to the community. You can now publish future notes directly without review (contributor access was granted).\n\nSign out and sign in again for the role to take effect.",
+    "guideRejectedText": "Here is the review result for your note \"{title}\".{noteBlock}\n\nYou can edit the note and submit it for review again.",
     "adminNewFeedbackSubject": "[JTPA] New feedback received",
     "adminNewFeedbackText": "{authorName} ({authorEmail}) submitted feedback.\n\n{preview}\n\ntriage: {triageUrl}",
     "waitlistSubject": "[JTPA] Waitlist promotion: {eventTitle}",
