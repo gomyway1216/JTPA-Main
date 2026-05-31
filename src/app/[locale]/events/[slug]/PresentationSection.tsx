@@ -361,13 +361,14 @@ function PresentationForm({
 
   async function handleDelete() {
     if (!presentationId) return;
-    setDeleteDialogOpen(false);
     setError(null);
     startTransition(async () => {
       try {
         await deletePresentation({ presentationId, eventId, eventSlug });
+        setDeleteDialogOpen(false);
         onDelete?.();
       } catch (err) {
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });

@@ -106,14 +106,17 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
 
   async function handleDelete() {
     if (!poll) return;
-    setDeleteDialogOpen(false);
     setError(null);
     startTransition(async () => {
       try {
         const res = await deleteMyPoll(poll.id);
-        if (res && !res.ok) setError(res.error);
+        if (res && !res.ok) {
+          setDeleteDialogOpen(false);
+          setError(res.error);
+        }
       } catch (err) {
         unstable_rethrow(err);
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });

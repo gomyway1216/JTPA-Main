@@ -253,7 +253,6 @@ export function EventForm({
 
   async function handleDelete() {
     if (!event) return;
-    setDeleteDialogOpen(false);
     startTransition(async () => {
       try {
         // deleteEvent redirects to /admin/events on success, so there's no
@@ -264,6 +263,7 @@ export function EventForm({
         // the navigation actually happens (mirrors handleSubmit). Anything
         // else is a real delete failure.
         unstable_rethrow(err);
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : common("deleteFailed"));
       }
     });
@@ -611,6 +611,7 @@ export function EventForm({
           <button
             type="button"
             onClick={() => setDeleteDialogOpen(true)}
+            disabled={pending || uploading}
             className={dangerButtonClass}
           >
             {t("deleteEvent")}

@@ -165,7 +165,6 @@ export function CommentsSection({
   async function handleDelete() {
     if (!deleteTarget) return;
     const { commentId, hard } = deleteTarget;
-    setDeleteTarget(null);
     setError(null);
     startTransition(async () => {
       try {
@@ -176,6 +175,7 @@ export function CommentsSection({
           hard,
         });
         if (!res.ok) {
+          setDeleteTarget(null);
           setError(res.error);
           return;
         }
@@ -185,8 +185,10 @@ export function CommentsSection({
             ? cur.filter((c) => c.id !== commentId)
             : cur.map((c) => (c.id === commentId ? updated : c)),
         );
+        setDeleteTarget(null);
         router.refresh();
       } catch (err) {
+        setDeleteTarget(null);
         setError(err instanceof Error ? err.message : t("deleteError"));
       }
     });
@@ -426,6 +428,7 @@ export function CommentsSection({
         title={
           deleteTarget?.hard ? t("hardDeleteConfirm") : t("deleteConfirm")
         }
+        confirmLabel={deleteTarget?.hard ? t("hardDelete") : undefined}
         pending={pending}
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDelete}

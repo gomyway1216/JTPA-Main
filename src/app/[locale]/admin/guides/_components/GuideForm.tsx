@@ -327,11 +327,11 @@ export function GuideForm({
 
   async function handleDelete() {
     if (!guide) return;
-    setDeleteDialogOpen(false);
     startTransition(async () => {
       try {
         const res = await deleteGuide(guide.id);
         if (!res.ok) {
+          setDeleteDialogOpen(false);
           setError(res.error);
           return;
         }
@@ -340,10 +340,12 @@ export function GuideForm({
         // where they can see the rest of their submissions. The admin
         // layout redirects contributors away from `/admin/*` so sending
         // them there would be a worse experience.
+        setDeleteDialogOpen(false);
         window.location.href = hasAdminAccess
           ? localizedPath("/admin/guides", locale)
           : localizedPath("/my/guides", locale);
       } catch (err) {
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });

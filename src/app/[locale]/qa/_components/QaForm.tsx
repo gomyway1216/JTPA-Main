@@ -167,16 +167,19 @@ export function QaForm({ mode, user, qa }: Props) {
 
   async function handleDelete() {
     if (!qa) return;
-    setDeleteDialogOpen(false);
     setError(null);
     startTransition(async () => {
       try {
         // deleteMyQa redirects on success (and on an already-deleted doc),
         // so a returned result is always the forbidden { ok: false } case.
         const res = await deleteMyQa(qa.id);
-        if (!res.ok) setError(res.error);
+        if (!res.ok) {
+          setDeleteDialogOpen(false);
+          setError(res.error);
+        }
       } catch (err) {
         unstable_rethrow(err);
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });

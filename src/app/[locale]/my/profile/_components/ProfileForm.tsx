@@ -233,17 +233,19 @@ export function ProfileForm({ uid, initial }: Props) {
   }
 
   async function handleAvatarRemove() {
-    setAvatarDeleteDialogOpen(false);
     setAvatarError(null);
     setAvatarBusy(true);
     try {
       const result = await removeMyAvatar();
       if (result.ok) {
+        setAvatarDeleteDialogOpen(false);
         setAvatar(null);
       } else {
+        setAvatarDeleteDialogOpen(false);
         setAvatarError(result.error);
       }
     } catch (err) {
+      setAvatarDeleteDialogOpen(false);
       setAvatarError(err instanceof Error ? err.message : t("deleteFailed"));
     } finally {
       setAvatarBusy(false);

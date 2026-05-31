@@ -34,23 +34,56 @@ export function DeleteConfirmationDialog({
   const descriptionId = useId();
   const noteId = useId();
   const cancelButtonRef = useRef<HTMLButtonElement | null>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const pendingRef = useRef(pending);
+  const onCancelRef = useRef(onCancel);
+
+  useEffect(() => {
+    pendingRef.current = pending;
+    onCancelRef.current = onCancel;
+  }, [pending, onCancel]);
 
   useEffect(() => {
     if (!open) return;
 
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     cancelButtonRef.current?.focus();
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !pending) onCancel();
+      if (event.key === "Escape" && !pendingRef.current) {
+        onCancelRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const first = cancelButtonRef.current;
+      const last = confirmButtonRef.current;
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
+      const previousFocus = previousFocusRef.current;
+      if (previousFocus && document.contains(previousFocus)) {
+        previousFocus.focus();
+      }
     };
-  }, [open, pending, onCancel]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -95,6 +128,7 @@ export function DeleteConfirmationDialog({
             {cancelLabel ?? t("cancel")}
           </button>
           <button
+            ref={confirmButtonRef}
             type="button"
             onClick={onConfirm}
             disabled={pending}

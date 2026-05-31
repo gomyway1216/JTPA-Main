@@ -177,7 +177,6 @@ export function PostForm({ mode, user, post }: Props) {
 
   async function handleDelete() {
     if (!post) return;
-    setDeleteDialogOpen(false);
     setError(null);
     startTransition(async () => {
       try {
@@ -185,11 +184,14 @@ export function PostForm({ mode, user, post }: Props) {
         if (!res.ok) {
           // Surface the real reason (e.g. permission) instead of the masked
           // generic Server Action crash; navigate away only on success.
+          setDeleteDialogOpen(false);
           setError(res.error);
           return;
         }
+        setDeleteDialogOpen(false);
         window.location.href = localizedPath("/my/posts", locale);
       } catch (err) {
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
