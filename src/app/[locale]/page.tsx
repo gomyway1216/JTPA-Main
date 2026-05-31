@@ -89,6 +89,7 @@ export default async function HomePage() {
             </span>
             {t("headlinePrefix")}
             <br className="hidden sm:inline" />
+            <span className="sm:hidden">{locale === "en" ? " " : ""}</span>
             {t("headlineSuffix")}
           </h1>
 
