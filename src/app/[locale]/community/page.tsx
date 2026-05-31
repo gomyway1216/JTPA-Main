@@ -140,8 +140,6 @@ function guideItem(
     date,
     locale,
     authorProfile: authorProfiles.get(authorUid) ?? null,
-    authorFallback:
-      guide.authorName ?? guide.createdBy.displayName ?? guide.createdBy.email,
     likeCount: guide.likeCount,
   });
 }
@@ -161,7 +159,6 @@ function qaItem(
     date: qa.createdAt,
     locale,
     authorProfile: authorProfiles.get(qa.authorUid) ?? null,
-    authorFallback: qa.authorName,
     likeCount: qa.likeCount,
   });
 }
@@ -186,7 +183,6 @@ function pollItem(
     date: poll.createdAt,
     locale,
     authorProfile: authorProfiles.get(poll.authorUid) ?? null,
-    authorFallback: poll.authorName,
     likeCount: poll.likeCount,
     voterCount: poll.voterCount,
     optionCount: poll.options.length,
@@ -208,7 +204,6 @@ function postItem(
     date: post.publishedAt ?? post.createdAt,
     locale,
     authorProfile: authorProfiles.get(post.authorUid) ?? null,
-    authorFallback: post.authorName,
     likeCount: post.likeCount,
   });
 }
@@ -223,7 +218,6 @@ function baseItem({
   date,
   locale,
   authorProfile,
-  authorFallback,
   likeCount,
   voterCount,
   optionCount,
@@ -239,7 +233,6 @@ function baseItem({
     excerpt,
     tags,
     authorProfile,
-    authorFallback,
     likeCount,
     voterCount,
     optionCount,

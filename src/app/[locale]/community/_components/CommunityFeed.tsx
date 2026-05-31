@@ -38,7 +38,6 @@ export interface CommunityFeedItem {
   dateLabel: string;
   sortTime: number;
   authorProfile: AuthorProfile | null;
-  authorFallback: string | null | undefined;
   likeCount?: number;
   voterCount?: number;
   optionCount?: number;
@@ -173,13 +172,7 @@ export function CommunityFeed({ items }: { items: CommunityFeedItem[] }) {
 }
 
 function Byline({ item }: { item: CommunityFeedItem }) {
-  if (item.authorProfile) {
-    return <AuthorBadge profile={item.authorProfile} />;
-  }
-  if (item.authorFallback) {
-    return <span>{item.authorFallback}</span>;
-  }
-  return null;
+  return <AuthorBadge profile={item.authorProfile} />;
 }
 
 function kindPillClass(kind: CommunityKind) {
