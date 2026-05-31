@@ -5,7 +5,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -20,7 +20,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
-import { localizedPath } from "@/i18n/paths";
+import { useRouter } from "@/i18n/navigation";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
@@ -47,7 +47,7 @@ interface Props {
 
 export function ProjectForm({ mode, user, project }: Props) {
   const t = useTranslations("ProjectForm");
-  const locale = useLocale();
+  const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
@@ -64,6 +64,7 @@ export function ProjectForm({ mode, user, project }: Props) {
   const [shotProgress, setShotProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [deletePending, startDeleteTransition] = useTransition();
 
   function uploadOne(
     file: File,
@@ -183,14 +184,14 @@ export function ProjectForm({ mode, user, project }: Props) {
     if (!project) return;
     if (!confirm(t("deleteConfirm"))) return;
     setError(null);
-    startTransition(async () => {
+    startDeleteTransition(async () => {
       try {
         const res = await deleteMyProject(project.id);
         if (!res.ok) {
           setError(res.error);
           return;
         }
-        window.location.href = localizedPath("/my/projects", locale);
+        router.push("/my/projects");
       } catch (err) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
@@ -354,7 +355,7 @@ export function ProjectForm({ mode, user, project }: Props) {
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="submit"
-          disabled={pending || uploading}
+          disabled={pending || deletePending || uploading}
           className={primaryButtonClass}
         >
           {pending
@@ -368,11 +369,11 @@ export function ProjectForm({ mode, user, project }: Props) {
         {mode === "edit" && (
           <button
             type="button"
-            disabled={pending || uploading}
+            disabled={pending || deletePending || uploading}
             onClick={handleDelete}
             className={`ml-auto ${dangerButtonClass}`}
           >
-            {t("deleteProject")}
+            {deletePending ? `${t("delete")}...` : t("deleteProject")}
           </button>
         )}
       </div>
