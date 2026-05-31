@@ -26,6 +26,7 @@ import {
   secondaryButtonClass,
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { localizedPath } from "@/i18n/paths";
 import { clientDb } from "@/lib/firebase/client";
 import {
@@ -117,6 +118,7 @@ export function GuideForm({
   // confirmation that their click did anything. SaveFlash uses the
   // value as a key to restart its visibility timer.
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [uploading, setUploading] = useState(false);
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
@@ -325,7 +327,7 @@ export function GuideForm({
 
   async function handleDelete() {
     if (!guide) return;
-    if (!confirm(t("deleteConfirm"))) return;
+    setDeleteDialogOpen(false);
     startTransition(async () => {
       try {
         const res = await deleteGuide(guide.id);
@@ -348,16 +350,17 @@ export function GuideForm({
   }
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        // Default submit (Enter in a text field) goes through the most
-        // common intent for this caller: "published" for trusted authors,
-        // "pending" for plain users.
-        submit(canPublishDirectly ? "published" : "pending");
-      }}
-      className="space-y-4"
-    >
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          // Default submit (Enter in a text field) goes through the most
+          // common intent for this caller: "published" for trusted authors,
+          // "pending" for plain users.
+          submit(canPublishDirectly ? "published" : "pending");
+        }}
+        className="space-y-4"
+      >
       <Field label={t("title")} required htmlFor="guide-title">
         <input
           id="guide-title"
@@ -504,7 +507,7 @@ export function GuideForm({
         {mode === "edit" && (
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             disabled={pending || uploading}
             className={dangerButtonClass}
           >
@@ -512,6 +515,14 @@ export function GuideForm({
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

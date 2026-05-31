@@ -12,6 +12,13 @@
       "hybrid": "Hybrid"
     }
   },
+  "DeleteConfirmation": {
+    "description": "Deleting this may make information unavailable to people who rely on it as a reference.",
+    "cannotUndo": "This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirm": "Delete",
+    "deleting": "Deleting..."
+  },
   "Header": {
     "nav": {
       "events": "Events",
@@ -119,7 +126,7 @@
     "hardDelete": "Delete permanently",
     "deleted": "This comment was deleted",
     "deleteConfirm": "Delete this comment?",
-    "hardDeleteConfirm": "Permanently delete this comment? This cannot be undone.",
+    "hardDeleteConfirm": "Permanently delete this comment?",
     "sendError": "Failed to send",
     "deleteError": "Failed to delete"
   },
@@ -610,6 +617,8 @@
     "changeImage": "Change image",
     "uploadImage": "Upload image",
     "delete": "Delete",
+    "deleteConfirm": "Delete your icon?",
+    "deleteDescription": "Deleting this can make it harder for people viewing your profile to recognize you.",
     "processing": "Processing...",
     "avatarHint": "{types} / up to 2MB. If unset, your Google account icon is shown.",
     "username": "Username",

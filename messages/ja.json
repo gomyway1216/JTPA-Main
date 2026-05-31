@@ -12,6 +12,13 @@
       "hybrid": "ハイブリッド"
     }
   },
+  "DeleteConfirmation": {
+    "description": "削除すると、この内容を参考にしている人が情報を見つけられなくなる可能性があります。",
+    "cannotUndo": "この操作は取り消せません。",
+    "cancel": "キャンセル",
+    "confirm": "削除する",
+    "deleting": "削除中..."
+  },
   "Header": {
     "nav": {
       "events": "イベント",
@@ -119,7 +126,7 @@
     "hardDelete": "完全に削除",
     "deleted": "このコメントは削除されました",
     "deleteConfirm": "このコメントを削除しますか？",
-    "hardDeleteConfirm": "このコメントを完全に削除しますか？復元できません。",
+    "hardDeleteConfirm": "このコメントを完全に削除しますか？",
     "sendError": "送信に失敗しました",
     "deleteError": "削除に失敗しました"
   },
@@ -610,6 +617,8 @@
     "changeImage": "画像を変更",
     "uploadImage": "画像をアップロード",
     "delete": "削除",
+    "deleteConfirm": "アイコンを削除しますか？",
+    "deleteDescription": "削除すると、プロフィールを見ている人があなたを見つけにくくなる可能性があります。",
     "processing": "処理中...",
     "avatarHint": "{types} / 2MB まで。未設定のときは Google アカウントのアイコンが表示されます。",
     "username": "ユーザーネーム",

@@ -23,6 +23,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { validateSurveyFields } from "@/lib/event-survey";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
@@ -93,6 +94,7 @@ export function EventForm({
   // confirmation that their click did anything. See SaveFlash for the
   // visibility-timer logic.
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const t = useTranslations("Admin.eventForm");
   const common = useTranslations("Admin.common");
@@ -251,7 +253,7 @@ export function EventForm({
 
   async function handleDelete() {
     if (!event) return;
-    if (!confirm(t("deleteConfirm"))) return;
+    setDeleteDialogOpen(false);
     startTransition(async () => {
       try {
         // deleteEvent redirects to /admin/events on success, so there's no
@@ -298,7 +300,8 @@ export function EventForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
       <Field label={t("title")} required htmlFor="event-title">
         <input
           id="event-title"
@@ -607,13 +610,21 @@ export function EventForm({
         {mode === "edit" && (
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className={dangerButtonClass}
           >
             {t("deleteEvent")}
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

@@ -24,6 +24,7 @@ import {
   primaryButtonClass,
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -76,6 +77,7 @@ export function QaForm({ mode, user, qa }: Props) {
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Pre-generate a Firestore auto-id on create so the user can upload
@@ -165,7 +167,7 @@ export function QaForm({ mode, user, qa }: Props) {
 
   async function handleDelete() {
     if (!qa) return;
-    if (!confirm(t("deleteConfirm"))) return;
+    setDeleteDialogOpen(false);
     setError(null);
     startTransition(async () => {
       try {
@@ -181,7 +183,8 @@ export function QaForm({ mode, user, qa }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
       <Field label={t("title")} required htmlFor="qa-title">
         <input
           id="qa-title"
@@ -260,13 +263,21 @@ export function QaForm({ mode, user, qa }: Props) {
           <button
             type="button"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className={`ml-auto ${dangerButtonClass}`}
           >
             {t("delete")}
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }
