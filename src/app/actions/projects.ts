@@ -230,7 +230,9 @@ export async function deleteMyProject(
   if (paths.length > 0) await deleteStoragePaths(paths);
 
   revalidatePath("/showcase");
+  revalidatePath(`/showcase/${cur.slug}`);
   revalidatePath("/my/projects");
+  revalidatePath("/admin/projects");
   return { ok: true };
 }
 
