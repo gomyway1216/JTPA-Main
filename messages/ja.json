@@ -57,22 +57,23 @@
   },
   "Home": {
     "eyebrow": "Bay Area の AI コミュニティ",
-    "headlinePrefix": "を軸に、",
-    "headlineSuffix": "集まり、つくり、学びを共有する。",
-    "intro1": "JTPAは、Bay Areaを拠点にした日本語・日本人テックプロフェッショナルのコミュニティです。",
-    "intro2": "AIをテーマにしたイベント、メンバー発のプロジェクト、実務で使える知見をゆるやかにつなぎます。",
+    "headlinePrefix": "の試行錯誤を、",
+    "headlineSuffix": "みんなで持ち寄る場所。",
+    "intro1": "JTPAは、Bay Areaの日本語・日本人テックプロフェッショナルがAIの学びや実践を持ち寄るコミュニティです。",
+    "intro2": "完成した記事じゃなくても大丈夫。試したこと、詰まったこと、小さな発見、作ったものを気軽に書き込んでください。",
+    "communityCta": "質問・メモを書き込む",
     "eventsCta": "次のイベントを見る",
     "showcaseCta": "プロジェクトを見る",
     "upcomingEvents": "次に参加できるイベント",
-    "upcomingEventsDescription": "勉強会、LT、交流会など。オンラインでも対面でも、気になる回から参加できます。",
+    "upcomingEventsDescription": "勉強会、LT、交流会など。聞くだけでも、持ち寄って話すだけでも歓迎です。",
     "noEvents": "現在公開中のイベントはありません。",
     "noEventsHint": "次回の告知まで少しお待ちください。",
     "featuredProjects": "メンバーのプロジェクト",
-    "featuredProjectsDescription": "JTPAメンバーが試し、作り、公開しているAIプロジェクト。",
+    "featuredProjectsDescription": "完成品だけでなく、試作や途中経過も歓迎。見せられるところから共有してください。",
     "noProjects": "掲載中のプロジェクトはまだありません。",
     "submitProjectPrefix": "作っている AI プロジェクトがあれば",
     "submitProjectLink": "投稿",
-    "submitProjectSuffix": "してください。"
+    "submitProjectSuffix": "して共有してください。"
   },
   "NotFound": {
     "title": "ページが見つかりません — JTPA",
@@ -152,11 +153,11 @@
     "metadataTitle": "コミュニティ",
     "metadataDescription": "JTPAコミュニティのガイド、Q&A、投票、ブログ記事。",
     "title": "コミュニティ",
-    "description": "ガイド、Q&A、投票、ブログをまとめて見られる場所です。初期フェーズではここに活動を集約します。",
+    "description": "質問、メモ、試したプロンプト、ノウハウ、投票。完成した記事でなくても、みんなの試行錯誤をここに残してください。",
     "actions": {
-      "qa": "質問・Tipsを投稿",
-      "guide": "ガイドを投稿",
-      "poll": "投票を作成"
+      "qa": "質問・メモを書く",
+      "guide": "ノウハウを残す",
+      "poll": "みんなに聞く"
     },
     "filtersLabel": "コミュニティ投稿の絞り込み",
     "filters": {
@@ -174,7 +175,7 @@
     },
     "showing": "表示中: {filtered} / 全 {total} 件",
     "empty": "まだコミュニティ投稿はありません。",
-    "emptyHint": "最初の質問、ガイド、投票を投稿してみましょう。",
+    "emptyHint": "試したこと、困っていること、小さな発見から書いてみましょう。",
     "noMatches": "このカテゴリにはまだ投稿がありません。",
     "pollMeta": "{voters} 人が投票 · {options}つの選択肢"
   },
