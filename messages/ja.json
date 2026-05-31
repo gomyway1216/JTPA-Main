@@ -16,6 +16,7 @@
     "nav": {
       "events": "イベント",
       "showcase": "ショーケース",
+      "community": "コミュニティ",
       "blog": "ブログ",
       "guide": "ガイド",
       "qa": "Q&A",
@@ -146,6 +147,36 @@
     "submit": "記事を投稿",
     "empty": "まだ公開済みの記事はありません。",
     "emptyHint": "最初の記事を投稿してみましょう。"
+  },
+  "CommunityPage": {
+    "metadataTitle": "コミュニティ",
+    "metadataDescription": "JTPAコミュニティのガイド、Q&A、投票、ブログ記事。",
+    "title": "コミュニティ",
+    "description": "ガイド、Q&A、投票、ブログをまとめて見られる場所です。初期フェーズではここに活動を集約します。",
+    "actions": {
+      "qa": "質問・Tipsを投稿",
+      "guide": "ガイドを投稿",
+      "poll": "投票を作成"
+    },
+    "filtersLabel": "コミュニティ投稿の絞り込み",
+    "filters": {
+      "all": "すべて",
+      "guide": "ガイド",
+      "qa": "Q&A",
+      "poll": "投票",
+      "blog": "ブログ"
+    },
+    "kind": {
+      "guide": "ガイド",
+      "qa": "Q&A",
+      "poll": "投票",
+      "blog": "ブログ"
+    },
+    "showing": "表示中: {filtered} / 全 {total} 件",
+    "empty": "まだコミュニティ投稿はありません。",
+    "emptyHint": "最初の質問、ガイド、投票を投稿してみましょう。",
+    "noMatches": "このカテゴリにはまだ投稿がありません。",
+    "pollMeta": "{voters} 人が投票 · {options}つの選択肢"
   },
   "GuidePage": {
     "metadataTitle": "ガイド",

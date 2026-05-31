@@ -11,12 +11,7 @@ import type { SessionUser } from "@/lib/types";
 const NAV_LINKS = [
   { href: "/events", key: "events" },
   { href: "/showcase", key: "showcase" },
-  { href: "/blog", key: "blog" },
-  { href: "/guide", key: "guide" },
-  { href: "/qa", key: "qa" },
-  { href: "/poll", key: "poll" },
-  { href: "/about", key: "about" },
-  { href: "/help", key: "help" },
+  { href: "/community", key: "community" },
 ] as const;
 
 export function Header({ user }: { user: SessionUser | null }) {

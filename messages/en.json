@@ -16,6 +16,7 @@
     "nav": {
       "events": "Events",
       "showcase": "Showcase",
+      "community": "Community",
       "blog": "Blog",
       "guide": "Guides",
       "qa": "Q&A",
@@ -146,6 +147,36 @@
     "submit": "Submit an article",
     "empty": "No published articles yet.",
     "emptyHint": "Be the first to submit one."
+  },
+  "CommunityPage": {
+    "metadataTitle": "Community",
+    "metadataDescription": "Guides, Q&A, polls, and blog posts from the JTPA community.",
+    "title": "Community",
+    "description": "Guides, Q&A, polls, and blog posts in one place. Early traffic stays concentrated here while each feature keeps its own URL.",
+    "actions": {
+      "qa": "Post a question or tip",
+      "guide": "Submit a guide",
+      "poll": "Create poll"
+    },
+    "filtersLabel": "Filter community posts",
+    "filters": {
+      "all": "All",
+      "guide": "Guides",
+      "qa": "Q&A",
+      "poll": "Polls",
+      "blog": "Blog"
+    },
+    "kind": {
+      "guide": "Guide",
+      "qa": "Q&A",
+      "poll": "Poll",
+      "blog": "Blog"
+    },
+    "showing": "Showing {filtered} of {total}",
+    "empty": "No community posts yet.",
+    "emptyHint": "Start with a question, guide, or poll.",
+    "noMatches": "No posts in this category yet.",
+    "pollMeta": "{voters, plural, =0 {No votes} =1 {# vote} other {# votes}} · {options, plural, =1 {# option} other {# options}}"
   },
   "GuidePage": {
     "metadataTitle": "Guides",
