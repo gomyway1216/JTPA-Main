@@ -1,7 +1,7 @@
 {
   "Common": {
     "siteTitle": "JTPA — Japanese Technology Professionals Association",
-    "siteDescription": "JTPAのコミュニティイベント、AIプロジェクトのショーケース、勉強会情報。",
+    "siteDescription": "JTPAのイベント、メンバーのAIプロジェクト、みんなの質問・メモ・ノウハウ。",
     "viewAll": "すべて見る →",
     "edit": "編集",
     "coverImageAlt": "{title} のカバー画像",
@@ -15,12 +15,12 @@
   "Header": {
     "nav": {
       "events": "イベント",
-      "showcase": "ショーケース",
-      "community": "コミュニティ",
-      "blog": "ブログ",
-      "guide": "ガイド",
-      "qa": "Q&A",
-      "poll": "投票",
+      "showcase": "プロジェクト",
+      "community": "みんなの投稿",
+      "blog": "記事",
+      "guide": "メモ・ノウハウ",
+      "qa": "質問・相談",
+      "poll": "みんなに聞く",
       "about": "JTPAとは",
       "help": "ヘルプ"
     },
@@ -40,8 +40,8 @@
   "Footer": {
     "about": "JTPAとは",
     "help": "ヘルプ・使い方",
-    "guide": "ガイド",
-    "qa": "Q&A"
+    "guide": "メモ・ノウハウ",
+    "qa": "質問・相談"
   },
   "Theme": {
     "toggle": "テーマを切り替える",
@@ -61,7 +61,7 @@
     "headlineSuffix": "みんなで持ち寄る場所。",
     "intro1": "JTPAは、Bay Areaの日本語・日本人テックプロフェッショナルがAIの学びや実践を持ち寄るコミュニティです。",
     "intro2": "完成した記事じゃなくても大丈夫。試したこと、詰まったこと、小さな発見、作ったものを気軽に書き込んでください。",
-    "communityCta": "質問・メモを書き込む",
+    "communityCta": "質問・発見を共有する",
     "eventsCta": "次のイベントを見る",
     "showcaseCta": "プロジェクトを見る",
     "upcomingEvents": "次に参加できるイベント",
@@ -92,7 +92,7 @@
   },
   "Login": {
     "title": "ログイン",
-    "description": "イベントへのRSVPや、ショーケースへのプロジェクト投稿にはGoogleアカウントでのログインが必要です。"
+    "description": "イベントへのRSVP、プロジェクト共有、みんなの投稿にはGoogleアカウントでのログインが必要です。"
   },
   "LikeButton": {
     "loginAria": "いいねするにはログイン",
@@ -134,86 +134,86 @@
     "capacityUnknown": "—"
   },
   "ShowcasePage": {
-    "metadataTitle": "ショーケース",
-    "title": "ショーケース",
-    "description": "JTPAコミュニティのメンバーが作ったAIプロジェクト",
-    "submit": "プロジェクトを投稿",
+    "metadataTitle": "プロジェクト",
+    "title": "プロジェクト",
+    "description": "JTPAメンバーが作っているAIプロジェクト。完成品だけでなく試作や途中経過も歓迎です。",
+    "submit": "プロジェクトを共有",
     "empty": "まだ承認済みプロジェクトはありません。",
     "by": "by"
   },
   "BlogPage": {
-    "metadataTitle": "ブログ",
-    "title": "ブログ",
-    "description": "JTPAコミュニティのメンバーによる記事",
-    "submit": "記事を投稿",
+    "metadataTitle": "記事",
+    "title": "記事",
+    "description": "JTPAメンバーが書いた長めの投稿や振り返り。",
+    "submit": "記事を書く",
     "empty": "まだ公開済みの記事はありません。",
     "emptyHint": "最初の記事を投稿してみましょう。"
   },
   "CommunityPage": {
-    "metadataTitle": "コミュニティ",
-    "metadataDescription": "JTPAコミュニティのガイド、Q&A、投票、ブログ記事。",
-    "title": "コミュニティ",
-    "description": "質問、メモ、試したプロンプト、ノウハウ、投票。完成した記事でなくても、みんなの試行錯誤をここに残してください。",
+    "metadataTitle": "みんなの投稿",
+    "metadataDescription": "JTPAメンバーの質問・相談、メモ・ノウハウ、みんなに聞く、記事。",
+    "title": "みんなの投稿",
+    "description": "質問、メモ、試したプロンプト、ノウハウ、みんなに聞きたいこと。完成した記事でなくても、試行錯誤の途中から残してください。",
     "actions": {
-      "qa": "質問・メモを書く",
+      "qa": "質問・発見を共有する",
       "guide": "ノウハウを残す",
       "poll": "みんなに聞く"
     },
-    "filtersLabel": "コミュニティ投稿の絞り込み",
+    "filtersLabel": "みんなの投稿の絞り込み",
     "filters": {
       "all": "すべて",
-      "guide": "ガイド",
-      "qa": "Q&A",
-      "poll": "投票",
-      "blog": "ブログ"
+      "guide": "メモ・ノウハウ",
+      "qa": "質問・相談",
+      "poll": "みんなに聞く",
+      "blog": "記事"
     },
     "kind": {
-      "guide": "ガイド",
-      "qa": "Q&A",
-      "poll": "投票",
-      "blog": "ブログ"
+      "guide": "メモ・ノウハウ",
+      "qa": "質問・相談",
+      "poll": "みんなに聞く",
+      "blog": "記事"
     },
     "showing": "表示中: {filtered} / 全 {total} 件",
-    "empty": "まだコミュニティ投稿はありません。",
+    "empty": "まだ投稿はありません。",
     "emptyHint": "試したこと、困っていること、小さな発見から書いてみましょう。",
     "noMatches": "このカテゴリにはまだ投稿がありません。",
-    "pollMeta": "{voters} 人が投票 · {options}つの選択肢"
+    "pollMeta": "{voters} 人が回答 · {options}つの選択肢"
   },
   "GuidePage": {
-    "metadataTitle": "ガイド",
-    "title": "ガイド",
-    "description": "AI ツールのセットアップから使いこなしまで、コミュニティでまとめた手引き集です。あなたのノウハウもぜひ投稿してください。",
-    "submit": "ガイドを投稿",
-    "loginSubmit": "ログインして投稿"
+    "metadataTitle": "メモ・ノウハウ",
+    "title": "メモ・ノウハウ",
+    "description": "AIツールの使い方、試したプロンプト、設定メモ、うまくいった工夫を残せる場所です。短いメモでも歓迎です。",
+    "submit": "ノウハウを残す",
+    "loginSubmit": "ログインして書く"
   },
   "GuideList": {
-    "searchLabel": "ガイドを検索",
+    "searchLabel": "メモ・ノウハウを検索",
     "searchPlaceholder": "キーワードで検索（タイトル・タグ・本文）",
     "clearTags": "タグをクリア",
-    "empty": "まだ公開済みのガイドはありません。",
-    "noMatches": "条件に一致するガイドがありません。",
+    "empty": "まだ公開済みのメモ・ノウハウはありません。",
+    "noMatches": "条件に一致するメモ・ノウハウがありません。",
     "showing": "表示中: {filtered} / 全 {total} 件"
   },
   "QaPage": {
-    "metadataTitle": "Q&A",
-    "metadataDescription": "JTPAコミュニティの質問・Tips投稿",
-    "title": "Q&A",
-    "description": "気軽に質問やTipsを投稿しましょう。コメント・返信・いいねで反応できます。",
-    "submit": "投稿する",
-    "loginSubmit": "ログインして投稿",
+    "metadataTitle": "質問・相談",
+    "metadataDescription": "JTPAメンバーの質問・相談・メモ投稿",
+    "title": "質問・相談",
+    "description": "困っていること、試してみたこと、誰かに聞きたいことを気軽に書けます。コメント・返信・いいねで反応できます。",
+    "submit": "質問・発見を共有する",
+    "loginSubmit": "ログインして書く",
     "empty": "まだ投稿はありません。",
-    "emptyHint": "最初の質問を投稿してみましょう。"
+    "emptyHint": "最初の質問やメモを書いてみましょう。"
   },
   "PollPage": {
-    "metadataTitle": "投票",
-    "metadataDescription": "JTPAコミュニティの投票・アンケート",
-    "title": "投票",
-    "description": "みんなの「どっち派？」を集計します。複数選択OK・いつでも変更できます。",
-    "submit": "投票を作成",
+    "metadataTitle": "みんなに聞く",
+    "metadataDescription": "JTPAメンバーに聞きたいこと・アンケート",
+    "title": "みんなに聞く",
+    "description": "迷っていること、知りたいこと、みんなの使い方を聞けます。複数選択OK・回答はいつでも変更できます。",
+    "submit": "みんなに聞く",
     "loginSubmit": "ログインして作成",
-    "empty": "まだ投票はありません。",
-    "emptyHint": "最初の投票を作ってみましょう。",
-    "voterCount": "{count} 人が投票",
+    "empty": "まだみんなへの質問はありません。",
+    "emptyHint": "最初の質問を作ってみましょう。",
+    "voterCount": "{count} 人が回答",
     "optionCount": "{count}つの選択肢"
   },
   "EventDetail": {
@@ -293,12 +293,12 @@
     "demoVideo": "デモ動画"
   },
   "BlogDetail": {
-    "back": "← ブログ一覧",
+    "back": "← 記事一覧",
     "coverAlt": "{title} のカバー画像"
   },
   "GuideDetail": {
-    "back": "← ガイド一覧",
-    "statusNoticePrefix": "このガイドは現在",
+    "back": "← メモ・ノウハウ",
+    "statusNoticePrefix": "このメモ・ノウハウは現在",
     "statusNoticeSuffix": "状態です。一般公開はされておらず、投稿者と管理者・エディタのみが閲覧できます。",
     "lastUpdated": "最終更新: {date}",
     "status": {
@@ -309,59 +309,59 @@
     }
   },
   "QaDetail": {
-    "back": "← Q&A 一覧",
+    "back": "← 質問・相談",
     "archivedNoticePrefix": "この投稿は管理者によって",
     "archived": "アーカイブ",
     "archivedNoticeSuffix": "されています。あなた以外には表示されません。"
   },
   "PollDetail": {
-    "back": "← 投票一覧",
+    "back": "← みんなに聞く",
     "archivedNoticePrefix": "この投稿は管理者によって",
     "archived": "アーカイブ",
     "archivedNoticeSuffix": "されています。あなた以外には表示されません。"
   },
   "PollResults": {
-    "summary": "{voters} 人が投票",
-    "summaryWithSelections": "{voters} 人が投票 / {selections} 件選択",
-    "yourChoice": "あなたの選択",
-    "votes": "{count} 票"
+    "summary": "{voters} 人が回答",
+    "summaryWithSelections": "{voters} 人が回答 / {selections} 件選択",
+    "yourChoice": "あなたの回答",
+    "votes": "{count} 件"
   },
   "PollVote": {
-    "loginRequired": "投票するにはログインが必要です。",
-    "vote": "投票する",
-    "changeVote": "投票を変更",
+    "loginRequired": "回答するにはログインが必要です。",
+    "vote": "回答する",
+    "changeVote": "回答を変更",
     "hint": "複数選択できます。いつでも変更できます。",
     "cancel": "キャンセル",
-    "removeVote": "投票を取消",
+    "removeVote": "回答を取消",
     "submitting": "送信中...",
-    "voteError": "投票に失敗しました",
-    "removeVoteError": "投票の取消に失敗しました"
+    "voteError": "回答に失敗しました",
+    "removeVoteError": "回答の取消に失敗しました"
   },
   "NewPost": {
     "metadataTitle": "記事を投稿",
     "title": "記事を投稿",
-    "description": "投稿された内容は管理者の承認後にブログに掲載されます。下書きとして保存することもできます。"
+    "description": "投稿された記事は管理者の承認後に掲載されます。下書きとして保存することもできます。"
   },
   "NewGuide": {
-    "metadataTitle": "ガイドを投稿",
-    "title": "ガイドを投稿",
-    "directDescription": "あなたは信頼された執筆者として登録されているため、ガイドを直接公開できます。「下書き保存」「公開する」のどちらでもどうぞ。",
-    "reviewDescription": "初回の投稿は管理者の確認後に公開されます。一度承認されると、次回からは contributor 権限が自動付与され、ガイドを直接公開できるようになります。"
+    "metadataTitle": "メモ・ノウハウを投稿",
+    "title": "メモ・ノウハウを投稿",
+    "directDescription": "あなたは信頼された執筆者として登録されているため、メモ・ノウハウを直接公開できます。「下書き保存」「公開する」のどちらでもどうぞ。",
+    "reviewDescription": "初回の投稿は管理者の確認後に公開されます。一度承認されると、次回からは contributor 権限が自動付与され、メモ・ノウハウを直接公開できるようになります。"
   },
   "NewQa": {
-    "metadataTitle": "Q&A を投稿",
-    "title": "Q&A を投稿",
-    "description": "質問・Tips・気づき、なんでも気軽に投稿できます。投稿後すぐに公開されます。"
+    "metadataTitle": "質問・相談を投稿",
+    "title": "質問・相談を投稿",
+    "description": "質問・相談・Tips・気づき、なんでも気軽に投稿できます。投稿後すぐに公開されます。"
   },
   "NewPoll": {
-    "metadataTitle": "投票を作成",
-    "title": "投票を作成",
-    "description": "選択肢を 2〜8 つ用意してください。複数選択OK・投票後の変更も自由です。"
+    "metadataTitle": "みんなに聞く",
+    "title": "みんなに聞く",
+    "description": "聞きたいことと選択肢を 2〜8 つ用意してください。複数選択OK・回答後の変更も自由です。"
   },
   "NewProject": {
     "metadataTitle": "プロジェクトを投稿",
     "title": "プロジェクトを投稿",
-    "description": "投稿された内容は管理者の承認後にショーケースに掲載されます。"
+    "description": "投稿された内容は管理者の承認後にプロジェクト一覧へ掲載されます。"
   },
   "PostForm": {
     "imageTooLarge": "画像サイズは 5MB 以下にしてください",
@@ -434,14 +434,14 @@
   "PollForm": {
     "minOptionsError": "選択肢は{count}つ以上必要です",
     "submitFailed": "送信に失敗しました",
-    "deleteConfirm": "この投票を削除しますか？",
+    "deleteConfirm": "この質問を削除しますか？",
     "deleteFailed": "削除に失敗しました",
     "title": "タイトル",
     "titlePlaceholder": "例: 普段どのAIを一番使ってる？",
     "description": "説明 (任意)",
     "descriptionPlaceholder": "補足や「その他はコメントで」などの注記",
     "options": "選択肢 ({min}〜{max}つ)",
-    "optionsLocked": "既に投票が入っているため、選択肢は変更できません。タイトル・説明のみ編集可能です。",
+    "optionsLocked": "既に回答が入っているため、選択肢は変更できません。タイトル・説明のみ編集可能です。",
     "optionPlaceholder": "選択肢 {number}",
     "removeOption": "選択肢 {number} を削除",
     "addOption": "+ 選択肢を追加",
@@ -456,7 +456,7 @@
     "uploadedCount": "{count} 件アップロードしました",
     "imageUploadFailed": "画像のアップロードに失敗しました",
     "saveFailed": "保存に失敗しました",
-    "deleteConfirm": "このガイドを削除しますか？",
+    "deleteConfirm": "このメモ・ノウハウを削除しますか？",
     "deleteFailed": "削除に失敗しました",
     "title": "タイトル",
     "slug": "スラッグ (URL)",
@@ -475,7 +475,7 @@
     "submitting": "送信中...",
     "submitForReview": "審査に出す",
     "resubmitForReview": "審査に出し直す",
-    "deleteGuide": "ガイドを削除",
+    "deleteGuide": "メモ・ノウハウを削除",
     "saved": "✓ 保存しました"
   },
   "AboutPage": {
@@ -486,7 +486,7 @@
     "feedbackSuffix": "からお気軽にどうぞ。",
     "sourceCode": "ソースコード:",
     "defaultTitle": "JTPAとは",
-    "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーの作ったプロジェクトの紹介などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクトのショーケース\n"
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーが作ったプロジェクトの共有などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクト・プロジェクトの共有\n"
   },
   "PublicProfile": {
     "notFoundTitle": "ユーザーが見つかりません",
@@ -505,7 +505,7 @@
     "success": "送信しました。確認次第対応します。ありがとうございます！",
     "sendFailed": "送信に失敗しました",
     "label": "要望・不具合・改善案",
-    "placeholder": "例: ガイドの並び順を作者名でフィルタしたい / ◯◯ページでスクロールがガタつく",
+    "placeholder": "例: メモ・ノウハウを作者名で絞り込みたい / ◯◯ページでスクロールがガタつく",
     "sending": "送信中...",
     "send": "送信",
     "privacy": "送信内容は admin / editor 権限のメンバーだけが閲覧できます。他のメンバーや一般公開はされません。"
@@ -523,10 +523,10 @@
     "title": "マイページ",
     "rsvpsTitle": "参加履歴",
     "rsvpsDescription": "参加予定・過去のイベント",
-    "projectsTitle": "自分の投稿",
-    "projectsDescription": "ショーケースに投稿したプロジェクト",
+    "projectsTitle": "自分のプロジェクト",
+    "projectsDescription": "共有したプロジェクト",
     "postsTitle": "自分の記事",
-    "postsDescription": "ブログに投稿した記事 (下書き含む)",
+    "postsDescription": "投稿した記事 (下書き含む)",
     "likesTitle": "もらったいいね",
     "likesDescription": "いいねを受け取った自分のコメント",
     "profileTitle": "アカウント設定",
@@ -534,7 +534,7 @@
   },
   "MyCommon": {
     "newPost": "新規投稿",
-    "newPoll": "新規作成",
+    "newPoll": "みんなに聞く",
     "emptyPosts": "まだ投稿はありません。",
     "edit": "編集",
     "viewPublic": "公開ページを見る",
@@ -546,26 +546,26 @@
     "empty": "参加登録履歴はありません。"
   },
   "MyProjects": {
-    "title": "自分の投稿"
+    "title": "自分のプロジェクト"
   },
   "MyPosts": {
     "metadataTitle": "自分の記事",
     "title": "自分の記事"
   },
   "MyGuides": {
-    "metadataTitle": "自分のガイド",
-    "title": "自分のガイド",
-    "writeFirst": "最初のガイドを書く"
+    "metadataTitle": "自分のメモ・ノウハウ",
+    "title": "自分のメモ・ノウハウ",
+    "writeFirst": "最初のメモを書く"
   },
   "MyQa": {
-    "metadataTitle": "自分のQ&A",
-    "title": "自分のQ&A"
+    "metadataTitle": "自分の質問・相談",
+    "title": "自分の質問・相談"
   },
   "MyPoll": {
-    "metadataTitle": "自分の投票",
-    "title": "自分の投票",
-    "empty": "まだ投票はありません。",
-    "voterCount": "{count} 人が投票"
+    "metadataTitle": "自分が聞いたこと",
+    "title": "自分が聞いたこと",
+    "empty": "まだ聞いたことはありません。",
+    "voterCount": "{count} 人が回答"
   },
   "MyLikes": {
     "metadataTitle": "もらったいいね",
@@ -574,19 +574,19 @@
     "empty": "まだいいねを受け取ったコメントはありません。",
     "deletedPage": "削除されたページ",
     "parent": {
-      "post": "ブログ",
-      "guide": "ガイド",
-      "qa": "Q&A",
-      "project": "ショーケース",
-      "poll": "投票"
+      "post": "記事",
+      "guide": "メモ・ノウハウ",
+      "qa": "質問・相談",
+      "project": "プロジェクト",
+      "poll": "みんなに聞く"
     }
   },
   "EditPages": {
     "post": "記事を編集",
     "project": "プロジェクトを編集",
-    "guide": "ガイド編集",
-    "qa": "Q&A を編集",
-    "poll": "投票を編集"
+    "guide": "メモ・ノウハウを編集",
+    "qa": "質問・相談を編集",
+    "poll": "みんなへの質問を編集"
   },
   "ProfilePage": {
     "title": "アカウント設定",
@@ -642,7 +642,7 @@
   "HelpPage": {
     "metadataTitle": "ヘルプ・使い方",
     "title": "ヘルプ・使い方",
-    "intro": "JTPAサイトの機能と使い方をまとめました。質問があれば<qaLink>Q&Aに投稿</qaLink>してください。",
+    "intro": "JTPAサイトの機能と使い方をまとめました。質問があれば<qaLink>質問・相談に投稿</qaLink>してください。",
     "toc": "目次",
     "sections": {
       "signin": {
@@ -652,7 +652,7 @@
         ],
         "items": [
           "初回ログイン時にプロフィールが Google の氏名・アイコン・メールから自動作成されます。",
-          "イベントRSVP、投稿、コメント、いいね、投票にはログインが必要です。",
+          "イベントRSVP、投稿、コメント、いいね、みんなに聞くへの回答にはログインが必要です。",
           "ログアウトしたい時は右上のアカウントメニューから「ログアウト」を選びます。"
         ]
       },
@@ -696,9 +696,9 @@
         ]
       },
       "showcase": {
-        "title": "ショーケースに投稿する",
+        "title": "プロジェクトを共有する",
         "paragraphs": [
-          "自作のAIプロジェクト・サービス・ツールを<showcaseLink>ショーケース</showcaseLink>で紹介できます。"
+          "自作のAIプロジェクト・サービス・ツールを<showcaseLink>プロジェクト</showcaseLink>で紹介できます。完成前の試作や途中経過も歓迎です。"
         ],
         "steps": [
           {
@@ -709,7 +709,7 @@
           },
           {
             "title": "管理者の承認待ち",
-            "body": "投稿は<code>審査待ち</code>として保存され、管理者の承認後にショーケースへ掲載されます。"
+            "body": "投稿は<code>審査待ち</code>として保存され、管理者の承認後にプロジェクト一覧へ掲載されます。"
           },
           {
             "title": "編集",
@@ -720,7 +720,7 @@
         ]
       },
       "blog": {
-        "title": "ブログ記事を書く",
+        "title": "記事を書く",
         "paragraphs": [
           "コミュニティ向けの記事、AI関連の体験記、チュートリアル、考察などを投稿できます。"
         ],
@@ -737,38 +737,38 @@
           },
           {
             "title": "公開",
-            "body": "承認後に<blogLink>ブログ</blogLink>へ掲載されます。公開済みの記事も再編集・再審査でき、初回公開日は維持されます。"
+            "body": "承認後に<blogLink>記事一覧</blogLink>へ掲載されます。公開済みの記事も再編集・再審査でき、初回公開日は維持されます。"
           }
         ]
       },
       "qa": {
-        "title": "Q&Aで質問・回答する",
+        "title": "質問・相談を書く",
         "paragraphs": [
-          "Q&A は短い質問・Tips・トラブルの共有用です。投稿は<strong>承認なしで即時公開</strong>されます。"
+          "質問・相談は、短い質問・Tips・トラブル・気づきをそのまま共有する場所です。投稿は<strong>承認なしで即時公開</strong>されます。"
         ],
         "items": [
-          "<qaListLink>Q&A一覧</qaListLink>で最新の質問を見られます。",
-          "<qaLink>新規Q&A投稿</qaLink>から投稿できます。Markdown に対応しています。",
+          "<qaListLink>質問・相談</qaListLink>で最新の投稿を見られます。",
+          "<qaLink>新規投稿</qaLink>から投稿できます。Markdown に対応しています。",
           "回答や追加質問はコメントでやり取りします。",
-          "自分の投稿は<myQaLink>自分のQ&A</myQaLink>から編集できます。"
+          "自分の投稿は<myQaLink>自分の質問・相談</myQaLink>から編集できます。"
         ]
       },
       "guide": {
-        "title": "ガイドを読む・書く",
+        "title": "メモ・ノウハウを読む・書く",
         "paragraphs": [
-          "<guideListLink>ガイド</guideListLink>は AI ツールのセットアップ、チュートリアル、後から参照しやすい資料をまとめる場所です。"
+          "<guideListLink>メモ・ノウハウ</guideListLink>は AI ツールのセットアップ、試したプロンプト、後から参照しやすい工夫を残す場所です。短いメモでも歓迎です。"
         ],
         "items": [
-          "誰でも<guideNewLink>新規ガイド</guideNewLink>から投稿できます。",
-          "初回のガイドは<strong>管理者の承認後</strong>に公開されます。承認されると<code>contributor</code>権限が自動付与され、次回から直接公開できます。",
-          "自分のガイドの下書き・公開状況・却下理由は<myGuidesLink>自分のガイド</myGuidesLink>で確認できます。",
-          "<strong>ブログとガイドの使い分け:</strong> 時系列の体験談やお知らせはブログ、長く参照する手順やリファレンスはガイド、という使い分けです。"
+          "誰でも<guideNewLink>新規メモ・ノウハウ</guideNewLink>から投稿できます。",
+          "初回のメモ・ノウハウは<strong>管理者の承認後</strong>に公開されます。承認されると<code>contributor</code>権限が自動付与され、次回から直接公開できます。",
+          "自分の下書き・公開状況・却下理由は<myGuidesLink>自分のメモ・ノウハウ</myGuidesLink>で確認できます。",
+          "<strong>記事とメモ・ノウハウの使い分け:</strong> まとまった体験談や長めの考察は記事、後から参照する手順・設定メモ・ノウハウはメモ・ノウハウ、という使い分けです。"
         ]
       },
       "comments": {
         "title": "コメント・いいね",
         "paragraphs": [
-          "ブログ・ガイド・Q&A・ショーケース・投票の詳細ページにはコメント欄といいねボタンがあります。"
+          "記事・メモ・ノウハウ・質問・相談・プロジェクト・みんなに聞くの詳細ページにはコメント欄といいねボタンがあります。"
         ],
         "items": [
           "<strong>コメント:</strong> 最大 2000 文字のプレーンテキストです。",
@@ -843,22 +843,22 @@
             {
               "href": "/my/projects",
               "cells": [
-                "自分の投稿",
-                "ショーケースに投稿したプロジェクト。"
+                "自分のプロジェクト",
+                "共有したプロジェクト。"
               ]
             },
             {
               "href": "/my/posts",
               "cells": [
                 "自分の記事",
-                "ブログ記事。下書きも含みます。"
+                "投稿した記事。下書きも含みます。"
               ]
             },
             {
               "href": "/my/qa",
               "cells": [
-                "自分のQ&A",
-                "自分が投稿した Q&A の質問。"
+                "自分の質問・相談",
+                "自分が投稿した質問・相談。"
               ]
             },
             {
@@ -885,7 +885,7 @@
         ],
         "items": [
           "必要に応じて運営から確認できるよう、送信にはログインが必要です。",
-          "他の人にも役立つ使い方の質問は<qaLink>Q&Aに投稿</qaLink>してください。"
+          "他の人にも役立つ使い方の質問は<qaLink>質問・相談に投稿</qaLink>してください。"
         ]
       }
     }
@@ -933,9 +933,9 @@
       "dashboard": "概要",
       "events": "イベント",
       "projects": "プロジェクト承認",
-      "posts": "ブログ管理",
+      "posts": "記事管理",
       "attendees": "参加者",
-      "guides": "ガイド",
+      "guides": "メモ・ノウハウ",
       "feedback": "フィードバック",
       "about": "JTPAとは",
       "users": "ユーザー",
@@ -1155,7 +1155,7 @@
       "screenshotAlt": "スクリーンショット {number}"
     },
     "posts": {
-      "metadataTitle": "ブログ管理",
+      "metadataTitle": "記事管理",
       "titlePending": "審査待ち ({count})",
       "titlePublished": "公開中 ({count})",
       "titleDrafts": "下書き ({count})",
@@ -1167,14 +1167,14 @@
       "coverAlt": "{title} のカバー画像"
     },
     "guides": {
-      "title": "ガイド管理",
-      "newTitle": "ガイド新規作成",
-      "editTitle": "ガイド編集",
+      "title": "メモ・ノウハウ管理",
+      "newTitle": "メモ・ノウハウ新規作成",
+      "editTitle": "メモ・ノウハウ編集",
       "titlePending": "審査待ち ({count})",
       "pendingDescription": "コミュニティ投稿の審査キュー。承認すると初回投稿者には <role>contributor</role> 権限が自動付与されます (二度目以降は自走可)。",
       "emptyPending": "審査待ちはありません。",
       "titlePublished": "公開中 ({count})",
-      "emptyPublished": "公開中のガイドはありません。",
+      "emptyPublished": "公開中のメモ・ノウハウはありません。",
       "titleDrafts": "下書き ({count})",
       "titleRejected": "却下 ({count})",
       "columns": {
@@ -1203,7 +1203,7 @@
       "nameUnset": "(名前未設定)",
       "you": "あなた",
       "none": "なし",
-      "contributorHint": "自分のガイドを審査なしで公開できる",
+      "contributorHint": "自分のメモ・ノウハウを審査なしで公開できる",
       "contributorGrant": "contributor 付与",
       "contributorRevoke": "contributor 剥奪",
       "editorGrant": "editor 付与",
@@ -1245,30 +1245,30 @@
               {
                 "cells": [
                   "admin",
-                  "全機能 (イベント・プロジェクト・記事・参加者・ガイド・About・ユーザー権限管理)"
+                  "全機能 (イベント・プロジェクト・記事・参加者・メモ・ノウハウ・About・ユーザー権限管理)"
                 ]
               },
               {
                 "cells": [
                   "editor",
-                  "他人のものを含む全ガイドの作成・編集・公開・削除 (キュレーター職)"
+                  "他人のものを含む全メモ・ノウハウの作成・編集・公開・削除 (キュレーター職)"
                 ]
               },
               {
                 "cells": [
                   "contributor",
-                  "自分のガイドを審査なしで公開・編集・削除 (信頼される投稿者)"
+                  "自分のメモ・ノウハウを審査なしで公開・編集・削除 (信頼される投稿者)"
                 ]
               },
               {
                 "cells": [
                   "(なし)",
-                  "一般メンバー: RSVP・投稿 (ガイドは初回 admin 審査)・コメント・いいね"
+                  "一般メンバー: RSVP・投稿 (メモ・ノウハウは初回 admin 審査)・コメント・いいね"
                 ]
               }
             ]
           },
-          "callout": "editor / contributor は admin の部分集合です。editor が <code>/admin</code> 配下の管理画面を直接開いた場合は <code>/admin/guides</code> にリダイレクトされます (例外: ガイド管理画面とこのヘルプページのみ editor も閲覧可)。contributor 権限は <code>/admin</code> へのアクセスを与えません。あくまで「自分のガイドの自己公開」だけです。"
+          "callout": "editor / contributor は admin の部分集合です。editor が <code>/admin</code> 配下の管理画面を直接開いた場合は <code>/admin/guides</code> にリダイレクトされます (例外: メモ・ノウハウ管理画面とこのヘルプページのみ editor も閲覧可)。contributor 権限は <code>/admin</code> へのアクセスを与えません。あくまで「自分のメモ・ノウハウの自己公開」だけです。"
         },
         "events": {
           "title": "イベント運営",
@@ -1315,7 +1315,7 @@
           "callout": "~500人を超える一斉メールは Gmail Web の上限に引っかかります。JTPA の既存 Google Group (約2000人) を使うか、issue #15 で予定している Trigger Email + Cloud Functions の実装を待ってください。"
         },
         "projects": {
-          "title": "ショーケース承認",
+          "title": "プロジェクト承認",
           "steps": [
             {
               "title": "承認待ち一覧",
@@ -1335,7 +1335,7 @@
           "note": "投稿者は <code>/my/projects</code> から自分の投稿を編集できます。編集すると <code>status</code> が自動的に <code>pending</code> に戻り、再審査が必要になります。"
         },
         "posts": {
-          "title": "ブログ記事の審査",
+          "title": "記事の審査",
           "paragraphs": [
             "<adminPostsLink>/admin/posts</adminPostsLink> の構成: 審査待ち / 公開中 / 下書き / 却下 の4セクション。"
           ],
@@ -1347,10 +1347,10 @@
           ]
         },
         "guides": {
-          "title": "ガイドの審査と contributor 自動付与",
+          "title": "メモ・ノウハウの審査と contributor 自動付与",
           "paragraphs": [
-            "<adminGuidesLink>/admin/guides</adminGuidesLink> で AI ツールの解説などのガイドを管理します。ここは<strong>editor 権限のユーザーも編集可能</strong>な唯一の管理画面です。",
-            "コミュニティ投稿のガイドは<strong>審査待ち (pending)</strong>として上部に並びます。各カードからプレビュー・編集・コメント記入ができ、「公開」または「却下」ボタンで決定します。"
+            "<adminGuidesLink>/admin/guides</adminGuidesLink> で AI ツールの解説や設定メモなどを管理します。ここは<strong>editor 権限のユーザーも編集可能</strong>な唯一の管理画面です。",
+            "コミュニティ投稿のメモ・ノウハウは<strong>審査待ち (pending)</strong>として上部に並びます。各カードからプレビュー・編集・コメント記入ができ、「公開」または「却下」ボタンで決定します。"
           ],
           "steps": [
             {
@@ -1363,7 +1363,7 @@
             },
             {
               "title": "公開 (+ contributor 付与)",
-              "body": "ボタンを押すとガイドが公開され、投稿者には <code>contributor: true</code> のカスタムクレームが自動付与されます (二度目以降は審査不要に)。投稿者は一度サインアウト -> 再ログインで権限が有効になります。"
+              "body": "ボタンを押すとメモ・ノウハウが公開され、投稿者には <code>contributor: true</code> のカスタムクレームが自動付与されます (二度目以降は審査不要に)。投稿者は一度サインアウト -> 再ログインで権限が有効になります。"
             },
             {
               "title": "却下",
@@ -1374,7 +1374,7 @@
             "<code>order</code> フィールドで <code>/guide</code> での表示順を制御 (小さい順)。admin/editor のみが触れる項目です。",
             "下書き (<code>draft</code>) や公開済み (<code>published</code>) も同じ管理画面から編集できます。",
             "Markdown は GFM (表・コードブロック・タスクリスト) 対応、コードはシンタックスハイライトされます。",
-            "contributor を悪用するユーザーが現れた場合は<adminUsersLink>/admin/users</adminUsersLink>の「contributor 剥奪」で降格できます。既存の公開ガイドはそのまま残ります。"
+            "contributor を悪用するユーザーが現れた場合は<adminUsersLink>/admin/users</adminUsersLink>の「contributor 剥奪」で降格できます。既存の公開メモ・ノウハウはそのまま残ります。"
           ]
         },
         "about": {
@@ -1423,9 +1423,9 @@
     "cloneSourceEventNotFound": "複製元のイベントが見つかりません",
     "invalidDraftId": "不正な下書きIDが指定されました",
     "draftIdTaken": "下書きIDが既に使われています",
-    "guideNotFound": "ガイドが見つかりません。",
-    "guideEditForbidden": "このガイドを編集する権限がありません。",
-    "guideDeleteForbidden": "このガイドを削除する権限がありません。",
+    "guideNotFound": "メモ・ノウハウが見つかりません。",
+    "guideEditForbidden": "このメモ・ノウハウを編集する権限がありません。",
+    "guideDeleteForbidden": "このメモ・ノウハウを削除する権限がありません。",
     "publishedOnlyLike": "公開済みのコンテンツのみにいいねできます",
     "likeTargetNotFound": "対象が見つかりません。",
     "commentParentNotFound": "投稿先が見つかりません。",
@@ -1441,10 +1441,10 @@
     "pollMinOptions": "選択肢は{count}つ以上必要です",
     "pollMaxOptions": "選択肢は{count}つまでです",
     "pollDedupeMinOptions": "重複を除いた選択肢が{count}つ未満です",
-    "pollNotFound": "投票が見つかりません。",
-    "pollEditForbidden": "この投票を編集する権限がありません。",
-    "pollDeleteForbidden": "この投票を削除する権限がありません。",
-    "pollPublishedOnly": "公開中の投票のみ受け付けています",
+    "pollNotFound": "質問が見つかりません。",
+    "pollEditForbidden": "この質問を編集する権限がありません。",
+    "pollDeleteForbidden": "この質問を削除する権限がありません。",
+    "pollPublishedOnly": "公開中の質問のみ回答を受け付けています",
     "pollInvalidOptions": "不正な選択肢が含まれています",
     "projectNotFound": "プロジェクトが見つかりません",
     "projectEditForbidden": "このプロジェクトを編集する権限がありません",
@@ -1482,8 +1482,8 @@
     "surveyDuplicateKey": "アンケート項目{index}: key「{key}」が重複しています。別の key を指定してください",
     "surveyMissingLabel": "アンケート項目{index}: 表示ラベルを入力してください",
     "surveyMissingOption": "アンケート項目{index}: 選択肢を1つ以上入力してください",
-    "guideImageMissingId": "ガイドIDが取得できませんでした",
-    "qaImageMissingId": "Q&A IDが取得できませんでした",
+    "guideImageMissingId": "メモ・ノウハウIDが取得できませんでした",
+    "qaImageMissingId": "質問IDが取得できませんでした",
     "userMissingId": "ユーザーIDが取得できませんでした",
     "imageType": "画像形式は {types} のみ対応しています",
     "imageTooLarge": "画像サイズは {size}MB 以下にしてください",
@@ -1495,21 +1495,21 @@
     "adminNewProjectText": "{ownerName} ({ownerEmail}) が新しいプロジェクトを投稿しました。\n\nタイトル: {title}\n\n承認: /admin/projects/pending",
     "projectApprovedSubject": "[JTPA] プロジェクトが承認されました: {title}",
     "projectRejectedSubject": "[JTPA] プロジェクトのレビュー結果について: {title}",
-    "projectApprovedText": "プロジェクト「{title}」が承認され、ショーケースに掲載されました。",
+    "projectApprovedText": "プロジェクト「{title}」が承認され、プロジェクト一覧に掲載されました。",
     "projectRejectedText": "プロジェクト「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
-    "adminNewPostSubject": "[JTPA] 新規ブログ記事の審査依頼: {title}",
+    "adminNewPostSubject": "[JTPA] 新規記事の審査依頼: {title}",
     "adminNewPostText": "{authorName} ({authorEmail}) が新しい記事を投稿しました。\n\nタイトル: {title}\n\n審査: /admin/posts",
-    "postPublishedSubject": "[JTPA] ブログ記事が公開されました: {title}",
-    "postRejectedSubject": "[JTPA] ブログ記事のレビュー結果について: {title}",
+    "postPublishedSubject": "[JTPA] 記事が公開されました: {title}",
+    "postRejectedSubject": "[JTPA] 記事のレビュー結果について: {title}",
     "postPublishedText": "記事「{title}」が公開されました。",
     "postRejectedText": "記事「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
-    "adminNewGuideSubject": "[JTPA] 新規ガイドの審査依頼: {title}",
-    "adminNewGuideText": "{authorName} ({authorEmail}) が新しいガイドを投稿しました。\n\nタイトル: {title}\n\n審査: /admin/guides",
-    "guidePublishedSubject": "[JTPA] ガイドが公開されました: {title}",
-    "guideRejectedSubject": "[JTPA] ガイドのレビュー結果について: {title}",
-    "guidePublishedText": "ガイド「{title}」が公開されました。",
-    "guidePromotedAppend": "\n\nおめでとうございます！コミュニティへの貢献を確認できたので、今後はガイドを審査なしで直接公開できるようになりました (contributor 権限を付与しました)。\n\n権限の反映には一度サインアウトして再ログインが必要です。",
-    "guideRejectedText": "ガイド「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
+    "adminNewGuideSubject": "[JTPA] 新規メモ・ノウハウの審査依頼: {title}",
+    "adminNewGuideText": "{authorName} ({authorEmail}) が新しいメモ・ノウハウを投稿しました。\n\nタイトル: {title}\n\n審査: /admin/guides",
+    "guidePublishedSubject": "[JTPA] メモ・ノウハウが公開されました: {title}",
+    "guideRejectedSubject": "[JTPA] メモ・ノウハウのレビュー結果について: {title}",
+    "guidePublishedText": "メモ・ノウハウ「{title}」が公開されました。",
+    "guidePromotedAppend": "\n\nおめでとうございます！コミュニティへの貢献を確認できたので、今後はメモ・ノウハウを審査なしで直接公開できるようになりました (contributor 権限を付与しました)。\n\n権限の反映には一度サインアウトして再ログインが必要です。",
+    "guideRejectedText": "メモ・ノウハウ「{title}」のレビュー結果をお知らせします。{noteBlock}\n\n内容を修正して再投稿いただけます。",
     "adminNewFeedbackSubject": "[JTPA] 新規フィードバックが届きました",
     "adminNewFeedbackText": "{authorName} ({authorEmail}) からフィードバックが届きました。\n\n{preview}\n\ntriage: {triageUrl}",
     "waitlistSubject": "[JTPA] 繰り上げ参加のお知らせ: {eventTitle}",
