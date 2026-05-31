@@ -562,9 +562,9 @@
     "title": "自分の質問・相談"
   },
   "MyPoll": {
-    "metadataTitle": "自分が聞いたこと",
-    "title": "自分が聞いたこと",
-    "empty": "まだ聞いたことはありません。",
+    "metadataTitle": "みんなに聞いたこと",
+    "title": "みんなに聞いたこと",
+    "empty": "まだみんなに聞いたことはありません。",
     "voterCount": "{count} 人が回答"
   },
   "MyLikes": {

@@ -1228,7 +1228,7 @@
     "help": {
       "metadataTitle": "Admin help",
       "title": "Admin help",
-    "intro": "A reference for JTPA site administration. For technical details such as Firestore collections and deployment steps, see the repository <docsLink>docs/</docsLink>.",
+      "intro": "A reference for JTPA site administration. For technical details such as Firestore collections and deployment steps, see the repository <docsLink>docs/</docsLink>.",
       "toc": "Contents",
       "sections": {
         "roles": {
@@ -1503,13 +1503,13 @@
     "postRejectedSubject": "[JTPA] Article review result: {title}",
     "postPublishedText": "Your article \"{title}\" was published.",
     "postRejectedText": "Here is the review result for your article \"{title}\".{noteBlock}\n\nYou can edit the article and submit it for review again.",
-    "adminNewGuideSubject": "[JTPA] New notes and know-how review request: {title}",
-    "adminNewGuideText": "{authorName} ({authorEmail}) submitted new notes and know-how.\n\nTitle: {title}\n\nReview: /admin/guides",
-    "guidePublishedSubject": "[JTPA] Notes & Know-how published: {title}",
-    "guideRejectedSubject": "[JTPA] Notes & Know-how review result: {title}",
-    "guidePublishedText": "Your notes and know-how \"{title}\" were published.",
+    "adminNewGuideSubject": "[JTPA] New note review request: {title}",
+    "adminNewGuideText": "{authorName} ({authorEmail}) submitted a new note.\n\nTitle: {title}\n\nReview: /admin/guides",
+    "guidePublishedSubject": "[JTPA] Note published: {title}",
+    "guideRejectedSubject": "[JTPA] Note review result: {title}",
+    "guidePublishedText": "Your note \"{title}\" was published.",
     "guidePromotedAppend": "\n\nThanks for contributing to the community. You can now publish future notes directly without review (contributor access was granted).\n\nSign out and sign in again for the role to take effect.",
-    "guideRejectedText": "Here is the review result for your notes and know-how \"{title}\".{noteBlock}\n\nYou can edit the note and submit it for review again.",
+    "guideRejectedText": "Here is the review result for your note \"{title}\".{noteBlock}\n\nYou can edit the note and submit it for review again.",
     "adminNewFeedbackSubject": "[JTPA] New feedback received",
     "adminNewFeedbackText": "{authorName} ({authorEmail}) submitted feedback.\n\n{preview}\n\ntriage: {triageUrl}",
     "waitlistSubject": "[JTPA] Waitlist promotion: {eventTitle}",
