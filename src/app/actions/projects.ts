@@ -10,6 +10,7 @@ import {
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { routing } from "@/i18n/routing";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
@@ -26,6 +27,13 @@ const AssetSchema = z.object({
   path: z.string().min(1),
   url: z.string().url(),
 });
+
+function revalidateLocalizedPath(path: string): void {
+  revalidatePath(path);
+  for (const locale of routing.locales) {
+    revalidatePath(`/${locale}${path}`);
+  }
+}
 
 const ProjectInputSchema = z.object({
   title: z.string().min(2).max(120),
@@ -143,9 +151,9 @@ export async function submitProject(
     ownerEmail: user.email,
   });
 
-  revalidatePath("/showcase");
-  revalidatePath("/my/projects");
-  revalidatePath("/admin/projects");
+  revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath("/my/projects");
+  revalidateLocalizedPath("/admin/projects");
   return redirectToLocalizedPath("/my/projects");
 }
 
@@ -197,9 +205,9 @@ export async function updateMyProject(
 
   if (orphans.length > 0) await deleteStoragePaths(orphans);
 
-  revalidatePath("/showcase");
-  revalidatePath("/my/projects");
-  revalidatePath("/admin/projects");
+  revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath("/my/projects");
+  revalidateLocalizedPath("/admin/projects");
   // Redirect on success — mirrors updateMyPost so the author lands back on
   // their list instead of sitting on a now-stale edit form (per #129 review).
   return redirectToLocalizedPath("/my/projects");
@@ -229,8 +237,10 @@ export async function deleteMyProject(
   await ref.delete();
   if (paths.length > 0) await deleteStoragePaths(paths);
 
-  revalidatePath("/showcase");
-  revalidatePath("/my/projects");
+  revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath(`/showcase/${cur.slug}`);
+  revalidateLocalizedPath("/my/projects");
+  revalidateLocalizedPath("/admin/projects");
   return { ok: true };
 }
 
@@ -268,7 +278,7 @@ export async function decideProject(
     });
   }
 
-  revalidatePath("/showcase");
-  revalidatePath("/admin/projects");
+  revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath("/admin/projects");
   return { ok: true };
 }

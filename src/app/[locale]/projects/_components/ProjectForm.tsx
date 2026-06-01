@@ -8,13 +8,19 @@ import {
 import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
-import { submitProject, updateMyProject } from "@/app/actions/projects";
+import {
+  deleteMyProject,
+  submitProject,
+  updateMyProject,
+} from "@/app/actions/projects";
 import { Field } from "@/components/forms/Field";
 import {
+  dangerButtonClass,
   errorTextClass,
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { useRouter } from "@/i18n/navigation";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
@@ -41,6 +47,7 @@ interface Props {
 
 export function ProjectForm({ mode, user, project }: Props) {
   const t = useTranslations("ProjectForm");
+  const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
   const [description, setDescription] = useState(project?.description ?? "");
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
@@ -57,6 +64,7 @@ export function ProjectForm({ mode, user, project }: Props) {
   const [shotProgress, setShotProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [deletePending, startDeleteTransition] = useTransition();
 
   function uploadOne(
     file: File,
@@ -168,6 +176,25 @@ export function ProjectForm({ mode, user, project }: Props) {
         // navigation actually happens. Anything else is a real failure.
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("submitFailed"));
+      }
+    });
+  }
+
+  async function handleDelete() {
+    if (!project) return;
+    if (!confirm(t("deleteConfirm"))) return;
+    setError(null);
+    startDeleteTransition(async () => {
+      try {
+        const res = await deleteMyProject(project.id);
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        router.push("/my/projects");
+      } catch (err) {
+        unstable_rethrow(err);
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
@@ -325,19 +352,31 @@ export function ProjectForm({ mode, user, project }: Props) {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || uploading}
-        className={primaryButtonClass}
-      >
-        {pending
-          ? t("submitting")
-          : uploading
-            ? t("uploadingButton")
-            : mode === "create"
-              ? t("submitForReview")
-              : t("updateForReview")}
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          disabled={pending || deletePending || uploading}
+          className={primaryButtonClass}
+        >
+          {pending
+            ? t("submitting")
+            : uploading
+              ? t("uploadingButton")
+              : mode === "create"
+                ? t("submitForReview")
+                : t("updateForReview")}
+        </button>
+        {mode === "edit" && (
+          <button
+            type="button"
+            disabled={pending || deletePending || uploading}
+            onClick={handleDelete}
+            className={`ml-auto ${dangerButtonClass}`}
+          >
+            {deletePending ? `${t("delete")}...` : t("deleteProject")}
+          </button>
+        )}
+      </div>
     </form>
   );
 }
