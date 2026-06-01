@@ -20,6 +20,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { useRouter } from "@/i18n/navigation";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
@@ -63,6 +64,7 @@ export function ProjectForm({ mode, user, project }: Props) {
   const [thumbProgress, setThumbProgress] = useState<number | null>(null);
   const [shotProgress, setShotProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [deletePending, startDeleteTransition] = useTransition();
 
@@ -182,18 +184,20 @@ export function ProjectForm({ mode, user, project }: Props) {
 
   async function handleDelete() {
     if (!project) return;
-    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startDeleteTransition(async () => {
       try {
         const res = await deleteMyProject(project.id);
         if (!res.ok) {
+          setDeleteDialogOpen(false);
           setError(res.error);
           return;
         }
+        setDeleteDialogOpen(false);
         router.push("/my/projects");
       } catch (err) {
         unstable_rethrow(err);
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
@@ -202,69 +206,70 @@ export function ProjectForm({ mode, user, project }: Props) {
   const uploading = thumbProgress !== null || shotProgress !== null;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label={t("title")} required htmlFor="project-title">
-        <input
-          id="project-title"
-          type="text"
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label={t("title")} required htmlFor="project-title">
+          <input
+            id="project-title"
+            type="text"
+            required
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Field
+          label={t("description")}
           required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
-      <Field
-        label={t("description")}
-        required
-        htmlFor="project-description"
-      >
-        <textarea
-          id="project-description"
-          required
-          rows={6}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
-      <Field label={t("tags")} htmlFor="project-tags">
-        <input
-          id="project-tags"
-          type="text"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-          placeholder="LLM, RAG, Agent"
-          className={inputClass}
-        />
-      </Field>
-      <Field label={t("appUrl")} htmlFor="project-app-url">
-        <input
-          id="project-app-url"
-          type="url"
-          value={appUrl}
-          onChange={(e) => setAppUrl(e.target.value)}
-          placeholder={t("appUrlPlaceholder")}
-          className={inputClass}
-        />
-      </Field>
-      <Field label={t("repoUrl")} htmlFor="project-repo-url">
-        <input
-          id="project-repo-url"
-          type="url"
-          value={repoUrl}
-          onChange={(e) => setRepoUrl(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
-      <Field label={t("demoVideoUrl")} htmlFor="project-demo-url">
-        <input
-          id="project-demo-url"
-          type="url"
-          value={demoVideoUrl}
-          onChange={(e) => setDemoVideoUrl(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
+          htmlFor="project-description"
+        >
+          <textarea
+            id="project-description"
+            required
+            rows={6}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Field label={t("tags")} htmlFor="project-tags">
+          <input
+            id="project-tags"
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="LLM, RAG, Agent"
+            className={inputClass}
+          />
+        </Field>
+        <Field label={t("appUrl")} htmlFor="project-app-url">
+          <input
+            id="project-app-url"
+            type="url"
+            value={appUrl}
+            onChange={(e) => setAppUrl(e.target.value)}
+            placeholder={t("appUrlPlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+        <Field label={t("repoUrl")} htmlFor="project-repo-url">
+          <input
+            id="project-repo-url"
+            type="url"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        <Field label={t("demoVideoUrl")} htmlFor="project-demo-url">
+          <input
+            id="project-demo-url"
+            type="url"
+            value={demoVideoUrl}
+            onChange={(e) => setDemoVideoUrl(e.target.value)}
+            className={inputClass}
+          />
+        </Field>
 
       <Field label={t("cover")}>
         <div className="space-y-2">
@@ -370,13 +375,21 @@ export function ProjectForm({ mode, user, project }: Props) {
           <button
             type="button"
             disabled={pending || deletePending || uploading}
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className={`ml-auto ${dangerButtonClass}`}
           >
             {deletePending ? `${t("delete")}...` : t("deleteProject")}
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={deletePending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

@@ -14,6 +14,7 @@ import {
   primaryButtonClassSm,
 } from "@/components/forms/styles";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { parentRoutePrefix } from "@/lib/comments-parent";
 import type { PublicProfile } from "@/lib/data/users";
@@ -62,6 +63,10 @@ export function CommentsSection({
   // that comment id. Only one inline reply form is visible at a time.
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyBody, setReplyBody] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{
+    commentId: string;
+    hard: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Separate error slot for the inline reply form so a failed reply shows
   // its message next to that form, not only under the main comment box at
@@ -157,11 +162,9 @@ export function CommentsSection({
     });
   }
 
-  async function handleDelete(commentId: string, hard = false) {
-    const prompt = hard
-      ? t("hardDeleteConfirm")
-      : t("deleteConfirm");
-    if (!confirm(prompt)) return;
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const { commentId, hard } = deleteTarget;
     setError(null);
     startTransition(async () => {
       try {
@@ -172,6 +175,7 @@ export function CommentsSection({
           hard,
         });
         if (!res.ok) {
+          setDeleteTarget(null);
           setError(res.error);
           return;
         }
@@ -181,8 +185,10 @@ export function CommentsSection({
             ? cur.filter((c) => c.id !== commentId)
             : cur.map((c) => (c.id === commentId ? updated : c)),
         );
+        setDeleteTarget(null);
         router.refresh();
       } catch (err) {
+        setDeleteTarget(null);
         setError(err instanceof Error ? err.message : t("deleteError"));
       }
     });
@@ -205,7 +211,9 @@ export function CommentsSection({
             {user?.isAdmin && (
               <button
                 type="button"
-                onClick={() => handleDelete(c.id, true)}
+                onClick={() =>
+                  setDeleteTarget({ commentId: c.id, hard: true })
+                }
                 disabled={pending}
                 className="text-xs text-red-600 hover:underline disabled:opacity-50"
               >
@@ -246,7 +254,9 @@ export function CommentsSection({
           {canDelete && (
             <button
               type="button"
-              onClick={() => handleDelete(c.id)}
+              onClick={() =>
+                setDeleteTarget({ commentId: c.id, hard: false })
+              }
               disabled={pending}
               className="text-xs text-red-600 hover:underline disabled:opacity-50"
             >
@@ -413,6 +423,16 @@ export function CommentsSection({
           </div>
         )}
       </div>
+      <DeleteConfirmationDialog
+        open={deleteTarget !== null}
+        title={
+          deleteTarget?.hard ? t("hardDeleteConfirm") : t("deleteConfirm")
+        }
+        confirmLabel={deleteTarget?.hard ? t("hardDelete") : undefined}
+        pending={pending}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+      />
     </section>
   );
 }

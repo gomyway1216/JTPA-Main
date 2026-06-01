@@ -12,6 +12,7 @@ import {
   deletePresentation,
   updatePresentation,
 } from "@/app/actions/presentations";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import type { PublicProfile } from "@/lib/data/users";
 import { clientStorage } from "@/lib/firebase/client";
@@ -245,6 +246,7 @@ function PresentationForm({
   const [stagedFile, setStagedFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   // Effective file fields = freshly staged upload, else whatever's already
@@ -359,23 +361,25 @@ function PresentationForm({
 
   async function handleDelete() {
     if (!presentationId) return;
-    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
         await deletePresentation({ presentationId, eventId, eventSlug });
+        setDeleteDialogOpen(false);
         onDelete?.();
       } catch (err) {
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
-    >
+    <>
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-3 rounded-md border border-zinc-200 p-3 dark:border-zinc-800"
+      >
       <input
         type="text"
         value={draft.title}
@@ -478,7 +482,7 @@ function PresentationForm({
         {mode === "edit" && onDelete && (
           <button
             type="button"
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             disabled={pending}
             className="ml-auto rounded-md border border-red-300 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
           >
@@ -486,6 +490,14 @@ function PresentationForm({
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

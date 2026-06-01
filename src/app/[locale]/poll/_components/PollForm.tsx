@@ -17,6 +17,7 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import type { PollDoc } from "@/lib/types";
 
 const MAX_OPTIONS = 8;
@@ -51,6 +52,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
     ],
   );
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function setOptionLabel(idx: number, label: string) {
@@ -104,14 +106,17 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
 
   async function handleDelete() {
     if (!poll) return;
-    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
         const res = await deleteMyPoll(poll.id);
-        if (res && !res.ok) setError(res.error);
+        if (res && !res.ok) {
+          setDeleteDialogOpen(false);
+          setError(res.error);
+        }
       } catch (err) {
         unstable_rethrow(err);
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
@@ -122,7 +127,8 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
     options.filter((o) => o.label.trim()).length >= MIN_OPTIONS;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
       <Field label={t("title")} required htmlFor="poll-title">
         <input
           id="poll-title"
@@ -211,13 +217,21 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           <button
             type="button"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className={`ml-auto ${dangerButtonClass}`}
           >
             {t("delete")}
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

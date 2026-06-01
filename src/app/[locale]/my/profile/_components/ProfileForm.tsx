@@ -13,6 +13,7 @@ import {
   type UsernameAvailability,
 } from "@/app/actions/users";
 import { SaveFlash } from "@/components/forms/SaveFlash";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import {
   deleteUserAvatarObject,
   GUIDE_IMAGE_ACCEPT,
@@ -89,6 +90,7 @@ export function ProfileForm({ uid, initial }: Props) {
   const [avatar, setAvatar] = useState<ProjectAsset | null>(initial.avatar);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [avatarDeleteDialogOpen, setAvatarDeleteDialogOpen] = useState(false);
 
   // Derived synchronously from the current input — these don't need an
   // effect because they're a pure function of `username` (and the
@@ -236,11 +238,14 @@ export function ProfileForm({ uid, initial }: Props) {
     try {
       const result = await removeMyAvatar();
       if (result.ok) {
+        setAvatarDeleteDialogOpen(false);
         setAvatar(null);
       } else {
+        setAvatarDeleteDialogOpen(false);
         setAvatarError(result.error);
       }
     } catch (err) {
+      setAvatarDeleteDialogOpen(false);
       setAvatarError(err instanceof Error ? err.message : t("deleteFailed"));
     } finally {
       setAvatarBusy(false);
@@ -260,10 +265,11 @@ export function ProfileForm({ uid, initial }: Props) {
     availability.status === "invalid";
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="rounded-lg border border-zinc-200 bg-white p-5 space-y-6 dark:border-zinc-800 dark:bg-zinc-900"
-    >
+    <>
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-lg border border-zinc-200 bg-white p-5 space-y-6 dark:border-zinc-800 dark:bg-zinc-900"
+      >
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
           {t("title")}
@@ -321,7 +327,7 @@ export function ProfileForm({ uid, initial }: Props) {
               {avatar && (
                 <button
                   type="button"
-                  onClick={handleAvatarRemove}
+                  onClick={() => setAvatarDeleteDialogOpen(true)}
                   disabled={avatarBusy || pending}
                   className="text-xs text-red-600 hover:underline disabled:opacity-50"
                 >
@@ -525,7 +531,16 @@ export function ProfileForm({ uid, initial }: Props) {
         </button>
         <SaveFlash savedAt={savedAt} message={t("saved")} />
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={avatarDeleteDialogOpen}
+        title={t("deleteConfirm")}
+        description={t("deleteDescription")}
+        pending={avatarBusy}
+        onCancel={() => setAvatarDeleteDialogOpen(false)}
+        onConfirm={handleAvatarRemove}
+      />
+    </>
   );
 }
 

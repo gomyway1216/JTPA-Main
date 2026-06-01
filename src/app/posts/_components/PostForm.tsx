@@ -26,6 +26,7 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from "@/components/forms/styles";
+import { DeleteConfirmationDialog } from "@/components/ui/DeleteConfirmationDialog";
 import { localizedPath } from "@/i18n/paths";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
@@ -82,6 +83,7 @@ export function PostForm({ mode, user, post }: Props) {
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const [colorMode, setColorMode] = useState<"light" | "dark">("light");
@@ -175,7 +177,6 @@ export function PostForm({ mode, user, post }: Props) {
 
   async function handleDelete() {
     if (!post) return;
-    if (!confirm(t("deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -183,11 +184,14 @@ export function PostForm({ mode, user, post }: Props) {
         if (!res.ok) {
           // Surface the real reason (e.g. permission) instead of the masked
           // generic Server Action crash; navigate away only on success.
+          setDeleteDialogOpen(false);
           setError(res.error);
           return;
         }
+        setDeleteDialogOpen(false);
         window.location.href = localizedPath("/my/posts", locale);
       } catch (err) {
+        setDeleteDialogOpen(false);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
     });
@@ -196,15 +200,16 @@ export function PostForm({ mode, user, post }: Props) {
   const uploading = coverProgress !== null;
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        // Default submit (Enter in a text field) goes through the
-        // "review request" path — the more common authoring intent.
-        submit("pending");
-      }}
-      className="space-y-4"
-    >
+    <>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          // Default submit (Enter in a text field) goes through the
+          // "review request" path — the more common authoring intent.
+          submit("pending");
+        }}
+        className="space-y-4"
+      >
       <Field label={t("title")} required htmlFor="post-title">
         <input
           id="post-title"
@@ -322,13 +327,21 @@ export function PostForm({ mode, user, post }: Props) {
           <button
             type="button"
             disabled={pending}
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className={`ml-auto ${dangerButtonClass}`}
           >
             {t("delete")}
           </button>
         )}
       </div>
-    </form>
+      </form>
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        title={t("deleteConfirm")}
+        pending={pending}
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }
