@@ -17,6 +17,7 @@ import {
   submitPost,
   updateMyPost,
   type PostFormInput,
+  type PostReturnTo,
 } from "@/app/actions/posts";
 import { Field } from "@/components/forms/Field";
 import {
@@ -66,9 +67,10 @@ interface Props {
   mode: "create" | "edit";
   user: SessionUser;
   post?: PostDoc;
+  returnTo?: PostReturnTo;
 }
 
-export function PostForm({ mode, user, post }: Props) {
+export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
   const locale = useLocale();
   const t = useTranslations("PostForm");
   const [title, setTitle] = useState(post?.title ?? "");
@@ -158,7 +160,7 @@ export function PostForm({ mode, user, post }: Props) {
           mode === "create"
             ? await submitPost(payload)
             : post
-              ? await updateMyPost(post.id, payload)
+              ? await updateMyPost(post.id, payload, returnTo)
               : null;
         // Both create and edit redirect on success, so a returned result is
         // always a failure — surface the real message inline instead of the
@@ -186,7 +188,8 @@ export function PostForm({ mode, user, post }: Props) {
           setError(res.error);
           return;
         }
-        window.location.href = localizedPath("/my/posts", locale);
+        const path = returnTo === "admin" ? "/admin/posts" : "/my/posts";
+        window.location.href = localizedPath(path, locale);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("deleteFailed"));
       }
@@ -297,14 +300,16 @@ export function PostForm({ mode, user, post }: Props) {
       )}
 
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          disabled={pending || uploading}
-          onClick={() => submit("draft")}
-          className={secondaryButtonClass}
-        >
-          {t("saveDraft")}
-        </button>
+        {!user.isAdmin && (
+          <button
+            type="button"
+            disabled={pending || uploading}
+            onClick={() => submit("draft")}
+            className={secondaryButtonClass}
+          >
+            {t("saveDraft")}
+          </button>
+        )}
         <button
           type="submit"
           disabled={pending || uploading}
@@ -316,7 +321,9 @@ export function PostForm({ mode, user, post }: Props) {
               ? t("uploadingButton")
               : mode === "create"
                 ? t("submitForReview")
-                : t("updateForReview")}
+                : user.isAdmin
+                  ? t("save")
+                  : t("updateForReview")}
         </button>
         {mode === "edit" && (
           <button

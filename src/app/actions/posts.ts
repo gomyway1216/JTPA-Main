@@ -35,6 +35,7 @@ const PostInputSchema = z.object({
 });
 
 export type PostFormInput = z.input<typeof PostInputSchema>;
+export type PostReturnTo = "my" | "admin";
 
 // submitPost / updateMyPost redirect on success (so they only ever *return*
 // on failure); the remaining actions return { ok: true }. Returning the
@@ -91,6 +92,10 @@ function orphanPaths(
   return [prev.path];
 }
 
+function postReturnPath(returnTo: PostReturnTo, isAdmin: boolean): string {
+  return returnTo === "admin" && isAdmin ? "/admin/posts" : "/my/posts";
+}
+
 // ---------- create ----------
 
 export async function submitPost(
@@ -143,6 +148,7 @@ export async function submitPost(
 export async function updateMyPost(
   postId: string,
   input: PostFormInput,
+  returnTo: PostReturnTo = "my",
 ): Promise<PostSaveResult> {
   const user = await requireUser();
   const pr = await parsePostInput(input);
@@ -188,7 +194,7 @@ export async function updateMyPost(
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
-  return redirectToLocalizedPath("/my/posts");
+  return redirectToLocalizedPath(postReturnPath(returnTo, user.isAdmin));
 }
 
 // ---------- delete (owner) ----------
@@ -260,6 +266,7 @@ export async function publishPost(postId: string): Promise<PostSaveResult> {
 
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
   return { ok: true };
 }
@@ -336,6 +343,7 @@ export async function archivePost(postId: string): Promise<PostSaveResult> {
   });
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
+  revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
   return { ok: true };
 }
