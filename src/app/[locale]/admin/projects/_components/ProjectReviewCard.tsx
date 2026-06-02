@@ -86,12 +86,20 @@ export function ProjectReviewCard({
             )}
           </p>
         </div>
-        <Link
-          href={`/showcase/${project.slug}`}
-          className="text-xs text-zinc-500 hover:underline"
-        >
-          {common("preview")}
-        </Link>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-xs">
+          <Link
+            href={`/showcase/${project.slug}`}
+            className="text-zinc-500 hover:underline"
+          >
+            {common("preview")}
+          </Link>
+          <Link
+            href={`/admin/projects/${project.id}/edit`}
+            className="text-zinc-500 hover:underline"
+          >
+            {common("editContent")}
+          </Link>
+        </div>
       </header>
       <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
         {project.description}

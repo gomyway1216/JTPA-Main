@@ -51,6 +51,7 @@ const ProjectInputSchema = z.object({
 });
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
+export type ProjectReturnTo = "my" | "admin";
 
 // submitProject / updateMyProject redirect on success (so they only ever
 // *return* on failure); the remaining actions return { ok: true }. Returning
@@ -81,6 +82,10 @@ async function uniqueSlug(base: string, existingId?: string): Promise<string> {
     if (snap.empty || snap.docs[0].id === existingId) return candidate;
   }
   return `${slug}-${Date.now().toString(36)}`;
+}
+
+function projectReturnPath(returnTo: ProjectReturnTo, isAdmin: boolean): string {
+  return returnTo === "admin" && isAdmin ? "/admin/projects" : "/my/projects";
 }
 
 // Best-effort Storage cleanup. Logged and swallowed so a single missing object
@@ -160,6 +165,7 @@ export async function submitProject(
 export async function updateMyProject(
   projectId: string,
   input: ProjectFormInput,
+  returnTo: ProjectReturnTo = "my",
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
   const pr = await parseProjectInput(input);
@@ -169,7 +175,7 @@ export async function updateMyProject(
   const snap = await ref.get();
   if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
   const cur = snap.data() as ProjectDoc;
-  if (cur.ownerUid !== user.uid) {
+  if (cur.ownerUid !== user.uid && !user.isAdmin) {
     return { ok: false, error: await actionError("projectEditForbidden") };
   }
 
@@ -184,10 +190,14 @@ export async function updateMyProject(
     parsed.thumbnail,
   );
 
-  // Editing flips back to pending for re-review. Explicitly delete the
-  // legacy `thumbnailPath` field on first save so the doc normalizes to
-  // the new shape (PR #24 introduced thumbnail: { path, url } in its
-  // place).
+  // Owner edits flip back to pending for re-review. Admin edits preserve
+  // the current moderation state so typo fixes do not accidentally hide a
+  // published project or revive a rejected one.
+  const nextStatus: ProjectDoc["status"] = user.isAdmin ? cur.status : "pending";
+
+  // Explicitly delete the legacy `thumbnailPath` field on first save so the
+  // doc normalizes to the new shape (PR #24 introduced thumbnail: { path,
+  // url } in its place).
   await ref.update({
     title: parsed.title,
     description: parsed.description,
@@ -198,19 +208,20 @@ export async function updateMyProject(
     thumbnail: parsed.thumbnail ?? FieldValue.delete(),
     screenshots: parsed.screenshots,
     thumbnailPath: FieldValue.delete(),
-    status: "pending" as const,
-    submittedAt: Timestamp.now(),
+    status: nextStatus,
+    ...(!user.isAdmin ? { submittedAt: Timestamp.now() } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   });
 
   if (orphans.length > 0) await deleteStoragePaths(orphans);
 
   revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath(`/showcase/${cur.slug}`);
   revalidateLocalizedPath("/my/projects");
   revalidateLocalizedPath("/admin/projects");
   // Redirect on success — mirrors updateMyPost so the author lands back on
   // their list instead of sitting on a now-stale edit form (per #129 review).
-  return redirectToLocalizedPath("/my/projects");
+  return redirectToLocalizedPath(projectReturnPath(returnTo, user.isAdmin));
 }
 
 export async function deleteMyProject(
@@ -222,7 +233,7 @@ export async function deleteMyProject(
   // Already gone — nothing to do, treat as success so the UI navigates away.
   if (!snap.exists) return { ok: true };
   const cur = snap.data() as ProjectDoc;
-  if (cur.ownerUid !== user.uid) {
+  if (cur.ownerUid !== user.uid && !user.isAdmin) {
     return { ok: false, error: await actionError("projectDeleteForbidden") };
   }
 
@@ -236,6 +247,31 @@ export async function deleteMyProject(
 
   await ref.delete();
   if (paths.length > 0) await deleteStoragePaths(paths);
+
+  revalidateLocalizedPath("/showcase");
+  revalidateLocalizedPath(`/showcase/${cur.slug}`);
+  revalidateLocalizedPath("/my/projects");
+  revalidateLocalizedPath("/admin/projects");
+  return { ok: true };
+}
+
+export async function setProjectVisibility(
+  projectId: string,
+  visible: boolean,
+): Promise<ProjectSaveResult> {
+  const admin = await requireAdmin();
+  const ref = adminDb().collection("projects").doc(projectId);
+  const snap = await ref.get();
+  if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
+  const cur = snap.data() as ProjectDoc;
+
+  await ref.update({
+    status: visible ? ("approved" as const) : ("archived" as const),
+    reviewerUid: admin.uid,
+    ...(visible ? { reviewNote: "" } : {}),
+    reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
 
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath(`/showcase/${cur.slug}`);

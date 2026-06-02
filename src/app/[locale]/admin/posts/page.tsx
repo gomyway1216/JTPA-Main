@@ -2,11 +2,13 @@ import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { PostStatusButton } from "@/app/[locale]/admin/posts/_components/PostStatusButton";
 import { PostReviewCard } from "@/app/[locale]/admin/posts/_components/PostReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import type { PostDoc } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -16,21 +18,33 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("metadataTitle") };
 }
 
+const STATUS_CLASSES: Record<string, string> = {
+  draft: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
+  pending:
+    "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  published:
+    "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
+  rejected: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
+  archived: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
+};
+
 export default async function AdminPostsPage() {
   const user = await getSessionUser();
   // Skip the /admin landing — editors hit a second redirect to
   // /admin/guides anyway. Send them straight there for one fewer hop and
   // consistency with the other admin-only routes.
   if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
-  const [locale, t] = await Promise.all([
+  const [locale, t, common, statusT] = await Promise.all([
     getLocale(),
     getTranslations("Admin.posts"),
+    getTranslations("Admin.common"),
+    getTranslations("Status"),
   ]);
 
   // Surface the full review queue + the recently-published / rejected /
   // drafted lists. Drafts are visible to admins so they can nudge an
   // author who left something half-finished, but we don't auto-act on them.
-  const [pending, published, rejected, drafts] = await Promise.all([
+  const [pending, published, rejected, drafts, archived] = await Promise.all([
     listPostsByStatus("pending", 50).catch((err) => {
       console.error("Failed to list pending posts:", err);
       return [];
@@ -47,6 +61,10 @@ export default async function AdminPostsPage() {
       console.error("Failed to list draft posts:", err);
       return [];
     }),
+    listPostsByStatus("archived", 20).catch((err) => {
+      console.error("Failed to list archived posts:", err);
+      return [];
+    }),
   ]);
   // Single batched read covering every author across all four status
   // lists — keeps the admin queue render to one Firestore round-trip
@@ -56,6 +74,7 @@ export default async function AdminPostsPage() {
     ...published.map((p) => p.authorUid),
     ...rejected.map((p) => p.authorUid),
     ...drafts.map((p) => p.authorUid),
+    ...archived.map((p) => p.authorUid),
   ]);
   const labelFor = (uid: string, fallback: string) => {
     const prof = authorProfiles.get(uid);
@@ -87,29 +106,15 @@ export default async function AdminPostsPage() {
         <h2 className="text-lg font-semibold">
           {t("titlePublished", { count: published.length })}
         </h2>
-        <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-          {published.length === 0 ? (
-            <li className="py-2 text-sm text-zinc-500">{t("emptyPublished")}</li>
-          ) : (
-            published.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
-              >
-                <Link
-                  href={`/blog/${p.slug}`}
-                  className="font-medium hover:underline"
-                >
-                  {p.title}
-                </Link>
-                <span className="text-xs text-zinc-500">
-                  {labelFor(p.authorUid, p.authorName)}
-                  {p.publishedAt && <> · {formatDate(p.publishedAt, locale)}</>}
-                </span>
-              </li>
-            ))
-          )}
-        </ul>
+        <PostList
+          posts={published}
+          empty={t("emptyPublished")}
+          locale={locale}
+          labelFor={labelFor}
+          statusT={statusT}
+          commonT={common}
+          archiveAction
+        />
       </section>
 
       {drafts.length > 0 && (
@@ -117,20 +122,14 @@ export default async function AdminPostsPage() {
           <h2 className="text-lg font-semibold">
             {t("titleDrafts", { count: drafts.length })}
           </h2>
-          <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {drafts.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
-              >
-                <span>{p.title}</span>
-                <span className="text-xs text-zinc-500">
-                  {labelFor(p.authorUid, p.authorName)} ·{" "}
-                  {t("updated", { date: formatDate(p.updatedAt, locale) })}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <PostList
+            posts={drafts}
+            empty=""
+            locale={locale}
+            labelFor={labelFor}
+            statusT={statusT}
+            commonT={common}
+          />
         </section>
       )}
 
@@ -139,21 +138,114 @@ export default async function AdminPostsPage() {
           <h2 className="text-lg font-semibold">
             {t("titleRejected", { count: rejected.length })}
           </h2>
-          <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {rejected.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
-              >
-                <span>{p.title}</span>
-                <span className="text-xs text-zinc-500">
-                  {labelFor(p.authorUid, p.authorName)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <PostList
+            posts={rejected}
+            empty=""
+            locale={locale}
+            labelFor={labelFor}
+            statusT={statusT}
+            commonT={common}
+          />
+        </section>
+      )}
+
+      {archived.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold">
+            {t("titleArchived", { count: archived.length })}
+          </h2>
+          <PostList
+            posts={archived}
+            empty=""
+            locale={locale}
+            labelFor={labelFor}
+            statusT={statusT}
+            commonT={common}
+            publishAction
+          />
         </section>
       )}
     </div>
+  );
+}
+
+function PostList({
+  posts,
+  empty,
+  locale,
+  labelFor,
+  statusT,
+  commonT,
+  archiveAction = false,
+  publishAction = false,
+}: {
+  posts: PostDoc[];
+  empty: string;
+  locale: string;
+  labelFor: (uid: string, fallback: string) => string;
+  statusT: (key: string) => string;
+  commonT: (key: string) => string;
+  archiveAction?: boolean;
+  publishAction?: boolean;
+}) {
+  if (posts.length === 0) {
+    return empty ? <p className="mt-2 text-sm text-zinc-500">{empty}</p> : null;
+  }
+
+  return (
+    <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
+      {posts.map((p) => {
+        const cls = STATUS_CLASSES[p.status] ?? STATUS_CLASSES.draft;
+        return (
+          <li
+            key={p.id}
+            className="flex flex-wrap items-center justify-between gap-3 py-2 text-sm"
+          >
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                {p.status === "published" ? (
+                  <Link
+                    href={`/blog/${p.slug}`}
+                    className="font-medium hover:underline"
+                  >
+                    {p.title}
+                  </Link>
+                ) : (
+                  <span className="font-medium">{p.title}</span>
+                )}
+                <span
+                  className={`whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium ${cls}`}
+                >
+                  {statusT(p.status)}
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500">
+                {labelFor(p.authorUid, p.authorName)}
+                {" · "}
+                {formatDate(p.updatedAt, locale)}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              {p.status === "published" && (
+                <Link
+                  href={`/blog/${p.slug}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {commonT("preview")}
+                </Link>
+              )}
+              <Link
+                href={`/admin/posts/${p.id}/edit`}
+                className="text-blue-600 hover:underline"
+              >
+                {commonT("edit")}
+              </Link>
+              {archiveAction && <PostStatusButton postId={p.id} status="published" />}
+              {publishAction && <PostStatusButton postId={p.id} status="archived" />}
+            </div>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
