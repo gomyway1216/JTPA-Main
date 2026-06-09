@@ -3,6 +3,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 
+import { routing } from "@/i18n/routing";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { checkInWindowState, generateCheckInTokenString } from "@/lib/check-in";
 import { plainify } from "@/lib/data/serialize";
@@ -21,6 +22,13 @@ export type CheckInError =
 class CheckInActionError extends Error {
   constructor(public code: CheckInError) {
     super(code);
+  }
+}
+
+function revalidateLocalizedPath(path: string): void {
+  revalidatePath(path);
+  for (const locale of routing.locales) {
+    revalidatePath(`/${locale}${path}`);
   }
 }
 
@@ -161,16 +169,16 @@ export async function selfCheckIn(
       });
     }
 
-    // Silence the unused warning — `event` is fetched for validation only.
-    void event;
-
-    return { rsvp: doc, alreadyCheckedIn };
+    return { rsvp: doc, alreadyCheckedIn, eventSlug: event.slug };
   });
 
-  revalidatePath(`/admin/attendees`);
-  revalidatePath("/admin/users");
-  revalidatePath("/my");
-  revalidatePath(`/u/${user.uid}`);
+  revalidateLocalizedPath("/events");
+  revalidateLocalizedPath(`/events/${result.eventSlug}`);
+  revalidateLocalizedPath("/admin/attendees");
+  revalidateLocalizedPath("/admin/users");
+  revalidateLocalizedPath("/my");
+  revalidateLocalizedPath("/my/rsvps");
+  revalidateLocalizedPath(`/u/${user.uid}`);
   return { rsvp: plainify(result.rsvp), alreadyCheckedIn: result.alreadyCheckedIn };
 }
 
