@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { QrDisplayControls } from "@/app/[locale]/admin/events/[id]/checkin/QrDisplayControls";
 import { TokenControls } from "@/app/[locale]/admin/events/[id]/checkin/TokenControls";
 import { getSessionUser } from "@/lib/auth/session";
+import { buildCheckInUrl } from "@/lib/check-in";
 import { getEventById } from "@/lib/data/events";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
@@ -45,7 +46,7 @@ export default async function AdminCheckInPage({
   const baseUrl = explicitOrigin || requestOrigin;
   const checkInUrl =
     baseUrl && event.checkInToken
-      ? `${baseUrl}/events/${event.slug}/checkin?t=${event.checkInToken}`
+      ? buildCheckInUrl(baseUrl, event.slug, event.checkInToken)
       : null;
   const qrSvg = checkInUrl
     ? await QRCode.toString(checkInUrl, {
