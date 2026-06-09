@@ -77,6 +77,15 @@ export interface PublicProfile {
   // plain users / when the docs lacks the field yet (older accounts that
   // haven't signed in since the bootstrap that writes this field).
   role: "admin" | "editor" | "contributor" | null;
+  // Always-public cumulative event attendance count. Missing or malformed
+  // legacy values are rendered as 0.
+  eventAttendanceCount: number;
+}
+
+function normalizedPublicCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : 0;
 }
 
 // Pure projection: apply per-field visibility flags to a stored
@@ -124,6 +133,7 @@ export function projectPublicProfile(data: UserProfile): PublicProfile {
     bio: data.bioPublic ? (data.bio ?? "") : null,
     links,
     role,
+    eventAttendanceCount: normalizedPublicCount(data.eventAttendanceCount),
   };
 }
 

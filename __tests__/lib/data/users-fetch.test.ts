@@ -105,6 +105,7 @@ describe("getPublicProfile", () => {
       // field (so the consumer never has to deal with `undefined`) and
       // the value mirrors the absent `roleBadge` in the stored doc.
       role: null,
+      eventAttendanceCount: 0,
     });
     expect(out).not.toHaveProperty("email");
     expect(out).not.toHaveProperty("affiliationPublic");

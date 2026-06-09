@@ -87,6 +87,10 @@ export interface UserProfile {
   // (self-healing if it ever drifts). Absent on profile docs for plain
   // users (renders no badge).
   roleBadge?: "admin" | "editor" | "contributor";
+  // Cumulative count of events where this user was marked attended.
+  // Updated by QR check-in and admin attendance toggles. Admins may also
+  // adjust it manually from /admin/users for historical cleanup.
+  eventAttendanceCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
 }
@@ -170,9 +174,9 @@ export interface RsvpDoc {
   presentationAbstract?: string;
   // Set when the attendee checks in at the venue. Missing = not checked in.
   attendedAt?: TsLike;
-  // True for walk-in guests who came via the anonymous-auth check-in flow
-  // (no Google account, no `users/{uid}` profile). For those docs, the
-  // `displayName` and `email` here are the only identity we have for them.
+  // Legacy marker for older walk-in guest RSVPs that were not backed by a
+  // Google account / `users/{uid}` profile. Current QR check-in sends
+  // logged-out visitors through Google login before attendance is recorded.
   isGuest?: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;

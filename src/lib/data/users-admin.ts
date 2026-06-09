@@ -19,6 +19,9 @@ export interface AdminUserListEntry {
   // single format and Date.parse() succeeds everywhere.
   lastSignInAt: string | null; // ISO 8601 (UTC), null if user never signed in
   createdAt: string | null; // ISO 8601 (UTC)
+  // Cumulative count of events where this user was marked attended.
+  // Loaded from users/{uid}; missing legacy values render as 0.
+  eventAttendanceCount: number;
 }
 
 // Cap on how many users we hand the client per render. Firebase Auth's
@@ -36,6 +39,31 @@ function toIso(input: string | undefined): string | null {
   if (!input) return null;
   const d = new Date(input);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function normalizedCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : 0;
+}
+
+async function loadEventAttendanceCounts(
+  uids: readonly string[],
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  if (uids.length === 0) return out;
+  const db = adminDb();
+  const chunkSize = 300;
+  for (let i = 0; i < uids.length; i += chunkSize) {
+    const chunk = uids.slice(i, i + chunkSize);
+    const refs = chunk.map((uid) => db.collection("users").doc(uid));
+    const snaps = await db.getAll(...refs);
+    snaps.forEach((snap, idx) => {
+      if (!snap.exists) return;
+      out.set(chunk[idx], normalizedCount(snap.get("eventAttendanceCount")));
+    });
+  }
+  return out;
 }
 
 export async function listAllUsersForAdmin(
@@ -60,6 +88,7 @@ export async function listAllUsersForAdmin(
         disabled: u.disabled,
         lastSignInAt: toIso(u.metadata.lastSignInTime),
         createdAt: toIso(u.metadata.creationTime),
+        eventAttendanceCount: 0,
       });
       if (out.length >= cap) break;
     }
@@ -77,6 +106,17 @@ export async function listAllUsersForAdmin(
     const bt = b.lastSignInAt ? Date.parse(b.lastSignInAt) : 0;
     return bt - at;
   });
+
+  try {
+    const counts = await loadEventAttendanceCounts(out.map((u) => u.uid));
+    for (const user of out) {
+      user.eventAttendanceCount = counts.get(user.uid) ?? 0;
+    }
+  } catch (err) {
+    // Keep the admin user list usable if Firestore is temporarily slow;
+    // role management still comes from Auth. Counts fall back to 0.
+    console.warn("Failed to load event attendance counts:", err);
+  }
 
   return { users: out, truncated };
 }

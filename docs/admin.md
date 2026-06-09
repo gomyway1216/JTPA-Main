@@ -12,7 +12,7 @@ The repo is public, so this doc is also public. Nothing here is a secret — adm
 | `editor` (`editor: true`) | Create / edit / publish / delete **any** guide (cross-author curation) | Touch events, projects, posts, Q&A or poll moderation, attendees, About page, roles |
 | `contributor` (`contributor: true`) | Self-publish their **own** guides without admin review | Edit other people's guides; everything in admin |
 | signed-in user (no role) | RSVP events, self check-in at events, submit projects (admin review), submit blog posts (admin review), **submit guides (admin review on first one, then auto-promoted to `contributor`)**, post Q&A (auto-published), create polls (auto-published), vote in polls, comment on any published guide / blog / Q&A / poll / approved project, like records and comments | Anything admin/editor-only |
-| anonymous | Read public content (published events, approved projects, published blog posts + guides + Q&A + polls, including poll results); walk-in check-in via the QR code at the door (uses anonymous Firebase Auth + creates a guest RSVP) | Anything that requires sign-in (RSVP, post, vote, comment, like) |
+| anonymous | Read public content (published events, approved projects, published blog posts + guides + Q&A + polls, including poll results) | Anything that requires sign-in (RSVP, event check-in, post, vote, comment, like) |
 
 The three role claims compose independently — a user can hold `editor` without `contributor`, or both. `editor` is strictly more powerful than `contributor` (editor can edit any guide; contributor can only touch their own). Editor / contributor are both strictly less privileged than admin.
 
@@ -74,14 +74,14 @@ If both sources are empty, the notification is silently dropped (no half-formed 
 | `/admin/events` | Event list (with chips for メンバー限定, status badges, RSVP counts) | admin |
 | `/admin/events/new` | Create event | admin |
 | `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) | admin |
-| `/admin/events/[id]/checkin` | Generate / rotate the check-in token, render the QR code for the door kiosk, and manually toggle attendance per RSVP | admin |
+| `/admin/events/[id]/checkin` | Generate / rotate the check-in token, render the QR code for the door kiosk, and show RSVP / attendance totals | admin |
 | `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
-| `/admin/attendees?eventId=...` | Per-event participant list with survey responses + CSV/email export | admin |
+| `/admin/attendees?eventId=...` | Per-event participant list with survey responses, CSV/email export, and manual attendance toggles | admin |
 | `/admin/guides` | Guide review queue (pending community submissions) + published / drafts / rejected sections, with approve/reject actions and the create button. Approval auto-promotes the author to `contributor`. | admin + editor |
 | `/admin/feedback` | Triage queue for `/help` feedback submissions. Inline status flips (未対応 → 確認済み → 対応済み, plus admin-only アーカイブ). Mirrored email lands in the admin notification list when a new entry arrives. | admin + editor |
 | `/admin/about` | Edit the `/about` page (title + Markdown body, stored in `sitePages/about`) | admin |
-| `/admin/users` | User list with role grant/revoke | admin |
+| `/admin/users` | User list with role grant/revoke and cumulative event attendance count edits | admin |
 | `/admin/help` | In-app admin operations guide (Japanese, mirrors this doc at a high level) | admin + editor |
 
 The `/admin/*` layout admits admins or editors; admin-only pages each add a one-line redirect (to `/admin/guides`) for editors hitting them directly. Server actions re-check with `requireAdmin()` or `requireEditor()` so the page-level guard isn't load-bearing for security.
@@ -163,10 +163,10 @@ The check-in flow lets attendees mark themselves "attended" by scanning a QR cod
 3. **At the event** attendees scan and land on `/events/[slug]/checkin?t=<token>`:
    - **Already signed in (pre-registered RSVP)**: `selfCheckIn` records `attendedAt: now` on their RSVP doc. Idempotent — second scan does nothing.
    - **Already signed in, no RSVP yet**: same Server Action also creates a confirmed RSVP transparently before stamping `attendedAt`.
-   - **Walk-in, not signed in**: the page offers a "ゲストとして入場" form (name + email). On submit, the client signs in anonymously via Firebase Auth, `guestCheckIn` verifies the ID token, creates an RSVP with `isGuest: true`, and stamps `attendedAt`. No `users/{uid}` profile is created — guest identity lives only on the RSVP.
+   - **Not signed in**: the page links to `/login?redirect=...`. After Google login, the user returns to the same QR URL and sees the check-in button.
 4. **Token validity window**: 4 hours before `startAt` to 6 hours after `endAt` (constants in `src/lib/check-in.ts`). Outside that window the page rejects the token with a clear error so a leaked QR can't be replayed weeks later.
-5. **Manual toggle**: `/admin/events/[id]/checkin` shows the live attendee list with a checkbox per RSVP — flip it to set/clear `attendedAt` directly. Useful when someone forgets to scan or when reversing a mistake.
-6. **Counter**: `events/{id}.attendanceCount` is maintained transactionally by all three flows, so the admin page's "X / Y attended" number stays accurate without recomputing.
+5. **Manual toggle**: `/admin/attendees?eventId=<id>` shows the attendee list with a control per RSVP — flip it to set/clear `attendedAt` directly. Useful when someone forgets to scan or when reversing a mistake.
+6. **Counters**: `events/{id}.attendanceCount` and `users/{uid}.eventAttendanceCount` are maintained transactionally by QR check-in and manual toggles. The user count appears on `/my`, `/u/[uid]`, and `/admin/users`; admins can correct the cumulative count directly from `/admin/users` for historical cleanup.
 
 If a token is leaked or accidentally shared early, click **再発行** — the old token instantly stops working (event doc only holds one token at a time).
 

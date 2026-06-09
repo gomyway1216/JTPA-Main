@@ -54,10 +54,14 @@ service cloud.firestore {
       allow read: if isSelf(uid) || isAdmin();
       allow create: if isSelf(uid)
         && request.resource.data.uid == uid
-        && request.resource.data.email == request.auth.token.email;
+        && request.resource.data.email == request.auth.token.email
+        && (!('eventAttendanceCount' in request.resource.data)
+            || request.resource.data.eventAttendanceCount == 0);
       allow update: if isSelf(uid)
         && request.resource.data.uid == resource.data.uid
-        && request.resource.data.email == resource.data.email;
+        && request.resource.data.email == resource.data.email
+        && !request.resource.data.diff(resource.data).affectedKeys()
+             .hasAny(['eventAttendanceCount']);
       allow delete: if isAdmin();
     }
 

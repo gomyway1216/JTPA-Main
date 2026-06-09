@@ -22,7 +22,7 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 | Poll detail | `/poll/[slug]` | `polls`, `polls/{id}/votes`, `comments`, `likes` | Results visible to everyone; individual ballots private |
 | Public profile | `/u/[uid]` | `users/{uid}` (only fields with `*Public: true`) | Email never shown publicly |
 | Help | `/help` | (none — static JSX) | Japanese user guide, linked from header + footer |
-| Event check-in (QR) | `/events/[slug]/checkin?t=<token>` | `events`, `rsvps` | Self check-in for signed-in attendees; walk-ins use anonymous auth → guest RSVP. 4h-before / 6h-after window enforced server-side. |
+| Event check-in (QR) | `/events/[slug]/checkin?t=<token>` | `events`, `rsvps`, `users` | Self check-in for signed-in attendees. Logged-out visitors are sent to `/login?redirect=...` and return to the same QR URL. 4h-before / 6h-after window enforced server-side. |
 
 ## Signed-in member
 
@@ -63,11 +63,11 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, define survey fields |
 | Project review | `/admin/projects` | admin | Approve / reject pending submissions |
 | Post review | `/admin/posts` | admin | Approve / reject pending blog posts |
-| Attendee export | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list |
-| Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view QR for kiosk, manually toggle attendance per RSVP |
+| Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; manually toggle attendance per RSVP |
+| Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view QR for kiosk, show RSVP / attendance totals |
 | Guides | `/admin/guides` | admin + editor | Review queue for pending community guides (approve auto-promotes the author to `contributor`); plus create / edit / publish / delete any guide |
 | About | `/admin/about` | admin | Edit `sitePages/about` |
-| Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims; opt-in-only email CSV export |
+| Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims, edit cumulative event attendance counts; opt-in-only email CSV export |
 | Admin help | `/admin/help` | admin + editor | In-app operations guide, linked from `/admin` sidebar |
 | Poll archive | (no dedicated UI) | admin | `setPollStatus` Server Action flips a poll to `archived` to hide from `/poll` |
 

@@ -8,25 +8,10 @@ import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import Link from "@/i18n/navigation";
+import type { PublicProfile } from "@/lib/data/users";
 
 type CommunityKind = "guide" | "qa" | "poll" | "blog";
 type CommunityFilter = "all" | CommunityKind;
-
-type AuthorProfile = {
-  uid: string;
-  username: string;
-  fullName: string | null;
-  photoURL: string | null;
-  affiliation: string | null;
-  bio: string | null;
-  links: {
-    portfolio?: string;
-    github?: string;
-    linkedin?: string;
-    sns?: string;
-  };
-  role: "admin" | "editor" | "contributor" | null;
-};
 
 export interface CommunityFeedItem {
   id: string;
@@ -37,7 +22,7 @@ export interface CommunityFeedItem {
   tags: string[];
   dateLabel: string;
   sortTime: number;
-  authorProfile: AuthorProfile | null;
+  authorProfile: PublicProfile | null;
   likeCount?: number;
   voterCount?: number;
   optionCount?: number;
