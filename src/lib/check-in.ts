@@ -56,3 +56,41 @@ export function buildCheckInUrl(
   url.searchParams.set("t", token);
   return url.toString();
 }
+
+function firstHeaderValue(value: string | null | undefined): string | null {
+  const first = value?.split(",")[0]?.trim();
+  return first || null;
+}
+
+function isLocalHost(host: string): boolean {
+  const lower = host.toLowerCase();
+  return (
+    lower.startsWith("localhost") ||
+    lower.startsWith("127.") ||
+    lower === "::1" ||
+    lower.startsWith("[::1]")
+  );
+}
+
+export function buildCheckInOrigin({
+  explicitOrigin,
+  forwardedHost,
+  forwardedProto,
+  host,
+}: {
+  explicitOrigin?: string | null;
+  forwardedHost?: string | null;
+  forwardedProto?: string | null;
+  host?: string | null;
+}): string | null {
+  const explicit = explicitOrigin?.trim();
+  if (explicit) return explicit;
+
+  const resolvedHost = firstHeaderValue(forwardedHost) ?? firstHeaderValue(host);
+  if (!resolvedHost) return null;
+
+  const proto =
+    firstHeaderValue(forwardedProto) ??
+    (isLocalHost(resolvedHost) ? "http" : "https");
+  return `${proto}://${resolvedHost}`;
+}

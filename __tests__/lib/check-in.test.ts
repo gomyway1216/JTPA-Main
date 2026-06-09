@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import {
   CHECKIN_EARLY_MS,
   CHECKIN_LATE_MS,
+  buildCheckInOrigin,
   buildCheckInUrl,
   checkInWindowState,
   generateCheckInTokenString,
@@ -65,6 +66,49 @@ describe("generateCheckInTokenString", () => {
     // Collisions in 50 draws from a 56^16 space are vanishingly unlikely;
     // any duplicate here would indicate the RNG isn't being seeded.
     expect(tokens.size).toBe(50);
+  });
+});
+
+describe("buildCheckInOrigin", () => {
+  it("uses an explicit configured origin when present", () => {
+    expect(
+      buildCheckInOrigin({
+        explicitOrigin: "https://bayarea-ai.com",
+        forwardedHost: "preview.example.com",
+        forwardedProto: "https",
+        host: "internal.run.app",
+      }),
+    ).toBe("https://bayarea-ai.com");
+  });
+
+  it("prefers x-forwarded-host over the internal request host", () => {
+    expect(
+      buildCheckInOrigin({
+        forwardedHost: "bayarea-ai.com",
+        forwardedProto: "https",
+        host: "t-233178595---jtpa-main-2ssrziw5oq-uc.a.run.app",
+      }),
+    ).toBe("https://bayarea-ai.com");
+  });
+
+  it("uses the first value from comma-separated forwarded headers", () => {
+    expect(
+      buildCheckInOrigin({
+        forwardedHost: "bayarea-ai.com, internal.run.app",
+        forwardedProto: "https, http",
+        host: "internal.run.app",
+      }),
+    ).toBe("https://bayarea-ai.com");
+  });
+
+  it("falls back to the request host for local development", () => {
+    expect(buildCheckInOrigin({ host: "localhost:3001" })).toBe(
+      "http://localhost:3001",
+    );
+  });
+
+  it("returns null when no origin can be resolved", () => {
+    expect(buildCheckInOrigin({})).toBeNull();
   });
 });
 
