@@ -267,10 +267,18 @@ function AttendanceCountEditor({
   initialCount: number;
 }) {
   const [value, setValue] = useState(String(initialCount));
+  const [prevInitialCount, setPrevInitialCount] = useState(initialCount);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const router = useRouter();
   const t = useTranslations("Admin.users");
+
+  if (initialCount !== prevInitialCount) {
+    setValue(String(initialCount));
+    setPrevInitialCount(initialCount);
+    setError(null);
+  }
+
   const changed = Number(value) !== initialCount;
 
   function save() {

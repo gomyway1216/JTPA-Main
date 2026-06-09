@@ -4,6 +4,7 @@ import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { QrDisplayControls } from "@/app/[locale]/admin/events/[id]/checkin/QrDisplayControls";
 import { TokenControls } from "@/app/[locale]/admin/events/[id]/checkin/TokenControls";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventById } from "@/lib/data/events";
@@ -27,6 +28,7 @@ export default async function AdminCheckInPage({
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) notFound();
+  const eventDate = formatDateTime(event.startAt, locale);
 
   // The public origin is required to build the absolute QR URL since the
   // QR is meant to be scanned from a phone external to the server. Prefer
@@ -55,21 +57,24 @@ export default async function AdminCheckInPage({
     : null;
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
+    <div className="space-y-6 print:space-y-0">
+      <header className="space-y-1 print:hidden">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-500">
-          {event.title} ({formatDateTime(event.startAt, locale)})
+          {event.title} ({eventDate})
         </p>
       </header>
 
-      <div className="grid gap-2 text-sm sm:grid-cols-3">
+      <div className="grid gap-2 text-sm sm:grid-cols-3 print:hidden">
         <Stat label={t("rsvpCount")} value={event.rsvpCount} />
         <Stat label={t("attendanceCount")} value={event.attendanceCount ?? 0} />
         <Stat label={t("waitlistCount")} value={event.waitlistCount} />
       </div>
 
-      <section className="rounded-lg border border-zinc-200 p-6 dark:border-zinc-800">
+      <section
+        id="check-in-poster"
+        className="rounded-lg border border-zinc-200 bg-white p-6 text-zinc-950 dark:border-zinc-800 print:flex print:min-h-screen print:items-center print:justify-center print:rounded-none print:border-0 print:p-8"
+      >
         {!event.checkInToken ? (
           <p className="text-center text-sm text-zinc-500">
             {t("noToken")}
@@ -83,12 +88,21 @@ export default async function AdminCheckInPage({
             {t("hostError")} <code>NEXT_PUBLIC_SITE_URL</code> {t("hostErrorAction")}
           </p>
         ) : qrSvg && checkInUrl ? (
-          <div className="flex flex-col items-center gap-4">
+          <div className="check-in-poster-inner flex flex-col items-center gap-4 text-center print:gap-6">
+            <div className="space-y-1">
+              <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+                {t("posterLabel")}
+              </p>
+              <h2 className="text-2xl font-bold print:text-3xl">
+                {event.title}
+              </h2>
+              <p className="text-sm text-zinc-500">{eventDate}</p>
+            </div>
             <div
-              className="bg-white p-3 rounded"
+              className="check-in-qr rounded bg-white p-3"
               dangerouslySetInnerHTML={{ __html: qrSvg }}
             />
-            <p className="break-all text-center text-xs text-zinc-500">
+            <p className="max-w-2xl break-all text-xs text-zinc-500 print:text-sm">
               {checkInUrl}
             </p>
             <p className="text-xs text-zinc-500">
@@ -98,15 +112,21 @@ export default async function AdminCheckInPage({
         ) : null}
       </section>
 
-      <TokenControls eventId={event.id} hasToken={!!event.checkInToken} />
+      {qrSvg && checkInUrl ? (
+        <QrDisplayControls targetId="check-in-poster" />
+      ) : null}
 
-      <p className="text-xs text-zinc-500">
+      <div className="print:hidden">
+        <TokenControls eventId={event.id} hasToken={!!event.checkInToken} />
+      </div>
+
+      <p className="text-xs text-zinc-500 print:hidden">
         {t("note")}
       </p>
 
       <Link
         href="/admin/attendees"
-        className="inline-block text-sm text-blue-600 hover:underline"
+        className="inline-block text-sm text-blue-600 hover:underline print:hidden"
       >
         {t("attendeesLink")}
       </Link>

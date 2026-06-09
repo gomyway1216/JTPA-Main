@@ -131,6 +131,32 @@ body {
     "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
+.check-in-qr svg {
+  width: min(72vw, 20rem);
+  height: auto;
+}
+
+#check-in-poster:fullscreen {
+  min-height: 100vh;
+  overflow: auto;
+  background: white;
+  padding: clamp(1.5rem, 5vw, 4rem);
+}
+
+#check-in-poster:fullscreen .check-in-poster-inner {
+  width: min(100%, 60rem);
+}
+
+#check-in-poster:fullscreen .check-in-qr svg {
+  width: min(68vw, 68vh, 42rem);
+}
+
+@media print {
+  .check-in-qr svg {
+    width: 90mm;
+  }
+}
+
 /*
  * Styles for Markdown rendered into real HTML (blog posts, guides) via
  * `<MarkdownBody>`. The wrapper is `<div class="prose-jtpa">` and child

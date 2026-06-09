@@ -67,7 +67,7 @@ export function Header({ user }: { user: SessionUser | null }) {
     // uses `isolate` for its decorative blobs). `z-30` keeps the header's
     // stacking context above the page area so dropdowns stay clickable
     // even when a page section uses negative-z decorations.
-    <header className="sticky top-0 z-30 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl supports-[backdrop-filter:blur(0)]:bg-white/60 dark:border-zinc-800/60 dark:bg-zinc-950/70 dark:supports-[backdrop-filter:blur(0)]:bg-zinc-950/55">
+    <header className="sticky top-0 z-30 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl supports-[backdrop-filter:blur(0)]:bg-white/60 dark:border-zinc-800/60 dark:bg-zinc-950/70 dark:supports-[backdrop-filter:blur(0)]:bg-zinc-950/55 print:hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold tracking-tight">

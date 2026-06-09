@@ -191,7 +191,7 @@ export async function setAttendance(
     const wasCheckedIn = !!prior.attendedAt;
     if (wasCheckedIn === attended) return;
     const now = Timestamp.now();
-    const userRef = adminDb().collection("users").doc(prior.uid || rsvpUid);
+    const userRef = adminDb().collection("users").doc(rsvpUid);
     const userSnap = prior.isGuest ? null : await tx.get(userRef);
     tx.update(rsvpRef, {
       attendedAt: attended ? now : FieldValue.delete(),

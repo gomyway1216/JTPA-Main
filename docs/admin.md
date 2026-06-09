@@ -158,8 +158,8 @@ Authors can edit their own posts from `/my/posts`; non-admin edits can land in e
 
 The check-in flow lets attendees mark themselves "attended" by scanning a QR code at the door — no admin desk work required for the common case, with a manual fallback for edge cases.
 
-1. **Generate the token** (once per event): open `/admin/events/[id]/checkin` → click **トークンを発行** (or **再発行** if rotating after a leak). This writes a 16-char alphanumeric `checkInToken` onto the event doc. The page renders a QR code embedding `https://<site>/events/<slug>/checkin?t=<token>`.
-2. **Print or display** the QR. Same page → 「印刷」 prints a kiosk-friendly poster; for an iPad / TV at the door, just leave the page open.
+1. **Generate the token** (once per event): open `/admin/events/[id]/checkin` → click **トークンを生成** (or **トークンを再生成** if rotating after a leak). This writes a 16-char alphanumeric `checkInToken` onto the event doc. The page renders a QR code embedding `https://<site>/events/<slug>/checkin?t=<token>`.
+2. **Print or display** the QR. Same page → **QRを印刷** prints a kiosk-friendly poster; **スクリーン表示** expands the QR poster for an iPad / TV at the door.
 3. **At the event** attendees scan and land on `/events/[slug]/checkin?t=<token>`:
    - **Already signed in (pre-registered RSVP)**: `selfCheckIn` records `attendedAt: now` on their RSVP doc. Idempotent — second scan does nothing.
    - **Already signed in, no RSVP yet**: same Server Action also creates a confirmed RSVP transparently before stamping `attendedAt`.
