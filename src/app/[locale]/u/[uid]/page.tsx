@@ -89,6 +89,17 @@ export default async function PublicProfilePage({
 
         <UserLinksRow links={profile.links} ownerLabel={`@${profile.username}`} />
 
+        <dl className="border-y border-zinc-200 py-3 dark:border-zinc-800">
+          <dt className="text-xs font-medium uppercase text-zinc-500">
+            {t("eventAttendanceCount")}
+          </dt>
+          <dd className="mt-1 text-lg font-semibold">
+            {t("eventAttendanceCountValue", {
+              count: profile.eventAttendanceCount,
+            })}
+          </dd>
+        </dl>
+
         {profile.bio ? (
           // Plain text with author-entered newlines preserved.
           // `break-words` handles long URLs / unbroken tokens.

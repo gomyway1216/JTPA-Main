@@ -22,9 +22,9 @@ export default async function AdminLayout({
   const t = await getTranslations("Admin.nav");
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="grid gap-6 md:grid-cols-[200px_1fr]">
-        <aside className="md:sticky md:top-4 md:self-start">
+    <div className="mx-auto max-w-6xl px-4 py-6 print:max-w-none print:px-0 print:py-0">
+      <div className="grid gap-6 md:grid-cols-[200px_1fr] print:block">
+        <aside className="md:sticky md:top-4 md:self-start print:hidden">
           <nav className="flex flex-col gap-1 text-sm">
             {user.isAdmin && <AdminLink href="/admin">{t("dashboard")}</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/events">{t("events")}</AdminLink>}

@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { setUserRole, type ManagedRole } from "@/app/actions/roles";
+import { setEventAttendanceCount } from "@/app/actions/users";
 import type { AdminUserListEntry } from "@/lib/data/users-admin";
 
 function formatDate(iso: string | null, locale: string): string {
@@ -104,6 +106,7 @@ export function UserTable({
               <tr>
                 <th className="py-2">{t("columns.user")}</th>
                 <th className="py-2">{t("columns.role")}</th>
+                <th className="py-2">{t("columns.eventAttendanceCount")}</th>
                 <th className="py-2">{t("columns.lastLogin")}</th>
                 <th className="py-2 text-right">{t("columns.actions")}</th>
               </tr>
@@ -176,6 +179,12 @@ export function UserTable({
                         )}
                       </div>
                     </td>
+                    <td className="py-2">
+                      <AttendanceCountEditor
+                        uid={u.uid}
+                        initialCount={u.eventAttendanceCount}
+                      />
+                    </td>
                     <td className="py-2 text-xs text-zinc-500">
                       {formatDate(u.lastSignInAt, locale)}
                     </td>
@@ -246,6 +255,70 @@ export function UserTable({
       <p className="text-xs text-zinc-500">
         {t("visibleCount", { visible: filtered.length, total: users.length })}
       </p>
+    </div>
+  );
+}
+
+function AttendanceCountEditor({
+  uid,
+  initialCount,
+}: {
+  uid: string;
+  initialCount: number;
+}) {
+  const [value, setValue] = useState(String(initialCount));
+  const [prevInitialCount, setPrevInitialCount] = useState(initialCount);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const router = useRouter();
+  const t = useTranslations("Admin.users");
+
+  if (initialCount !== prevInitialCount) {
+    setValue(String(initialCount));
+    setPrevInitialCount(initialCount);
+    setError(null);
+  }
+
+  const changed = Number(value) !== initialCount;
+
+  function save() {
+    setError(null);
+    const count = Number(value);
+    startTransition(async () => {
+      try {
+        const res = await setEventAttendanceCount({ uid, count });
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("attendanceSaveFailed"));
+      }
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min={0}
+          step={1}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="w-20 rounded border border-zinc-300 bg-white px-2 py-1 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+        />
+        <button
+          type="button"
+          disabled={pending || !changed}
+          onClick={save}
+          className="rounded border border-zinc-300 px-2 py-1 text-xs hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:hover:bg-zinc-900"
+        >
+          {pending ? t("savingAttendance") : t("saveAttendance")}
+        </button>
+      </div>
+      {error && <p className="max-w-40 text-[10px] text-red-600">{error}</p>}
     </div>
   );
 }

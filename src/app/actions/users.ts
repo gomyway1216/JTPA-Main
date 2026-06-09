@@ -4,7 +4,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
-import { requireUser } from "@/lib/auth/session";
+import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type { ProjectAsset, UserLinks, UserProfile } from "@/lib/types";
@@ -101,6 +101,9 @@ export type ProfileFormInput = z.input<typeof ProfileInputSchema>;
 export type UpdateProfileResult =
   | { ok: true }
   | { ok: false; error: string };
+export type SetEventAttendanceCountResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 // Public-availability probe used by the live-validation UI on
 // /my/profile. Returns "available" / "taken" / "yours" (already the
@@ -114,6 +117,11 @@ export type UsernameAvailability =
   | { status: "taken" }
   | { status: "yours" }
   | { status: "invalid"; reason: string };
+
+const EventAttendanceCountInputSchema = z.object({
+  uid: z.string().min(1),
+  count: z.coerce.number().int().min(0).max(100000),
+});
 
 async function localizeProfileInputIssues(
   issues: readonly { path: readonly PropertyKey[]; message: string }[],
@@ -191,6 +199,42 @@ export async function checkUsernameAvailable(
   const ownerUid = (resSnap.data() as { uid: string }).uid;
   if (ownerUid === user.uid) return { status: "yours" };
   return { status: "taken" };
+}
+
+export async function setEventAttendanceCount(
+  input: z.input<typeof EventAttendanceCountInputSchema>,
+): Promise<SetEventAttendanceCountResult> {
+  const admin = await requireAdmin();
+  const parsed = EventAttendanceCountInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: await actionError("eventAttendanceCountInvalid"),
+    };
+  }
+
+  const { uid, count } = parsed.data;
+  const ref = adminDb().collection("users").doc(uid);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    return { ok: false, error: await actionError("userProfileMissing") };
+  }
+
+  const now = Timestamp.now();
+  await ref.update({
+    eventAttendanceCount: count,
+    eventAttendanceCountEditedAt: now,
+    eventAttendanceCountEditedBy: {
+      uid: admin.uid,
+      email: admin.email || null,
+      displayName: admin.displayName || null,
+    },
+    updatedAt: now,
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/u/${uid}`);
+  return { ok: true };
 }
 
 export async function updateMyProfile(

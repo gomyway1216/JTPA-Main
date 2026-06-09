@@ -6,9 +6,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // the most-recently-active sort.
 
 const listUsersMock = vi.fn();
+const getAllMock = vi.fn();
 
 vi.mock("@/lib/firebase/admin", () => ({
   adminAuth: () => ({ listUsers: listUsersMock }),
+  adminDb: () => ({
+    collection: () => ({
+      doc: (uid: string) => ({ id: uid }),
+    }),
+    getAll: (...args: unknown[]) => getAllMock(...args),
+  }),
 }));
 
 import {
@@ -42,8 +49,21 @@ function user(stub: UserStub) {
   };
 }
 
+function profileSnap(_uid: string, eventAttendanceCount?: unknown) {
+  return {
+    exists: eventAttendanceCount !== undefined,
+    get: (field: string) =>
+      field === "eventAttendanceCount" ? eventAttendanceCount : undefined,
+  };
+}
+
 beforeEach(() => {
   listUsersMock.mockReset();
+  getAllMock
+    .mockReset()
+    .mockImplementation(async (...refs: Array<{ id: string }>) =>
+      refs.map((ref) => profileSnap(ref.id)),
+    );
 });
 
 describe("listAllUsersForAdmin", () => {
@@ -85,6 +105,7 @@ describe("listAllUsersForAdmin", () => {
         disabled: false,
         lastSignInAt: "2024-01-01T12:00:00.000Z",
         createdAt: "2023-12-31T00:00:00.000Z",
+        eventAttendanceCount: 0,
       },
     ]);
   });
@@ -101,7 +122,25 @@ describe("listAllUsersForAdmin", () => {
       photoURL: null,
       isAdmin: false,
       isEditor: false,
+      eventAttendanceCount: 0,
     });
+  });
+
+  it("merges event attendance counts from Firestore profile docs", async () => {
+    listUsersMock.mockResolvedValueOnce({
+      users: [user({ uid: "u1" }), user({ uid: "u2" })],
+      pageToken: undefined,
+    });
+    getAllMock.mockResolvedValueOnce([
+      profileSnap("u1", 7),
+      profileSnap("u2", -3),
+    ]);
+
+    const { users } = await listAllUsersForAdmin();
+    expect(users.map((u) => [u.uid, u.eventAttendanceCount])).toEqual([
+      ["u1", 7],
+      ["u2", 0],
+    ]);
   });
 
   it("returns null for un-parseable timestamps without throwing", async () => {

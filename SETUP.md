@@ -4,8 +4,7 @@ Firebase プロジェクト `jtpa-main` を前提とした初期セットアッ�
 
 ## 1. Firebase コンソール側で有効化するもの
 
-- **Authentication** → Sign-in method で **Google** と **Anonymous** を有効化
-  (Anonymous はイベント当日のウォークイン来場者の QR チェックインで使用)
+- **Authentication** → Sign-in method で **Google** を有効化
 - **Firestore Database** を `us-west1` で作成 (本番モード)
 - **Storage** を作成
 - **Extensions** → "Trigger Email" (Stream Firestore to Email) — 設定済み:

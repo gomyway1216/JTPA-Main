@@ -63,6 +63,7 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
       fullNamePublic: false,
       links: {},
       emailOptIn: true,
+      eventAttendanceCount: 0,
       createdAt: now,
       updatedAt: now,
     });

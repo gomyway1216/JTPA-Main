@@ -55,12 +55,13 @@ Bootstrapped on first sign-in by `signInWithIdToken` (`src/app/actions/auth.ts`)
 | `bio` | string? | Plain-text self-introduction (multi-line; rendered with `whitespace-pre-wrap`). Visible on `/u/[uid]` iff `bioPublic === true`. |
 | `affiliationPublic`, `bioPublic` | boolean? | Per-field public/private toggles. Default `false` on older docs (opt-in migration). Email is **never** publicly toggleable. |
 | `emailOptIn` | boolean | Defaults to `true`; gate for future notification opt-out. |
+| `eventAttendanceCount` | number? | Cumulative count of events where the user was marked attended. Updated by QR check-in and admin attendance toggles; admin can correct it on `/admin/users`. Missing = 0 on legacy docs. |
 | `createdAt`, `updatedAt` | Timestamp | |
 
-**Rules**: self-read, self-write (uid + email immutable). Admins can read all.
+**Rules**: self-read, self-write (uid + email immutable) except `eventAttendanceCount`, which is server/admin-managed. Admins can read all.
 The public profile loader (`getPublicProfile` in `src/lib/data/users.ts`)
 goes through Admin SDK and only returns the fields the user has flagged
-public; it does **not** rely on rules.
+public plus the cumulative attendance count; it does **not** rely on rules.
 
 **`admin: true` and `editor: true` live on Firebase Auth Custom Claims, NOT here.** See [`admin.md`](admin.md#granting-roles-preferred-admin-ui) for why.
 
@@ -115,12 +116,12 @@ One RSVP per user per event. Doc id = user uid.
 | `surveyResponses` | `Record<string, string \| string[] \| boolean>` | Keyed by survey field `key` |
 | `presentationTitle`, `presentationAbstract` | string? | Free text the presenter typed at signup. Independent of any uploaded presentation doc (see below) |
 | `attendedAt` | Timestamp? | Set when the attendee checks in (QR self check-in, walk-in guest, or admin manual toggle). Missing = not checked in. **Server-managed** — clients cannot set or change this field, even on their own doc. |
-| `isGuest` | boolean? | `true` for walk-in attendees who used the anonymous-auth check-in flow (no Google account). Missing or `false` = pre-registered RSVP. **Server-managed**, same as `attendedAt`. |
+| `isGuest` | boolean? | Legacy marker for older walk-in guest RSVPs. Current QR check-in sends logged-out visitors through Google login and returns them to the check-in URL. **Server-managed**, same as `attendedAt`. |
 | `createdAt`, `updatedAt` | Timestamp | |
 
-**Rules**: self-read, self-write — but `attendedAt` and `isGuest` are explicitly blocklisted from both create and update (rules use `!('attendedAt' in request.resource.data)` and `.diff(resource.data).affectedKeys().hasAny(['attendedAt', 'isGuest'])`). Only Admin SDK writes (from `selfCheckIn` / `guestCheckIn` / `setAttendance` Server Actions) can touch them. Admins can do everything.
+**Rules**: self-read, self-write — but `attendedAt` and `isGuest` are explicitly blocklisted from both create and update (rules use `!('attendedAt' in request.resource.data)` and `.diff(resource.data).affectedKeys().hasAny(['attendedAt', 'isGuest'])`). Only Admin SDK writes (from `selfCheckIn` / `setAttendance` Server Actions) can touch them. Admins can do everything.
 
-**Transactional counters**: `submitRsvp` (`src/app/actions/rsvps.ts`) maintains `rsvpCount` / `presenterCount` / `waitlistCount` on the parent event doc inside the transaction. Check-in Server Actions maintain `attendanceCount` the same way. Don't update the RSVP doc outside those paths or counters drift.
+**Transactional counters**: `submitRsvp` (`src/app/actions/rsvps.ts`) maintains `rsvpCount` / `presenterCount` / `waitlistCount` on the parent event doc inside the transaction. Check-in Server Actions maintain `events/{id}.attendanceCount` and `users/{uid}.eventAttendanceCount` the same way. Don't update the RSVP doc outside those paths or counters drift.
 
 ### `events/{eventId}/presentations/{autoId}`
 

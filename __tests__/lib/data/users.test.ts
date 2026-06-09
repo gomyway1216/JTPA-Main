@@ -19,6 +19,7 @@ function baseProfile(overrides: Partial<UserProfile> = {}): UserProfile {
     fullNamePublic: false,
     emailOptIn: true,
     links: {},
+    eventAttendanceCount: 3,
     createdAt: { seconds: 0, nanoseconds: 0 },
     updatedAt: { seconds: 0, nanoseconds: 0 },
     ...overrides,
@@ -31,6 +32,7 @@ describe("projectPublicProfile (privacy boundary)", () => {
     expect(out.uid).toBe("u1");
     expect(out.username).toBe("testuser");
     expect(out.photoURL).toBe("https://example.com/p.png");
+    expect(out.eventAttendanceCount).toBe(3);
   });
 
   it("NEVER leaks email, emailOptIn, displayName (when private), or visibility flags themselves", () => {
@@ -49,6 +51,23 @@ describe("projectPublicProfile (privacy boundary)", () => {
     // displayName string. The /u/[uid] page reads `fullName`, not a
     // separate displayName field, so this is the visible guarantee.
     expect(out.fullName).toBeNull();
+  });
+
+  it("defaults malformed or missing attendance counts to 0", () => {
+    const missing = baseProfile();
+    delete (missing as { eventAttendanceCount?: number }).eventAttendanceCount;
+    expect(projectPublicProfile(missing).eventAttendanceCount).toBe(0);
+
+    const malformed = baseProfile();
+    (malformed as { eventAttendanceCount?: unknown }).eventAttendanceCount = -2;
+    expect(projectPublicProfile(malformed).eventAttendanceCount).toBe(0);
+  });
+
+  it("truncates fractional attendance counts defensively", () => {
+    expect(
+      projectPublicProfile(baseProfile({ eventAttendanceCount: 4.8 }))
+        .eventAttendanceCount,
+    ).toBe(4);
   });
 
   it("hides affiliation when affiliationPublic = false", () => {

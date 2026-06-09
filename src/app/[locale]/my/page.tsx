@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
+import { getMyProfile } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,11 @@ export default async function MyPage() {
     redirect(loginPath("/my", locale));
   }
 
-  const t = await getTranslations("MyPage");
+  const [t, profile] = await Promise.all([
+    getTranslations("MyPage"),
+    getMyProfile(user.uid).catch(() => null),
+  ]);
+  const attendanceCount = Math.max(0, profile?.eventAttendanceCount ?? 0);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -24,6 +29,15 @@ export default async function MyPage() {
           {user.displayName} ({user.email})
         </p>
       </header>
+
+      <section className="border-y border-zinc-200 py-4 dark:border-zinc-800">
+        <p className="text-xs font-medium uppercase text-zinc-500">
+          {t("attendanceCountLabel")}
+        </p>
+        <p className="mt-1 text-2xl font-semibold">
+          {t("attendanceCountValue", { count: attendanceCount })}
+        </p>
+      </section>
 
       <nav className="grid gap-4 sm:grid-cols-2">
         <Link

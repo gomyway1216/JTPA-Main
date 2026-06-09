@@ -3,11 +3,10 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 
-import { createSessionCookie } from "@/lib/auth/session";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { checkInWindowState, generateCheckInTokenString } from "@/lib/check-in";
 import { plainify } from "@/lib/data/serialize";
-import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
 import type { EventDoc, RsvpDoc } from "@/lib/types";
 
 export type CheckInError =
@@ -17,11 +16,7 @@ export type CheckInError =
   | "TOKEN_NOT_SET"
   | "TOO_EARLY"
   | "TOO_LATE"
-  | "MISSING_DATES"
-  | "GUEST_NAME_REQUIRED"
-  | "GUEST_EMAIL_REQUIRED"
-  | "INVALID_ID_TOKEN"
-  | "NOT_ANONYMOUS";
+  | "MISSING_DATES";
 
 class CheckInActionError extends Error {
   constructor(public code: CheckInError) {
@@ -47,8 +42,7 @@ export async function generateCheckInToken(eventId: string): Promise<string> {
 }
 
 // Validates token + day-window. Throws on failure; returns the EventDoc on
-// success so callers can re-use it without a second read. Shared between
-// the signed-in and guest check-in paths.
+// success so callers can re-use it without a second read.
 async function loadValidatedEvent(
   eventId: string,
   token: string,
@@ -82,10 +76,17 @@ export interface CheckInResult {
   alreadyCheckedIn: boolean;
 }
 
+function normalizeAttendanceCount(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0
+    ? Math.trunc(value)
+    : 0;
+}
+
 // Signed-in user (Google account) self-check-in. Creates a walk-in RSVP if
-// one doesn't already exist, sets `attendedAt`, and bumps `attendanceCount`
-// transactionally. Idempotent: calling twice returns the same doc with
-// `alreadyCheckedIn=true` on the second call.
+// one doesn't already exist, sets `attendedAt`, and bumps both the event's
+// `attendanceCount` and the user's `eventAttendanceCount` transactionally.
+// Idempotent: calling twice returns the same doc with `alreadyCheckedIn=true`
+// on the second call.
 export async function selfCheckIn(
   eventId: string,
   token: string,
@@ -105,6 +106,8 @@ export async function selfCheckIn(
     const alreadyCheckedIn = !!prior?.attendedAt;
     const wasCountedAsRsvp =
       prior && (prior.status === "confirmed" || prior.status === "waitlist");
+    const userRef = adminDb().collection("users").doc(user.uid);
+    const userSnap = alreadyCheckedIn ? null : await tx.get(userRef);
 
     const doc: RsvpDoc = {
       uid: user.uid,
@@ -150,6 +153,13 @@ export async function selfCheckIn(
       eventPatch.updatedAt = now.toDate();
       tx.update(eventRef, eventPatch);
     }
+    if (!alreadyCheckedIn && userSnap?.exists) {
+      tx.update(userRef, {
+        eventAttendanceCount:
+          normalizeAttendanceCount(userSnap.get("eventAttendanceCount")) + 1,
+        updatedAt: now,
+      });
+    }
 
     // Silence the unused warning — `event` is fetched for validation only.
     void event;
@@ -158,97 +168,9 @@ export async function selfCheckIn(
   });
 
   revalidatePath(`/admin/attendees`);
-  return { rsvp: plainify(result.rsvp), alreadyCheckedIn: result.alreadyCheckedIn };
-}
-
-export interface GuestCheckInInput {
-  eventId: string;
-  token: string;
-  // Firebase Anonymous-Auth ID token minted on the client.
-  idToken: string;
-  name: string;
-  email: string;
-}
-
-// Walk-in flow: client signed in anonymously, server verifies the ID token,
-// mints a session cookie so subsequent reads see the user as authenticated,
-// then creates the RSVP+attendance in a transaction.
-export async function guestCheckIn(
-  input: GuestCheckInInput,
-): Promise<CheckInResult> {
-  const name = input.name.trim();
-  const email = input.email.trim();
-  if (!name) throw new CheckInActionError("GUEST_NAME_REQUIRED");
-  if (!email) throw new CheckInActionError("GUEST_EMAIL_REQUIRED");
-
-  let decoded: import("firebase-admin/auth").DecodedIdToken;
-  try {
-    decoded = await adminAuth().verifyIdToken(input.idToken, true);
-  } catch {
-    throw new CheckInActionError("INVALID_ID_TOKEN");
-  }
-  // Guard against a Google-signed-in client accidentally hitting this
-  // path — they should go through `selfCheckIn` instead so we don't
-  // overwrite their real RSVP with `isGuest=true`.
-  if (decoded.firebase?.sign_in_provider !== "anonymous") {
-    throw new CheckInActionError("NOT_ANONYMOUS");
-  }
-
-  const result = await adminDb().runTransaction(async (tx) => {
-    const { ref: eventRef, data: event } = await loadValidatedEvent(
-      input.eventId,
-      input.token,
-      tx,
-    );
-    const rsvpRef = eventRef.collection("rsvps").doc(decoded.uid);
-    const rsvpSnap = await tx.get(rsvpRef);
-    const now = Timestamp.now();
-    const prior = rsvpSnap.exists ? (rsvpSnap.data() as RsvpDoc) : null;
-
-    const alreadyCheckedIn = !!prior?.attendedAt;
-    const wasCountedAsRsvp =
-      prior && (prior.status === "confirmed" || prior.status === "waitlist");
-
-    const doc: RsvpDoc = {
-      uid: decoded.uid,
-      displayName: name,
-      email,
-      affiliation: prior?.affiliation ?? "",
-      role: "attendee",
-      status: "confirmed",
-      surveyResponses: prior?.surveyResponses ?? {},
-      attendedAt: prior?.attendedAt ?? now,
-      isGuest: true,
-      createdAt: prior?.createdAt ?? now,
-      updatedAt: now,
-    };
-    tx.set(rsvpRef, doc);
-
-    const eventPatch: Record<string, FirebaseFirestore.FieldValue | Date> = {};
-    if (!wasCountedAsRsvp) {
-      eventPatch.rsvpCount = FieldValue.increment(1);
-    } else if (prior?.status === "waitlist") {
-      eventPatch.rsvpCount = FieldValue.increment(1);
-      eventPatch.waitlistCount = FieldValue.increment(-1);
-    }
-    if (!alreadyCheckedIn) {
-      eventPatch.attendanceCount = FieldValue.increment(1);
-    }
-    if (Object.keys(eventPatch).length > 0) {
-      eventPatch.updatedAt = now.toDate();
-      tx.update(eventRef, eventPatch);
-    }
-    void event;
-
-    return { rsvp: doc, alreadyCheckedIn };
-  });
-
-  // Mint the session cookie AFTER the write succeeds, so a failed write
-  // doesn't leave a half-authenticated browser. Subsequent server reads
-  // will now see `getSessionUser()` returning this anonymous uid.
-  await createSessionCookie(input.idToken);
-
-  revalidatePath(`/admin/attendees`);
+  revalidatePath("/admin/users");
+  revalidatePath("/my");
+  revalidatePath(`/u/${user.uid}`);
   return { rsvp: plainify(result.rsvp), alreadyCheckedIn: result.alreadyCheckedIn };
 }
 
@@ -269,6 +191,8 @@ export async function setAttendance(
     const wasCheckedIn = !!prior.attendedAt;
     if (wasCheckedIn === attended) return;
     const now = Timestamp.now();
+    const userRef = adminDb().collection("users").doc(rsvpUid);
+    const userSnap = prior.isGuest ? null : await tx.get(userRef);
     tx.update(rsvpRef, {
       attendedAt: attended ? now : FieldValue.delete(),
       updatedAt: now,
@@ -277,6 +201,17 @@ export async function setAttendance(
       attendanceCount: FieldValue.increment(attended ? 1 : -1),
       updatedAt: now,
     });
+    if (userSnap?.exists) {
+      const current = normalizeAttendanceCount(
+        userSnap.get("eventAttendanceCount"),
+      );
+      tx.update(userRef, {
+        eventAttendanceCount: Math.max(0, current + (attended ? 1 : -1)),
+        updatedAt: now,
+      });
+    }
   });
   revalidatePath(`/admin/attendees`);
+  revalidatePath("/admin/users");
+  revalidatePath(`/u/${rsvpUid}`);
 }

@@ -95,6 +95,7 @@ describe("signInWithIdToken — first-time login bootstrap", () => {
       fullNamePublic: false,
       links: {},
       emailOptIn: true,
+      eventAttendanceCount: 0,
     });
     // `username` is intentionally absent on bootstrap — see the
     // comment in signInWithIdToken for why we let the read-side

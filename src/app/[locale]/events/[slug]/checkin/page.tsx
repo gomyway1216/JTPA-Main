@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CheckInClient } from "@/app/[locale]/events/[slug]/checkin/CheckInClient";
+import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { checkInWindowState } from "@/lib/check-in";
 import { getEventBySlug } from "@/lib/data/events";
@@ -79,6 +80,7 @@ export default async function CheckInPage({
         eventId={event.id}
         eventSlug={event.slug}
         token={token}
+        loginHref={loginHref(`/events/${event.slug}/checkin?t=${token}`, locale)}
         signedInUser={
           user
             ? {
