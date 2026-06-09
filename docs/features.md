@@ -60,7 +60,7 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Dashboard | `/admin` | admin | Pending projects + posts + upcoming events |
 | Events list | `/admin/events` | admin | All statuses, with 複製 (clone) action per row |
 | Create event | `/admin/events/new` | admin | |
-| Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, define survey fields |
+| Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, set QR check-in window, define survey fields |
 | Project admin | `/admin/projects` | admin | Approve / reject pending submissions; edit, archive / republish, or delete projects from any status |
 | Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status |
 | Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list; manually toggle attendance per RSVP |

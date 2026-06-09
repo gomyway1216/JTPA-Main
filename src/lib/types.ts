@@ -150,6 +150,10 @@ export interface EventDoc {
   // to invalidate a leaked code. Pair with the event date window so a leaked
   // token can't be used outside the actual event.
   checkInToken?: string;
+  // Per-event QR validity window. Missing = default window from
+  // src/lib/check-in.ts (currently 4 hours before start, 6 hours after end).
+  checkInEarlyMinutes?: number;
+  checkInLateMinutes?: number;
   // Denormalized count of RSVPs with `attendedAt` set. Maintained
   // transactionally with each check-in. Missing = 0 on older docs.
   attendanceCount?: number;

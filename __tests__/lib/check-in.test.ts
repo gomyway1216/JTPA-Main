@@ -48,6 +48,39 @@ describe("checkInWindowState", () => {
       }),
     ).toBe("missing_dates");
   });
+
+  it("uses per-event check-in windows when present", () => {
+    const customEvent = {
+      ...event,
+      checkInEarlyMinutes: 30,
+      checkInLateMinutes: 15,
+    };
+
+    expect(
+      checkInWindowState(
+        customEvent,
+        new Date(start.getTime() - 30 * 60 * 1000),
+      ),
+    ).toBe("ok");
+    expect(
+      checkInWindowState(
+        customEvent,
+        new Date(start.getTime() - 30 * 60 * 1000 - 1),
+      ),
+    ).toBe("too_early");
+    expect(
+      checkInWindowState(
+        customEvent,
+        new Date(end.getTime() + 15 * 60 * 1000),
+      ),
+    ).toBe("ok");
+    expect(
+      checkInWindowState(
+        customEvent,
+        new Date(end.getTime() + 15 * 60 * 1000 + 1),
+      ),
+    ).toBe("too_late");
+  });
 });
 
 describe("generateCheckInTokenString", () => {
@@ -81,6 +114,21 @@ describe("buildCheckInOrigin", () => {
     ).toBe("https://bayarea-ai.com");
   });
 
+  it("normalizes an explicit configured origin without a protocol", () => {
+    expect(buildCheckInOrigin({ explicitOrigin: "bayarea-ai.com" })).toBe(
+      "https://bayarea-ai.com",
+    );
+    expect(buildCheckInOrigin({ explicitOrigin: "localhost:3001" })).toBe(
+      "http://localhost:3001",
+    );
+  });
+
+  it("rejects invalid explicit origins instead of crashing later", () => {
+    expect(
+      buildCheckInOrigin({ explicitOrigin: "ftp://bayarea-ai.com" }),
+    ).toBeNull();
+  });
+
   it("prefers x-forwarded-host over the internal request host", () => {
     expect(
       buildCheckInOrigin({
@@ -105,6 +153,35 @@ describe("buildCheckInOrigin", () => {
     expect(buildCheckInOrigin({ host: "localhost:3001" })).toBe(
       "http://localhost:3001",
     );
+  });
+
+  it("does not treat public localhost-like host names as local", () => {
+    expect(buildCheckInOrigin({ host: "localhost-staging.com" })).toBe(
+      "https://localhost-staging.com",
+    );
+    expect(buildCheckInOrigin({ host: "127.0.0.1.example.com" })).toBe(
+      "https://127.0.0.1.example.com",
+    );
+  });
+
+  it("normalizes invalid forwarded protocol values", () => {
+    expect(
+      buildCheckInOrigin({
+        forwardedHost: "bayarea-ai.com",
+        forwardedProto: "javascript",
+        host: "internal.run.app",
+      }),
+    ).toBe("https://bayarea-ai.com");
+  });
+
+  it("rejects invalid forwarded host values", () => {
+    expect(
+      buildCheckInOrigin({
+        forwardedHost: "bad host",
+        forwardedProto: "https",
+        host: "internal.run.app",
+      }),
+    ).toBeNull();
   });
 
   it("returns null when no origin can be resolved", () => {

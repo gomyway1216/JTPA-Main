@@ -11,6 +11,11 @@ import {
   defaultActionError,
   inputError,
 } from "@/lib/i18n/action-errors";
+import {
+  DEFAULT_CHECKIN_EARLY_MINUTES,
+  DEFAULT_CHECKIN_LATE_MINUTES,
+  MAX_CHECKIN_WINDOW_MINUTES,
+} from "@/lib/check-in";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { slugify } from "@/lib/utils";
 import type { EventDoc } from "@/lib/types";
@@ -28,6 +33,12 @@ const AssetSchema = z.object({
   path: z.string().min(1),
   url: z.string().url(),
 });
+
+const CheckInWindowMinutesSchema = z.coerce
+  .number()
+  .int()
+  .min(0)
+  .max(MAX_CHECKIN_WINDOW_MINUTES);
 
 async function deleteStoragePaths(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
@@ -65,6 +76,8 @@ const EventInputSchema = z.object({
   // Optional in the schema so existing forms / older clients keep working;
   // we default to "public" when writing to Firestore below.
   visibility: z.enum(["public", "members_only"]).optional(),
+  checkInEarlyMinutes: CheckInWindowMinutesSchema.optional(),
+  checkInLateMinutes: CheckInWindowMinutesSchema.optional(),
   coverImage: AssetSchema.optional(),
   surveyFields: z.array(SurveyFieldSchema).default([]),
 });
@@ -127,6 +140,10 @@ export async function createEvent(
     presenterCapacity: parsed.presenterCapacity,
     status: parsed.status,
     visibility: parsed.visibility ?? "public",
+    checkInEarlyMinutes:
+      parsed.checkInEarlyMinutes ?? DEFAULT_CHECKIN_EARLY_MINUTES,
+    checkInLateMinutes:
+      parsed.checkInLateMinutes ?? DEFAULT_CHECKIN_LATE_MINUTES,
     coverImage: parsed.coverImage,
     surveyFields: parsed.surveyFields,
     rsvpCount: 0,
@@ -204,6 +221,10 @@ export async function updateEvent(
     presenterCapacity: parsed.presenterCapacity,
     status: parsed.status,
     visibility: parsed.visibility ?? "public",
+    checkInEarlyMinutes:
+      parsed.checkInEarlyMinutes ?? DEFAULT_CHECKIN_EARLY_MINUTES,
+    checkInLateMinutes:
+      parsed.checkInLateMinutes ?? DEFAULT_CHECKIN_LATE_MINUTES,
     coverImage: parsed.coverImage ?? FieldValue.delete(),
     // Drop the legacy `coverImagePath` field so existing docs normalize
     // to the new shape on first edit (same pattern as PR #24).

@@ -7,7 +7,11 @@ import { notFound } from "next/navigation";
 import { QrDisplayControls } from "@/app/[locale]/admin/events/[id]/checkin/QrDisplayControls";
 import { TokenControls } from "@/app/[locale]/admin/events/[id]/checkin/TokenControls";
 import { getSessionUser } from "@/lib/auth/session";
-import { buildCheckInOrigin, buildCheckInUrl } from "@/lib/check-in";
+import {
+  buildCheckInOrigin,
+  buildCheckInUrl,
+  checkInWindowSettings,
+} from "@/lib/check-in";
 import { getEventById } from "@/lib/data/events";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
@@ -30,6 +34,7 @@ export default async function AdminCheckInPage({
   const event = await getEventById(id);
   if (!event) notFound();
   const eventDate = formatDateTime(event.startAt, locale);
+  const { earlyMinutes, lateMinutes } = checkInWindowSettings(event);
 
   // The public origin is required to build the absolute QR URL since the
   // QR is meant to be scanned from a phone external to the server. Prefer
@@ -121,7 +126,10 @@ export default async function AdminCheckInPage({
       </div>
 
       <p className="text-xs text-zinc-500 print:hidden">
-        {t("note")}
+        {t("note", {
+          earlyHours: earlyMinutes / 60,
+          lateHours: lateMinutes / 60,
+        })}
       </p>
 
       <Link
