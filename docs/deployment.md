@@ -55,7 +55,7 @@ Stabilizes the encryption Next.js uses for Server Action references so a form op
 
 The `NEXT_PUBLIC_FIREBASE_*` values used to be in `apphosting.yaml` but were moved to the Console UI in PR #5 to keep the repo source-code free of identifiers (even though they end up in the client bundle anyway). This is a soft hardening — adjust if it ever gets in the way.
 
-For production, set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `bayarea-ai.com`, not `jtpa-main.firebaseapp.com`. Firebase Auth redirect/popup helpers are proxied from `https://bayarea-ai.com/__/auth/*` to `https://jtpa-main.firebaseapp.com/__/auth/*` by `next.config.ts`, keeping the OAuth helper on the same site as the app. This avoids the "missing initial state" failure that can happen when browsers partition or block third-party storage during Google sign-in.
+For production, set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `bayarea-ai.com`, not `jtpa-main.firebaseapp.com`. Firebase Auth redirect/popup helpers are proxied from `https://bayarea-ai.com/__/auth/*` to the matching Firebase Hosting helper origin by `next.config.ts`, keeping the OAuth helper on the same site as the app. The app also serves `https://bayarea-ai.com/__/firebase/init.json` from the same `NEXT_PUBLIC_FIREBASE_*` values for the helper's domain verification. This avoids the "missing initial state" failure that can happen when browsers partition or block third-party storage during Google sign-in.
 
 To change a value in the Console UI:
 

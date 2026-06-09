@@ -60,17 +60,19 @@ describe("proxy", () => {
     },
   );
 
-  it.each(["/__/auth/handler", "/__/auth/iframe", "/__/firebase/init.json"])(
-    "does not run the locale proxy on Firebase helper paths: %s",
-    (pathname) => {
-      expect(
-        unstable_doesMiddlewareMatch({
-          config,
-          url: pathname,
-        }),
-      ).toBe(false);
-    },
-  );
+  it.each([
+    "/__/auth/handler",
+    "/__/auth/iframe",
+    "/__/firebase/init.json",
+    "/__/firebase/10.0.0/firebase-app.js",
+  ])("does not run the locale proxy on Firebase helper paths: %s", (pathname) => {
+    expect(
+      unstable_doesMiddlewareMatch({
+        config,
+        url: pathname,
+      }),
+    ).toBe(false);
+  });
 
   it.each(["/ja", "/ja/help", "/en", "/en/help"])(
     "serves locale-prefixed paths without redirecting: %s",
