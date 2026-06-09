@@ -78,7 +78,7 @@ export function PostReviewCard({
             {common("preview")}
           </Link>
           <Link
-            href={`/my/posts/${post.id}/edit`}
+            href={`/admin/posts/${post.id}/edit`}
             className="text-zinc-500 hover:underline"
           >
             {common("editContent")}

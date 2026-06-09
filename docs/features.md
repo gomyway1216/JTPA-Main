@@ -61,8 +61,8 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Events list | `/admin/events` | admin | All statuses, with 複製 (clone) action per row |
 | Create event | `/admin/events/new` | admin | |
 | Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, define survey fields |
-| Project review | `/admin/projects` | admin | Approve / reject pending submissions |
-| Post review | `/admin/posts` | admin | Approve / reject pending blog posts |
+| Project admin | `/admin/projects` | admin | Approve / reject pending submissions; edit, archive / republish, or delete projects from any status |
+| Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status |
 | Attendee export | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list |
 | Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view QR for kiosk, manually toggle attendance per RSVP |
 | Guides | `/admin/guides` | admin + editor | Review queue for pending community guides (approve auto-promotes the author to `contributor`); plus create / edit / publish / delete any guide |

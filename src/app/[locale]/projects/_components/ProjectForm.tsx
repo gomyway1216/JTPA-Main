@@ -12,6 +12,7 @@ import {
   deleteMyProject,
   submitProject,
   updateMyProject,
+  type ProjectReturnTo,
 } from "@/app/actions/projects";
 import { Field } from "@/components/forms/Field";
 import {
@@ -43,9 +44,10 @@ interface Props {
   mode: "create" | "edit";
   user: SessionUser;
   project?: ProjectDoc;
+  returnTo?: ProjectReturnTo;
 }
 
-export function ProjectForm({ mode, user, project }: Props) {
+export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   const t = useTranslations("ProjectForm");
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
@@ -165,7 +167,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           mode === "create"
             ? await submitProject(payload)
             : project
-              ? await updateMyProject(project.id, payload)
+              ? await updateMyProject(project.id, payload, returnTo)
               : null;
         // Both create and edit redirect on success, so a returned result is
         // always a failure — surface the real message inline instead of the
@@ -191,7 +193,7 @@ export function ProjectForm({ mode, user, project }: Props) {
           setError(res.error);
           return;
         }
-        router.push("/my/projects");
+        router.push(returnTo === "admin" ? "/admin/projects" : "/my/projects");
       } catch (err) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("deleteFailed"));
@@ -346,7 +348,7 @@ export function ProjectForm({ mode, user, project }: Props) {
       </Field>
 
       {error && <p className={errorTextClass}>{error}</p>}
-      {mode === "edit" && (
+      {mode === "edit" && !user.isAdmin && (
         <p className="text-xs text-zinc-500">
           {t("editReviewNotice")}
         </p>
@@ -364,7 +366,9 @@ export function ProjectForm({ mode, user, project }: Props) {
               ? t("uploadingButton")
               : mode === "create"
                 ? t("submitForReview")
-                : t("updateForReview")}
+                : user.isAdmin
+                  ? t("save")
+                  : t("updateForReview")}
         </button>
         {mode === "edit" && (
           <button
