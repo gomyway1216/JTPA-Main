@@ -235,6 +235,7 @@
     "waitlist": "現在キャンセル待ちです。",
     "registered": "登録済み ({role})",
     "checkedInRegistered": "チェックイン済みです。参加登録も自動で完了しています。",
+    "checkedInWaitlist": "チェックイン済みです。参加登録はキャンセル待ちのままです。",
     "roleLabel": "参加形式",
     "attendee": "参加者",
     "presenter": "発表者",

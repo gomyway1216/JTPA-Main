@@ -49,7 +49,20 @@ export function RsvpSection({
     (f) => f.audience === "presenter",
   );
   const allFields = event.surveyFields.filter((f) => f.audience === "all");
-  const checkedIn = !!rsvp?.attendedAt && rsvp.status !== "cancelled";
+  const checkedIn = !!rsvp?.attendedAt && rsvp?.status !== "cancelled";
+  const statusMessage =
+    !rsvp || rsvp.status === "cancelled"
+      ? null
+      : checkedIn && rsvp.status === "waitlist"
+        ? t("checkedInWaitlist")
+        : checkedIn
+          ? t("checkedInRegistered")
+          : rsvp.status === "waitlist"
+            ? t("waitlist")
+            : t("registered", {
+                role:
+                  rsvp.role === "presenter" ? t("presenter") : t("attendee"),
+              });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,18 +104,9 @@ export function RsvpSection({
     <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="text-xl font-semibold mb-4">{t("title")}</h2>
 
-      {rsvp && rsvp.status !== "cancelled" && (
+      {statusMessage && (
         <div className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-          {checkedIn
-            ? t("checkedInRegistered")
-            : rsvp.status === "waitlist"
-              ? t("waitlist")
-              : t("registered", {
-                  role:
-                    rsvp.role === "presenter"
-                      ? t("presenter")
-                      : t("attendee"),
-                })}
+          {statusMessage}
         </div>
       )}
 

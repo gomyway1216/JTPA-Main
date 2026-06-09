@@ -235,6 +235,7 @@
     "waitlist": "You are currently on the waitlist.",
     "registered": "Registered ({role})",
     "checkedInRegistered": "You are checked in. Registration has also been completed automatically.",
+    "checkedInWaitlist": "You are checked in. Your registration is still on the waitlist.",
     "roleLabel": "Participation type",
     "attendee": "Attendee",
     "presenter": "Presenter",
