@@ -161,12 +161,11 @@ export async function selfCheckIn(
       });
     }
 
-    // Silence the unused warning — `event` is fetched for validation only.
-    void event;
-
-    return { rsvp: doc, alreadyCheckedIn };
+    return { rsvp: doc, alreadyCheckedIn, eventSlug: event.slug };
   });
 
+  revalidatePath("/events");
+  revalidatePath(`/events/${result.eventSlug}`);
   revalidatePath(`/admin/attendees`);
   revalidatePath("/admin/users");
   revalidatePath("/my");
