@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import QRCode from "qrcode";
 
 import {
   CHECKIN_EARLY_MS,
   CHECKIN_LATE_MS,
+  buildCheckInUrl,
   checkInWindowState,
   generateCheckInTokenString,
 } from "@/lib/check-in";
@@ -63,5 +65,42 @@ describe("generateCheckInTokenString", () => {
     // Collisions in 50 draws from a 56^16 space are vanishingly unlikely;
     // any duplicate here would indicate the RNG isn't being seeded.
     expect(tokens.size).toBe(50);
+  });
+});
+
+describe("buildCheckInUrl", () => {
+  it("builds the QR payload URL from origin, slug, and token", () => {
+    expect(
+      buildCheckInUrl("https://bayarea-ai.com", "ai-study-2", "abc123"),
+    ).toBe("https://bayarea-ai.com/events/ai-study-2/checkin?t=abc123");
+  });
+
+  it("normalizes trailing slashes and URL-encodes path/query values", () => {
+    const url = buildCheckInUrl(
+      "https://bayarea-ai.com/",
+      "ai 勉強会",
+      "a+b&c",
+    );
+
+    expect(url).toBe(
+      "https://bayarea-ai.com/events/ai%20%E5%8B%89%E5%BC%B7%E4%BC%9A/checkin?t=a%2Bb%26c",
+    );
+  });
+
+  it("can be rendered as a QR-code SVG", async () => {
+    const payload = buildCheckInUrl(
+      "https://bayarea-ai.com",
+      "ai-study-2",
+      "abc123",
+    );
+    const svg = await QRCode.toString(payload, {
+      type: "svg",
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 320,
+    });
+
+    expect(svg).toContain("<svg");
+    expect(svg).toContain("<path");
   });
 });

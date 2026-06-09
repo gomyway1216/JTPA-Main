@@ -46,3 +46,13 @@ export function generateCheckInTokenString(): string {
   }
   return out;
 }
+
+export function buildCheckInUrl(
+  origin: string,
+  slug: string,
+  token: string,
+): string {
+  const url = new URL(`/events/${slug}/checkin`, origin);
+  url.searchParams.set("t", token);
+  return url.toString();
+}
