@@ -82,6 +82,7 @@ public plus the cumulative attendance count; it does **not** rely on rules.
 | `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions by `submitRsvp` / `cancelRsvp` |
 | `attendanceCount` | number? | Denormalized count of RSVPs with `attendedAt` set. Updated transactionally by the check-in Server Actions. Missing = 0 on legacy docs. |
 | `checkInToken` | string? | 16-char alphanumeric token (confusable-free alphabet) embedded in the QR-code URL. Admin generates/rotates via `generateCheckInToken` on `/admin/events/[id]/checkin`. Missing = token not yet issued. |
+| `checkInEarlyMinutes`, `checkInLateMinutes` | number? | Per-event QR validity buffers in minutes. Missing = defaults from `src/lib/check-in.ts` (currently 4 hours before start, 6 hours after end). Admin edits these from the event edit form. |
 | `createdBy` | string (uid) | |
 | `createdAt`, `updatedAt` | Timestamp | |
 

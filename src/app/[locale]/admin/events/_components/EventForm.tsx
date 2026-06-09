@@ -23,6 +23,11 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import {
+  DEFAULT_CHECKIN_EARLY_MINUTES,
+  DEFAULT_CHECKIN_LATE_MINUTES,
+  MAX_CHECKIN_WINDOW_MINUTES,
+} from "@/lib/check-in";
 import { validateSurveyFields } from "@/lib/event-survey";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
@@ -50,6 +55,22 @@ function toLocalInput(d: Date | null): string {
   if (!d) return "";
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function minutesToHoursInput(
+  minutes: number | undefined,
+  fallbackMinutes: number,
+): string {
+  const hours = (minutes ?? fallbackMinutes) / 60;
+  return Number.isInteger(hours)
+    ? String(hours)
+    : String(Number(hours.toFixed(2)));
+}
+
+function hoursInputToMinutes(value: string, fallbackMinutes: number): number {
+  const hours = Number(value);
+  if (!Number.isFinite(hours) || hours < 0) return fallbackMinutes;
+  return Math.min(Math.round(hours * 60), MAX_CHECKIN_WINDOW_MINUTES);
 }
 
 export function EventForm({
@@ -82,6 +103,15 @@ export function EventForm({
   const [visibility, setVisibility] = useState<
     NonNullable<EventFormInput["visibility"]>
   >(event?.visibility ?? "public");
+  const [checkInEarlyHours, setCheckInEarlyHours] = useState(
+    minutesToHoursInput(
+      event?.checkInEarlyMinutes,
+      DEFAULT_CHECKIN_EARLY_MINUTES,
+    ),
+  );
+  const [checkInLateHours, setCheckInLateHours] = useState(
+    minutesToHoursInput(event?.checkInLateMinutes, DEFAULT_CHECKIN_LATE_MINUTES),
+  );
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
   const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
     event?.coverImage,
@@ -215,6 +245,14 @@ export function EventForm({
           presenterCapacity,
           status,
           visibility,
+          checkInEarlyMinutes: hoursInputToMinutes(
+            checkInEarlyHours,
+            DEFAULT_CHECKIN_EARLY_MINUTES,
+          ),
+          checkInLateMinutes: hoursInputToMinutes(
+            checkInLateHours,
+            DEFAULT_CHECKIN_LATE_MINUTES,
+          ),
           coverImage,
           surveyFields: fields,
         };
@@ -351,11 +389,57 @@ export function EventForm({
           />
         </Field>
       </div>
+      <div className="space-y-3 rounded-md border border-zinc-200 p-4 dark:border-zinc-800">
+        <div className="space-y-1">
+          <h3 className="font-semibold">{t("checkInWindowTitle")}</h3>
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {t("checkInWindowHelp")}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label={t("checkInEarlyHours")}
+            required
+            htmlFor="event-check-in-early"
+          >
+            <input
+              id="event-check-in-early"
+              type="number"
+              required
+              min={0}
+              max={MAX_CHECKIN_WINDOW_MINUTES / 60}
+              step={0.25}
+              value={checkInEarlyHours}
+              onChange={(e) => setCheckInEarlyHours(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field
+            label={t("checkInLateHours")}
+            required
+            htmlFor="event-check-in-late"
+          >
+            <input
+              id="event-check-in-late"
+              type="number"
+              required
+              min={0}
+              max={MAX_CHECKIN_WINDOW_MINUTES / 60}
+              step={0.25}
+              value={checkInLateHours}
+              onChange={(e) => setCheckInLateHours(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+      </div>
       <Field label={t("locationType")} htmlFor="event-location-type">
         <select
           id="event-location-type"
           value={locationType}
-          onChange={(e) => setLocationType(e.target.value as EventFormInput["locationType"])}
+          onChange={(e) =>
+            setLocationType(e.target.value as EventFormInput["locationType"])
+          }
           className={inputClass}
         >
           <option value="offline">{t("location.offline")}</option>

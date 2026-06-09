@@ -7,6 +7,11 @@ import { notFound } from "next/navigation";
 import { QrDisplayControls } from "@/app/[locale]/admin/events/[id]/checkin/QrDisplayControls";
 import { TokenControls } from "@/app/[locale]/admin/events/[id]/checkin/TokenControls";
 import { getSessionUser } from "@/lib/auth/session";
+import {
+  buildCheckInOrigin,
+  buildCheckInUrl,
+  checkInWindowSettings,
+} from "@/lib/check-in";
 import { getEventById } from "@/lib/data/events";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
@@ -29,23 +34,23 @@ export default async function AdminCheckInPage({
   const event = await getEventById(id);
   if (!event) notFound();
   const eventDate = formatDateTime(event.startAt, locale);
+  const { earlyMinutes, lateMinutes } = checkInWindowSettings(event);
 
   // The public origin is required to build the absolute QR URL since the
   // QR is meant to be scanned from a phone external to the server. Prefer
   // the explicit `NEXT_PUBLIC_SITE_URL` env var (correct behind reverse
   // proxies that rewrite Host), fall back to the request's own host so
   // preview / dev environments work without configuration.
-  const explicitOrigin = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const headerStore = await headers();
-  const host = headerStore.get("host");
-  const forwardedProto = headerStore.get("x-forwarded-proto");
-  const requestOrigin = host
-    ? `${forwardedProto ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`
-    : null;
-  const baseUrl = explicitOrigin || requestOrigin;
+  const baseUrl = buildCheckInOrigin({
+    explicitOrigin: process.env.NEXT_PUBLIC_SITE_URL,
+    forwardedHost: headerStore.get("x-forwarded-host"),
+    forwardedProto: headerStore.get("x-forwarded-proto"),
+    host: headerStore.get("host"),
+  });
   const checkInUrl =
     baseUrl && event.checkInToken
-      ? `${baseUrl}/events/${event.slug}/checkin?t=${event.checkInToken}`
+      ? buildCheckInUrl(baseUrl, event.slug, event.checkInToken)
       : null;
   const qrSvg = checkInUrl
     ? await QRCode.toString(checkInUrl, {
@@ -121,7 +126,10 @@ export default async function AdminCheckInPage({
       </div>
 
       <p className="text-xs text-zinc-500 print:hidden">
-        {t("note")}
+        {t("note", {
+          earlyHours: earlyMinutes / 60,
+          lateHours: lateMinutes / 60,
+        })}
       </p>
 
       <Link
