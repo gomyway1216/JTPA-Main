@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { NextRequest } from "next/server";
 
-import proxy from "@/proxy";
+import proxy, { config } from "@/proxy";
 
 const middlewareMocks = vi.hoisted(() => {
   const intlProxy = vi.fn((request: NextRequest) => {
@@ -56,6 +57,18 @@ describe("proxy", () => {
       expect(response.status).toBe(307);
       expect(response.headers.get("location")).toBe(location);
       expect(middlewareMocks.intlProxy).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each(["/__/auth/handler", "/__/auth/iframe", "/__/firebase/init.json"])(
+    "does not run the locale proxy on Firebase helper paths: %s",
+    (pathname) => {
+      expect(
+        unstable_doesMiddlewareMatch({
+          config,
+          url: pathname,
+        }),
+      ).toBe(false);
     },
   );
 

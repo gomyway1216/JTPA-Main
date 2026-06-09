@@ -55,6 +55,8 @@ Stabilizes the encryption Next.js uses for Server Action references so a form op
 
 The `NEXT_PUBLIC_FIREBASE_*` values used to be in `apphosting.yaml` but were moved to the Console UI in PR #5 to keep the repo source-code free of identifiers (even though they end up in the client bundle anyway). This is a soft hardening — adjust if it ever gets in the way.
 
+For production, set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `bayarea-ai.com`, not `jtpa-main.firebaseapp.com`. Firebase Auth redirect/popup helpers are proxied from `https://bayarea-ai.com/__/auth/*` to `https://jtpa-main.firebaseapp.com/__/auth/*` by `next.config.ts`, keeping the OAuth helper on the same site as the app. This avoids the "missing initial state" failure that can happen when browsers partition or block third-party storage during Google sign-in.
+
 To change a value in the Console UI:
 
 1. Open Console → App Hosting → backends → jtpa-main → Settings → Environment variables
@@ -99,6 +101,8 @@ Google sign-in only works from domains explicitly whitelisted in Firebase Auth:
 - Currently allowed: `localhost`, `jtpa-main.firebaseapp.com`, `jtpa-main.web.app`, `jtpa-main--jtpa-main.us-central1.hosted.app`, `bayarea-ai.com`
 
 If we add another custom domain, add it here too or sign-in will throw `auth/unauthorized-domain`. The matching change is also needed on the GCP API key referrer allow-list (`NEXT_PUBLIC_FIREBASE_API_KEY` in **APIs & Services → Credentials**) — Firebase Auth verifies the API key with its own referrer check, so a domain missing from there throws `auth/api-key-not-valid` even when the Authorized-domains list is right.
+
+When `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` is `bayarea-ai.com`, also add `https://bayarea-ai.com/__/auth/handler` to the Google OAuth client Authorized redirect URIs. The App Hosting revision must be redeployed after the env var is changed.
 
 ## Things to wire up that aren't done yet
 
