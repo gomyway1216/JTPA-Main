@@ -314,6 +314,58 @@ describe("submitRsvp — editing an existing RSVP", () => {
     });
   });
 
+  it("a waitlisted edit STAYS waitlist and never touches counters", async () => {
+    // Regression for the counter-desync bug: a waitlisted user editing
+    // their RSVP (e.g. affiliation / survey answers) must remain on the
+    // waitlist. Re-evaluating capacity here used to silently promote them
+    // to "confirmed" past capacity while leaving rsvpCount too low and
+    // waitlistCount too high — a permanent desync. Promotion happens only
+    // via the cancel→promote flow, never by editing.
+    eventSnap = snap(
+      eventData({ capacity: 10, rsvpCount: 10, waitlistCount: 1 }),
+    );
+    rsvpSnap = snap({
+      status: "waitlist",
+      role: "attendee",
+      affiliation: "Old Co",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(
+      rsvpInput({ affiliation: "New Co", surveyResponses: { q1: "changed" } }),
+    );
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.status).toBe("waitlist");
+      expect(res.rsvp.affiliation).toBe("New Co");
+    }
+    // Doc is rewritten, but no counter movement at all (no rsvpCount++ /
+    // waitlistCount--), so the event update is skipped entirely.
+    expect(txSetMock).toHaveBeenCalledTimes(1);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("a waitlisted attendee → presenter switch STAYS waitlist with no presenterCount change", async () => {
+    // presenterCount tracks CONFIRMED presenters only. A waitlisted RSVP
+    // never contributed to it, so switching role while waitlisted must
+    // leave presenterCount (and every other counter) untouched.
+    eventSnap = snap(
+      eventData({ capacity: 10, rsvpCount: 10, waitlistCount: 1 }),
+    );
+    rsvpSnap = snap({
+      status: "waitlist",
+      role: "attendee",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.status).toBe("waitlist");
+      expect(res.rsvp.role).toBe("presenter");
+    }
+    expect(txSetMock).toHaveBeenCalledTimes(1);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+  });
+
   it("preserves check-in markers + createdAt across edits", async () => {
     // tx.set() overwrites the whole doc — without forwarding these the
     // attendee would look un-checked-in after editing their answers.

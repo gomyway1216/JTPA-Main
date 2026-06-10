@@ -61,23 +61,38 @@ export async function submitRsvp(
     let presenterDelta = 0;
     let waitlistDelta = 0;
 
-    const isWaitlist =
-      event.capacity > 0 &&
-      event.rsvpCount >= event.capacity &&
-      (!prior || prior.status === "cancelled");
-    const newStatus: RsvpDoc["status"] = isWaitlist ? "waitlist" : "confirmed";
+    // Editing an existing RSVP must PRESERVE its current status: a
+    // confirmed RSVP stays confirmed, a waitlisted one stays waitlisted.
+    // Re-evaluating capacity on every edit would silently promote a
+    // waitlisted user to "confirmed" past capacity AND leave the bucket
+    // counters desynced (waitlistCount too high, rsvpCount too low),
+    // since the edit branch moves no rsvp/waitlist deltas. Promotion off
+    // the waitlist happens only via the cancel→promote flow. Capacity is
+    // therefore evaluated solely for a brand-new RSVP or a re-RSVP after
+    // cancellation.
+    const isExisting = !!prior && prior.status !== "cancelled";
+    let newStatus: RsvpDoc["status"];
 
-    if (!prior || prior.status === "cancelled") {
-      if (newStatus === "waitlist") waitlistDelta = 1;
+    if (!isExisting) {
+      const isWaitlist =
+        event.capacity > 0 && event.rsvpCount >= event.capacity;
+      newStatus = isWaitlist ? "waitlist" : "confirmed";
+      if (isWaitlist) waitlistDelta = 1;
       else rsvpDelta = 1;
       if (newStatus === "confirmed" && input.role === "presenter") {
         presenterDelta = 1;
       }
     } else {
-      if (prior.role === "presenter" && input.role === "attendee") {
-        presenterDelta = -1;
-      } else if (prior.role === "attendee" && input.role === "presenter") {
-        presenterDelta = 1;
+      newStatus = prior.status; // preserve "confirmed" or "waitlist"
+      // presenterCount tracks CONFIRMED presenters only, so a role switch
+      // moves it only while the RSVP is confirmed — a waitlisted role
+      // switch must leave presenterCount untouched.
+      if (newStatus === "confirmed") {
+        if (prior.role === "presenter" && input.role === "attendee") {
+          presenterDelta = -1;
+        } else if (prior.role === "attendee" && input.role === "presenter") {
+          presenterDelta = 1;
+        }
       }
     }
 
