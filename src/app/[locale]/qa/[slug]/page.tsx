@@ -56,9 +56,12 @@ export default async function QaDetailPage({
     notFound();
   }
 
-  const comments = await listComments("qa", qa.id).catch((err) => {
+  const { comments, nextCursor: commentsNextCursor } = await listComments(
+    "qa",
+    qa.id,
+  ).catch((err) => {
     console.error("Failed to list Q&A comments:", err);
-    return [];
+    return { comments: [], nextCursor: null };
   });
   const likedSet = await getMyLikesForParent({
     parentType: "qa",
@@ -144,6 +147,7 @@ export default async function QaDetailPage({
         parentId={qa.id}
         parentSlug={qa.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

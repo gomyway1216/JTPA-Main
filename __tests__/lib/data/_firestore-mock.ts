@@ -17,8 +17,13 @@ export interface QueryState {
   collection?: string;
   collectionGroup?: string;
   whereCalls: Array<[string, string, unknown]>;
-  orderByCalls: Array<[string, string?]>;
+  // First element is `unknown` (not string) because cursor-paged queries
+  // order by `FieldPath.documentId()`, which is a FieldPath instance.
+  orderByCalls: Array<[unknown, string?]>;
   limit?: number;
+  // Cursor values passed to `.startAfter(...)`; undefined when the query
+  // never paged.
+  startAfter?: unknown[];
   docPath?: { collection: string; id: string };
 }
 
@@ -53,6 +58,7 @@ export function createAdminDbMock() {
     state.whereCalls = [];
     state.orderByCalls = [];
     state.limit = undefined;
+    state.startAfter = undefined;
     state.docPath = undefined;
     nextGet = { docs: [] };
     nextGetAll = [];
@@ -71,12 +77,16 @@ export function createAdminDbMock() {
         state.whereCalls.push([f, op, val]);
         return q;
       }),
-      orderBy: vi.fn((f: string, dir?: string) => {
+      orderBy: vi.fn((f: unknown, dir?: string) => {
         state.orderByCalls.push([f, dir]);
         return q;
       }),
       limit: vi.fn((n: number) => {
         state.limit = n;
+        return q;
+      }),
+      startAfter: vi.fn((...values: unknown[]) => {
+        state.startAfter = values;
         return q;
       }),
       get: vi.fn(async () => withEmpty(nextGet)),

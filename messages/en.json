@@ -121,7 +121,10 @@
     "deleteConfirm": "Delete this comment?",
     "hardDeleteConfirm": "Permanently delete this comment? This cannot be undone.",
     "sendError": "Failed to send",
-    "deleteError": "Failed to delete"
+    "deleteError": "Failed to delete",
+    "loadMore": "Load more",
+    "loadingMore": "Loading...",
+    "loadMoreError": "Failed to load more comments"
   },
   "EventsPage": {
     "metadataTitle": "Events",
@@ -1028,7 +1031,9 @@
         "archived": "Archive"
       },
       "updateFailed": "Failed to update",
-      "statusChanged": "{name} changed status on {date}"
+      "statusChanged": "{name} changed status on {date}",
+      "nextPage": "Next page",
+      "backToLatest": "Back to latest"
     },
     "attendees": {
       "title": "Attendees",

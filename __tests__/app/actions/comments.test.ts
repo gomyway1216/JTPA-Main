@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // the reply-parent validation that prevents thread-misattribution.
 
 const requireUserMock = vi.fn();
+const getSessionUserMock = vi.fn();
 const parentGetMock = vi.fn();
 const parentCommentGetMock = vi.fn();
 const commentSetMock = vi.fn();
@@ -14,8 +15,29 @@ const newCommentRefId = "new-comment-id";
 
 const revalidatePathMock = vi.fn();
 
+// loadMoreComments delegates the actual reads to the data layer; mock
+// those modules so these tests stay focused on the action's job —
+// validation + the page-mirroring visibility rules.
+const listCommentsMock = vi.fn();
+const getMyLikesForParentMock = vi.fn();
+const getPublicProfilesByUidsMock = vi.fn();
+
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
+  getSessionUser: () => getSessionUserMock(),
+}));
+
+vi.mock("@/lib/data/comments", () => ({
+  listComments: (...args: unknown[]) => listCommentsMock(...args),
+}));
+
+vi.mock("@/lib/data/likes", () => ({
+  getMyLikesForParent: (...args: unknown[]) => getMyLikesForParentMock(...args),
+}));
+
+vi.mock("@/lib/data/users", () => ({
+  getPublicProfilesByUids: (...args: unknown[]) =>
+    getPublicProfilesByUidsMock(...args),
 }));
 
 vi.mock("next/cache", () => ({
@@ -64,12 +86,12 @@ vi.mock("@/lib/firebase/admin", () => {
   };
 });
 
-import { postComment } from "@/app/actions/comments";
+import { loadMoreComments, postComment } from "@/app/actions/comments";
 
-// postComment now returns a discriminated result instead of throwing —
+// The comment actions return discriminated results instead of throwing —
 // assert on the error result rather than a rejection.
 async function expectError(
-  p: ReturnType<typeof postComment>,
+  p: Promise<{ ok: true } | { ok: false; error: string }>,
   substr: string,
 ) {
   const res = await p;
@@ -79,11 +101,17 @@ async function expectError(
 
 beforeEach(() => {
   requireUserMock.mockReset();
+  getSessionUserMock.mockReset().mockResolvedValue(null);
   parentGetMock.mockReset();
   parentCommentGetMock.mockReset();
   commentSetMock.mockReset().mockResolvedValue(undefined);
   parentUpdateMock.mockReset().mockResolvedValue(undefined);
   revalidatePathMock.mockReset();
+  listCommentsMock
+    .mockReset()
+    .mockResolvedValue({ comments: [], nextCursor: null });
+  getMyLikesForParentMock.mockReset().mockResolvedValue(new Set<string>());
+  getPublicProfilesByUidsMock.mockReset().mockResolvedValue(new Map());
   requireUserMock.mockResolvedValue({
     uid: "u1",
     displayName: "Alice",
@@ -290,6 +318,239 @@ describe("postComment — author denormalization", () => {
       expect(res.comment.authorUid).toBe("u1");
       expect(res.comment.authorName).toBe("Alice");
       expect(res.comment.authorPhotoURL).toBe("https://x/a.png");
+    }
+  });
+});
+
+// loadMoreComments is the read continuation of the server-rendered first
+// page. Unlike postComment it must NOT require a session — but it must
+// apply the exact same visibility rules as the detail pages, returning
+// the not-found error (never the unpublished one) so it doesn't leak
+// whether a hidden doc exists.
+
+function sessionUser(overrides: Record<string, unknown> = {}) {
+  return {
+    uid: "u1",
+    displayName: "Alice",
+    photoURL: null,
+    email: "alice@x",
+    isAdmin: false,
+    isEditor: false,
+    ...overrides,
+  };
+}
+
+describe("loadMoreComments — validation", () => {
+  it("rejects an empty cursor (first page is always server-rendered)", async () => {
+    await expectError(
+      loadMoreComments({ parentType: "post", parentId: "p1", cursor: "" }),
+      "入力エラー",
+    );
+    expect(listCommentsMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown parentType", async () => {
+    await expectError(
+      loadMoreComments({
+        parentType: "spam" as never,
+        parentId: "p1",
+        cursor: "abc",
+      }),
+      "入力エラー",
+    );
+  });
+});
+
+describe("loadMoreComments — visibility (mirrors the detail pages)", () => {
+  it("returns not-found when the parent doc is missing", async () => {
+    parentGetMock.mockResolvedValueOnce({ exists: false });
+    await expectError(
+      loadMoreComments({ parentType: "post", parentId: "p1", cursor: "c" }),
+      "見つかりません",
+    );
+    expect(listCommentsMock).not.toHaveBeenCalled();
+  });
+
+  it("hides a draft post behind the same not-found error (no existence leak)", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "draft", authorUid: "u1" }),
+    });
+    await expectError(
+      loadMoreComments({ parentType: "post", parentId: "p1", cursor: "c" }),
+      "見つかりません",
+    );
+    expect(listCommentsMock).not.toHaveBeenCalled();
+  });
+
+  it("hides a draft post even from its author (the blog page 404s drafts for everyone)", async () => {
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "u1" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "draft", authorUid: "u1" }),
+    });
+    await expectError(
+      loadMoreComments({ parentType: "post", parentId: "p1", cursor: "c" }),
+      "見つかりません",
+    );
+  });
+
+  it("serves a published post to an anonymous viewer", async () => {
+    // getSessionUser default → null (anonymous).
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "published", slug: "x" }),
+    });
+    const res = await loadMoreComments({
+      parentType: "post",
+      parentId: "p1",
+      cursor: "c",
+    });
+    expect(res.ok).toBe(true);
+    // Like-state lookup runs in the anonymous mode (uid: null), exactly
+    // like the page's first-page read.
+    expect(getMyLikesForParentMock).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: null }),
+    );
+  });
+
+  it("treats 'approved' as the visible status for projects", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "published" }),
+    });
+    await expectError(
+      loadMoreComments({ parentType: "project", parentId: "p1", cursor: "c" }),
+      "見つかりません",
+    );
+  });
+
+  it("serves an unpublished QA item to its author", async () => {
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "author-1" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "archived", authorUid: "author-1" }),
+    });
+    const res = await loadMoreComments({
+      parentType: "qa",
+      parentId: "q1",
+      cursor: "c",
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("hides an unpublished QA item from other signed-in users", async () => {
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "someone-else" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "archived", authorUid: "author-1" }),
+    });
+    await expectError(
+      loadMoreComments({ parentType: "qa", parentId: "q1", cursor: "c" }),
+      "見つかりません",
+    );
+  });
+
+  it("serves an unpublished poll to an admin", async () => {
+    getSessionUserMock.mockResolvedValue(
+      sessionUser({ uid: "adm", isAdmin: true }),
+    );
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "draft", authorUid: "author-1" }),
+    });
+    const res = await loadMoreComments({
+      parentType: "poll",
+      parentId: "pl1",
+      cursor: "c",
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("serves an unpublished guide to an editor (guides are curator-visible)", async () => {
+    getSessionUserMock.mockResolvedValue(
+      sessionUser({ uid: "ed", isEditor: true }),
+    );
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "pending", authorUid: "author-1" }),
+    });
+    const res = await loadMoreComments({
+      parentType: "guide",
+      parentId: "g1",
+      cursor: "c",
+    });
+    expect(res.ok).toBe(true);
+  });
+
+  it("falls back to createdBy.uid for legacy guides without authorUid", async () => {
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "legacy-owner" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "draft", createdBy: { uid: "legacy-owner" } }),
+    });
+    const res = await loadMoreComments({
+      parentType: "guide",
+      parentId: "g1",
+      cursor: "c",
+    });
+    expect(res.ok).toBe(true);
+  });
+});
+
+describe("loadMoreComments — page passthrough", () => {
+  it("forwards the cursor to listComments and returns the page + companion data", async () => {
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "viewer" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "published", slug: "x" }),
+    });
+    const comment = {
+      id: "c51",
+      parentType: "post",
+      parentId: "p1",
+      authorUid: "author-9",
+      authorName: "Nine",
+      authorPhotoURL: null,
+      body: "hello",
+      parentCommentId: null,
+      likeCount: 2,
+      createdAt: { _seconds: 51, _nanoseconds: 0 },
+      updatedAt: { _seconds: 51, _nanoseconds: 0 },
+    };
+    listCommentsMock.mockResolvedValue({
+      comments: [comment],
+      nextCursor: "CURSOR-2",
+    });
+    getMyLikesForParentMock.mockResolvedValue(new Set(["comment:c51"]));
+    const profile = { uid: "author-9", username: "nine" };
+    getPublicProfilesByUidsMock.mockResolvedValue(
+      new Map([["author-9", profile]]),
+    );
+
+    const res = await loadMoreComments({
+      parentType: "post",
+      parentId: "p1",
+      cursor: "CURSOR-1",
+    });
+
+    expect(listCommentsMock).toHaveBeenCalledWith("post", "p1", {
+      cursor: "CURSOR-1",
+    });
+    expect(getMyLikesForParentMock).toHaveBeenCalledWith({
+      parentType: "post",
+      parentId: "p1",
+      commentIds: ["c51"],
+      uid: "viewer",
+    });
+    expect(getPublicProfilesByUidsMock).toHaveBeenCalledWith(["author-9"]);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.comments).toEqual([comment]);
+      expect(res.nextCursor).toBe("CURSOR-2");
+      expect(res.likedKeys).toEqual(["comment:c51"]);
+      // Map → plain object so it survives the Server Action boundary.
+      expect(res.profiles).toEqual({ "author-9": profile });
     }
   });
 });

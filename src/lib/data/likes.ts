@@ -20,10 +20,12 @@ import type { CommentParentType } from "@/lib/types";
 export const RECORD_LIKE_KEY = "RECORD";
 
 // Firestore's BatchGet caps at 100 documents per request. We split refs
-// into chunks just under that ceiling so a busy comment thread (up to
-// `COMMENTS_PER_PAGE = 500` in `listComments`) doesn't silently break the
-// lookup. The chunk size is slightly under 100 so the record-level like
-// ref can always be appended to the first batch without spilling.
+// into chunks just under that ceiling. A single comments page
+// (`COMMENTS_PAGE_SIZE = 50` in `listComments`) fits in one chunk, but
+// the chunking keeps the lookup correct for any caller that passes a
+// larger id list. The chunk size is slightly under 100 so the
+// record-level like ref can always be appended to the first batch
+// without spilling.
 const BATCH_GET_LIMIT = 99;
 
 export async function getMyLikesForParent({
@@ -63,9 +65,8 @@ export async function getMyLikesForParent({
     refChunks.push(commentLikeRefs.slice(cursor, cursor + BATCH_GET_LIMIT));
   }
 
-  // Run chunked BatchGets in parallel — they're independent and the worst
-  // case (commentIds.length = COMMENTS_PER_PAGE = 500) is only a handful
-  // of chunks.
+  // Run chunked BatchGets in parallel — they're independent, and even a
+  // multi-page id list is only a handful of chunks.
   const chunkResults = await Promise.all(
     refChunks.map((refs) => adminDb().getAll(...refs)),
   );
