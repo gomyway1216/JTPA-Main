@@ -113,6 +113,18 @@ function eventData(overrides: Record<string, unknown> = {}) {
     rsvpCount: 2,
     presenterCount: 1,
     waitlistCount: 0,
+    // A single optional free-text question so the default `{ q1: "yes" }`
+    // fixture is a KNOWN field (server-side validation rejects answers to
+    // fields the event doesn't define). Validation tests override this.
+    surveyFields: [
+      {
+        key: "q1",
+        label: "Q1",
+        type: "text",
+        required: false,
+        audience: "all",
+      },
+    ],
     ...overrides,
   };
 }
@@ -124,6 +136,18 @@ function rsvpInput(overrides: Record<string, unknown> = {}) {
     surveyResponses: { q1: "yes" },
     ...overrides,
   } as Parameters<typeof submitRsvp>[0];
+}
+
+// A presenter RSVP now requires a non-empty title + abstract (server-side
+// validation mirrors the form's `required` presenter fields), so the
+// presenter-path fixtures carry them by default.
+function presenterInput(overrides: Record<string, unknown> = {}) {
+  return rsvpInput({
+    role: "presenter" as const,
+    presentationTitle: "My Talk",
+    presentationAbstract: "An abstract.",
+    ...overrides,
+  });
 }
 
 // The write aimed at a particular tagged ref (undefined if none landed).
@@ -205,6 +229,151 @@ describe("submitRsvp — auth + event guards", () => {
   });
 });
 
+describe("submitRsvp — server-side input validation", () => {
+  it("rejects an out-of-range role and writes nothing", async () => {
+    // A hand-crafted request can send any string; only attendee/presenter
+    // are valid. (The cast mirrors a spoofed client payload.)
+    await expectError(
+      submitRsvp(rsvpInput({ role: "admin" as unknown as "attendee" })),
+      "参加形態",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter RSVP when the event accepts no presenters", async () => {
+    eventSnap = snap(eventData({ presenterCapacity: 0 }));
+    await expectError(submitRsvp(presenterInput()), "発表者");
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter RSVP missing the talk title/abstract", async () => {
+    await expectError(
+      submitRsvp(
+        presenterInput({ presentationTitle: "", presentationAbstract: "" }),
+      ),
+      "発表タイトル",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing required survey answer", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "diet",
+            label: "Dietary needs",
+            type: "text",
+            required: true,
+            audience: "all",
+          },
+        ],
+      }),
+    );
+    // No answer for the required `diet` field.
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: {} })),
+      "diet",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a select answer outside the field's options", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "mode",
+            label: "Mode",
+            type: "select",
+            required: true,
+            options: ["online", "offline"],
+            audience: "all",
+          },
+        ],
+      }),
+    );
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: { mode: "hybrid" } })),
+      "mode",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an answer to a field the event doesn't define", async () => {
+    // The default event defines only `q1`; a stray `q2` can't be legit.
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: { q1: "ok", q2: "stray" } })),
+      "q2",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter-only answer smuggled in by an attendee", async () => {
+    // A presenter-audience field is not applicable to an attendee, so an
+    // attendee sending it is an unknown key for their submission.
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "q1",
+            label: "Q1",
+            type: "text",
+            required: false,
+            audience: "all",
+          },
+          {
+            key: "slides",
+            label: "Slides URL",
+            type: "text",
+            required: false,
+            audience: "presenter",
+          },
+        ],
+      }),
+    );
+    await expectError(
+      submitRsvp(
+        rsvpInput({ surveyResponses: { q1: "ok", slides: "http://x" } }),
+      ),
+      "slides",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a valid presenter submission with a presenter-audience answer", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "topic",
+            label: "Topic",
+            type: "select",
+            required: true,
+            options: ["AI", "Web"],
+            audience: "presenter",
+          },
+        ],
+      }),
+    );
+    const res = await submitRsvp(
+      presenterInput({ surveyResponses: { topic: "AI" } }),
+    );
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.role).toBe("presenter");
+      expect(res.rsvp.status).toBe("confirmed");
+      expect(res.rsvp.surveyResponses).toEqual({ topic: "AI" });
+    }
+    expect(txSetMock).toHaveBeenCalledWith(rsvpRef, expect.anything());
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      presenterCount: { __inc: 1 },
+    });
+  });
+});
+
 describe("submitRsvp — fresh RSVP counter deltas", () => {
   it("confirms an attendee under capacity and bumps rsvpCount only", async () => {
     const res = await submitRsvp(rsvpInput());
@@ -231,7 +400,7 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
   });
 
   it("counts a confirmed presenter in presenterCount too", async () => {
-    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    const res = await submitRsvp(presenterInput());
     expect(res.ok).toBe(true);
     expect(updateTo("event")).toMatchObject({
       rsvpCount: { __inc: 1 },
@@ -243,7 +412,7 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
     // presenterCount tracks CONFIRMED presenters only; a presenter who
     // lands on the waitlist must not inflate it.
     eventSnap = snap(eventData({ capacity: 10, rsvpCount: 10 }));
-    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    const res = await submitRsvp(presenterInput());
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.rsvp.status).toBe("waitlist");
     expect(updateTo("event")).toMatchObject({
@@ -325,7 +494,7 @@ describe("submitRsvp — editing an existing RSVP", () => {
 
   it("attendee → presenter switch bumps presenterCount only", async () => {
     rsvpSnap = snap({ status: "confirmed", role: "attendee" });
-    await submitRsvp(rsvpInput({ role: "presenter" }));
+    await submitRsvp(presenterInput());
     expect(updateTo("event")).toMatchObject({
       rsvpCount: { __inc: 0 },
       presenterCount: { __inc: 1 },
@@ -383,7 +552,7 @@ describe("submitRsvp — editing an existing RSVP", () => {
       role: "attendee",
       createdAt: { __fixed: "created" },
     });
-    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    const res = await submitRsvp(presenterInput());
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.rsvp.status).toBe("waitlist");
