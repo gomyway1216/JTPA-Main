@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import {
   ref as storageRef,
@@ -272,10 +273,11 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
         <div className="space-y-2">
           {thumbnail && (
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={thumbnail.url}
                 alt={t("thumbnailPreviewAlt")}
+                width={80}
+                height={80}
                 className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
@@ -307,10 +309,12 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {screenshots.map((s, i) => (
                 <li key={s.path} className="relative">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={s.url}
                     alt={`screenshot ${i + 1}`}
+                    width={160}
+                    height={96}
+                    sizes="(max-width: 640px) 33vw, 152px"
                     className="h-24 w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
                   />
                   <button

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import {
   ref as storageRef,
@@ -262,10 +263,11 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
         <div className="space-y-2">
           {coverImage && (
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={coverImage.url}
                 alt={t("coverPreviewAlt")}
+                width={128}
+                height={80}
                 className="h-20 w-32 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/i18n/navigation";
+import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useTransition } from "react";
@@ -283,10 +284,11 @@ export function ProfileForm({ uid, initial }: Props) {
         <p className="block text-sm font-medium">{t("icon")}</p>
         <div className="flex items-center gap-4">
           {avatar ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
+            <Image
               src={avatar.url}
               alt={t("currentIconAlt")}
+              width={64}
+              height={64}
               className="h-16 w-16 shrink-0 rounded-full border border-zinc-200 object-cover dark:border-zinc-800"
             />
           ) : (

@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -84,10 +85,18 @@ export default async function ProjectDetailPage({
       </header>
 
       {project.thumbnail && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        // The source ratio is whatever the submitter uploaded; width/height
+        // only pre-reserve a 16:9 box while loading — Tailwind preflight's
+        // `img { height: auto }` keeps the rendered height tracking the
+        // real ratio at full width, exactly like the old raw <img>.
+        // `preload`: the cover is the LCP element on projects that have one.
+        <Image
           src={project.thumbnail.url}
           alt={t("coverAlt", { title: project.title })}
+          width={1600}
+          height={900}
+          preload
+          sizes="(max-width: 768px) 100vw, 736px"
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
@@ -109,10 +118,12 @@ export default async function ProjectDetailPage({
                   rel="noreferrer noopener"
                   className="block"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={s.url}
-                    alt={`screenshot ${i + 1}`}
+                    alt={`${project.title} screenshot ${i + 1}`}
+                    width={640}
+                    height={360}
+                    sizes="(max-width: 640px) 50vw, 240px"
                     className="h-32 w-full rounded border border-zinc-200 object-cover hover:opacity-90 dark:border-zinc-800"
                   />
                 </a>

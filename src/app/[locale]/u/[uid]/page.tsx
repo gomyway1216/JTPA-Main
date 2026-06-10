@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { RolePill } from "@/components/users/AuthorBadge";
@@ -48,10 +49,11 @@ export default async function PublicProfilePage({
       <article className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
         <header className="flex items-start gap-4">
           {profile.photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={profile.photoURL}
               alt={t("avatarAlt", { username: profile.username })}
+              width={64}
+              height={64}
               className="h-16 w-16 rounded-full border border-zinc-200 dark:border-zinc-800"
             />
           ) : (

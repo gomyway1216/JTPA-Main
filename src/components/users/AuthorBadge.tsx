@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import Link from "@/i18n/navigation";
 
 import type { PublicProfile } from "@/lib/data/users";
@@ -34,6 +36,9 @@ interface Props {
 // render Auth lookups.
 export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   const avatarClass = size === "sm" ? "h-5 w-5" : "h-6 w-6";
+  // Intrinsic px size for next/image — matches the h-5/h-6 box above so
+  // the optimizer serves a 1x/2x avatar instead of the full upload.
+  const avatarPx = size === "sm" ? 20 : 24;
   const initialClass = size === "sm" ? "text-[10px]" : "text-xs";
 
   const username = profile?.username ?? "unknown";
@@ -53,10 +58,11 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
   const inner = (
     <>
       {profile?.photoURL ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
+        <Image
           src={profile.photoURL}
           alt=""
+          width={avatarPx}
+          height={avatarPx}
           className={`${avatarClass} shrink-0 rounded-full object-cover`}
         />
       ) : (

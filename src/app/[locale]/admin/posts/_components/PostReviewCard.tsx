@@ -2,6 +2,7 @@
 
 import Link from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -87,10 +88,12 @@ export function PostReviewCard({
       </header>
 
       {post.coverImage?.url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <Image
           src={post.coverImage.url}
           alt={t("coverAlt", { title: post.title })}
+          width={1600}
+          height={900}
+          sizes="100vw"
           className="mt-3 h-32 w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}

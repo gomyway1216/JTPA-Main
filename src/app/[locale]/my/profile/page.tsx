@@ -1,4 +1,5 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { loginPath } from "@/i18n/paths";
@@ -70,10 +71,11 @@ export default async function MyProfilePage() {
             <>
               <dt className="text-zinc-500">{t("googleIcon")}</dt>
               <dd>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={user.photoURL}
                   alt={t("googleIconAlt", { name: user.displayName })}
+                  width={40}
+                  height={40}
                   className="h-10 w-10 rounded-full border border-zinc-200 dark:border-zinc-800"
                 />
               </dd>

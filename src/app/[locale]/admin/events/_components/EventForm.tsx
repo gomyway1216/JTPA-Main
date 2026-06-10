@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import {
   deleteObject,
@@ -535,12 +536,13 @@ export function EventForm({
         <div className="space-y-2">
           {coverImage && (
             <div className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={coverImage.url}
                 alt={t("coverPreviewAlt", {
                   title: title || t("coverFallbackTitle"),
                 })}
+                width={160}
+                height={96}
                 className="h-24 w-40 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
               <button
