@@ -1,11 +1,13 @@
 import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { countNewFeedback } from "@/lib/data/feedback";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
+import { safeLoad } from "@/lib/data/safe-load";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 
@@ -19,12 +21,27 @@ export default async function AdminHomePage() {
     getTranslations("Admin.common"),
   ]);
 
-  const [pending, upcoming, pendingPosts, newFeedbackCount] = await Promise.all([
-    listProjects({ status: "pending", limit: 5 }).catch(() => []),
-    listEvents({ statuses: ["draft", "published"], limit: 5 }).catch(() => []),
-    listPostsByStatus("pending", 5).catch(() => []),
-    countNewFeedback().catch(() => 0),
-  ]);
+  const [pendingRes, upcomingRes, pendingPostsRes, newFeedbackRes] =
+    await Promise.all([
+      safeLoad("pending projects", () =>
+        listProjects({ status: "pending", limit: 5 }),
+      ),
+      safeLoad("upcoming events", () =>
+        listEvents({ statuses: ["draft", "published"], limit: 5 }),
+      ),
+      safeLoad("pending posts", () => listPostsByStatus("pending", 5)),
+      safeLoad("new feedback count", () => countNewFeedback()),
+    ]);
+  const pending = pendingRes.ok ? pendingRes.data : [];
+  const upcoming = upcomingRes.ok ? upcomingRes.data : [];
+  const pendingPosts = pendingPostsRes.ok ? pendingPostsRes.data : [];
+  const newFeedbackCount = newFeedbackRes.ok ? newFeedbackRes.data : 0;
+  const loadFailed = [
+    pendingRes,
+    upcomingRes,
+    pendingPostsRes,
+    newFeedbackRes,
+  ].some((r) => !r.ok);
   const profiles = await getPublicProfilesByUids([
     ...pending.map((p) => p.ownerUid),
     ...pendingPosts.map((p) => p.authorUid),
@@ -36,6 +53,7 @@ export default async function AdminHomePage() {
 
   return (
     <div className="space-y-8">
+      <LoadErrorBanner show={loadFailed} />
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <section>
