@@ -55,13 +55,14 @@ export default async function ProjectDetailPage({
   // Session + comment listing are independent — kick them off together
   // rather than serially. The like-state query depends on the comment
   // ids so it stays after the join.
-  const [user, comments] = await Promise.all([
+  const [user, commentsPage] = await Promise.all([
     getSessionUser(),
     listComments("project", project.id).catch((err) => {
       console.error("Failed to list project comments:", err);
-      return [];
+      return { comments: [], nextCursor: null };
     }),
   ]);
+  const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "project",
     parentId: project.id,
@@ -197,6 +198,7 @@ export default async function ProjectDetailPage({
         parentId={project.id}
         parentSlug={project.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

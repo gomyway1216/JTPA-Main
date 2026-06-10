@@ -1,13 +1,12 @@
 import "server-only";
 
+import { FieldPath } from "firebase-admin/firestore";
+
 import { parentCollection } from "@/lib/comments-parent";
 import { adminDb } from "@/lib/firebase/admin";
+import { decodePageCursor, slicePage } from "@/lib/data/page-cursor";
 import { plainify } from "@/lib/data/serialize";
-import type {
-  CommentDoc,
-  CommentParentType,
-  PostCommentDoc,
-} from "@/lib/types";
+import type { CommentDoc, CommentParentType } from "@/lib/types";
 
 const COMMENT_PARENT_TYPES: readonly CommentParentType[] = [
   "post",
@@ -45,31 +44,54 @@ function fromSnap(
   });
 }
 
-// Hard cap as a runaway-cost / spam guard. Pagination can be added later
-// when a real thread approaches this number; until then a small per-parent
-// page is fine for both UX and Firestore read budget.
-const COMMENTS_PER_PAGE = 500;
+export const COMMENTS_PAGE_SIZE = 50;
 
+export type CommentsPage = {
+  comments: CommentDoc[];
+  // Opaque cursor for fetching the page after this one (pass it back as
+  // `opts.cursor`); null when this page reached the end of the thread.
+  nextCursor: string | null;
+};
+
+/**
+ * Cursor-paged listing of a parent's comment thread, oldest first.
+ *
+ * Pages walk the flat subcollection in (createdAt asc, doc id asc)
+ * order. Ascending order is what makes paginating the *flat* list safe
+ * for threading: a reply can only be written against a comment that
+ * already exists, so a reply's parent always sorts before the reply and
+ * the client-side thread builder never sees a reply orphaned merely
+ * because its parent is on a later page.
+ */
 export async function listComments(
   parentType: CommentParentType,
   parentId: string,
-): Promise<CommentDoc[]> {
-  const snap = await adminDb()
+  opts: { cursor?: string | null; pageSize?: number } = {},
+): Promise<CommentsPage> {
+  const { cursor = null, pageSize = COMMENTS_PAGE_SIZE } = opts;
+  let query = adminDb()
     .collection(parentCollection(parentType))
     .doc(parentId)
     .collection("comments")
     .orderBy("createdAt", "asc")
-    .limit(COMMENTS_PER_PAGE)
-    .get();
-  return snap.docs.map((d) => fromSnap(d, parentType, parentId));
-}
-
-// Back-compat for callers that haven't migrated to listComments yet. Kept
-// thin so the migration to listComments stays one find-and-replace away.
-export async function listPostComments(
-  postId: string,
-): Promise<PostCommentDoc[]> {
-  return listComments("post", postId);
+    // Explicit doc-id tiebreak so the cursor stays total-ordered when two
+    // comments share a createdAt. This matches the implicit __name__
+    // ordering Firestore appends to every query anyway (same direction as
+    // the last orderBy), so no composite index is needed.
+    .orderBy(FieldPath.documentId(), "asc")
+    // Overfetch by one so we know whether another page exists without a
+    // separate count() read; `slicePage` drops the extra doc.
+    .limit(pageSize + 1);
+  // A malformed cursor (tampered or stale client value) decodes to null
+  // and falls back to the first page rather than throwing.
+  const decoded = cursor ? decodePageCursor(cursor) : null;
+  if (decoded) query = query.startAfter(decoded.createdAt, decoded.id);
+  const snap = await query.get();
+  const { pageDocs, nextCursor } = slicePage(snap.docs, pageSize);
+  return {
+    comments: pageDocs.map((d) => fromSnap(d, parentType, parentId)),
+    nextCursor,
+  };
 }
 
 // Returns the user's comments that have at least one like, most-liked
