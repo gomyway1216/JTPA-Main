@@ -67,8 +67,12 @@ const before = user.customClaims ?? {};
 console.log(`Target user:    ${user.email} (uid: ${user.uid})`);
 console.log(`Current claims: ${JSON.stringify(before)}`);
 
-const claims = { ...before, contributor: !revoke };
-if (revoke) delete claims.contributor;
+const claims = { ...before };
+if (revoke) {
+  delete claims.contributor;
+} else {
+  claims.contributor = true;
+}
 console.log(`New claims:     ${JSON.stringify(claims)}`);
 
 if (dryRun) {
