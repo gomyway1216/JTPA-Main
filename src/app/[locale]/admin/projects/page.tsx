@@ -1,10 +1,12 @@
 import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { ProjectVisibilityButton } from "@/app/[locale]/admin/projects/_components/ProjectVisibilityButton";
 import { ProjectReviewCard } from "@/app/[locale]/admin/projects/_components/ProjectReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listProjects } from "@/lib/data/projects";
+import { safeLoad } from "@/lib/data/safe-load";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type { ProjectDoc } from "@/lib/types";
@@ -29,12 +31,28 @@ export default async function AdminProjectsPage() {
     getTranslations("Status"),
   ]);
 
-  const [pending, approved, rejected, archived] = await Promise.all([
-    listProjects({ status: "pending", limit: 50 }).catch(() => []),
-    listProjects({ status: "approved", limit: 50 }).catch(() => []),
-    listProjects({ status: "rejected", limit: 20 }).catch(() => []),
-    listProjects({ status: "archived", limit: 20 }).catch(() => []),
-  ]);
+  const [pendingRes, approvedRes, rejectedRes, archivedRes] =
+    await Promise.all([
+      safeLoad("pending projects", () =>
+        listProjects({ status: "pending", limit: 50 }),
+      ),
+      safeLoad("approved projects", () =>
+        listProjects({ status: "approved", limit: 50 }),
+      ),
+      safeLoad("rejected projects", () =>
+        listProjects({ status: "rejected", limit: 20 }),
+      ),
+      safeLoad("archived projects", () =>
+        listProjects({ status: "archived", limit: 20 }),
+      ),
+    ]);
+  const pending = pendingRes.ok ? pendingRes.data : [];
+  const approved = approvedRes.ok ? approvedRes.data : [];
+  const rejected = rejectedRes.ok ? rejectedRes.data : [];
+  const archived = archivedRes.ok ? archivedRes.data : [];
+  const loadFailed = [pendingRes, approvedRes, rejectedRes, archivedRes].some(
+    (r) => !r.ok,
+  );
   const ownerProfiles = await getPublicProfilesByUids(
     Array.from(
       new Set([
@@ -52,6 +70,7 @@ export default async function AdminProjectsPage() {
 
   return (
     <div className="space-y-8">
+      <LoadErrorBanner show={loadFailed} />
       <section>
         <h1 className="text-2xl font-bold">
           {t("titlePending", { count: pending.length })}
