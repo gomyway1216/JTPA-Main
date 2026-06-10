@@ -54,8 +54,10 @@ export function AboutForm({
         if (!res.ok) {
           // Real validation message surfaced inline, instead of the masked
           // generic "Server Components render" crash — same handling as
-          // EventForm.
+          // EventForm. Clear any prior "saved" flash so the UI never shows
+          // a stale confirmation alongside the new error.
           setError(res.error);
+          setSavedAt(null);
           return;
         }
         setSavedAt(Date.now());

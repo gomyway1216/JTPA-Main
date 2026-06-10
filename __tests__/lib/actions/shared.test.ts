@@ -121,17 +121,24 @@ describe("findUniqueSlug", () => {
     slugQueryMock.mockResolvedValue(takenBy("other"));
     const slug = await findUniqueSlug("qa", "My Question", {
       attempts: 4,
-      retrySuffix: (base) => `${base}-${Date.now().toString(36)}`,
+      // Mirrors qa.ts: a base36 timestamp with the attempt index folded in
+      // so same-millisecond retries still probe distinct candidates.
+      retrySuffix: (base, attempt) =>
+        `${base}-${Date.now().toString(36)}-${attempt}`,
       fallback: (base) => `${base}-random`,
     });
     expect(slugQueryMock).toHaveBeenCalledTimes(4);
-    // Retries 1-3 probed a timestamp suffix, not the counter default.
-    const [, secondCandidate] = slugQueryMock.mock.calls[1] as [
-      string,
-      string,
-    ];
-    expect(secondCandidate).toMatch(/^my-question-[0-9a-z]+$/);
-    expect(secondCandidate).not.toBe("my-question-1");
+    // Retries 1-3 probed a timestamp suffix, not the counter default, and
+    // each carried its distinct attempt index as a trailing segment.
+    const probed = slugQueryMock.mock.calls
+      .slice(1)
+      .map((call) => (call as [string, string])[1]);
+    expect(probed).toEqual([
+      expect.stringMatching(/^my-question-[0-9a-z]+-1$/),
+      expect.stringMatching(/^my-question-[0-9a-z]+-2$/),
+      expect.stringMatching(/^my-question-[0-9a-z]+-3$/),
+    ]);
+    expect(probed).not.toContain("my-question-1");
     expect(slug).toBe("my-question-random");
   });
 });

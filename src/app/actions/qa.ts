@@ -65,14 +65,17 @@ function localizeQaIssue(message: string): string | Promise<string> {
 
 // Resolve a free slug under /qa. Unlike the `-1`, `-2`, ... counter the
 // other content types retry with, collisions here append a base36
-// timestamp, so the loop stays short. Capped to keep it bounded; the
+// timestamp. The `attempt` index is folded in too so retries inside the
+// same millisecond still probe distinct candidates instead of re-querying
+// an identical timestamped slug. Capped to keep it bounded; the
 // pathological case (extremely fast same-ms collisions) falls back to a
 // fully random suffix so we never spin forever.
 function findFreeQaSlug(seed: string): Promise<string> {
   return findUniqueSlug("qa", seed, {
     prefix: "qa",
     attempts: 4,
-    retrySuffix: (slug) => `${slug}-${Date.now().toString(36)}`,
+    retrySuffix: (slug, attempt) =>
+      `${slug}-${Date.now().toString(36)}-${attempt}`,
     fallback: (slug) =>
       `${slug}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
   });
