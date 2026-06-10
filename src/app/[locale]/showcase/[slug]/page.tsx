@@ -9,8 +9,38 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getProjectBySlug } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const project = await getProjectBySlug(slug).catch(() => null);
+  if (!project || project.status !== "approved") return {};
+  // Project descriptions are plain text (not Markdown — see the body
+  // rendering below), so no stripMarkdown pass is needed here.
+  const description = truncate(project.description, 160);
+  const images = project.thumbnail ? [project.thumbnail.url] : undefined;
+  return {
+    title: project.title,
+    description,
+    openGraph: {
+      title: project.title,
+      description,
+      images,
+    },
+    twitter: {
+      card: project.thumbnail ? "summary_large_image" : "summary",
+      title: project.title,
+      description,
+      images,
+    },
+  };
+}
 
 export default async function ProjectDetailPage({
   params,

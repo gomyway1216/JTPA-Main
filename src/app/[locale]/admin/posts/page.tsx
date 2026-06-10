@@ -2,10 +2,12 @@ import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { PostStatusButton } from "@/app/[locale]/admin/posts/_components/PostStatusButton";
 import { PostReviewCard } from "@/app/[locale]/admin/posts/_components/PostReviewCard";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPostsByStatus } from "@/lib/data/posts";
+import { safeLoad } from "@/lib/data/safe-load";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type { PostDoc } from "@/lib/types";
@@ -44,28 +46,26 @@ export default async function AdminPostsPage() {
   // Surface the full review queue + the recently-published / rejected /
   // drafted lists. Drafts are visible to admins so they can nudge an
   // author who left something half-finished, but we don't auto-act on them.
-  const [pending, published, rejected, drafts, archived] = await Promise.all([
-    listPostsByStatus("pending", 50).catch((err) => {
-      console.error("Failed to list pending posts:", err);
-      return [];
-    }),
-    listPostsByStatus("published", 30).catch((err) => {
-      console.error("Failed to list published posts:", err);
-      return [];
-    }),
-    listPostsByStatus("rejected", 20).catch((err) => {
-      console.error("Failed to list rejected posts:", err);
-      return [];
-    }),
-    listPostsByStatus("draft", 20).catch((err) => {
-      console.error("Failed to list draft posts:", err);
-      return [];
-    }),
-    listPostsByStatus("archived", 20).catch((err) => {
-      console.error("Failed to list archived posts:", err);
-      return [];
-    }),
-  ]);
+  const [pendingRes, publishedRes, rejectedRes, draftsRes, archivedRes] =
+    await Promise.all([
+      safeLoad("pending posts", () => listPostsByStatus("pending", 50)),
+      safeLoad("published posts", () => listPostsByStatus("published", 30)),
+      safeLoad("rejected posts", () => listPostsByStatus("rejected", 20)),
+      safeLoad("draft posts", () => listPostsByStatus("draft", 20)),
+      safeLoad("archived posts", () => listPostsByStatus("archived", 20)),
+    ]);
+  const pending = pendingRes.ok ? pendingRes.data : [];
+  const published = publishedRes.ok ? publishedRes.data : [];
+  const rejected = rejectedRes.ok ? rejectedRes.data : [];
+  const drafts = draftsRes.ok ? draftsRes.data : [];
+  const archived = archivedRes.ok ? archivedRes.data : [];
+  const loadFailed = [
+    pendingRes,
+    publishedRes,
+    rejectedRes,
+    draftsRes,
+    archivedRes,
+  ].some((r) => !r.ok);
   // Single batched read covering every author across all four status
   // lists — keeps the admin queue render to one Firestore round-trip
   // for users regardless of post count.
@@ -83,6 +83,7 @@ export default async function AdminPostsPage() {
 
   return (
     <div className="space-y-8">
+      <LoadErrorBanner show={loadFailed} />
       <section>
         <h1 className="text-2xl font-bold">
           {t("titlePending", { count: pending.length })}

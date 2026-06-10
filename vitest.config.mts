@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig({
@@ -18,6 +18,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["__tests__/**/*.test.ts"],
+    // Security-rules tests need running Firebase emulators, so they are
+    // excluded from plain `npm test` and run via `npm run test:rules`
+    // (vitest.rules.config.mts) instead.
+    exclude: [...configDefaults.exclude, "__tests__/rules/**"],
     // Pin TZ so the ja-JP date/time formatters in src/lib/utils.ts produce
     // identical strings across local machines and CI. The app is JST-only
     // (Asia/Tokyo) and the formatters render JST regardless of host TZ, so

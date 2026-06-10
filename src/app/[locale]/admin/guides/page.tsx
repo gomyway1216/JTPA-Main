@@ -1,8 +1,10 @@
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { GuideReviewCard } from "@/app/[locale]/admin/guides/_components/GuideReviewCard";
 import { listGuides, listGuidesByStatus } from "@/lib/data/guides";
+import { safeLoad } from "@/lib/data/safe-load";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,8 @@ export const dynamic = "force-dynamic";
 // drafts / rejected. Failures on any individual section log + degrade
 // to an empty list so a missing composite index on (say) rejected guides
 // doesn't blank out the pending queue too — the same shape as
-// /admin/posts.
+// /admin/posts. A banner flags the partial failure so an empty section
+// isn't mistaken for "nothing here".
 export default async function AdminGuidesPage() {
   const [locale, t, common] = await Promise.all([
     getLocale(),
@@ -24,27 +27,28 @@ export default async function AdminGuidesPage() {
   // `order` field); listGuidesByStatus drives the per-state sections
   // (pending / rejected) where chronological updatedAt is the
   // appropriate sort.
-  const [pending, published, drafts, rejected] = await Promise.all([
-    listGuidesByStatus("pending", 50).catch((err) => {
-      console.error("Failed to list pending guides:", err);
-      return [];
-    }),
-    listGuides({ statuses: ["published"], limit: 200 }).catch((err) => {
-      console.error("Failed to list published guides:", err);
-      return [];
-    }),
-    listGuides({ statuses: ["draft"], limit: 100 }).catch((err) => {
-      console.error("Failed to list draft guides:", err);
-      return [];
-    }),
-    listGuidesByStatus("rejected", 20).catch((err) => {
-      console.error("Failed to list rejected guides:", err);
-      return [];
-    }),
-  ]);
+  const [pendingRes, publishedRes, draftsRes, rejectedRes] =
+    await Promise.all([
+      safeLoad("pending guides", () => listGuidesByStatus("pending", 50)),
+      safeLoad("published guides", () =>
+        listGuides({ statuses: ["published"], limit: 200 }),
+      ),
+      safeLoad("draft guides", () =>
+        listGuides({ statuses: ["draft"], limit: 100 }),
+      ),
+      safeLoad("rejected guides", () => listGuidesByStatus("rejected", 20)),
+    ]);
+  const pending = pendingRes.ok ? pendingRes.data : [];
+  const published = publishedRes.ok ? publishedRes.data : [];
+  const drafts = draftsRes.ok ? draftsRes.data : [];
+  const rejected = rejectedRes.ok ? rejectedRes.data : [];
+  const loadFailed = [pendingRes, publishedRes, draftsRes, rejectedRes].some(
+    (r) => !r.ok,
+  );
 
   return (
     <div className="space-y-8">
+      <LoadErrorBanner show={loadFailed} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link
