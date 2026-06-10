@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 //   - castPollVote runs per-option deltas + the voterCount inside one
 //     transaction so the denormalized counts never drift from ballots.
 // Mock runTransaction to run the callback against a hand-rolled tx whose
-// .get() shifts scripted snapshots (same pattern as likes.test.ts).
+// .get() returns scripted snapshots keyed by the ref tag (same dispatch
+// style as users.test.ts).
 
 const requireUserMock = vi.fn();
 const requireAdminMock = vi.fn();
@@ -27,17 +28,24 @@ const txSetMock = vi.fn();
 const txUpdateMock = vi.fn();
 const txDeleteMock = vi.fn();
 
-// tx.get() is called in source order (updateMyPoll: pollRef; castPollVote:
-// pollRef then voteRef). Tests push snapshot stubs here.
-let snapQueue: Array<{ exists: boolean; data?: () => unknown }> = [];
+// tx.get() dispatches on the ref tag, not call order: the poll ref carries
+// __pollId, the per-user vote ref carries __voteFor. castPollVote reads both
+// concurrently via Promise.all, so a shift-queue would couple the tests to
+// argument order; keying by ref keeps them order-independent (same pattern
+// as users.test.ts). Tests script these two snapshots per case.
+type TxSnap = { exists: boolean; data?: () => unknown };
+let pollTxSnap: TxSnap = { exists: false };
+let voteTxSnap: TxSnap = { exists: false };
 
 // Named impl so beforeEach can re-install it after vi.resetAllMocks().
 const runTransactionImpl = async (cb: (tx: unknown) => Promise<unknown>) => {
-  txGetMock.mockImplementation(async () => {
-    const next = snapQueue.shift();
-    if (!next) throw new Error("test bug: snapshot queue underflow");
-    return next;
-  });
+  txGetMock.mockImplementation(
+    async (ref: { __pollId?: string; __voteFor?: string }) => {
+      if (ref?.__pollId !== undefined) return pollTxSnap;
+      if (ref?.__voteFor !== undefined) return voteTxSnap;
+      throw new Error("test bug: unknown ref passed to tx.get");
+    },
+  );
   return await cb({
     get: txGetMock,
     set: txSetMock,
@@ -135,7 +143,8 @@ beforeEach(() => {
   addMock.mockResolvedValue({ id: "new-poll-id" });
   pollUpdateMock.mockResolvedValue(undefined);
   pollDeleteMock.mockResolvedValue(undefined);
-  snapQueue = [];
+  pollTxSnap = { exists: false };
+  voteTxSnap = { exists: false };
 });
 
 describe("submitPoll — validation + option hygiene", () => {
@@ -227,7 +236,7 @@ describe("updateMyPoll — ownership + option freeze", () => {
       }),
     };
     pollGetMock.mockResolvedValueOnce(doc);
-    snapQueue.push(doc);
+    pollTxSnap = doc;
     await expect(
       updateMyPoll("p1", {
         title: "New title?",
@@ -254,7 +263,7 @@ describe("updateMyPoll — ownership + option freeze", () => {
       }),
     };
     pollGetMock.mockResolvedValueOnce(doc);
-    snapQueue.push(doc);
+    pollTxSnap = doc;
     await expect(
       updateMyPoll("p1", {
         title: "T?",
@@ -310,7 +319,8 @@ describe("deleteMyPoll / setPollStatus", () => {
 
 describe("castPollVote — guards", () => {
   it("returns pollNotFound when the poll is gone", async () => {
-    snapQueue.push({ exists: false }, { exists: false });
+    pollTxSnap = { exists: false };
+    voteTxSnap = { exists: false };
     await expectError(
       castPollVote({ pollId: "p1", optionIds: ["a"] }),
       "見つかりません",
@@ -318,18 +328,16 @@ describe("castPollVote — guards", () => {
   });
 
   it("refuses votes on a closed (archived) poll", async () => {
-    snapQueue.push(
-      {
-        exists: true,
-        data: () => ({
-          slug: "s",
-          status: "archived",
-          voterCount: 1,
-          options: [{ id: "a", label: "A", voteCount: 1 }],
-        }),
-      },
-      { exists: false },
-    );
+    pollTxSnap = {
+      exists: true,
+      data: () => ({
+        slug: "s",
+        status: "archived",
+        voterCount: 1,
+        options: [{ id: "a", label: "A", voteCount: 1 }],
+      }),
+    };
+    voteTxSnap = { exists: false };
     await expectError(
       castPollVote({ pollId: "p1", optionIds: ["a"] }),
       "公開中",
@@ -339,18 +347,16 @@ describe("castPollVote — guards", () => {
   });
 
   it("rejects phantom option ids that aren't on the poll", async () => {
-    snapQueue.push(
-      {
-        exists: true,
-        data: () => ({
-          slug: "s",
-          status: "published",
-          voterCount: 0,
-          options: [{ id: "a", label: "A", voteCount: 0 }],
-        }),
-      },
-      { exists: false },
-    );
+    pollTxSnap = {
+      exists: true,
+      data: () => ({
+        slug: "s",
+        status: "published",
+        voterCount: 0,
+        options: [{ id: "a", label: "A", voteCount: 0 }],
+      }),
+    };
+    voteTxSnap = { exists: false };
     await expectError(
       castPollVote({ pollId: "p1", optionIds: ["zzz"] }),
       "不正な選択肢",
@@ -374,7 +380,8 @@ describe("castPollVote — ballot lifecycle", () => {
   });
 
   it("first ballot: writes the vote doc, +1 on the option and the voterCount", async () => {
-    snapQueue.push(pollDoc(0, [0, 0]), { exists: false });
+    pollTxSnap = pollDoc(0, [0, 0]);
+    voteTxSnap = { exists: false };
     const res = await castPollVote({ pollId: "p1", optionIds: ["a"] });
     expect(res.ok).toBe(true);
     if (res.ok) {
@@ -393,7 +400,8 @@ describe("castPollVote — ballot lifecycle", () => {
   });
 
   it("dedupes repeated ids in a multi-select payload (single +1)", async () => {
-    snapQueue.push(pollDoc(0, [0, 0]), { exists: false });
+    pollTxSnap = pollDoc(0, [0, 0]);
+    voteTxSnap = { exists: false };
     const res = await castPollVote({
       pollId: "p1",
       optionIds: ["a", "a", "b"],
@@ -407,10 +415,11 @@ describe("castPollVote — ballot lifecycle", () => {
   });
 
   it("changing a ballot moves the count without touching voterCount", async () => {
-    snapQueue.push(pollDoc(5, [3, 1]), {
+    pollTxSnap = pollDoc(5, [3, 1]);
+    voteTxSnap = {
       exists: true,
       data: () => ({ optionIds: ["a"], createdAt: { __fixed: "earlier" } }),
-    });
+    };
     const res = await castPollVote({ pollId: "p1", optionIds: ["b"] });
     expect(res.ok).toBe(true);
     if (res.ok) {
@@ -426,10 +435,11 @@ describe("castPollVote — ballot lifecycle", () => {
   });
 
   it("an empty selection un-votes: ballot deleted, counts decremented", async () => {
-    snapQueue.push(pollDoc(1, [1, 0]), {
+    pollTxSnap = pollDoc(1, [1, 0]);
+    voteTxSnap = {
       exists: true,
       data: () => ({ optionIds: ["a"], createdAt: { __fixed: "earlier" } }),
-    });
+    };
     const res = await castPollVote({ pollId: "p1", optionIds: [] });
     expect(res.ok).toBe(true);
     if (res.ok) {
@@ -444,10 +454,11 @@ describe("castPollVote — ballot lifecycle", () => {
   it("clamps counts at zero when a legacy doc would go negative", async () => {
     // Ballot says "a" but the option count is already 0 — the decrement
     // must not drive the counter (or voterCount) below zero.
-    snapQueue.push(pollDoc(0, [0, 0]), {
+    pollTxSnap = pollDoc(0, [0, 0]);
+    voteTxSnap = {
       exists: true,
       data: () => ({ optionIds: ["a"], createdAt: { __fixed: "earlier" } }),
-    });
+    };
     const res = await castPollVote({ pollId: "p1", optionIds: [] });
     expect(res.ok).toBe(true);
     if (res.ok) {
