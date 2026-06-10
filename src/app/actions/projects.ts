@@ -8,12 +8,16 @@ import {
   enqueueAdminNewProjectNotification,
   enqueueProjectDecisionNotification,
 } from "@/lib/notifications";
+import {
+  deleteStoragePaths,
+  findUniqueSlug,
+  parseInput,
+} from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
-import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { adminDb } from "@/lib/firebase/admin";
 import { routing } from "@/i18n/routing";
-import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
-import { slugify } from "@/lib/utils";
 import type { ProjectAsset, ProjectDoc } from "@/lib/types";
 
 // Pre-process empty strings to `undefined` so blank optional URL fields don't
@@ -60,49 +64,8 @@ export type ProjectReturnTo = "my" | "admin";
 // production (same reasoning as events.ts / users.ts, per PR #59).
 export type ProjectSaveResult = { ok: true } | { ok: false; error: string };
 
-type ParsedProjectInput =
-  | { ok: true; data: z.infer<typeof ProjectInputSchema> }
-  | { ok: false; error: string };
-
-async function parseProjectInput(input: ProjectFormInput): Promise<ParsedProjectInput> {
-  const result = ProjectInputSchema.safeParse(input);
-  if (result.success) return { ok: true, data: result.data };
-  return { ok: false, error: await inputError(result.error.issues) };
-}
-
-async function uniqueSlug(base: string, existingId?: string): Promise<string> {
-  const slug = slugify(base);
-  for (let i = 0; i < 20; i++) {
-    const candidate = i === 0 ? slug : `${slug}-${i}`;
-    const snap = await adminDb()
-      .collection("projects")
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (snap.empty || snap.docs[0].id === existingId) return candidate;
-  }
-  return `${slug}-${Date.now().toString(36)}`;
-}
-
 function projectReturnPath(returnTo: ProjectReturnTo, isAdmin: boolean): string {
   return returnTo === "admin" && isAdmin ? "/admin/projects" : "/my/projects";
-}
-
-// Best-effort Storage cleanup. Logged and swallowed so a single missing object
-// can't block a metadata write or a doc deletion.
-async function deleteStoragePaths(paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
-  const bucket = adminStorage().bucket();
-  await Promise.all(
-    paths.map((p) =>
-      bucket
-        .file(p)
-        .delete()
-        .catch((err) => {
-          console.warn("Failed to delete storage object:", p, err);
-        }),
-    ),
-  );
 }
 
 function diffAssetPaths(
@@ -124,11 +87,11 @@ export async function submitProject(
   input: ProjectFormInput,
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = await parseProjectInput(input);
+  const pr = await parseInput(ProjectInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const now = Timestamp.now();
-  const slug = await uniqueSlug(parsed.title);
+  const slug = await findUniqueSlug("projects", parsed.title);
 
   const ref = await adminDb().collection("projects").add({
     slug,
@@ -168,7 +131,7 @@ export async function updateMyProject(
   returnTo: ProjectReturnTo = "my",
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = await parseProjectInput(input);
+  const pr = await parseInput(ProjectInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("projects").doc(projectId);

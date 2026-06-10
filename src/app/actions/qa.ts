@@ -4,12 +4,12 @@ import { Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
+import { findUniqueSlug, parseInput } from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
-import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type { QaDoc, QaStatus } from "@/lib/types";
-import { slugify } from "@/lib/utils";
 
 // Same shape Firestore auto-ids use; QaForm pre-generates one via
 // `doc(collection(clientDb, "qa")).id` so it can upload images to
@@ -56,46 +56,31 @@ export type SetQaStatusInput = z.input<typeof StatusSchema>;
 // *return* on failure; setQaStatus returns { ok: true }.
 export type QaActionResult = { ok: true } | { ok: false; error: string };
 
-async function parseOrError<T extends z.ZodTypeAny>(
-  schema: T,
-  input: z.input<T>,
-): Promise<{ ok: true; data: z.infer<T> } | { ok: false; error: string }> {
-  const result = schema.safeParse(input);
-  if (result.success) return { ok: true, data: result.data };
-  const issues = await Promise.all(
-    result.error.issues.map(async (issue) => ({
-      path: issue.path,
-      message:
-        issue.message === QA_INVALID_ID
-          ? await actionError("qaInvalidId")
-          : issue.message,
-    })),
-  );
-  return { ok: false, error: await inputError(issues) };
+// `parseInput` issue mapper: the id regex above attaches the literal
+// `qaInvalidId` sentinel as its message — swap it for the localized error
+// before the issues are formatted.
+function localizeQaIssue(message: string): string | Promise<string> {
+  return message === QA_INVALID_ID ? actionError("qaInvalidId") : message;
 }
 
-// Resolve a free slug under /qa. Mirrors the pattern in
-// `src/app/actions/events.ts` — try a base slug, then append a base36
-// timestamp if it's already taken. Capped to keep the loop bounded.
-async function findFreeQaSlug(seed: string): Promise<string> {
-  const base = slugify(seed, "qa");
-  for (let attempt = 0; attempt < 4; attempt++) {
-    const candidate = attempt === 0 ? base : `${base}-${Date.now().toString(36)}`;
-    const snap = await adminDb()
-      .collection("qa")
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (snap.empty) return candidate;
-  }
-  // Pathological case (extremely fast same-ms collisions); fall back to
-  // a fully random suffix so we never spin forever.
-  return `${base}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+// Resolve a free slug under /qa. Unlike the `-1`, `-2`, ... counter the
+// other content types retry with, collisions here append a base36
+// timestamp, so the loop stays short. Capped to keep it bounded; the
+// pathological case (extremely fast same-ms collisions) falls back to a
+// fully random suffix so we never spin forever.
+function findFreeQaSlug(seed: string): Promise<string> {
+  return findUniqueSlug("qa", seed, {
+    prefix: "qa",
+    attempts: 4,
+    retrySuffix: (slug) => `${slug}-${Date.now().toString(36)}`,
+    fallback: (slug) =>
+      `${slug}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+  });
 }
 
 export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
   const user = await requireUser();
-  const pr = await parseOrError(QaFormSchema, input);
+  const pr = await parseInput(QaFormSchema, input, localizeQaIssue);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -153,7 +138,7 @@ export async function updateMyQa(
   input: QaFormInput,
 ): Promise<QaActionResult> {
   const user = await requireUser();
-  const pr = await parseOrError(QaFormSchema, input);
+  const pr = await parseInput(QaFormSchema, input, localizeQaIssue);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -216,7 +201,7 @@ export async function setQaStatus(
   input: SetQaStatusInput,
 ): Promise<QaActionResult> {
   await requireAdmin();
-  const pr = await parseOrError(StatusSchema, input);
+  const pr = await parseInput(StatusSchema, input, localizeQaIssue);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 

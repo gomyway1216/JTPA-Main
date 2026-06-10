@@ -4,9 +4,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
+import { parseInput } from "@/lib/actions/shared";
 import { requireAdmin } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
-import { inputError } from "@/lib/i18n/action-errors";
 import { SITE_PAGE_SLUGS } from "@/lib/data/site-pages";
 
 const SitePageInputSchema = z.object({
@@ -17,13 +17,18 @@ const SitePageInputSchema = z.object({
 
 export type SitePageFormInput = z.input<typeof SitePageInputSchema>;
 
-export async function saveSitePage(input: SitePageFormInput): Promise<void> {
+// Returning the error rather than throwing it is what lets the real message
+// reach the admin — Next masks thrown Server Action errors as a generic
+// digest in production (same reasoning as posts.ts / events.ts, per PR #59).
+export type SitePageSaveResult = { ok: true } | { ok: false; error: string };
+
+export async function saveSitePage(
+  input: SitePageFormInput,
+): Promise<SitePageSaveResult> {
   const user = await requireAdmin();
-  const result = SitePageInputSchema.safeParse(input);
-  if (!result.success) {
-    throw new Error(await inputError(result.error.issues));
-  }
-  const parsed = result.data;
+  const pr = await parseInput(SitePageInputSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
 
   await adminDb()
     .collection("sitePages")
@@ -48,4 +53,5 @@ export async function saveSitePage(input: SitePageFormInput): Promise<void> {
   // edit page so the next visit shows the just-saved value.
   revalidatePath(`/${parsed.slug}`);
   revalidatePath(`/admin/${parsed.slug}`);
+  return { ok: true };
 }

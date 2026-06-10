@@ -4,13 +4,14 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
-import { requireAdmin } from "@/lib/auth/session";
-import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import {
-  actionError,
-  defaultActionError,
-  inputError,
-} from "@/lib/i18n/action-errors";
+  deleteStoragePaths,
+  findUniqueSlug,
+  parseInput,
+} from "@/lib/actions/shared";
+import { requireAdmin } from "@/lib/auth/session";
+import { adminDb } from "@/lib/firebase/admin";
+import { actionError, defaultActionError } from "@/lib/i18n/action-errors";
 import {
   DEFAULT_CHECKIN_EARLY_MINUTES,
   DEFAULT_CHECKIN_LATE_MINUTES,
@@ -39,21 +40,6 @@ const CheckInWindowMinutesSchema = z.coerce
   .int()
   .min(0)
   .max(MAX_CHECKIN_WINDOW_MINUTES);
-
-async function deleteStoragePaths(paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
-  const bucket = adminStorage().bucket();
-  await Promise.all(
-    paths.map((p) =>
-      bucket
-        .file(p)
-        .delete()
-        .catch((err) => {
-          console.warn("Failed to delete storage object:", p, err);
-        }),
-    ),
-  );
-}
 
 // Pre-process empty strings on optional URL/slug fields into `undefined` so the
 // validator doesn't reject a blank form field as a length/regex violation.
@@ -91,23 +77,11 @@ export type EventFormInput = z.input<typeof EventInputSchema>;
 // reasoning as users.ts / presentations.ts, per PR #59).
 export type EventSaveResult = { ok: true } | { ok: false; error: string };
 
-type ParsedEventInput =
-  | { ok: true; data: z.infer<typeof EventInputSchema> }
-  | { ok: false; error: string };
-
-async function parseEventInput(input: EventFormInput): Promise<ParsedEventInput> {
-  const result = EventInputSchema.safeParse(input);
-  if (result.success) return { ok: true, data: result.data };
-  // Readable error so the admin sees which field failed instead of the
-  // generic Server Component crash.
-  return { ok: false, error: await inputError(result.error.issues) };
-}
-
 export async function createEvent(
   input: EventFormInput,
 ): Promise<EventSaveResult> {
   const admin = await requireAdmin();
-  const pr = await parseEventInput(input);
+  const pr = await parseInput(EventInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
 
@@ -164,7 +138,7 @@ export async function updateEvent(
   input: EventFormInput,
 ): Promise<EventSaveResult> {
   await requireAdmin();
-  const pr = await parseEventInput(input);
+  const pr = await parseInput(EventInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("events").doc(eventId);
@@ -265,24 +239,6 @@ export async function deleteEvent(eventId: string): Promise<void> {
   return redirectToLocalizedPath("/admin/events");
 }
 
-// Try the base slug first, then append `-1`, `-2`, ... until we find one
-// that's free. Returns a base36-timestamp fallback if we hit 20 collisions.
-// Mirrors the helper in `src/app/actions/projects.ts` (kept inline so this
-// file doesn't reach across module boundaries for a 12-line utility).
-async function findFreeSlug(base: string): Promise<string> {
-  const seed = slugify(base);
-  for (let i = 0; i < 20; i++) {
-    const candidate = i === 0 ? seed : `${seed}-${i}`;
-    const snap = await adminDb()
-      .collection("events")
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (snap.empty) return candidate;
-  }
-  return `${seed}-${Date.now().toString(36)}`;
-}
-
 export async function cloneEvent(
   originalId: string,
 ): Promise<EventSaveResult> {
@@ -330,7 +286,7 @@ export async function cloneEvent(
   // title that does not slugify cleanly carries the original's clean
   // English slug forward as `jtpa-salon-32-1`, instead of collapsing into
   // a generic timestamp via slugify of the title.
-  const slug = await findFreeSlug(src.slug || src.title);
+  const slug = await findUniqueSlug("events", src.slug || src.title);
 
   const now = Timestamp.now();
   // Subcollections (rsvps, presentations) are NOT copied — they belong to
