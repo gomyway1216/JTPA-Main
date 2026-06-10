@@ -3,9 +3,9 @@ import type { MetadataRoute } from "next";
 import { routing } from "@/i18n/routing";
 import { siteBaseUrl } from "@/lib/site";
 
-// Force per-request generation so NEXT_PUBLIC_SITE_URL is read at runtime
-// (the CI build runs with placeholder envs that would otherwise be baked
-// into a build-time-cached robots.txt). Matches sitemap.ts.
+// Force per-request generation so the server-only SITE_URL (see
+// siteBaseUrl) is read at runtime rather than baked into a build-time-cached
+// robots.txt. Matches sitemap.ts.
 export const dynamic = "force-dynamic";
 
 // Login-gated surfaces that should never be crawled. Every page route

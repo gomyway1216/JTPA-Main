@@ -12,8 +12,9 @@ import { toDate } from "@/lib/utils";
 
 // Metadata routes are cached at build time by default. Force per-request
 // generation — matching the app-wide force-dynamic convention — so newly
-// published content appears without a redeploy, and so the CI build (which
-// runs with placeholder Firebase env vars) never attempts a Firestore query.
+// published content appears without a redeploy, so the server-only SITE_URL
+// (see siteBaseUrl) is read at runtime, and so the CI build (which runs with
+// placeholder Firebase env vars) never attempts a Firestore query.
 export const dynamic = "force-dynamic";
 
 // Public, always-present landing/listing pages. Detail URLs for blog /
