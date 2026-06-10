@@ -221,6 +221,14 @@ export async function loadMoreComments(
     parsed.parentId,
     { cursor: parsed.cursor },
   );
+  // An empty page is possible when every doc after the cursor was
+  // hard-deleted between page fetches. `nextCursor` still comes from the
+  // raw overfetch in `listComments`, so paging keeps advancing correctly;
+  // we just skip the companion lookups (which would otherwise do a stray
+  // record-like BatchGet for no comments) and return empty companion data.
+  if (comments.length === 0) {
+    return { ok: true, comments, nextCursor, likedKeys: [], profiles: {} };
+  }
   const [likedKeys, profiles] = await Promise.all([
     getMyLikesForParent({
       parentType: parsed.parentType,

@@ -401,6 +401,12 @@ describe("loadMoreComments — visibility (mirrors the detail pages)", () => {
       exists: true,
       data: () => ({ status: "published", slug: "x" }),
     });
+    // A non-empty page so the companion lookups actually run (an empty
+    // page short-circuits them — covered separately below).
+    listCommentsMock.mockResolvedValue({
+      comments: [{ id: "c1", authorUid: "a1" }],
+      nextCursor: null,
+    });
     const res = await loadMoreComments({
       parentType: "post",
       parentId: "p1",
@@ -551,6 +557,38 @@ describe("loadMoreComments — page passthrough", () => {
       expect(res.likedKeys).toEqual(["comment:c51"]);
       // Map → plain object so it survives the Server Action boundary.
       expect(res.profiles).toEqual({ "author-9": profile });
+    }
+  });
+
+  it("short-circuits the companion lookups when the page comes back empty", async () => {
+    // Every doc after the cursor was hard-deleted between fetches, so the
+    // page is empty. We still surface the (possibly non-null) nextCursor
+    // from listComments so paging keeps advancing, but skip the like /
+    // profile reads — there are no comments to look them up for.
+    getSessionUserMock.mockResolvedValue(sessionUser({ uid: "viewer" }));
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ status: "published", slug: "x" }),
+    });
+    listCommentsMock.mockResolvedValue({
+      comments: [],
+      nextCursor: "CURSOR-NEXT",
+    });
+
+    const res = await loadMoreComments({
+      parentType: "post",
+      parentId: "p1",
+      cursor: "CURSOR-1",
+    });
+
+    expect(getMyLikesForParentMock).not.toHaveBeenCalled();
+    expect(getPublicProfilesByUidsMock).not.toHaveBeenCalled();
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.comments).toEqual([]);
+      expect(res.nextCursor).toBe("CURSOR-NEXT");
+      expect(res.likedKeys).toEqual([]);
+      expect(res.profiles).toEqual({});
     }
   });
 });

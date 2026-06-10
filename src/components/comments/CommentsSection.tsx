@@ -81,11 +81,16 @@ export function CommentsSection({
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialNextCursor,
   );
-  // Liked keys + profiles start from the server-prefetched page-one data
-  // and grow as later pages arrive via loadMoreComments.
-  const [likedKeys, setLikedKeys] = useState<string[]>(initialLikedKeys);
-  const [profiles, setProfiles] =
-    useState<Record<string, PublicProfile>>(profilesByUid);
+  // Liked keys + profiles loaded incrementally as later pages arrive via
+  // loadMoreComments. These hold *only* the extra pages — page one's
+  // companion data stays on the props (`initialLikedKeys`/`profilesByUid`)
+  // so a `router.refresh()` that reconciles server truth (post-like,
+  // post-delete, auth change) is always reflected. The lookups below merge
+  // props with these, preferring the fresher server props.
+  const [extraLikedKeys, setExtraLikedKeys] = useState<string[]>([]);
+  const [extraProfiles, setExtraProfiles] = useState<
+    Record<string, PublicProfile>
+  >({});
   const [body, setBody] = useState("");
   // null = top-level comment form. String = inline reply form targeting
   // that comment id. Only one inline reply form is visible at a time.
@@ -104,7 +109,22 @@ export function CommentsSection({
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
-  const likedSet = useMemo(() => new Set(likedKeys), [likedKeys]);
+  // Server-prefetched page-one keys plus the keys later pages added. The
+  // prop is listed first so a refreshed `initialLikedKeys` is always part
+  // of the set; membership is a union, so extra-page keys still count.
+  const likedSet = useMemo(
+    () => new Set([...initialLikedKeys, ...extraLikedKeys]),
+    [initialLikedKeys, extraLikedKeys],
+  );
+
+  // Profile lookup merging page-one props with later-page data. Spread the
+  // prop last so a `router.refresh()` that returns newer profile data wins
+  // over a stale extra-page copy; extra-page-only authors (uids the server
+  // never prefetched for page one) still resolve from `extraProfiles`.
+  const profiles = useMemo(
+    () => ({ ...extraProfiles, ...profilesByUid }),
+    [extraProfiles, profilesByUid],
+  );
 
   // Comment lookup by id so a reply can show "Re: @author" pointing at
   // the parent even if it's older / off-screen.
@@ -213,8 +233,8 @@ export function CommentsSection({
             ...res.comments.filter((c) => !seen.has(c.id)),
           ].sort(byThreadOrder);
         });
-        setLikedKeys((cur) => [...new Set([...cur, ...res.likedKeys])]);
-        setProfiles((cur) => ({ ...cur, ...res.profiles }));
+        setExtraLikedKeys((cur) => [...new Set([...cur, ...res.likedKeys])]);
+        setExtraProfiles((cur) => ({ ...cur, ...res.profiles }));
         setNextCursor(res.nextCursor);
       } catch (err) {
         setLoadMoreError(
