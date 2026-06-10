@@ -501,6 +501,15 @@
     "avatarAlt": "Icon for @{username}",
     "eventAttendanceCount": "Event attendance",
     "eventAttendanceCountValue": "{count, plural, =0 {0 events} =1 {# event} other {# events}}",
+    "contributions": "Contributions",
+    "contributionType": {
+      "posts": "Blog posts",
+      "projects": "Projects",
+      "qa": "Q&A",
+      "polls": "Polls",
+      "guides": "Guides",
+      "total": "Total"
+    },
     "emptyBio": "This user has not published a bio yet."
   },
   "UserLinks": {
