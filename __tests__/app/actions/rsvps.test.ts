@@ -274,6 +274,33 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
     if (res.ok) expect(res.rsvp.status).toBe("confirmed");
     expect(updateTo("event")).toMatchObject({ rsvpCount: { __inc: 1 } });
   });
+
+  it("a re-RSVP after cancellation gets a FRESH createdAt (no waitlist jump)", async () => {
+    // Fairness regression: the waitlist is FIFO by `createdAt asc`. A user
+    // who cancelled and re-registers is NOT an existing RSVP, so they must
+    // get a brand-new `now` timestamp and go to the BACK of the queue —
+    // reusing the old (earlier) createdAt would let them cut ahead of
+    // everyone who signed up while they were gone. Land them on the
+    // waitlist (full house) so the queue ordering actually matters.
+    eventSnap = snap(eventData({ capacity: 10, rsvpCount: 10 }));
+    rsvpSnap = snap({
+      status: "cancelled",
+      role: "attendee",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(rsvpInput());
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.rsvp.status).toBe("waitlist");
+    const [, doc] = txSetMock.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    // The persisted doc must carry the fresh `now`, NOT the stale prior
+    // createdAt — this assertion fails against the pre-fix code, which used
+    // `prior?.createdAt ?? now` and preserved { __fixed: "created" }.
+    expect(doc.createdAt).toEqual({ __fixed: "now" });
+    expect(doc.createdAt).not.toEqual({ __fixed: "created" });
+  });
 });
 
 describe("submitRsvp — editing an existing RSVP", () => {

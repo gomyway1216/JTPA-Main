@@ -114,7 +114,13 @@ export async function submitRsvp(
       // with the fields absent.
       attendedAt: prior?.attendedAt,
       isGuest: prior?.isGuest,
-      createdAt: prior?.createdAt ?? now,
+      // Keep the original queue position only for a true edit of a live
+      // (confirmed/waitlist) RSVP. A re-registration after cancellation is
+      // NOT existing, so it gets a fresh `now`: the waitlist is FIFO by
+      // `createdAt asc`, and reusing the old (earlier) timestamp would let a
+      // re-registering user jump ahead of everyone who signed up in the
+      // meantime. (When isExisting is true, `prior` is non-null.)
+      createdAt: isExisting && prior ? (prior.createdAt ?? now) : now,
       updatedAt: now,
     };
 
