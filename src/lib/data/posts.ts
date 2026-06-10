@@ -1,11 +1,13 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { PostDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { PostDoc, PostStatus } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): PostDoc {
-  const data = doc.data() as Omit<PostDoc, "id">;
+function toDoc(doc: SnapLike): PostDoc {
+  const data = fromSnap<Omit<PostDoc, "id">>(doc, PostDocSchema, "posts");
   return plainify({ ...data, id: doc.id });
 }
 
@@ -16,7 +18,7 @@ export async function listPublishedPosts(limit = 50): Promise<PostDoc[]> {
     .orderBy("publishedAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listPostsByStatus(
@@ -29,7 +31,7 @@ export async function listPostsByStatus(
     .orderBy("updatedAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listMyPosts(uid: string): Promise<PostDoc[]> {
@@ -38,7 +40,7 @@ export async function listMyPosts(uid: string): Promise<PostDoc[]> {
     .where("authorUid", "==", uid)
     .orderBy("updatedAt", "desc")
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getPostBySlug(slug: string): Promise<PostDoc | null> {
@@ -48,11 +50,11 @@ export async function getPostBySlug(slug: string): Promise<PostDoc | null> {
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }
 
 export async function getPostById(id: string): Promise<PostDoc | null> {
   const snap = await adminDb().collection("posts").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({ ...(snap.data() as Omit<PostDoc, "id">), id: snap.id });
+  return toDoc(snap);
 }

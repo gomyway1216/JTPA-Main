@@ -1,11 +1,13 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { QaDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { QaDoc, QaStatus } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): QaDoc {
-  const data = doc.data() as Omit<QaDoc, "id">;
+function toDoc(doc: SnapLike): QaDoc {
+  const data = fromSnap<Omit<QaDoc, "id">>(doc, QaDocSchema, "qa");
   return plainify({
     // Default the optional `likeCount` so the type matches the runtime
     // even on docs created before the field existed.
@@ -29,7 +31,7 @@ export async function listQa(
     .orderBy("createdAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listMyQa(uid: string): Promise<QaDoc[]> {
@@ -41,17 +43,13 @@ export async function listMyQa(uid: string): Promise<QaDoc[]> {
     .orderBy("updatedAt", "desc")
     .limit(100)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getQaById(id: string): Promise<QaDoc | null> {
   const snap = await adminDb().collection("qa").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({
-    likeCount: 0,
-    ...(snap.data() as Omit<QaDoc, "id">),
-    id: snap.id,
-  });
+  return toDoc(snap);
 }
 
 export async function getQaBySlug(slug: string): Promise<QaDoc | null> {
@@ -61,5 +59,5 @@ export async function getQaBySlug(slug: string): Promise<QaDoc | null> {
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }

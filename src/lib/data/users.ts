@@ -6,6 +6,8 @@ import { adminDb } from "@/lib/firebase/admin";
 import type { UserLinks, UserProfile } from "@/lib/types";
 import { defaultUsernameFor } from "@/lib/users-shared";
 
+import { fromSnap } from "./from-snap";
+import { UserProfileSchema } from "./schemas";
 import { plainify } from "./serialize";
 
 // Read the full users/{uid} Firestore doc. `SessionUser` (decoded session
@@ -20,7 +22,7 @@ export async function getMyProfile(uid: string): Promise<UserProfile | null> {
   const snap = await adminDb().collection("users").doc(uid).get();
   if (!snap.exists) return null;
   // `plainify` so Admin SDK Timestamps survive the Server→Client boundary.
-  return plainify(snap.data() as UserProfile);
+  return plainify(fromSnap<UserProfile>(snap, UserProfileSchema, "users"));
 }
 
 // Resolve just the custom-avatar URL for a user. Used by the root layout
@@ -39,7 +41,7 @@ export const getMyAvatarUrl = cache(
     try {
       const snap = await adminDb().collection("users").doc(uid).get();
       if (!snap.exists) return null;
-      const data = snap.data() as UserProfile;
+      const data = fromSnap<UserProfile>(snap, UserProfileSchema, "users");
       return data.avatar?.url ?? null;
     } catch (err) {
       console.error("getMyAvatarUrl failed:", err);
@@ -150,7 +152,9 @@ export const getPublicProfile = cache(
   async (uid: string): Promise<PublicProfile | null> => {
     const snap = await adminDb().collection("users").doc(uid).get();
     if (!snap.exists) return null;
-    return projectPublicProfile(snap.data() as UserProfile);
+    return projectPublicProfile(
+      fromSnap<UserProfile>(snap, UserProfileSchema, "users"),
+    );
   },
 );
 
@@ -179,7 +183,12 @@ const _getPublicProfilesByKey = cache(
     for (let i = 0; i < snaps.length; i++) {
       const snap = snaps[i];
       if (!snap.exists) continue;
-      out.set(unique[i], projectPublicProfile(snap.data() as UserProfile));
+      out.set(
+        unique[i],
+        projectPublicProfile(
+          fromSnap<UserProfile>(snap, UserProfileSchema, "users"),
+        ),
+      );
     }
     return out;
   },
