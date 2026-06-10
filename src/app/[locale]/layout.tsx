@@ -13,6 +13,7 @@ import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/theme/ThemeProvid
 import { routing } from "@/i18n/routing";
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyAvatarUrl } from "@/lib/data/users";
+import { siteBaseUrl } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,10 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "Common" });
 
   return {
+    // Set once here (this is the root layout) so URL-based metadata fields
+    // below this segment — og:image, alternates, etc. — can use relative
+    // paths and still resolve to absolute URLs in the rendered tags.
+    metadataBase: new URL(siteBaseUrl()),
     title: t("siteTitle"),
     description: t("siteDescription"),
   };
