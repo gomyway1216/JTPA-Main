@@ -989,7 +989,8 @@
       "uploadFailed": "Upload failed",
       "imageType": "Choose PNG, JPEG, WebP, or GIF",
       "imageTooLarge": "Image must be {size}MB or smaller",
-      "saved": "✓ Saved"
+      "saved": "✓ Saved",
+      "loadError": "Some data failed to load. Try reloading."
     },
     "dashboard": {
       "title": "Admin dashboard",

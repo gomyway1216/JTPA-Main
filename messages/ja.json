@@ -989,7 +989,8 @@
       "uploadFailed": "アップロード失敗",
       "imageType": "PNG / JPEG / WebP / GIF のいずれかを選択してください",
       "imageTooLarge": "画像サイズは {size}MB 以下にしてください",
-      "saved": "✓ 保存しました"
+      "saved": "✓ 保存しました",
+      "loadError": "一部のデータを読み込めませんでした。再読み込みしてください。"
     },
     "dashboard": {
       "title": "管理ダッシュボード",

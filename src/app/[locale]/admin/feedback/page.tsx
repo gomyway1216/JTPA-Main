@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import Link from "@/i18n/navigation";
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { FeedbackList } from "@/app/[locale]/admin/feedback/_components/FeedbackList";
 import { getSessionUser } from "@/lib/auth/session";
 import { listFeedback } from "@/lib/data/feedback";
+import { safeLoad } from "@/lib/data/safe-load";
 import {
   redirectToLocalizedPath,
   redirectToLoginPath,
@@ -46,16 +48,22 @@ export default async function AdminFeedbackPage({
   // client component has the docs available without a re-fetch when
   // the user flips the filter. Triggered list-side filtering keeps the
   // network behavior single-shot.
-  const { entries, nextCursor } = await listFeedback({
-    statuses: ["new", "read", "resolved", "archived"],
-    cursor: cursor ?? null,
-  }).catch((err) => {
-    console.error("Failed to list feedback:", err);
-    return { entries: [], nextCursor: null };
-  });
+  const entriesRes = await safeLoad("feedback", () =>
+    listFeedback({
+      statuses: ["new", "read", "resolved", "archived"],
+      cursor: cursor ?? null,
+    }),
+  );
+  // On a failed read, degrade to an empty page with no next cursor; the
+  // banner below surfaces the failure (so empty-because-error stays
+  // distinguishable from empty-because-no-data).
+  const { entries, nextCursor } = entriesRes.ok
+    ? entriesRes.data
+    : { entries: [], nextCursor: null };
 
   return (
     <div className="space-y-6">
+      <LoadErrorBanner show={!entriesRes.ok} />
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-500">

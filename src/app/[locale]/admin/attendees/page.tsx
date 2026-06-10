@@ -1,8 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
+import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
@@ -48,19 +50,27 @@ export default async function AdminAttendeesPage({
   ]);
 
   const { eventId } = await searchParams;
-  const events = await listEvents({
-    statuses: ["draft", "published", "past"],
-    limit: 50,
-  }).catch(() => []);
+  const eventsRes = await safeLoad("events", () =>
+    listEvents({
+      statuses: ["draft", "published", "past"],
+      limit: 50,
+    }),
+  );
+  const events = eventsRes.ok ? eventsRes.data : [];
   const selectedId = eventId || events[0]?.id;
   const selectedEvent = events.find((e) => e.id === selectedId);
   const surveyFields = selectedEvent?.surveyFields ?? [];
-  const rsvps = selectedId
-    ? await listRsvps(selectedId).catch(() => [])
-    : [];
+  // `null` when no event is selected — that's "nothing to load", not a
+  // failure, so it must not trip the banner.
+  const rsvpsRes = selectedId
+    ? await safeLoad("RSVPs", () => listRsvps(selectedId))
+    : null;
+  const rsvps = rsvpsRes?.ok ? rsvpsRes.data : [];
+  const loadFailed = !eventsRes.ok || rsvpsRes?.ok === false;
 
   return (
     <div className="space-y-6">
+      <LoadErrorBanner show={loadFailed} />
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <form method="get" className="flex items-center gap-2">

@@ -1,9 +1,11 @@
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { CloneEventButton } from "@/app/[locale]/admin/events/_components/CloneEventButton";
 import { getSessionUser } from "@/lib/auth/session";
 import { listEvents } from "@/lib/data/events";
+import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
 
@@ -18,13 +20,17 @@ export default async function AdminEventsPage() {
     getTranslations("Admin.common"),
   ]);
 
-  const events = await listEvents({
-    statuses: ["draft", "published", "past", "cancelled"],
-    limit: 100,
-  }).catch(() => []);
+  const eventsRes = await safeLoad("events", () =>
+    listEvents({
+      statuses: ["draft", "published", "past", "cancelled"],
+      limit: 100,
+    }),
+  );
+  const events = eventsRes.ok ? eventsRes.data : [];
 
   return (
     <div className="space-y-4">
+      <LoadErrorBanner show={!eventsRes.ok} />
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Link

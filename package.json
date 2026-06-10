@@ -10,6 +10,7 @@
     "check:i18n": "node scripts/check-i18n.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:rules": "firebase emulators:exec --only firestore,storage --project demo-jtpa \"vitest run --config vitest.rules.config.mts\"",
     "test:watch": "vitest",
     "set-admin": "node scripts/set-admin.mjs",
     "set-editor": "node scripts/set-editor.mjs",
@@ -36,6 +37,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -43,9 +45,15 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "firebase-tools": "13.35.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^4.1.8"
+  },
+  "overrides": {
+    "firebase-tools": {
+      "universal-analytics": "0.5.3"
+    }
   }
 }

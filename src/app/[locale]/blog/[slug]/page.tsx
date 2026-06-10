@@ -5,13 +5,14 @@ import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPostBySlug } from "@/lib/data/posts";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { formatDate } from "@/lib/utils";
+import { formatDate, toDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,21 @@ export default async function BlogPostPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
+      {/* schema.org/BlogPosting structured data. `undefined` fields
+          (missing publish date / cover) are dropped by JSON.stringify
+          inside JsonLd, and toISOString() emits ISO 8601 UTC. */}
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "BlogPosting",
+          headline: post.title,
+          description: post.excerpt,
+          datePublished: toDate(post.publishedAt)?.toISOString(),
+          author: { "@type": "Person", name: post.authorName },
+          image: post.coverImage ? [post.coverImage.url] : undefined,
+        }}
+      />
+
       <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
         {t("back")}
       </Link>

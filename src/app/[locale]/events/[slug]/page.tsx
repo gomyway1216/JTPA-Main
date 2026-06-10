@@ -5,15 +5,98 @@ import { notFound, redirect } from "next/navigation";
 import { PresentationSection } from "@/app/[locale]/events/[slug]/PresentationSection";
 import { RsvpSection } from "@/app/[locale]/events/[slug]/RsvpSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
-import { loginHref, loginPath } from "@/i18n/paths";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { localizedPath, loginHref, loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
-import { formatDateTime, isEventEnded } from "@/lib/utils";
+import { siteBaseUrl } from "@/lib/site";
+import type { EventDoc } from "@/lib/types";
+import {
+  formatDateTime,
+  isEventEnded,
+  stripMarkdown,
+  toDate,
+  truncate,
+} from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const event = await getEventBySlug(slug).catch(() => null);
+  // Mirror the page's own gating (`if (!event) notFound()`): any status the
+  // page renders gets metadata. Members-only events are safe to describe
+  // here — the page redirects anonymous visitors before a <head> is ever
+  // sent, so crawlers/unfurlers only see the login redirect.
+  if (!event) return {};
+  const description = truncate(stripMarkdown(event.description), 160);
+  const images = event.coverImage ? [event.coverImage.url] : undefined;
+  return {
+    title: event.title,
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      images,
+    },
+    twitter: {
+      card: event.coverImage ? "summary_large_image" : "summary",
+      title: event.title,
+      description,
+      images,
+    },
+  };
+}
+
+// schema.org/Event structured data. The location maps from our LocationType:
+// offline → Place, online → VirtualLocation, hybrid → both. VirtualLocation
+// deliberately points at the event page (not `location.meetingUrl`) — the
+// meeting link is only ever delivered to confirmed attendees and must not
+// leak into crawlable markup.
+function eventJsonLd(event: EventDoc, eventUrl: string) {
+  const place = event.location.address
+    ? { "@type": "Place", address: event.location.address }
+    : null;
+  const virtual =
+    event.location.type !== "offline"
+      ? { "@type": "VirtualLocation", url: eventUrl }
+      : null;
+  const locations = [
+    ...(event.location.type !== "online" && place ? [place] : []),
+    ...(virtual ? [virtual] : []),
+  ];
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: truncate(stripMarkdown(event.description), 160),
+    // toDate() handles the serialized Timestamp shape; toISOString() emits
+    // ISO 8601 in UTC (trailing `Z`), which satisfies the "with timezone"
+    // requirement for Event rich results.
+    startDate: toDate(event.startAt)?.toISOString(),
+    endDate: toDate(event.endAt)?.toISOString(),
+    location:
+      locations.length === 0
+        ? undefined
+        : locations.length === 1
+          ? locations[0]
+          : locations,
+    image: event.coverImage ? [event.coverImage.url] : undefined,
+    url: eventUrl,
+    organizer: {
+      "@type": "Organization",
+      name: "JTPA",
+      url: siteBaseUrl(),
+    },
+  };
+}
 
 export default async function EventDetailPage({
   params,
@@ -54,6 +137,13 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
+      <JsonLd
+        data={eventJsonLd(
+          event,
+          `${siteBaseUrl()}${localizedPath(`/events/${event.slug}`, locale)}`,
+        )}
+      />
+
       {event.coverImage?.url && (
         // aspect-[21/9] keeps the hero a cinematic-ish banner regardless of
         // the source aspect ratio — without this, a portrait upload would

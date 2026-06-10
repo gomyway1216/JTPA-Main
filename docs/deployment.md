@@ -53,6 +53,14 @@ Stabilizes the encryption Next.js uses for Server Action references so a form op
 - Pick the most restrictive visibility scope ("Server only" / "Backend only") so the value is excluded from the client bundle even if a `NEXT_PUBLIC_*` regression sneaks in
 - Rotate manually when you want to invalidate every in-flight action (rare — old forms then show the same error until reload, which is the trade-off)
 
+### `SITE_URL`
+
+Canonical public origin used to build absolute URLs for SEO surfaces — `metadataBase`, `sitemap.xml`, `robots.txt`, and JSON-LD (see `src/lib/site.ts`). Set it to the apex domain, e.g. `https://bayarea-ai.com`.
+
+- Prefer this over `NEXT_PUBLIC_SITE_URL`: Next.js inlines `NEXT_PUBLIC_*` at `next build` time (on the server too), so a build-time value is frozen into the bundle and can't be changed at runtime. `SITE_URL` is read at runtime during dynamic rendering (`sitemap.ts` / `robots.ts` are `force-dynamic`), so the origin can change without a rebuild.
+- Set as a Console UI env var with the "Server only" / "Backend only" visibility scope — it's read server-side only and doesn't need to reach the client bundle.
+- `siteBaseUrl()` falls back to `NEXT_PUBLIC_SITE_URL`, then to `https://bayarea-ai.com`, and normalizes the value (prepends `https://` if the scheme is missing, strips any path/trailing slash, returns only the origin) so a misconfigured value can't crash metadata rendering.
+
 The `NEXT_PUBLIC_FIREBASE_*` values used to be in `apphosting.yaml` but were moved to the Console UI in PR #5 to keep the repo source-code free of identifiers (even though they end up in the client bundle anyway). This is a soft hardening — adjust if it ever gets in the way.
 
 For production, set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `bayarea-ai.com`, not `jtpa-main.firebaseapp.com`. Firebase Auth redirect/popup helpers are proxied from `https://bayarea-ai.com/__/auth/*` to the matching Firebase Hosting helper origin by `next.config.ts`, keeping the OAuth helper on the same site as the app. The app also serves `https://bayarea-ai.com/__/firebase/init.json` from the same `NEXT_PUBLIC_FIREBASE_*` values for the helper's domain verification. This avoids the "missing initial state" failure that can happen when browsers partition or block third-party storage during Google sign-in.
