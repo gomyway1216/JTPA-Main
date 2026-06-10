@@ -75,6 +75,12 @@ async function countPublishedFor(
 export async function getPublicContributionCounts(
   uid: string,
 ): Promise<ContributionCounts> {
+  // No author id ⇒ nothing to attribute, so short-circuit before firing
+  // five pointless aggregation reads (an empty `==` filter would only ever
+  // match 0 docs anyway).
+  if (!uid) {
+    return { posts: 0, projects: 0, qa: 0, polls: 0, guides: 0, total: 0 };
+  }
   const [posts, projects, qa, polls, guides] = await Promise.all(
     CONTRIBUTION_SOURCES.map((source) => countPublishedFor(source, uid)),
   );

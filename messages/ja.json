@@ -501,7 +501,7 @@
     "avatarAlt": "@{username} のアイコン",
     "eventAttendanceCount": "イベント参加回数",
     "eventAttendanceCountValue": "{count}回",
-    "contributions": "投稿",
+    "contributions": "貢献",
     "contributionType": {
       "posts": "記事",
       "projects": "プロジェクト",

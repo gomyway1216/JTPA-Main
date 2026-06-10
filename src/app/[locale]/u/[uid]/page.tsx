@@ -109,11 +109,12 @@ export default async function PublicProfilePage({
         </dl>
 
         {/*
-          Published-contribution tallies. Every type is shown even at 0 so
-          the grid stays a predictable five-up shape and an empty slot
-          reads as "none yet" rather than a missing feature. Reuses the
-          same label/value typography as the attendance stat above so the
-          two read as one family of profile metrics.
+          Published-contribution tallies: the five content types plus a
+          Total cell (six in all). Every type is shown even at 0 so the
+          grid stays a predictable shape and an empty slot reads as "none
+          yet" rather than a missing feature. Reuses the same label/value
+          typography as the attendance stat above so the two read as one
+          family of profile metrics.
         */}
         <section className="border-b border-zinc-200 pb-3 dark:border-zinc-800">
           <h2 className="text-xs font-medium uppercase text-zinc-500">

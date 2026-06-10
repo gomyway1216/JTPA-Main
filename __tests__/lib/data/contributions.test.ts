@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // `getPublicContributionCounts` fans out five parallel `count()`
 // aggregations, one per public-content collection. The shared
@@ -54,11 +54,19 @@ vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => adminDb(),
 }));
 
-// Silence the expected console.warn from the degrade-to-0 path so a
-// passing run stays quiet.
-vi.spyOn(console, "warn").mockImplementation(() => {});
-
 import { getPublicContributionCounts } from "@/lib/data/contributions";
+
+// Silence the expected console.warn from the degrade-to-0 path so a
+// passing run stays quiet. Scoped to this file's hooks and restored in
+// afterAll so the spy can't leak into other test files sharing the worker
+// and silence their real warnings.
+let warnSpy: ReturnType<typeof vi.spyOn>;
+beforeAll(() => {
+  warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+afterAll(() => {
+  warnSpy.mockRestore();
+});
 
 // Find the single recorded query against a given collection. Asserts
 // exactly one exists so a typo'd/duplicated collection name fails loudly.
@@ -133,6 +141,20 @@ describe("getPublicContributionCounts", () => {
       guides: 0,
       total: 0,
     });
+  });
+
+  it("short-circuits to all-zero without querying Firestore when uid is empty", async () => {
+    const result = await getPublicContributionCounts("");
+    expect(result).toEqual({
+      posts: 0,
+      projects: 0,
+      qa: 0,
+      polls: 0,
+      guides: 0,
+      total: 0,
+    });
+    // The empty-uid guard must return before any aggregation fires.
+    expect(recorded).toHaveLength(0);
   });
 
   it("degrades a single failing aggregation to 0 without rejecting the whole call", async () => {
