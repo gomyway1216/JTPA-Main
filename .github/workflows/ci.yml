@@ -47,7 +47,9 @@ jobs:
         run: npm run check:i18n
 
       - name: Test
-        run: npm test
+        # --coverage enforces the ratchet thresholds in vitest.config.mts,
+        # failing the job if coverage regresses below the floors.
+        run: npm test -- --coverage
 
       - name: Build
         env:

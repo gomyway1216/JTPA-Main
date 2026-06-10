@@ -34,7 +34,17 @@ import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 import { initAdmin } from "./_lib/firebase-init.mjs";
 
-const dryRun = process.argv.includes("--dry-run");
+// Reject anything that isn't exactly --dry-run: a typo'd flag (--dryrun,
+// --dry_run, ...) must not silently fall through to a real production-wide
+// mutation.
+const args = process.argv.slice(2);
+const unknownArgs = args.filter((a) => a !== "--dry-run");
+if (unknownArgs.length > 0) {
+  console.error(`Unknown argument(s): ${unknownArgs.join(", ")}`);
+  console.error("Usage: node scripts/sync-role-badges.mjs [--dry-run]");
+  process.exit(1);
+}
+const dryRun = args.includes("--dry-run");
 
 initAdmin();
 const auth = getAuth();
