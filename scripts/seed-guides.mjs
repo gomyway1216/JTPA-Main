@@ -10,7 +10,10 @@
  * re-seed from scratch.
  *
  * Usage:
- *   node scripts/seed-guides.mjs
+ *   node scripts/seed-guides.mjs [--dry-run]
+ *
+ * --dry-run reads Firestore to report which guides would be created and
+ * which already exist, without writing anything.
  *
  * Requires GOOGLE_APPLICATION_CREDENTIALS pointing at a service-account
  * JSON for the Firebase project, OR the FIREBASE_SERVICE_ACCOUNT env var
@@ -20,6 +23,15 @@
 import { Timestamp, getFirestore } from "firebase-admin/firestore";
 
 import { initAdmin } from "./_lib/firebase-init.mjs";
+
+const args = process.argv.slice(2);
+const unknownArgs = args.filter((a) => a !== "--dry-run");
+if (unknownArgs.length > 0) {
+  console.error(`Unknown argument(s): ${unknownArgs.join(", ")}`);
+  console.error("Usage: node scripts/seed-guides.mjs [--dry-run]");
+  process.exit(1);
+}
+const dryRun = args.includes("--dry-run");
 
 const SEED_AUTHOR = {
   uid: "seed",
@@ -175,6 +187,11 @@ for (const g of GUIDES) {
     skipped++;
     continue;
   }
+  if (dryRun) {
+    console.log(`+ would create: "${g.slug}" — ${g.title}`);
+    created++;
+    continue;
+  }
   const now = Timestamp.now();
   await db.collection("guides").add({
     slug: g.slug,
@@ -192,7 +209,11 @@ for (const g of GUIDES) {
   created++;
 }
 
-console.log(`\nDone. ${created} created, ${skipped} skipped.`);
+console.log(
+  `\n${dryRun ? "[dry-run] " : ""}Done. ${created} ${
+    dryRun ? "would be created" : "created"
+  }, ${skipped} skipped.`,
+);
 // Firestore's gRPC client keeps connections open after the work is done,
 // which leaves the Node event loop active and stops the process from
 // exiting on its own. An explicit exit avoids the "script just hangs"

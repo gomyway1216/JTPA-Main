@@ -6,7 +6,10 @@
  * but do NOT get admin powers (events, projects, user management).
  *
  * Usage:
- *   node scripts/set-editor.mjs <email> [--revoke]
+ *   node scripts/set-editor.mjs <email> [--revoke] [--dry-run]
+ *
+ * --dry-run resolves the user and prints the claim change that would be
+ * made (current → new) without writing anything.
  *
  * Requires GOOGLE_APPLICATION_CREDENTIALS pointing at a service-account
  * JSON for the Firebase project, OR the FIREBASE_SERVICE_ACCOUNT env var
@@ -17,20 +20,62 @@ import { getAuth } from "firebase-admin/auth";
 
 import { initAdmin } from "./_lib/firebase-init.mjs";
 
+const USAGE =
+  "Usage: node scripts/set-editor.mjs <email> [--revoke] [--dry-run]";
+
 const args = process.argv.slice(2);
-if (args.length === 0) {
-  console.error("Usage: node scripts/set-editor.mjs <email> [--revoke]");
+const flags = args.filter((a) => a.startsWith("--"));
+const positionals = args.filter((a) => !a.startsWith("--"));
+const unknownFlags = flags.filter((f) => f !== "--revoke" && f !== "--dry-run");
+if (positionals.length !== 1 || unknownFlags.length > 0) {
+  if (unknownFlags.length > 0) {
+    console.error(`Unknown flag(s): ${unknownFlags.join(", ")}`);
+  }
+  console.error(USAGE);
   process.exit(1);
 }
-const email = args[0];
-const revoke = args.includes("--revoke");
+const [email] = positionals;
+const revoke = flags.includes("--revoke");
+const dryRun = flags.includes("--dry-run");
 
 initAdmin();
 
 const auth = getAuth();
-const user = await auth.getUserByEmail(email);
-const claims = { ...(user.customClaims ?? {}), editor: !revoke };
-if (revoke) delete claims.editor;
+let user;
+try {
+  user = await auth.getUserByEmail(email);
+} catch (err) {
+  if (err?.code === "auth/user-not-found") {
+    console.error(`ERROR: no Firebase user exists with email ${email}.`);
+    process.exit(1);
+  }
+  if (err?.code === "auth/invalid-email") {
+    console.error(`ERROR: "${email}" is not a valid email address.`);
+    process.exit(1);
+  }
+  throw err;
+}
+
+// Show the operator exactly what they're touching before any write.
+const before = user.customClaims ?? {};
+console.log(`Target user:    ${user.email} (uid: ${user.uid})`);
+console.log(`Current claims: ${JSON.stringify(before)}`);
+
+const claims = { ...before };
+if (revoke) {
+  delete claims.editor;
+} else {
+  claims.editor = true;
+}
+console.log(`New claims:     ${JSON.stringify(claims)}`);
+
+if (dryRun) {
+  console.log(
+    `[dry-run] Would ${revoke ? "revoke" : "grant"} editor for ${email}; nothing written.`,
+  );
+  process.exit(0);
+}
+
 await auth.setCustomUserClaims(user.uid, claims);
 console.log(
   `${revoke ? "Revoked" : "Granted"} editor for ${email} (uid: ${user.uid}).`,
