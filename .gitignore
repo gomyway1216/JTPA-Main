@@ -28,6 +28,8 @@
 .runtimeconfig.json
 .firebase/
 firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
 *service-account*.json
 *serviceAccount*.json
 *-adminsdk-*.json
