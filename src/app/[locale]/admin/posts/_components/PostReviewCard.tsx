@@ -88,12 +88,18 @@ export function PostReviewCard({
       </header>
 
       {post.coverImage?.url && (
+        // The admin layout caps content at `max-w-6xl px-4` and reserves a
+        // 200px sidebar + gap-6 once the md (768px) grid kicks in, so this
+        // `w-full` cover tops out at ~896px (1152 − 32 − 200 − 24), never the
+        // full viewport. Below md the grid is single-column, so it spans the
+        // content width (≈100vw). Sizing accordingly avoids fetching
+        // viewport-wide candidates for a card that never renders that wide.
         <Image
           src={post.coverImage.url}
           alt={t("coverAlt", { title: post.title })}
           width={1600}
           height={900}
-          sizes="100vw"
+          sizes="(max-width: 768px) 100vw, 896px"
           className="mt-3 h-32 w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
