@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("fromSnap", () => {
-  it("passes a valid doc through identically, without logging", async () => {
+  it("passes a valid doc through identically, without logging", () => {
     const ts = new FakeTimestamp(1, 0);
     const data = {
       slug: "hello",
