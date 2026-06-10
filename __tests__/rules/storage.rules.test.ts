@@ -48,7 +48,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  // `testEnv` is undefined if `createRulesTestEnv()` threw in beforeAll;
+  // guard so cleanup doesn't mask the real initialization error.
+  if (testEnv) {
+    await testEnv.cleanup();
+  }
 });
 
 describe("users (avatars)", () => {
@@ -111,6 +115,49 @@ describe("projects (showcase assets)", () => {
     );
     await assertFails(
       upload(bob(), `projects/${ALICE}/shot.png`, "image/png"),
+    );
+  });
+});
+
+describe("posts (blog cover + body images)", () => {
+  it("author writes images to their own folder; admin writes any; others locked out", async () => {
+    await assertSucceeds(
+      upload(alice(), `posts/${ALICE}/cover.png`, "image/png"),
+    );
+    // Admin can write into anyone's post folder (unlike users/ avatars).
+    await assertSucceeds(
+      upload(admin(), `posts/${ALICE}/body.webp`, "image/webp"),
+    );
+    await assertFails(upload(bob(), `posts/${ALICE}/sneaky.png`, "image/png"));
+  });
+
+  it("non-image uploads are rejected and the 5MB cap is enforced", async () => {
+    await assertFails(
+      upload(alice(), `posts/${ALICE}/readme.pdf`, "application/pdf"),
+    );
+    await assertFails(
+      upload(alice(), `posts/${ALICE}/logo.svg`, "image/svg+xml"),
+    );
+    // maxSize(5) is a strict `<`, so exactly 5MiB must be rejected.
+    await assertFails(
+      upload(
+        alice(),
+        `posts/${ALICE}/huge.png`,
+        "image/png",
+        new Uint8Array(5 * 1024 * 1024),
+      ),
+    );
+  });
+
+  it("owner can delete own upload (delete is split from the image checks)", async () => {
+    await testEnv.withSecurityRulesDisabled(async (ctx) => {
+      await upload(ctx, `posts/${ALICE}/orphan.png`, "image/png");
+    });
+    await assertFails(
+      deleteObject(ref(storageOf(bob()), `posts/${ALICE}/orphan.png`)),
+    );
+    await assertSucceeds(
+      deleteObject(ref(storageOf(alice()), `posts/${ALICE}/orphan.png`)),
     );
   });
 });

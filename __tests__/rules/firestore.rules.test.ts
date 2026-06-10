@@ -68,7 +68,11 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await testEnv.cleanup();
+  // `testEnv` is undefined if `createRulesTestEnv()` threw in beforeAll;
+  // guard so cleanup doesn't mask the real initialization error.
+  if (testEnv) {
+    await testEnv.cleanup();
+  }
 });
 
 describe("users", () => {
@@ -324,6 +328,108 @@ describe("projects", () => {
       setDoc(doc(alice(), `projects/approved1/likes/${ALICE}`), {
         createdAt: new Date(),
       }),
+    );
+  });
+});
+
+describe("projects/{id}/comments (approved-gating + owner peek)", () => {
+  // Showcase project comments differ from posts/guides/qa: the parent gate
+  // is `status == 'approved'` (not 'published'), and the project owner can
+  // read comments even while the project is still pending/rejected.
+  const pendingProject = { ownerUid: ALICE, title: "My app", status: "pending" };
+  const approvedProject = {
+    ownerUid: ALICE,
+    title: "My app",
+    status: "approved",
+  };
+  const bobComment = {
+    authorUid: BOB,
+    parentType: "project",
+    parentId: "pending1",
+    body: "Looks promising",
+    likeCount: 0,
+  };
+
+  it("comments on a pending project are visible to the owner but hidden from others", async () => {
+    await seed({
+      "projects/pending1": pendingProject,
+      "projects/pending1/comments/c1": bobComment,
+    });
+    // Owner (Alice) can peek even though the project isn't approved yet.
+    await assertSucceeds(getDoc(doc(alice(), "projects/pending1/comments/c1")));
+    // The comment author (Bob) always sees their own.
+    await assertSucceeds(getDoc(doc(bob(), "projects/pending1/comments/c1")));
+    await assertSucceeds(getDoc(doc(admin(), "projects/pending1/comments/c1")));
+    // A bystander and anon cannot — the project isn't public.
+    await assertFails(getDoc(doc(carol(), "projects/pending1/comments/c1")));
+    await assertFails(getDoc(doc(anon(), "projects/pending1/comments/c1")));
+  });
+
+  it("comments on an approved project are public", async () => {
+    await seed({
+      "projects/approved1": approvedProject,
+      "projects/approved1/comments/c1": { ...bobComment, parentId: "approved1" },
+    });
+    await assertSucceeds(getDoc(doc(anon(), "projects/approved1/comments/c1")));
+    await assertSucceeds(getDoc(doc(carol(), "projects/approved1/comments/c1")));
+  });
+
+  it("create needs an approved parent and a consistent parent path", async () => {
+    await seed({
+      "projects/pending1": pendingProject,
+      "projects/approved1": approvedProject,
+    });
+    // Parent still pending → no public comments yet.
+    await assertFails(
+      setDoc(doc(bob(), "projects/pending1/comments/c2"), bobComment),
+    );
+    // Path/parentId mismatch is rejected even when the parent is approved.
+    await assertFails(
+      setDoc(doc(bob(), "projects/approved1/comments/c2"), {
+        ...bobComment,
+        parentId: "pending1",
+      }),
+    );
+    // Spoofing parentType is rejected.
+    await assertFails(
+      setDoc(doc(bob(), "projects/approved1/comments/c3"), {
+        ...bobComment,
+        parentType: "post",
+        parentId: "approved1",
+      }),
+    );
+    await assertSucceeds(
+      setDoc(doc(bob(), "projects/approved1/comments/c4"), {
+        ...bobComment,
+        parentId: "approved1",
+      }),
+    );
+  });
+
+  it("author may edit only body/updatedAt/deletedAt; hard delete is admin-only", async () => {
+    await seed({
+      "projects/approved1": approvedProject,
+      "projects/approved1/comments/c1": { ...bobComment, parentId: "approved1" },
+    });
+    await assertSucceeds(
+      updateDoc(doc(bob(), "projects/approved1/comments/c1"), {
+        body: "edited",
+        updatedAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(bob(), "projects/approved1/comments/c1"), {
+        likeCount: 999,
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(carol(), "projects/approved1/comments/c1"), {
+        body: "not yours",
+      }),
+    );
+    await assertFails(deleteDoc(doc(bob(), "projects/approved1/comments/c1")));
+    await assertSucceeds(
+      deleteDoc(doc(admin(), "projects/approved1/comments/c1")),
     );
   });
 });
