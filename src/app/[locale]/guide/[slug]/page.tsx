@@ -6,12 +6,14 @@ import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { getSessionUser } from "@/lib/auth/session";
+import { getGuideBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
-import { getGuideBySlug } from "@/lib/data/guides";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
+// Per-request render (session-based draft preview, like state, comments
+// stay fresh); only the guide document is served from the data cache.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -20,7 +22,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = await getGuideBySlug(slug).catch(() => null);
+  const guide = await getGuideBySlugCached(slug).catch(() => null);
   if (!guide || guide.status !== "published") return {};
   const description = truncate(stripMarkdown(guide.body), 160);
   return {
@@ -47,7 +49,7 @@ export default async function GuideDetailPage({
   // rather than serially. We need the user for the access check below.
   const [user, guide] = await Promise.all([
     getSessionUser(),
-    getGuideBySlug(slug),
+    getGuideBySlugCached(slug),
   ]);
   if (!guide) notFound();
 

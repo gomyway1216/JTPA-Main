@@ -5,11 +5,13 @@ import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
+import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
-import { getProjectBySlug } from "@/lib/data/projects";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 
+// Per-request render (session, like state, comments stay fresh); only the
+// project document is served from the shared data cache.
 export const dynamic = "force-dynamic";
 
 export default async function ProjectDetailPage({
@@ -19,7 +21,7 @@ export default async function ProjectDetailPage({
 }) {
   const { slug } = await params;
   const t = await getTranslations("ShowcaseDetail");
-  const project = await getProjectBySlug(slug);
+  const project = await getProjectBySlugCached(slug);
   if (!project || project.status !== "approved") notFound();
 
   // Session + comment listing are independent — kick them off together

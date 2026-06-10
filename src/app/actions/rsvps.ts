@@ -1,9 +1,10 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { requireUser } from "@/lib/auth/session";
+import { EVENTS_TAG } from "@/lib/data/cache-tags";
 import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
@@ -120,6 +121,8 @@ export async function submitRsvp(
   // reason instead of the masked generic "Server Components render" crash.
   if (!result.ok) return result;
 
+  // rsvpCount changed — expire the cached / + /events lists (both locales).
+  updateTag(EVENTS_TAG);
   revalidatePath(`/events`);
   revalidatePath(`/my/rsvps`);
   // Strip Firestore Timestamp class instances before returning to the Client
@@ -262,6 +265,8 @@ export async function cancelRsvp({
     await enqueueWaitlistPromotionNotification(promotion);
   }
 
+  // rsvpCount changed — expire the cached / + /events lists (both locales).
+  updateTag(EVENTS_TAG);
   revalidatePath(`/events`);
   revalidatePath(`/events/[slug]`, "page");
   revalidatePath(`/my/rsvps`);

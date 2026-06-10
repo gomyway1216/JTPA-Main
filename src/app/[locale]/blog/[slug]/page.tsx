@@ -7,12 +7,14 @@ import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
+import { getPostBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
-import { getPostBySlug } from "@/lib/data/posts";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
+// Per-request render (session, like state, comments stay fresh); only the
+// post document itself is served from the shared data cache.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
@@ -21,7 +23,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug).catch(() => null);
+  const post = await getPostBySlugCached(slug).catch(() => null);
   if (!post || post.status !== "published") return {};
   return {
     title: post.title,
@@ -44,7 +46,7 @@ export default async function BlogPostPage({
     getLocale(),
     getTranslations("BlogDetail"),
   ]);
-  const post = await getPostBySlug(slug);
+  const post = await getPostBySlugCached(slug);
   if (!post || post.status !== "published") notFound();
 
   // Session + comment listing are independent — kick them off together

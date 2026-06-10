@@ -1,7 +1,7 @@
 "use server";
 
 import { Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import { requireUser } from "@/lib/auth/session";
@@ -10,6 +10,7 @@ import {
   parentCollection,
   parentRoutePrefix,
 } from "@/lib/comments-parent";
+import { likeParentTag } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
@@ -119,6 +120,14 @@ export async function toggleLikeRecord(
   });
 
   if (!result.ok) return result;
+  // The toggle bumped `likeCount` on the parent doc, which post/guide/
+  // project detail pages serve from the cross-request data cache
+  // (src/lib/data/cached.ts). Expire ONLY that entity's tag — likes are
+  // the highest-frequency mutation, and the entity tag keeps the
+  // expensive cached list queries intact. qa/poll parents aren't cached,
+  // so likeParentTag returns null for them.
+  const entityTag = likeParentTag(parsed.parentType, result.slug);
+  if (entityTag) updateTag(entityTag);
   revalidatePath(`${parentRoutePrefix(parsed.parentType)}/${result.slug}`);
   return { ok: true, result: { liked: result.liked, count: result.count } };
 }

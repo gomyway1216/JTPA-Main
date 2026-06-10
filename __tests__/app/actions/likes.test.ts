@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireUserMock = vi.fn();
 const revalidatePathMock = vi.fn();
+const updateTagMock = vi.fn();
 
 const txGetMock = vi.fn();
 const txSetMock = vi.fn();
@@ -50,6 +51,7 @@ vi.mock("@/lib/auth/session", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
+  updateTag: (...args: unknown[]) => updateTagMock(...args),
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
@@ -81,6 +83,7 @@ async function expectError(
 beforeEach(() => {
   requireUserMock.mockReset().mockResolvedValue({ uid: "u1" });
   revalidatePathMock.mockReset();
+  updateTagMock.mockReset();
   txGetMock.mockReset();
   txSetMock.mockReset();
   txUpdateMock.mockReset();
@@ -240,6 +243,37 @@ describe("toggleLikeRecord — cache invalidation", () => {
     );
     await toggleLikeRecord({ parentType: "post", parentId: "p1" });
     expect(revalidatePathMock).toHaveBeenCalledWith("/blog/hello-world");
+  });
+
+  it("expires only the liked entity's data-cache tag (post)", async () => {
+    // likeCount lives on the parent doc, which the cached detail read
+    // (src/lib/data/cached.ts) serves tagged `post:<slug>`. The toggle
+    // must expire that tag — and ONLY that tag, so the cached list
+    // queries (tag `posts`) survive the high-frequency like traffic.
+    snapQueue.push(
+      { exists: false },
+      {
+        exists: true,
+        data: () => ({ status: "published", slug: "hello-world" }),
+      },
+    );
+    await toggleLikeRecord({ parentType: "post", parentId: "p1" });
+    expect(updateTagMock).toHaveBeenCalledTimes(1);
+    expect(updateTagMock).toHaveBeenCalledWith("post:hello-world");
+  });
+
+  it("does not expire any data-cache tag for uncached parents (qa)", async () => {
+    // qa / poll pages render fully dynamically — there is no cached doc
+    // to expire, so likeParentTag maps them to null.
+    snapQueue.push(
+      { exists: false },
+      {
+        exists: true,
+        data: () => ({ status: "published", slug: "some-question" }),
+      },
+    );
+    await toggleLikeRecord({ parentType: "qa", parentId: "q1" });
+    expect(updateTagMock).not.toHaveBeenCalled();
   });
 });
 

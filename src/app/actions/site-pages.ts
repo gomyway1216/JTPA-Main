@@ -1,10 +1,11 @@
 "use server";
 
 import { FieldValue } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { SITE_PAGES_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { inputError } from "@/lib/i18n/action-errors";
 import { SITE_PAGE_SLUGS } from "@/lib/data/site-pages";
@@ -43,6 +44,10 @@ export async function saveSitePage(input: SitePageFormInput): Promise<void> {
       { merge: true },
     );
 
+  // Expire the cross-request data cache for the public page body
+  // (src/lib/data/cached.ts) — covers both locales at once. The admin
+  // edit form reads the uncached getSitePage, so it's always fresh.
+  updateTag(SITE_PAGES_TAG);
   // Slug doubles as the public route under /, so revalidating `/${slug}`
   // refreshes the corresponding page (`/about`). Also bust the admin
   // edit page so the next visit shows the just-saved value.

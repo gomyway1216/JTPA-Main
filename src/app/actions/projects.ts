@@ -1,7 +1,7 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import {
@@ -9,6 +9,7 @@ import {
   enqueueProjectDecisionNotification,
 } from "@/lib/notifications";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
+import { PROJECTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import { routing } from "@/i18n/routing";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
@@ -33,6 +34,16 @@ function revalidateLocalizedPath(path: string): void {
   for (const locale of routing.locales) {
     revalidatePath(`/${locale}${path}`);
   }
+}
+
+// Expire the cross-request data cache for /, /showcase and
+// /showcase/[slug] (see src/lib/data/cached.ts). The collection tag also
+// covers the per-slug detail entries, and the cached data is
+// locale-independent so one call hits both locales. The
+// revalidateLocalizedPath calls in each action remain for client-router
+// refresh semantics.
+function expireProjectCache() {
+  updateTag(PROJECTS_TAG);
 }
 
 const ProjectInputSchema = z.object({
@@ -156,6 +167,7 @@ export async function submitProject(
     ownerEmail: user.email,
   });
 
+  expireProjectCache();
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath("/my/projects");
   revalidateLocalizedPath("/admin/projects");
@@ -215,6 +227,7 @@ export async function updateMyProject(
 
   if (orphans.length > 0) await deleteStoragePaths(orphans);
 
+  expireProjectCache();
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath(`/showcase/${cur.slug}`);
   revalidateLocalizedPath("/my/projects");
@@ -248,6 +261,7 @@ export async function deleteMyProject(
   await ref.delete();
   if (paths.length > 0) await deleteStoragePaths(paths);
 
+  expireProjectCache();
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath(`/showcase/${cur.slug}`);
   revalidateLocalizedPath("/my/projects");
@@ -273,6 +287,7 @@ export async function setProjectVisibility(
     updatedAt: FieldValue.serverTimestamp(),
   });
 
+  expireProjectCache();
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath(`/showcase/${cur.slug}`);
   revalidateLocalizedPath("/my/projects");
@@ -314,6 +329,7 @@ export async function decideProject(
     });
   }
 
+  expireProjectCache();
   revalidateLocalizedPath("/showcase");
   revalidateLocalizedPath("/admin/projects");
   return { ok: true };

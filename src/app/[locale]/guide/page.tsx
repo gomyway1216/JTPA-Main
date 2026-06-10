@@ -5,8 +5,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { GuideListClient } from "@/app/[locale]/guide/_components/GuideListClient";
 import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
-import { listGuides } from "@/lib/data/guides";
+import { listPublishedGuidesCached } from "@/lib/data/cached";
 
+// Per-request render (the submit CTA branches on the session); the guide
+// list itself is served from the shared data cache.
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -24,10 +26,7 @@ export default async function GuideIndexPage() {
   // it would hide the easiest debug signal.
   const [user, guides] = await Promise.all([
     getSessionUser(),
-    listGuides({
-      statuses: ["published"],
-      limit: 200,
-    }),
+    listPublishedGuidesCached(200),
   ]);
 
   return (

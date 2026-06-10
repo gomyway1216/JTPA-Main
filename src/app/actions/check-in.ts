@@ -1,11 +1,12 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { routing } from "@/i18n/routing";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { checkInWindowState, generateCheckInTokenString } from "@/lib/check-in";
+import { EVENTS_TAG } from "@/lib/data/cache-tags";
 import { plainify } from "@/lib/data/serialize";
 import { adminDb } from "@/lib/firebase/admin";
 import type { EventDoc, RsvpDoc } from "@/lib/types";
@@ -172,6 +173,9 @@ export async function selfCheckIn(
     return { rsvp: doc, alreadyCheckedIn, eventSlug: event.slug };
   });
 
+  // Walk-in check-ins can bump rsvpCount — expire the cached / + /events
+  // lists (src/lib/data/cached.ts) in both locales.
+  updateTag(EVENTS_TAG);
   revalidateLocalizedPath("/events");
   revalidateLocalizedPath(`/events/${result.eventSlug}`);
   revalidateLocalizedPath("/admin/attendees");

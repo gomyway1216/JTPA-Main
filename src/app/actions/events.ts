@@ -1,10 +1,11 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { EVENTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb, adminStorage } from "@/lib/firebase/admin";
 import {
   actionError,
@@ -154,6 +155,8 @@ export async function createEvent(
     updatedAt: now,
   });
 
+  // Expire the cached / + /events lists (src/lib/data/cached.ts) in both locales.
+  updateTag(EVENTS_TAG);
   revalidatePath("/events");
   revalidatePath("/admin/events");
   return redirectToLocalizedPath(`/admin/events/${ref.id}/edit`);
@@ -235,6 +238,8 @@ export async function updateEvent(
 
   if (orphan) await deleteStoragePaths([orphan]);
 
+  // Expire the cached / + /events lists (src/lib/data/cached.ts) in both locales.
+  updateTag(EVENTS_TAG);
   revalidatePath("/events");
   revalidatePath("/admin/events");
   return { ok: true };
@@ -253,6 +258,8 @@ export async function deleteEvent(eventId: string): Promise<void> {
   if (cur?.coverImage) {
     await deleteStoragePaths([cur.coverImage.path]);
   }
+  // Expire the cached / + /events lists (src/lib/data/cached.ts) in both locales.
+  updateTag(EVENTS_TAG);
   revalidatePath("/events");
   revalidatePath("/admin/events");
   // Redirect server-side instead of letting the client navigate after the
