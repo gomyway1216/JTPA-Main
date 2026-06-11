@@ -72,7 +72,7 @@ export function Header({ user }: { user: SessionUser | null }) {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold tracking-tight">
-            JTPA
+            ベイエリアAI勉強会
           </Link>
           <nav className="hidden gap-4 text-sm text-zinc-700 sm:flex dark:text-zinc-300">
             {NAV_LINKS.map((l) => (

@@ -15,13 +15,13 @@
   "Header": {
     "nav": {
       "events": "イベント",
-      "showcase": "プロジェクト",
+      "showcase": "みんなのプロジェクト",
       "community": "みんなの投稿",
       "blog": "記事",
       "guide": "メモ・ノウハウ",
       "qa": "質問・相談",
       "poll": "みんなに聞く",
-      "about": "JTPAとは",
+      "about": "ベイエリアAI勉強会とは",
       "help": "ヘルプ"
     },
     "userMenu": "ユーザーメニュー",
@@ -38,7 +38,7 @@
     }
   },
   "Footer": {
-    "about": "JTPAとは",
+    "about": "ベイエリアAI勉強会とは",
     "help": "ヘルプ・使い方",
     "guide": "メモ・ノウハウ",
     "qa": "質問・相談"
@@ -59,16 +59,16 @@
     "eyebrow": "Bay Area の AI コミュニティ",
     "headlinePrefix": "の試行錯誤を、",
     "headlineSuffix": "みんなで持ち寄る場所。",
-    "intro1": "JTPAは、Bay Areaの日本語・日本人テックプロフェッショナルがAIの学びや実践を持ち寄るコミュニティです。",
+    "intro1": "ベイエリアAI勉強会は、Bay Areaの日本語・日本人テックプロフェッショナルがAIの学びや実践を持ち寄るコミュニティです。",
     "intro2": "完成した記事じゃなくても大丈夫。試したこと、詰まったこと、小さな発見、作ったものを気軽に書き込んでください。",
     "communityCta": "質問・発見を共有する",
     "eventsCta": "次のイベントを見る",
-    "showcaseCta": "プロジェクトを見る",
+    "showcaseCta": "みんなのプロジェクトを見る",
     "upcomingEvents": "次に参加できるイベント",
     "upcomingEventsDescription": "勉強会、LT、交流会など。聞くだけでも、持ち寄って話すだけでも歓迎です。",
     "noEvents": "現在公開中のイベントはありません。",
     "noEventsHint": "次回の告知まで少しお待ちください。",
-    "featuredProjects": "メンバーのプロジェクト",
+    "featuredProjects": "みんなのプロジェクト",
     "featuredProjectsDescription": "完成品だけでなく、試作や途中経過も歓迎。見せられるところから共有してください。",
     "noProjects": "掲載中のプロジェクトはまだありません。",
     "submitProjectPrefix": "作っている AI プロジェクトがあれば",
@@ -139,7 +139,7 @@
   "ShowcasePage": {
     "metadataTitle": "プロジェクト",
     "title": "プロジェクト",
-    "description": "JTPAメンバーが作っているAIプロジェクト。完成品だけでなく試作や途中経過も歓迎です。",
+    "description": "みんなが作っているAIプロジェクト。完成品だけでなく試作や途中経過も歓迎です。",
     "submit": "プロジェクトを共有",
     "empty": "まだ承認済みプロジェクトはありません。",
     "by": "by"
@@ -495,7 +495,7 @@
     "feedbackLink": "ヘルプの「要望・不具合報告」",
     "feedbackSuffix": "からお気軽にどうぞ。",
     "sourceCode": "ソースコード:",
-    "defaultTitle": "JTPAとは",
+    "defaultTitle": "ベイエリアAI勉強会とは",
     "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーが作ったプロジェクトの共有などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクト・プロジェクトの共有\n"
   },
   "PublicProfile": {
@@ -952,7 +952,7 @@
       "attendees": "参加者",
       "guides": "メモ・ノウハウ",
       "feedback": "フィードバック",
-      "about": "JTPAとは",
+      "about": "ベイエリアAI勉強会とは",
       "users": "ユーザー",
       "errors": "エラーログ",
       "help": "ヘルプ"
@@ -1014,8 +1014,8 @@
       "eventsEmpty": "イベントはありません。"
     },
     "about": {
-      "metadataTitle": "JTPAとは編集",
-      "title": "JTPAとは編集",
+      "metadataTitle": "ベイエリアAI勉強会とは編集",
+      "title": "ベイエリアAI勉強会とは編集",
       "viewPublic": "/about を表示 →",
       "description": "/about ページの本文を Markdown で編集します。保存後すぐに公開ページに反映されます。",
       "titleLabel": "タイトル",
@@ -1418,7 +1418,7 @@
           ]
         },
         "about": {
-          "title": "「JTPAとは」の編集",
+          "title": "「ベイエリアAI勉強会とは」の編集",
           "paragraphs": [
             "<adminAboutLink>/admin/about</adminAboutLink> で <code>/about</code> ページのタイトルと本文 (Markdown) を編集できます。まだ保存していないときはコード内のデフォルト文言が表示されます。"
           ],
