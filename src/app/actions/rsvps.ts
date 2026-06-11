@@ -5,11 +5,46 @@ import { revalidatePath } from "next/cache";
 
 import { requireUser } from "@/lib/auth/session";
 import { plainify } from "@/lib/data/serialize";
+import {
+  MAX_SURVEY_ANSWER_LENGTH,
+  validateSurveyResponses,
+  type SurveyResponseError,
+} from "@/lib/event-survey";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { enqueueWaitlistPromotionNotification } from "@/lib/notifications";
 import { cancellationDeltas } from "@/lib/rsvp-counters";
-import type { RsvpDoc } from "@/lib/types";
+import type { RsvpDoc, SurveyField } from "@/lib/types";
+
+// Presentation title/abstract are short identifiers, not long-form prose —
+// the abstract still gets a generous cap so the server rejects a multi-KB
+// payload while accepting any realistic talk summary.
+const MAX_PRESENTATION_TITLE_LENGTH = 300;
+const MAX_PRESENTATION_ABSTRACT_LENGTH = 5000;
+
+// Map a structured survey-answer failure to its localized action-error key.
+// Kept here (not in event-survey.ts) so the pure validator stays i18n-free
+// and unit-testable; the keys live in messages/{ja,en}.json under
+// ActionErrors.
+async function surveyResponseError(
+  failure: SurveyResponseError,
+): Promise<string> {
+  switch (failure.code) {
+    case "required":
+      return actionError("rsvpSurveyRequired", { key: failure.key });
+    case "option":
+      return actionError("rsvpSurveyInvalidOption", { key: failure.key });
+    case "checkbox":
+      return actionError("rsvpSurveyInvalidValue", { key: failure.key });
+    case "tooLong":
+      return actionError("rsvpSurveyTooLong", {
+        key: failure.key,
+        max: MAX_SURVEY_ANSWER_LENGTH,
+      });
+    case "unknownKey":
+      return actionError("rsvpSurveyUnknownKey", { key: failure.key });
+  }
+}
 
 interface SubmitRsvpInput {
   eventId: string;
@@ -45,11 +80,68 @@ export async function submitRsvp(
       presenterCount: number;
       waitlistCount: number;
       status: string;
+      surveyFields?: SurveyField[];
     };
     if (event.status === "cancelled") {
       return {
         ok: false as const,
         error: await actionError("eventCancelledRsvp"),
+      };
+    }
+
+    // Server-side input validation. The client form (RsvpSection) enforces
+    // these same rules, but a Server Action is a public endpoint — a
+    // hand-crafted request can send any `role`/`surveyResponses`, so we
+    // re-check here (now that the event doc is loaded and we know the survey
+    // schema + presenter policy) before anything is written. Validation
+    // failures come back as an error RESULT (never a throw): Next masks
+    // thrown Server Action errors as a generic digest in production, and the
+    // rest of this file already returns localized results for the
+    // cancelled/deleted cases.
+    if (input.role !== "attendee" && input.role !== "presenter") {
+      return { ok: false as const, error: await actionError("rsvpInvalidRole") };
+    }
+    // Reject a presenter RSVP when the event accepts no presenters. capacity
+    // semantics elsewhere treat 0 as "unlimited", but presenterCapacity === 0
+    // specifically means "no presenter slots" (the agenda has none), so a
+    // presenter signup there is invalid.
+    if (input.role === "presenter" && event.presenterCapacity === 0) {
+      return {
+        ok: false as const,
+        error: await actionError("rsvpPresenterNotAllowed"),
+      };
+    }
+    // A presenter must supply a talk title + abstract — both are `required`
+    // in the form when role === "presenter". (Attendees send neither; the
+    // form clears them, so don't validate them for an attendee.)
+    if (input.role === "presenter") {
+      const title = (input.presentationTitle ?? "").trim();
+      const abstract = (input.presentationAbstract ?? "").trim();
+      if (!title || !abstract) {
+        return {
+          ok: false as const,
+          error: await actionError("rsvpPresentationRequired"),
+        };
+      }
+      if (
+        title.length > MAX_PRESENTATION_TITLE_LENGTH ||
+        abstract.length > MAX_PRESENTATION_ABSTRACT_LENGTH
+      ) {
+        return {
+          ok: false as const,
+          error: await actionError("rsvpPresentationTooLong"),
+        };
+      }
+    }
+    const surveyFailure = validateSurveyResponses(
+      event.surveyFields ?? [],
+      input.surveyResponses ?? {},
+      input.role,
+    );
+    if (surveyFailure) {
+      return {
+        ok: false as const,
+        error: await surveyResponseError(surveyFailure),
       };
     }
 
@@ -61,23 +153,38 @@ export async function submitRsvp(
     let presenterDelta = 0;
     let waitlistDelta = 0;
 
-    const isWaitlist =
-      event.capacity > 0 &&
-      event.rsvpCount >= event.capacity &&
-      (!prior || prior.status === "cancelled");
-    const newStatus: RsvpDoc["status"] = isWaitlist ? "waitlist" : "confirmed";
+    // Editing an existing RSVP must PRESERVE its current status: a
+    // confirmed RSVP stays confirmed, a waitlisted one stays waitlisted.
+    // Re-evaluating capacity on every edit would silently promote a
+    // waitlisted user to "confirmed" past capacity AND leave the bucket
+    // counters desynced (waitlistCount too high, rsvpCount too low),
+    // since the edit branch moves no rsvp/waitlist deltas. Promotion off
+    // the waitlist happens only via the cancel→promote flow. Capacity is
+    // therefore evaluated solely for a brand-new RSVP or a re-RSVP after
+    // cancellation.
+    const isExisting = !!prior && prior.status !== "cancelled";
+    let newStatus: RsvpDoc["status"];
 
-    if (!prior || prior.status === "cancelled") {
-      if (newStatus === "waitlist") waitlistDelta = 1;
+    if (!isExisting) {
+      const isWaitlist =
+        event.capacity > 0 && event.rsvpCount >= event.capacity;
+      newStatus = isWaitlist ? "waitlist" : "confirmed";
+      if (isWaitlist) waitlistDelta = 1;
       else rsvpDelta = 1;
       if (newStatus === "confirmed" && input.role === "presenter") {
         presenterDelta = 1;
       }
     } else {
-      if (prior.role === "presenter" && input.role === "attendee") {
-        presenterDelta = -1;
-      } else if (prior.role === "attendee" && input.role === "presenter") {
-        presenterDelta = 1;
+      newStatus = prior.status; // preserve "confirmed" or "waitlist"
+      // presenterCount tracks CONFIRMED presenters only, so a role switch
+      // moves it only while the RSVP is confirmed — a waitlisted role
+      // switch must leave presenterCount untouched.
+      if (newStatus === "confirmed") {
+        if (prior.role === "presenter" && input.role === "attendee") {
+          presenterDelta = -1;
+        } else if (prior.role === "attendee" && input.role === "presenter") {
+          presenterDelta = 1;
+        }
       }
     }
 
@@ -99,7 +206,13 @@ export async function submitRsvp(
       // with the fields absent.
       attendedAt: prior?.attendedAt,
       isGuest: prior?.isGuest,
-      createdAt: prior?.createdAt ?? now,
+      // Keep the original queue position only for a true edit of a live
+      // (confirmed/waitlist) RSVP. A re-registration after cancellation is
+      // NOT existing, so it gets a fresh `now`: the waitlist is FIFO by
+      // `createdAt asc`, and reusing the old (earlier) timestamp would let a
+      // re-registering user jump ahead of everyone who signed up in the
+      // meantime. (When isExisting is true, `prior` is non-null.)
+      createdAt: isExisting && prior ? (prior.createdAt ?? now) : now,
       updatedAt: now,
     };
 

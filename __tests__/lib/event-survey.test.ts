@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { validateSurveyFields } from "@/lib/event-survey";
+import {
+  MAX_SURVEY_ANSWER_LENGTH,
+  validateSurveyFields,
+  validateSurveyResponses,
+} from "@/lib/event-survey";
 import type { SurveyField } from "@/lib/types";
 
 const messages = {
@@ -115,5 +119,133 @@ describe("validateSurveyFields", () => {
     );
     expect(msg).toContain("アンケート項目2");
     expect(msg).toContain("重複");
+  });
+});
+
+describe("validateSurveyResponses", () => {
+  it("accepts an empty submission when there are no fields", () => {
+    expect(validateSurveyResponses([], {}, "attendee")).toBeNull();
+  });
+
+  it("accepts a well-formed submission for every field type", () => {
+    const fields = [
+      field({ key: "name", label: "Name", type: "text", required: true }),
+      field({
+        key: "mode",
+        label: "Mode",
+        type: "select",
+        required: true,
+        options: ["online", "offline"],
+      }),
+      field({ key: "agree", label: "Agree", type: "checkbox", required: true }),
+      field({ key: "note", label: "Note", type: "textarea" }),
+    ];
+    const ok = validateSurveyResponses(
+      fields,
+      { name: "Alice", mode: "online", agree: "true", note: "" },
+      "attendee",
+    );
+    expect(ok).toBeNull();
+  });
+
+  it("flags a missing required answer with its field key", () => {
+    const fields = [field({ key: "name", label: "Name", required: true })];
+    expect(validateSurveyResponses(fields, {}, "attendee")).toEqual({
+      code: "required",
+      key: "name",
+    });
+    // Whitespace-only is still "blank".
+    expect(
+      validateSurveyResponses(fields, { name: "   " }, "attendee"),
+    ).toEqual({ code: "required", key: "name" });
+  });
+
+  it("requires a checkbox to be \"true\" when the field is required", () => {
+    const fields = [
+      field({ key: "agree", label: "Agree", type: "checkbox", required: true }),
+    ];
+    expect(
+      validateSurveyResponses(fields, { agree: "false" }, "attendee"),
+    ).toEqual({ code: "required", key: "agree" });
+    expect(
+      validateSurveyResponses(fields, { agree: "true" }, "attendee"),
+    ).toBeNull();
+  });
+
+  it("rejects a checkbox value other than true/false", () => {
+    const fields = [field({ key: "agree", type: "checkbox" })];
+    expect(
+      validateSurveyResponses(fields, { agree: "maybe" }, "attendee"),
+    ).toEqual({ code: "checkbox", key: "agree" });
+  });
+
+  it("rejects a select answer outside the allowed options", () => {
+    const fields = [
+      field({
+        key: "mode",
+        type: "select",
+        required: true,
+        options: ["online", "offline"],
+      }),
+    ];
+    expect(
+      validateSurveyResponses(fields, { mode: "hybrid" }, "attendee"),
+    ).toEqual({ code: "option", key: "mode" });
+    expect(
+      validateSurveyResponses(fields, { mode: "online" }, "attendee"),
+    ).toBeNull();
+  });
+
+  it("allows an optional select left blank", () => {
+    const fields = [
+      field({ key: "mode", type: "select", options: ["a", "b"] }),
+    ];
+    expect(validateSurveyResponses(fields, { mode: "" }, "attendee")).toBeNull();
+    expect(validateSurveyResponses(fields, {}, "attendee")).toBeNull();
+  });
+
+  it("rejects an answer longer than the cap", () => {
+    const fields = [field({ key: "bio", type: "textarea" })];
+    const tooLong = "x".repeat(MAX_SURVEY_ANSWER_LENGTH + 1);
+    expect(
+      validateSurveyResponses(fields, { bio: tooLong }, "attendee"),
+    ).toEqual({ code: "tooLong", key: "bio" });
+  });
+
+  it("rejects a response key with no matching field", () => {
+    const fields = [field({ key: "q1", label: "Q1" })];
+    expect(
+      validateSurveyResponses(fields, { q1: "ok", q2: "stray" }, "attendee"),
+    ).toEqual({ code: "unknownKey", key: "q2" });
+  });
+
+  it("treats presenter-audience fields as applicable only for a presenter", () => {
+    const fields = [
+      field({ key: "q1", label: "Q1", audience: "all" }),
+      field({
+        key: "slides",
+        label: "Slides",
+        audience: "presenter",
+        required: true,
+      }),
+    ];
+    // Attendee: the presenter field is not applicable, so an answer to it is
+    // an unknown key — and it is NOT required of the attendee.
+    expect(
+      validateSurveyResponses(fields, { q1: "ok", slides: "x" }, "attendee"),
+    ).toEqual({ code: "unknownKey", key: "slides" });
+    expect(validateSurveyResponses(fields, { q1: "ok" }, "attendee")).toBeNull();
+    // Presenter: the presenter field becomes required.
+    expect(validateSurveyResponses(fields, { q1: "ok" }, "presenter")).toEqual({
+      code: "required",
+      key: "slides",
+    });
+    expect(
+      validateSurveyResponses(
+        fields,
+        { q1: "ok", slides: "deck" },
+        "presenter",
+      ),
+    ).toBeNull();
   });
 });
