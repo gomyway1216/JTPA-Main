@@ -6,10 +6,16 @@ import Image from "next/image";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents, listPastEvents } from "@/lib/data/events";
+import {
+  listPastEventsCached,
+  listUpcomingEventsCached,
+} from "@/lib/data/cached";
 import type { EventDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
+// Per-request render (the members-only filter below needs the session);
+// the event lists come from the shared data cache with a short (60s)
+// window because they surface rsvpCount and split on "ended yet?".
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,8 +37,8 @@ export default async function EventsPage() {
   const user = await getSessionUser();
   const signedIn = !!user;
   const [upcomingRaw, pastRaw] = await Promise.all([
-    listEvents({ notEndedOnly: true, limit: 30 }).catch(() => []),
-    listPastEvents(10).catch(() => []),
+    listUpcomingEventsCached(30).catch(() => []),
+    listPastEventsCached(10).catch(() => []),
   ]);
   const upcoming = upcomingRaw.filter(visibleTo(signedIn));
   const past = pastRaw.filter(visibleTo(signedIn));

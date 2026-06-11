@@ -1,7 +1,7 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import {
@@ -14,6 +14,7 @@ import {
   parseInput,
 } from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
+import { POSTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
@@ -61,6 +62,19 @@ function postReturnPath(returnTo: PostReturnTo, isAdmin: boolean): string {
   return returnTo === "admin" && isAdmin ? "/admin/posts" : "/my/posts";
 }
 
+// Expire the cross-request data cache entries for /blog and
+// /blog/[slug] (see src/lib/data/cached.ts). The collection tag covers
+// the per-slug detail entries too (every detail entry carries both
+// tags), so one call is enough. `updateTag` (vs
+// `revalidateTag(tag, "max")`) blocks the next read until fresh data is
+// fetched, so an author who publishes and lands back on /blog sees their
+// post immediately. Covers both locales at once — the cached data is
+// locale-independent. The revalidatePath calls in each action remain for
+// client-router refresh semantics.
+function expirePostCache() {
+  updateTag(POSTS_TAG);
+}
+
 // ---------- create ----------
 
 export async function submitPost(
@@ -102,6 +116,7 @@ export async function submitPost(
     });
   }
 
+  expirePostCache();
   revalidatePath("/blog");
   revalidatePath("/my/posts");
   revalidatePath("/admin/posts");
@@ -155,6 +170,7 @@ export async function updateMyPost(
 
   if (orphans.length > 0) await deleteStoragePaths(orphans);
 
+  expirePostCache();
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
@@ -181,6 +197,7 @@ export async function deleteMyPost(postId: string): Promise<PostSaveResult> {
   await ref.delete();
   if (paths.length > 0) await deleteStoragePaths(paths);
 
+  expirePostCache();
   revalidatePath("/blog");
   // Also revalidate the now-gone detail route so a cached 200 from earlier
   // doesn't keep serving the deleted post.
@@ -229,6 +246,7 @@ export async function publishPost(postId: string): Promise<PostSaveResult> {
     }
   }
 
+  expirePostCache();
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
@@ -286,6 +304,7 @@ export async function decidePost(
     }
   }
 
+  expirePostCache();
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");
@@ -306,6 +325,7 @@ export async function archivePost(postId: string): Promise<PostSaveResult> {
     status: "archived" as const,
     updatedAt: FieldValue.serverTimestamp(),
   });
+  expirePostCache();
   revalidatePath("/blog");
   revalidatePath(`/blog/${cur.slug}`);
   revalidatePath("/my/posts");

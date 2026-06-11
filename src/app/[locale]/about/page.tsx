@@ -3,7 +3,7 @@ import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
-import { getSitePage } from "@/lib/data/site-pages";
+import { getSitePageCached } from "@/lib/data/cached";
 
 // Yudai's JTPA uid. Hardcoded because the maintainer attribution is
 // a specific, stable individual — using an env var or DB lookup would
@@ -14,7 +14,7 @@ const MAINTAINER_UID = "FQe7JWGETbTm9w9sAZgacemC1aC3";
 
 export async function generateMetadata(): Promise<Metadata> {
   const [page, t] = await Promise.all([
-    getSitePage("about"),
+    getSitePageCached("about"),
     getTranslations("AboutPage"),
   ]);
   return { title: page?.title || t("defaultTitle") };
@@ -22,7 +22,10 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function AboutPage() {
   const t = await getTranslations("AboutPage");
-  const page = await getSitePage("about");
+  // Served from the shared data cache; the admin save action invalidates
+  // the `site-pages` tag so edits appear immediately on this instance and
+  // within CONTENT_REVALIDATE_SECONDS everywhere else.
+  const page = await getSitePageCached("about");
   const title = page?.title || t("defaultTitle");
   const body = page?.body || t("defaultBody");
   return (

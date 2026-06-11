@@ -26,16 +26,25 @@ export const SITE_PAGE_DEFAULTS: Record<
   },
 };
 
+// Raw Firestore read, exported so the cross-request data cache
+// (src/lib/data/cached.ts) can wrap it with `unstable_cache`. React's
+// `cache()` wrapper below must stay OUTSIDE that data cache: wrapping the
+// React-cached function would make the unstable_cache key depend on the
+// generic cache() wrapper's source instead of this function's.
+export async function readSitePage(
+  slug: SitePageSlug,
+): Promise<SitePageDoc | null> {
+  const snap = await adminDb().collection("sitePages").doc(slug).get();
+  if (!snap.exists) return null;
+  return plainify({
+    ...(snap.data() as Omit<SitePageDoc, "id">),
+    id: snap.id,
+  });
+}
+
 // Wrapped in React `cache` so a single request hits Firestore once even when
 // both `generateMetadata` and the page component call this with the same
 // slug. Matches the pattern used by `getSessionUser` in src/lib/auth/session.ts.
-export const getSitePage = cache(
-  async (slug: SitePageSlug): Promise<SitePageDoc | null> => {
-    const snap = await adminDb().collection("sitePages").doc(slug).get();
-    if (!snap.exists) return null;
-    return plainify({
-      ...(snap.data() as Omit<SitePageDoc, "id">),
-      id: snap.id,
-    });
-  },
-);
+// Admin pages keep using this uncached-across-requests variant so the edit
+// form always shows the latest saved content.
+export const getSitePage = cache(readSitePage);

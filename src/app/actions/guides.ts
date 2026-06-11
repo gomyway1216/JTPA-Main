@@ -1,7 +1,7 @@
 "use server";
 
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import { findUniqueSlug, parseInput } from "@/lib/actions/shared";
@@ -10,6 +10,7 @@ import {
   requireEditor,
   requireUser,
 } from "@/lib/auth/session";
+import { GUIDES_TAG } from "@/lib/data/cache-tags";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
@@ -77,6 +78,12 @@ function authorRef(user: {
 }
 
 function revalidate(slug?: string) {
+  // Expire the cross-request data cache for /guide and /guide/[slug]
+  // (see src/lib/data/cached.ts). The collection tag also covers the
+  // per-slug detail entries, and the cached data is locale-independent
+  // so this hits both locales at once. The path calls below remain for
+  // client-router refresh semantics.
+  updateTag(GUIDES_TAG);
   revalidatePath("/guide");
   revalidatePath("/admin/guides");
   revalidatePath("/my/guides");

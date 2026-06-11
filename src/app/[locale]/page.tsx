@@ -5,11 +5,16 @@ import Image from "next/image";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
-import { listEvents } from "@/lib/data/events";
-import { listProjects } from "@/lib/data/projects";
+import {
+  listApprovedProjectsCached,
+  listUpcomingEventsCached,
+} from "@/lib/data/cached";
 import type { LocationType } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
+// The route still renders per request (the root layout reads the session
+// cookie for the header), but the Firestore reads below are served from
+// the shared data cache — see src/lib/data/cached.ts for windows/tags.
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
@@ -17,8 +22,8 @@ export default async function HomePage() {
   const t = await getTranslations("Home");
   const common = await getTranslations("Common");
   const [events, projects] = await Promise.all([
-    listEvents({ limit: 3, notEndedOnly: true }).catch(() => []),
-    listProjects({ limit: 6 }).catch(() => []),
+    listUpcomingEventsCached(3).catch(() => []),
+    listApprovedProjectsCached(6).catch(() => []),
   ]);
 
   return (

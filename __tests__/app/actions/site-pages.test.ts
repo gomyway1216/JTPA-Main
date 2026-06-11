@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireAdminMock = vi.fn();
 const docSetMock = vi.fn();
 const revalidatePathMock = vi.fn();
+const updateTagMock = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   requireAdmin: () => requireAdminMock(),
@@ -31,6 +32,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
+  updateTag: (...args: unknown[]) => updateTagMock(...args),
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
@@ -47,6 +49,7 @@ beforeEach(() => {
   });
   docSetMock.mockReset().mockResolvedValue(undefined);
   revalidatePathMock.mockReset();
+  updateTagMock.mockReset();
 });
 
 // Validation failures come back as a result, never a throw, so the real
@@ -118,6 +121,9 @@ describe("saveSitePage — happy path", () => {
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/about");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/about");
+    // Data-cache expiry for the public /about body — the cached read in
+    // src/lib/data/cached.ts is tagged "site-pages".
+    expect(updateTagMock).toHaveBeenCalledWith("site-pages");
   });
 
   it("falls back to null for blank displayName / email in the audit fields", async () => {

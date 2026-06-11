@@ -7,10 +7,12 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
-import { listPublishedPosts } from "@/lib/data/posts";
+import { listPublishedPostsCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { formatDate } from "@/lib/utils";
 
+// Still rendered per request (session-reading layout); the post list
+// itself comes from the shared data cache (src/lib/data/cached.ts).
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -22,7 +24,7 @@ export default async function BlogIndexPage() {
   const locale = await getLocale();
   const t = await getTranslations("BlogPage");
   const common = await getTranslations("Common");
-  const posts = await listPublishedPosts(50).catch(() => []);
+  const posts = await listPublishedPostsCached(50).catch(() => []);
   // Single batched read for every author appearing in the list — keeps
   // the page to one Firestore round-trip for user lookups regardless of
   // post count. AuthorBadge handles the missing-profile case (deleted

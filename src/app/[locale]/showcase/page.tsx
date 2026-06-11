@@ -6,9 +6,11 @@ import Image from "next/image";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
-import { listProjects } from "@/lib/data/projects";
+import { listApprovedProjectsCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 
+// Per-request render (session-reading layout); the approved-project list
+// is served from the shared data cache (src/lib/data/cached.ts).
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -19,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ShowcasePage() {
   const t = await getTranslations("ShowcasePage");
   const common = await getTranslations("Common");
-  const projects = await listProjects({ limit: 100 }).catch(() => []);
+  const projects = await listApprovedProjectsCached(100).catch(() => []);
   // Batched profile lookup for every project owner shown in the grid;
   // missing entries fall back to "@unknown" so a deleted-owner project
   // still renders.
