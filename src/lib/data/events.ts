@@ -3,11 +3,13 @@ import "server-only";
 import { Timestamp } from "firebase-admin/firestore";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { EventDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { EventDoc, EventStatus } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): EventDoc {
-  const data = doc.data() as Omit<EventDoc, "id">;
+function toDoc(doc: SnapLike): EventDoc {
+  const data = fromSnap<Omit<EventDoc, "id">>(doc, EventDocSchema, "events");
   return plainify({ ...data, id: doc.id });
 }
 
@@ -37,7 +39,7 @@ export async function listEvents(opts: {
   }
   q = q.limit(limit);
   const snap = await q.get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listPastEvents(limit = 20): Promise<EventDoc[]> {
@@ -51,7 +53,7 @@ export async function listPastEvents(limit = 20): Promise<EventDoc[]> {
     .orderBy("endAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
@@ -61,11 +63,11 @@ export async function getEventBySlug(slug: string): Promise<EventDoc | null> {
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }
 
 export async function getEventById(id: string): Promise<EventDoc | null> {
   const snap = await adminDb().collection("events").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({ ...(snap.data() as Omit<EventDoc, "id">), id: snap.id });
+  return toDoc(snap);
 }

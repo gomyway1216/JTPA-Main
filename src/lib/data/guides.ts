@@ -1,11 +1,13 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { GuideDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { GuideDoc, GuideStatus } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): GuideDoc {
-  const data = doc.data() as Omit<GuideDoc, "id">;
+function toDoc(doc: SnapLike): GuideDoc {
+  const data = fromSnap<Omit<GuideDoc, "id">>(doc, GuideDocSchema, "guides");
   return plainify({ ...data, id: doc.id });
 }
 
@@ -25,7 +27,7 @@ export async function listGuides(
     .orderBy("updatedAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 // Per-status query for the admin review queue. Mirrors `listPostsByStatus`.
@@ -41,7 +43,7 @@ export async function listGuidesByStatus(
     .orderBy("updatedAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 // List guides the given user has authored. Used by `/my/guides` so a
@@ -56,13 +58,13 @@ export async function listMyGuides(uid: string): Promise<GuideDoc[]> {
     .where("authorUid", "==", uid)
     .orderBy("updatedAt", "desc")
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getGuideById(id: string): Promise<GuideDoc | null> {
   const snap = await adminDb().collection("guides").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({ ...(snap.data() as Omit<GuideDoc, "id">), id: snap.id });
+  return toDoc(snap);
 }
 
 export async function getGuideBySlug(slug: string): Promise<GuideDoc | null> {
@@ -72,5 +74,5 @@ export async function getGuideBySlug(slug: string): Promise<GuideDoc | null> {
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }

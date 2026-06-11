@@ -1,11 +1,17 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { ProjectDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { ProjectDoc, ProjectStatus } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): ProjectDoc {
-  const data = doc.data() as Omit<ProjectDoc, "id">;
+function toDoc(doc: SnapLike): ProjectDoc {
+  const data = fromSnap<Omit<ProjectDoc, "id">>(
+    doc,
+    ProjectDocSchema,
+    "projects",
+  );
   return plainify({ ...data, id: doc.id });
 }
 
@@ -20,7 +26,7 @@ export async function listProjects(opts: {
     .orderBy("submittedAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listMyProjects(uid: string): Promise<ProjectDoc[]> {
@@ -29,7 +35,7 @@ export async function listMyProjects(uid: string): Promise<ProjectDoc[]> {
     .where("ownerUid", "==", uid)
     .orderBy("updatedAt", "desc")
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getProjectBySlug(
@@ -41,14 +47,11 @@ export async function getProjectBySlug(
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }
 
 export async function getProjectById(id: string): Promise<ProjectDoc | null> {
   const snap = await adminDb().collection("projects").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({
-    ...(snap.data() as Omit<ProjectDoc, "id">),
-    id: snap.id,
-  });
+  return toDoc(snap);
 }
