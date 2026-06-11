@@ -8,11 +8,15 @@ import {
   enqueueAdminNewPostNotification,
   enqueuePostDecisionNotification,
 } from "@/lib/notifications";
+import {
+  deleteStoragePaths,
+  findUniqueSlug,
+  parseInput,
+} from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
-import { adminDb, adminStorage } from "@/lib/firebase/admin";
-import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { adminDb } from "@/lib/firebase/admin";
+import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
-import { slugify } from "@/lib/utils";
 import type { PostDoc, PostStatus, ProjectAsset } from "@/lib/types";
 
 const AssetSchema = z.object({
@@ -44,45 +48,6 @@ export type PostReturnTo = "my" | "admin";
 // production (same reasoning as events.ts / users.ts, per PR #59).
 export type PostSaveResult = { ok: true } | { ok: false; error: string };
 
-type ParsedPostInput =
-  | { ok: true; data: z.infer<typeof PostInputSchema> }
-  | { ok: false; error: string };
-
-async function parsePostInput(input: PostFormInput): Promise<ParsedPostInput> {
-  const result = PostInputSchema.safeParse(input);
-  if (result.success) return { ok: true, data: result.data };
-  return { ok: false, error: await inputError(result.error.issues) };
-}
-
-async function uniqueSlug(base: string, existingId?: string): Promise<string> {
-  const slug = slugify(base, "post");
-  for (let i = 0; i < 20; i++) {
-    const candidate = i === 0 ? slug : `${slug}-${i}`;
-    const snap = await adminDb()
-      .collection("posts")
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (snap.empty || snap.docs[0].id === existingId) return candidate;
-  }
-  return `${slug}-${Date.now().toString(36)}`;
-}
-
-async function deleteStoragePaths(paths: string[]): Promise<void> {
-  if (paths.length === 0) return;
-  const bucket = adminStorage().bucket();
-  await Promise.all(
-    paths.map((p) =>
-      bucket
-        .file(p)
-        .delete()
-        .catch((err) => {
-          console.warn("Failed to delete storage object:", p, err);
-        }),
-    ),
-  );
-}
-
 function orphanPaths(
   prev: ProjectAsset | undefined,
   next: ProjectAsset | undefined,
@@ -102,11 +67,11 @@ export async function submitPost(
   input: PostFormInput,
 ): Promise<PostSaveResult> {
   const user = await requireUser();
-  const pr = await parsePostInput(input);
+  const pr = await parseInput(PostInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const now = Timestamp.now();
-  const slug = await uniqueSlug(parsed.title);
+  const slug = await findUniqueSlug("posts", parsed.title, { prefix: "post" });
 
   // Capture the doc id from `.add()` — admin tooling and future moderation
   // actions look posts up by document id, not by slug, so the notification
@@ -151,7 +116,7 @@ export async function updateMyPost(
   returnTo: PostReturnTo = "my",
 ): Promise<PostSaveResult> {
   const user = await requireUser();
-  const pr = await parsePostInput(input);
+  const pr = await parseInput(PostInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("posts").doc(postId);
