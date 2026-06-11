@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import { PresentationSection } from "@/app/[locale]/events/[slug]/PresentationSection";
@@ -147,11 +148,15 @@ export default async function EventDetailPage({
       {event.coverImage?.url && (
         // aspect-[21/9] keeps the hero a cinematic-ish banner regardless of
         // the source aspect ratio — without this, a portrait upload would
-        // push the title way below the fold.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        // push the title way below the fold. `preload` because this is the
+        // above-the-fold LCP element whenever a cover exists.
+        <Image
           src={event.coverImage.url}
           alt={t("coverAlt", { title: event.title })}
+          width={1680}
+          height={720}
+          preload
+          sizes="(max-width: 768px) 100vw, 736px"
           className="aspect-[21/9] w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}

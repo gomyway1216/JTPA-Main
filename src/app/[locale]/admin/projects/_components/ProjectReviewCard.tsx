@@ -2,6 +2,7 @@
 
 import Link from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -108,20 +109,22 @@ export function ProjectReviewCard({
         <ul className="mt-3 flex flex-wrap gap-2">
           {project.thumbnail && (
             <li>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={project.thumbnail.url}
                 alt={t("thumbnailAlt")}
+                width={80}
+                height={80}
                 className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
             </li>
           )}
           {project.screenshots?.map((s, i) => (
             <li key={s.path}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={s.url}
                 alt={t("screenshotAlt", { number: i + 1 })}
+                width={80}
+                height={80}
                 className="h-20 w-20 rounded border border-zinc-200 object-cover dark:border-zinc-800"
               />
             </li>
