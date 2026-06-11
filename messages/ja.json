@@ -504,6 +504,15 @@
     "avatarAlt": "@{username} のアイコン",
     "eventAttendanceCount": "イベント参加回数",
     "eventAttendanceCountValue": "{count}回",
+    "contributions": "貢献",
+    "contributionType": {
+      "posts": "記事",
+      "projects": "プロジェクト",
+      "qa": "質問・相談",
+      "polls": "みんなに聞く",
+      "guides": "メモ・ノウハウ",
+      "total": "合計"
+    },
     "emptyBio": "このユーザーはまだ紹介文を公開していません。"
   },
   "UserLinks": {
