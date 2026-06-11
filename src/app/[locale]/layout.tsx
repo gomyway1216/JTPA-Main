@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -94,11 +93,7 @@ export default async function RootLayout({
         {/* Sets `.dark` on <html> before paint so users don't see a
             flash of the wrong theme on first load. Must run synchronously
             in <head>; the React state in ThemeProvider mounts later. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-        />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
