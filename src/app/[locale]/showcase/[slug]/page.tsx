@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -21,7 +22,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const project = await getProjectBySlug(slug).catch(() => null);
+  const project = await getProjectBySlugCached(slug).catch(() => null);
   if (!project || project.status !== "approved") return {};
   // Project descriptions are plain text (not Markdown — see the body
   // rendering below), so no stripMarkdown pass is needed here.
@@ -57,13 +58,14 @@ export default async function ProjectDetailPage({
   // Session + comment listing are independent — kick them off together
   // rather than serially. The like-state query depends on the comment
   // ids so it stays after the join.
-  const [user, comments] = await Promise.all([
+  const [user, commentsPage] = await Promise.all([
     getSessionUser(),
     listComments("project", project.id).catch((err) => {
       console.error("Failed to list project comments:", err);
-      return [];
+      return { comments: [], nextCursor: null };
     }),
   ]);
+  const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "project",
     parentId: project.id,
@@ -116,10 +118,18 @@ export default async function ProjectDetailPage({
       </header>
 
       {project.thumbnail && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        // The source ratio is whatever the submitter uploaded; width/height
+        // only pre-reserve a 16:9 box while loading — Tailwind preflight's
+        // `img { height: auto }` keeps the rendered height tracking the
+        // real ratio at full width, exactly like the old raw <img>.
+        // `preload`: the cover is the LCP element on projects that have one.
+        <Image
           src={project.thumbnail.url}
           alt={t("coverAlt", { title: project.title })}
+          width={1600}
+          height={900}
+          preload
+          sizes="(max-width: 768px) 100vw, 736px"
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
@@ -141,10 +151,12 @@ export default async function ProjectDetailPage({
                   rel="noreferrer noopener"
                   className="block"
                 >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={s.url}
-                    alt={`screenshot ${i + 1}`}
+                    alt={`${project.title} screenshot ${i + 1}`}
+                    width={640}
+                    height={360}
+                    sizes="(max-width: 640px) 50vw, 240px"
                     className="h-32 w-full rounded border border-zinc-200 object-cover hover:opacity-90 dark:border-zinc-800"
                   />
                 </a>
@@ -199,6 +211,7 @@ export default async function ProjectDetailPage({
         parentId={project.id}
         parentSlug={project.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

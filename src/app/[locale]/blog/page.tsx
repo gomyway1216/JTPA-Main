@@ -1,6 +1,7 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -67,10 +68,13 @@ export default async function BlogIndexPage() {
               className={`${interactiveCardClass} relative flex flex-col overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
             >
               {p.coverImage?.url && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img
+                // Full-width strip on phones, fixed 192px rail from sm:.
+                <Image
                   src={p.coverImage.url}
                   alt={common("coverImageAlt", { title: p.title })}
+                  width={1600}
+                  height={900}
+                  sizes="(max-width: 640px) 100vw, 192px"
                   className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
                 />
               )}

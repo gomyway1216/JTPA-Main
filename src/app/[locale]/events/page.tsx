@@ -1,6 +1,7 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
@@ -57,12 +58,13 @@ export default async function EventsPage() {
                   className={`${interactiveCardClass} flex flex-col gap-0 overflow-hidden sm:flex-row`}
                 >
                   {e.coverImage?.url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
+                    // Full-width strip on phones, fixed 192px rail from sm:.
+                    <Image
                       src={e.coverImage.url}
                       alt={common("coverImageAlt", { title: e.title })}
-                      loading="lazy"
-                      decoding="async"
+                      width={1600}
+                      height={900}
+                      sizes="(max-width: 640px) 100vw, 192px"
                       className="h-40 w-full object-cover sm:w-48 sm:shrink-0"
                     />
                   )}

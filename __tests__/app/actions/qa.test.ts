@@ -159,7 +159,11 @@ describe("submitQa — create", () => {
       .mockResolvedValueOnce({ empty: true, docs: [] });
     await expect(submitQa(validInput)).rejects.toThrow("__REDIRECT__");
     const [payload] = addMock.mock.calls[0] as [{ slug: string }];
-    expect(payload.slug).toMatch(/^how-do-i-file-taxes-[a-z0-9]+$/);
+    // findFreeQaSlug's retrySuffix is `${slug}-${base36 ts}-${attempt}`, so a
+    // collision yields a multi-segment suffix like `...-mq90k8wn-1` — the
+    // hyphen before the attempt counter is expected. (The original regex
+    // `-[a-z0-9]+$` predated that suffix shape and rejected it.)
+    expect(payload.slug).toMatch(/^how-do-i-file-taxes(?:-[a-z0-9]+)+$/);
   });
 });
 

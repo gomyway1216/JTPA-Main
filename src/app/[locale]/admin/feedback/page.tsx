@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import Link from "@/i18n/navigation";
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { FeedbackList } from "@/app/[locale]/admin/feedback/_components/FeedbackList";
 import { getSessionUser } from "@/lib/auth/session";
@@ -25,15 +26,23 @@ export async function generateMetadata(): Promise<Metadata> {
 //
 // The page is built around three buckets (new / read / resolved) and a
 // fourth `archived` view for entries we want to keep but hide from the
-// default triage. We fetch them all in a single query and let the
-// client component bucket + filter in memory — fast enough at the
-// expected volume (single-digit entries per day) and avoids the
-// either/or of a separate query per tab.
-export default async function AdminFeedbackPage() {
+// default triage. We fetch one cursor-sized page (newest first) and let
+// the client component bucket + filter it in memory — fast enough at
+// the expected volume (single-digit entries per day) and avoids the
+// either/or of a separate query per tab. Older entries are reached via
+// the `?cursor=` next-page link below the list, which keeps the
+// Firestore read bounded no matter how big the backlog grows; the
+// status tabs (and their counts) apply to the page being viewed.
+export default async function AdminFeedbackPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ cursor?: string }>;
+}) {
   const user = await getSessionUser();
   if (!user) return redirectToLoginPath("/admin/feedback");
   if (!user.isAdmin && !user.isEditor) return redirectToLocalizedPath("/");
   const t = await getTranslations("Admin.feedback");
+  const { cursor } = await searchParams;
 
   // Always include archived in the read so the "all" filter in the
   // client component has the docs available without a re-fetch when
@@ -42,10 +51,15 @@ export default async function AdminFeedbackPage() {
   const entriesRes = await safeLoad("feedback", () =>
     listFeedback({
       statuses: ["new", "read", "resolved", "archived"],
-      limit: 500,
+      cursor: cursor ?? null,
     }),
   );
-  const entries = entriesRes.ok ? entriesRes.data : [];
+  // On a failed read, degrade to an empty page with no next cursor; the
+  // banner below surfaces the failure (so empty-because-error stays
+  // distinguishable from empty-because-no-data).
+  const { entries, nextCursor } = entriesRes.ok
+    ? entriesRes.data
+    : { entries: [], nextCursor: null };
 
   return (
     <div className="space-y-6">
@@ -58,6 +72,29 @@ export default async function AdminFeedbackPage() {
       </header>
 
       <FeedbackList entries={entries} viewerIsAdmin={user.isAdmin} />
+
+      {(cursor || nextCursor) && (
+        <nav className="flex items-center gap-4 text-sm">
+          {cursor && (
+            <Link
+              href="/admin/feedback"
+              className="text-zinc-600 hover:underline dark:text-zinc-400"
+            >
+              {t("backToLatest")}
+            </Link>
+          )}
+          {nextCursor && (
+            <Link
+              // The cursor is base64url (already URL-safe); encode anyway
+              // so the link stays valid even if the format ever changes.
+              href={`/admin/feedback?cursor=${encodeURIComponent(nextCursor)}`}
+              className="text-zinc-600 hover:underline dark:text-zinc-400"
+            >
+              {t("nextPage")}
+            </Link>
+          )}
+        </nav>
+      )}
     </div>
   );
 }

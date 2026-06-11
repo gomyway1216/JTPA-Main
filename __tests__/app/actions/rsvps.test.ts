@@ -71,6 +71,10 @@ vi.mock("@/lib/auth/session", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
+  // The action also expires the cached event lists via updateTag; these
+  // tests assert on revalidatePath, not tag invalidation, so a no-op stub
+  // is enough to satisfy the import.
+  updateTag: () => {},
 }));
 
 vi.mock("firebase-admin/firestore", () => ({
@@ -113,6 +117,18 @@ function eventData(overrides: Record<string, unknown> = {}) {
     rsvpCount: 2,
     presenterCount: 1,
     waitlistCount: 0,
+    // A single optional free-text question so the default `{ q1: "yes" }`
+    // fixture is a KNOWN field (server-side validation rejects answers to
+    // fields the event doesn't define). Validation tests override this.
+    surveyFields: [
+      {
+        key: "q1",
+        label: "Q1",
+        type: "text",
+        required: false,
+        audience: "all",
+      },
+    ],
     ...overrides,
   };
 }
@@ -124,6 +140,18 @@ function rsvpInput(overrides: Record<string, unknown> = {}) {
     surveyResponses: { q1: "yes" },
     ...overrides,
   } as Parameters<typeof submitRsvp>[0];
+}
+
+// A presenter RSVP now requires a non-empty title + abstract (server-side
+// validation mirrors the form's `required` presenter fields), so the
+// presenter-path fixtures carry them by default.
+function presenterInput(overrides: Record<string, unknown> = {}) {
+  return rsvpInput({
+    role: "presenter" as const,
+    presentationTitle: "My Talk",
+    presentationAbstract: "An abstract.",
+    ...overrides,
+  });
 }
 
 // The write aimed at a particular tagged ref (undefined if none landed).
@@ -205,6 +233,151 @@ describe("submitRsvp — auth + event guards", () => {
   });
 });
 
+describe("submitRsvp — server-side input validation", () => {
+  it("rejects an out-of-range role and writes nothing", async () => {
+    // A hand-crafted request can send any string; only attendee/presenter
+    // are valid. (The cast mirrors a spoofed client payload.)
+    await expectError(
+      submitRsvp(rsvpInput({ role: "admin" as unknown as "attendee" })),
+      "参加形態",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter RSVP when the event accepts no presenters", async () => {
+    eventSnap = snap(eventData({ presenterCapacity: 0 }));
+    await expectError(submitRsvp(presenterInput()), "発表者");
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter RSVP missing the talk title/abstract", async () => {
+    await expectError(
+      submitRsvp(
+        presenterInput({ presentationTitle: "", presentationAbstract: "" }),
+      ),
+      "発表タイトル",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a missing required survey answer", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "diet",
+            label: "Dietary needs",
+            type: "text",
+            required: true,
+            audience: "all",
+          },
+        ],
+      }),
+    );
+    // No answer for the required `diet` field.
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: {} })),
+      "diet",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a select answer outside the field's options", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "mode",
+            label: "Mode",
+            type: "select",
+            required: true,
+            options: ["online", "offline"],
+            audience: "all",
+          },
+        ],
+      }),
+    );
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: { mode: "hybrid" } })),
+      "mode",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an answer to a field the event doesn't define", async () => {
+    // The default event defines only `q1`; a stray `q2` can't be legit.
+    await expectError(
+      submitRsvp(rsvpInput({ surveyResponses: { q1: "ok", q2: "stray" } })),
+      "q2",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a presenter-only answer smuggled in by an attendee", async () => {
+    // A presenter-audience field is not applicable to an attendee, so an
+    // attendee sending it is an unknown key for their submission.
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "q1",
+            label: "Q1",
+            type: "text",
+            required: false,
+            audience: "all",
+          },
+          {
+            key: "slides",
+            label: "Slides URL",
+            type: "text",
+            required: false,
+            audience: "presenter",
+          },
+        ],
+      }),
+    );
+    await expectError(
+      submitRsvp(
+        rsvpInput({ surveyResponses: { q1: "ok", slides: "http://x" } }),
+      ),
+      "slides",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts a valid presenter submission with a presenter-audience answer", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "topic",
+            label: "Topic",
+            type: "select",
+            required: true,
+            options: ["AI", "Web"],
+            audience: "presenter",
+          },
+        ],
+      }),
+    );
+    const res = await submitRsvp(
+      presenterInput({ surveyResponses: { topic: "AI" } }),
+    );
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.role).toBe("presenter");
+      expect(res.rsvp.status).toBe("confirmed");
+      expect(res.rsvp.surveyResponses).toEqual({ topic: "AI" });
+    }
+    expect(txSetMock).toHaveBeenCalledWith(rsvpRef, expect.anything());
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      presenterCount: { __inc: 1 },
+    });
+  });
+});
+
 describe("submitRsvp — fresh RSVP counter deltas", () => {
   it("confirms an attendee under capacity and bumps rsvpCount only", async () => {
     const res = await submitRsvp(rsvpInput());
@@ -231,7 +404,7 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
   });
 
   it("counts a confirmed presenter in presenterCount too", async () => {
-    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    const res = await submitRsvp(presenterInput());
     expect(res.ok).toBe(true);
     expect(updateTo("event")).toMatchObject({
       rsvpCount: { __inc: 1 },
@@ -243,7 +416,7 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
     // presenterCount tracks CONFIRMED presenters only; a presenter who
     // lands on the waitlist must not inflate it.
     eventSnap = snap(eventData({ capacity: 10, rsvpCount: 10 }));
-    const res = await submitRsvp(rsvpInput({ role: "presenter" }));
+    const res = await submitRsvp(presenterInput());
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.rsvp.status).toBe("waitlist");
     expect(updateTo("event")).toMatchObject({
@@ -274,6 +447,33 @@ describe("submitRsvp — fresh RSVP counter deltas", () => {
     if (res.ok) expect(res.rsvp.status).toBe("confirmed");
     expect(updateTo("event")).toMatchObject({ rsvpCount: { __inc: 1 } });
   });
+
+  it("a re-RSVP after cancellation gets a FRESH createdAt (no waitlist jump)", async () => {
+    // Fairness regression: the waitlist is FIFO by `createdAt asc`. A user
+    // who cancelled and re-registers is NOT an existing RSVP, so they must
+    // get a brand-new `now` timestamp and go to the BACK of the queue —
+    // reusing the old (earlier) createdAt would let them cut ahead of
+    // everyone who signed up while they were gone. Land them on the
+    // waitlist (full house) so the queue ordering actually matters.
+    eventSnap = snap(eventData({ capacity: 10, rsvpCount: 10 }));
+    rsvpSnap = snap({
+      status: "cancelled",
+      role: "attendee",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(rsvpInput());
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.rsvp.status).toBe("waitlist");
+    const [, doc] = txSetMock.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    // The persisted doc must carry the fresh `now`, NOT the stale prior
+    // createdAt — this assertion fails against the pre-fix code, which used
+    // `prior?.createdAt ?? now` and preserved { __fixed: "created" }.
+    expect(doc.createdAt).toEqual({ __fixed: "now" });
+    expect(doc.createdAt).not.toEqual({ __fixed: "created" });
+  });
 });
 
 describe("submitRsvp — editing an existing RSVP", () => {
@@ -298,7 +498,7 @@ describe("submitRsvp — editing an existing RSVP", () => {
 
   it("attendee → presenter switch bumps presenterCount only", async () => {
     rsvpSnap = snap({ status: "confirmed", role: "attendee" });
-    await submitRsvp(rsvpInput({ role: "presenter" }));
+    await submitRsvp(presenterInput());
     expect(updateTo("event")).toMatchObject({
       rsvpCount: { __inc: 0 },
       presenterCount: { __inc: 1 },
@@ -312,6 +512,58 @@ describe("submitRsvp — editing an existing RSVP", () => {
     expect(updateTo("event")).toMatchObject({
       presenterCount: { __inc: -1 },
     });
+  });
+
+  it("a waitlisted edit STAYS waitlist and never touches counters", async () => {
+    // Regression for the counter-desync bug: a waitlisted user editing
+    // their RSVP (e.g. affiliation / survey answers) must remain on the
+    // waitlist. Re-evaluating capacity here used to silently promote them
+    // to "confirmed" past capacity while leaving rsvpCount too low and
+    // waitlistCount too high — a permanent desync. Promotion happens only
+    // via the cancel→promote flow, never by editing.
+    eventSnap = snap(
+      eventData({ capacity: 10, rsvpCount: 10, waitlistCount: 1 }),
+    );
+    rsvpSnap = snap({
+      status: "waitlist",
+      role: "attendee",
+      affiliation: "Old Co",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(
+      rsvpInput({ affiliation: "New Co", surveyResponses: { q1: "changed" } }),
+    );
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.status).toBe("waitlist");
+      expect(res.rsvp.affiliation).toBe("New Co");
+    }
+    // Doc is rewritten, but no counter movement at all (no rsvpCount++ /
+    // waitlistCount--), so the event update is skipped entirely.
+    expect(txSetMock).toHaveBeenCalledTimes(1);
+    expect(txUpdateMock).not.toHaveBeenCalled();
+  });
+
+  it("a waitlisted attendee → presenter switch STAYS waitlist with no presenterCount change", async () => {
+    // presenterCount tracks CONFIRMED presenters only. A waitlisted RSVP
+    // never contributed to it, so switching role while waitlisted must
+    // leave presenterCount (and every other counter) untouched.
+    eventSnap = snap(
+      eventData({ capacity: 10, rsvpCount: 10, waitlistCount: 1 }),
+    );
+    rsvpSnap = snap({
+      status: "waitlist",
+      role: "attendee",
+      createdAt: { __fixed: "created" },
+    });
+    const res = await submitRsvp(presenterInput());
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.status).toBe("waitlist");
+      expect(res.rsvp.role).toBe("presenter");
+    }
+    expect(txSetMock).toHaveBeenCalledTimes(1);
+    expect(txUpdateMock).not.toHaveBeenCalled();
   });
 
   it("preserves check-in markers + createdAt across edits", async () => {

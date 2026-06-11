@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
@@ -165,10 +166,14 @@ export default async function HomePage() {
                   className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
                 >
                   {e.coverImage?.url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
+                    // width/height only set the pre-load aspect-ratio hint;
+                    // the rendered box is fixed by the aspect-[16/9] class.
+                    <Image
                       src={e.coverImage.url}
                       alt={common("coverImageAlt", { title: e.title })}
+                      width={1600}
+                      height={900}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}
@@ -240,10 +245,12 @@ export default async function HomePage() {
                   className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
                 >
                   {p.thumbnail?.url && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
+                    <Image
                       src={p.thumbnail.url}
                       alt={common("thumbnailAlt", { title: p.title })}
+                      width={1600}
+                      height={900}
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       className="aspect-[16/9] w-full object-cover"
                     />
                   )}

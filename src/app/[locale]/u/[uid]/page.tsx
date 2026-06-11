@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { RolePill } from "@/components/users/AuthorBadge";
 import { UserLinksRow } from "@/components/users/UserLinks";
+import { getPublicContributionCounts } from "@/lib/data/contributions";
 import { getPublicProfile } from "@/lib/data/users";
 
 export const dynamic = "force-dynamic";
@@ -37,6 +39,13 @@ export default async function PublicProfilePage({
   const profile = await getPublicProfile(uid);
   if (!profile) notFound();
 
+  // Published contribution tallies, computed at read time via `count()`
+  // aggregations. Fetched after the profile guard so we don't spend five
+  // aggregation reads on a non-existent user; the profile read itself is
+  // a per-request cache hit (shared with `generateMetadata`), so there's
+  // nothing live to parallelize it against on the happy path.
+  const contributions = await getPublicContributionCounts(uid);
+
   // Initials fallback for the avatar — same surrogate-safe `[...str][0]`
   // pattern as the AuthorBadge to handle emoji / non-BMP usernames. The
   // initial comes from the username (the primary label) rather than the
@@ -48,10 +57,11 @@ export default async function PublicProfilePage({
       <article className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900 space-y-5">
         <header className="flex items-start gap-4">
           {profile.photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={profile.photoURL}
               alt={t("avatarAlt", { username: profile.username })}
+              width={64}
+              height={64}
               className="h-16 w-16 rounded-full border border-zinc-200 dark:border-zinc-800"
             />
           ) : (
@@ -99,6 +109,41 @@ export default async function PublicProfilePage({
             })}
           </dd>
         </dl>
+
+        {/*
+          Published-contribution tallies: the five content types plus a
+          Total cell (six in all). Every type is shown even at 0 so the
+          grid stays a predictable shape and an empty slot reads as "none
+          yet" rather than a missing feature. Reuses the same label/value
+          typography as the attendance stat above so the two read as one
+          family of profile metrics.
+        */}
+        <section className="border-b border-zinc-200 pb-3 dark:border-zinc-800">
+          <h2 className="text-xs font-medium uppercase text-zinc-500">
+            {t("contributions")}
+          </h2>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+            {(
+              [
+                ["posts", contributions.posts],
+                ["projects", contributions.projects],
+                ["qa", contributions.qa],
+                ["polls", contributions.polls],
+                ["guides", contributions.guides],
+                ["total", contributions.total],
+              ] as const
+            ).map(([key, count]) => (
+              <div key={key}>
+                <dt className="text-xs text-zinc-500">
+                  {t(`contributionType.${key}`)}
+                </dt>
+                <dd className="mt-0.5 text-lg font-semibold tabular-nums">
+                  {count}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
         {profile.bio ? (
           // Plain text with author-entered newlines preserved.

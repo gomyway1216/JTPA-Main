@@ -56,16 +56,17 @@ export default async function PollDetailPage({
     notFound();
   }
 
-  const [comments, myVote] = await Promise.all([
+  const [commentsPage, myVote] = await Promise.all([
     listComments("poll", poll.id).catch((err) => {
       console.error("Failed to list poll comments:", err);
-      return [];
+      return { comments: [], nextCursor: null };
     }),
     getMyPollVote(poll.id, user?.uid ?? null).catch((err) => {
       console.error("Failed to load my poll vote:", err);
       return null;
     }),
   ]);
+  const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "poll",
     parentId: poll.id,
@@ -162,6 +163,7 @@ export default async function PollDetailPage({
         parentId={poll.id}
         parentSlug={poll.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

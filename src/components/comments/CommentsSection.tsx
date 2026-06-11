@@ -6,7 +6,11 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
-import { deleteComment, postComment } from "@/app/actions/comments";
+import {
+  deleteComment,
+  loadMoreComments,
+  postComment,
+} from "@/app/actions/comments";
 import {
   errorTextClass,
   inputClass,
@@ -22,15 +26,29 @@ import type {
   CommentParentType,
   SessionUser,
 } from "@/lib/types";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, toDate } from "@/lib/utils";
 
 const MAX_BODY = 2000;
+
+// Canonical thread order — matches the Firestore query behind the pages
+// and the load-more action (createdAt asc, doc id as tiebreak). Used to
+// re-sort after merging a fetched page into the local list, which can be
+// out of order when the viewer posted a comment before loading more.
+function byThreadOrder(a: CommentDoc, b: CommentDoc): number {
+  const at = toDate(a.createdAt)?.getTime() ?? 0;
+  const bt = toDate(b.createdAt)?.getTime() ?? 0;
+  if (at !== bt) return at - bt;
+  return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+}
 
 interface Props {
   parentType: CommentParentType;
   parentId: string;
   parentSlug: string;
   initialComments: CommentDoc[];
+  // Cursor for the page after `initialComments`, as returned by
+  // `listComments`. Null when the whole thread fit in the first page.
+  initialNextCursor: string | null;
   // Set of "like target" keys the current user has already liked. Members
   // are either `RECORD_LIKE_KEY` or `comment:{commentId}`. Empty for
   // anonymous visitors.
@@ -50,6 +68,7 @@ export function CommentsSection({
   parentId,
   parentSlug,
   initialComments,
+  initialNextCursor,
   initialLikedKeys,
   profilesByUid,
   user,
@@ -57,6 +76,21 @@ export function CommentsSection({
   const t = useTranslations("Comments");
   const locale = useLocale();
   const [comments, setComments] = useState<CommentDoc[]>(initialComments);
+  // Cursor for the next not-yet-loaded page; null once the end of the
+  // thread has been reached (which hides the "load more" button).
+  const [nextCursor, setNextCursor] = useState<string | null>(
+    initialNextCursor,
+  );
+  // Liked keys + profiles loaded incrementally as later pages arrive via
+  // loadMoreComments. These hold *only* the extra pages — page one's
+  // companion data stays on the props (`initialLikedKeys`/`profilesByUid`)
+  // so a `router.refresh()` that reconciles server truth (post-like,
+  // post-delete, auth change) is always reflected. The lookups below merge
+  // props with these, preferring the fresher server props.
+  const [extraLikedKeys, setExtraLikedKeys] = useState<string[]>([]);
+  const [extraProfiles, setExtraProfiles] = useState<
+    Record<string, PublicProfile>
+  >({});
   const [body, setBody] = useState("");
   // null = top-level comment form. String = inline reply form targeting
   // that comment id. Only one inline reply form is visible at a time.
@@ -68,12 +102,28 @@ export function CommentsSection({
   // the bottom of the thread. Only one reply form is open at a time
   // (replyingTo is a single id), so one slot is enough. Per #128 review.
   const [replyError, setReplyError] = useState<string | null>(null);
+  // Load-more gets its own error slot + transition so a slow page fetch
+  // doesn't disable the comment forms (and vice versa).
+  const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
+  const [loadingMore, startLoadMore] = useTransition();
   const [pending, startTransition] = useTransition();
   const router = useRouter();
 
+  // Server-prefetched page-one keys plus the keys later pages added. The
+  // prop is listed first so a refreshed `initialLikedKeys` is always part
+  // of the set; membership is a union, so extra-page keys still count.
   const likedSet = useMemo(
-    () => new Set(initialLikedKeys),
-    [initialLikedKeys],
+    () => new Set([...initialLikedKeys, ...extraLikedKeys]),
+    [initialLikedKeys, extraLikedKeys],
+  );
+
+  // Profile lookup merging page-one props with later-page data. Spread the
+  // prop last so a `router.refresh()` that returns newer profile data wins
+  // over a stale extra-page copy; extra-page-only authors (uids the server
+  // never prefetched for page one) still resolve from `extraProfiles`.
+  const profiles = useMemo(
+    () => ({ ...extraProfiles, ...profilesByUid }),
+    [extraProfiles, profilesByUid],
   );
 
   // Comment lookup by id so a reply can show "Re: @author" pointing at
@@ -157,6 +207,43 @@ export function CommentsSection({
     });
   }
 
+  function handleLoadMore() {
+    if (!nextCursor) return;
+    setLoadMoreError(null);
+    startLoadMore(async () => {
+      try {
+        const res = await loadMoreComments({
+          parentType,
+          parentId,
+          cursor: nextCursor,
+        });
+        if (!res.ok) {
+          setLoadMoreError(res.error);
+          return;
+        }
+        setComments((cur) => {
+          // Dedupe before appending: a comment posted from this session
+          // (optimistically appended above) reappears on a later page —
+          // pages walk createdAt ascending and fresh comments sort last.
+          // Then re-sort so the merged list keeps the canonical
+          // (createdAt, id) order the thread builder expects.
+          const seen = new Set(cur.map((c) => c.id));
+          return [
+            ...cur,
+            ...res.comments.filter((c) => !seen.has(c.id)),
+          ].sort(byThreadOrder);
+        });
+        setExtraLikedKeys((cur) => [...new Set([...cur, ...res.likedKeys])]);
+        setExtraProfiles((cur) => ({ ...cur, ...res.profiles }));
+        setNextCursor(res.nextCursor);
+      } catch (err) {
+        setLoadMoreError(
+          err instanceof Error ? err.message : t("loadMoreError"),
+        );
+      }
+    });
+  }
+
   async function handleDelete(commentId: string, hard = false) {
     const prompt = hard
       ? t("hardDeleteConfirm")
@@ -216,7 +303,7 @@ export function CommentsSection({
           {repliesTo && (
             <ReplyToPrefix
               uid={repliesTo.authorUid}
-              profile={profilesByUid[repliesTo.authorUid] ?? null}
+              profile={profiles[repliesTo.authorUid] ?? null}
               fallbackName={repliesTo.authorName}
             />
           )}
@@ -236,7 +323,7 @@ export function CommentsSection({
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <AuthorBadge
-              profile={profilesByUid[c.authorUid] ?? null}
+              profile={profiles[c.authorUid] ?? null}
               size="md"
             />
             <span className="text-xs text-zinc-500">
@@ -258,7 +345,7 @@ export function CommentsSection({
         {repliesTo && (
           <ReplyToPrefix
             uid={repliesTo.authorUid}
-            profile={profilesByUid[repliesTo.authorUid] ?? null}
+            profile={profiles[repliesTo.authorUid] ?? null}
             fallbackName={repliesTo.authorName}
           />
         )}
@@ -315,7 +402,7 @@ export function CommentsSection({
               disabled={pending}
               autoFocus
               placeholder={t("replyPlaceholder", {
-                name: profilesByUid[c.authorUid]?.username ?? c.authorName,
+                name: profiles[c.authorUid]?.username ?? c.authorName,
               })}
               className={inputClass}
             />
@@ -364,6 +451,20 @@ export function CommentsSection({
             </li>
           ))}
         </ul>
+      )}
+
+      {nextCursor && (
+        <div className="mt-4 space-y-2 text-center">
+          <button
+            type="button"
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="rounded-md border border-zinc-300 px-4 py-1.5 text-sm text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          >
+            {loadingMore ? t("loadingMore") : t("loadMore")}
+          </button>
+          {loadMoreError && <p className={errorTextClass}>{loadMoreError}</p>}
+        </div>
       )}
 
       <div className="mt-6 border-t border-zinc-200 pt-4 dark:border-zinc-800">

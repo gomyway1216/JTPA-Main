@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
@@ -53,13 +54,14 @@ export default async function BlogPostPage({
   // Session + comment listing are independent — kick them off together
   // rather than serially. The like-state query depends on the comment
   // ids so it stays after the join.
-  const [user, comments] = await Promise.all([
+  const [user, commentsPage] = await Promise.all([
     getSessionUser(),
     listComments("post", post.id).catch((err) => {
       console.error("Failed to list comments:", err);
-      return [];
+      return { comments: [], nextCursor: null };
     }),
   ]);
+  const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "post",
     parentId: post.id,
@@ -138,10 +140,18 @@ export default async function BlogPostPage({
       </header>
 
       {post.coverImage?.url && (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
+        // The source ratio is whatever the author uploaded; width/height
+        // only pre-reserve a 16:9 box while loading — Tailwind preflight's
+        // `img { height: auto }` keeps the rendered height tracking the
+        // real ratio at full width, exactly like the old raw <img>.
+        // `preload`: the cover is the LCP element on posts that have one.
+        <Image
           src={post.coverImage.url}
           alt={t("coverAlt", { title: post.title })}
+          width={1600}
+          height={900}
+          preload
+          sizes="(max-width: 768px) 100vw, 736px"
           className="w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
         />
       )}
@@ -157,6 +167,7 @@ export default async function BlogPostPage({
         parentId={post.id}
         parentSlug={post.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

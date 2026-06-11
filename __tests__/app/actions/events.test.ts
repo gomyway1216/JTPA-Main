@@ -30,6 +30,10 @@ vi.mock("@/lib/auth/session", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: (...args: unknown[]) => revalidatePathMock(...args),
+  // The action also expires the cached event lists via updateTag; these
+  // tests assert on revalidatePath, not tag invalidation, so a no-op stub
+  // is enough to satisfy the import.
+  updateTag: () => {},
 }));
 
 vi.mock("@/lib/i18n/redirects", () => ({

@@ -77,9 +77,12 @@ export default async function GuideDetailPage({
           ? t("status.archived")
           : t("status.draft");
 
-  const comments = await listComments("guide", guide.id).catch((err) => {
+  const { comments, nextCursor: commentsNextCursor } = await listComments(
+    "guide",
+    guide.id,
+  ).catch((err) => {
     console.error("Failed to list guide comments:", err);
-    return [];
+    return { comments: [], nextCursor: null };
   });
   const likedSet = await getMyLikesForParent({
     parentType: "guide",
@@ -148,6 +151,7 @@ export default async function GuideDetailPage({
         parentId={guide.id}
         parentSlug={guide.slug}
         initialComments={comments}
+        initialNextCursor={commentsNextCursor}
         initialLikedKeys={[...likedSet]}
         profilesByUid={Object.fromEntries(profilesByUid)}
         user={user}

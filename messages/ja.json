@@ -121,7 +121,10 @@
     "deleteConfirm": "このコメントを削除しますか？",
     "hardDeleteConfirm": "このコメントを完全に削除しますか？復元できません。",
     "sendError": "送信に失敗しました",
-    "deleteError": "削除に失敗しました"
+    "deleteError": "削除に失敗しました",
+    "loadMore": "さらに表示",
+    "loadingMore": "読み込み中...",
+    "loadMoreError": "コメントの読み込みに失敗しました"
   },
   "EventsPage": {
     "metadataTitle": "イベント一覧",
@@ -501,6 +504,15 @@
     "avatarAlt": "@{username} のアイコン",
     "eventAttendanceCount": "イベント参加回数",
     "eventAttendanceCountValue": "{count}回",
+    "contributions": "貢献",
+    "contributionType": {
+      "posts": "記事",
+      "projects": "プロジェクト",
+      "qa": "質問・相談",
+      "polls": "みんなに聞く",
+      "guides": "メモ・ノウハウ",
+      "total": "合計"
+    },
     "emptyBio": "このユーザーはまだ紹介文を公開していません。"
   },
   "UserLinks": {
@@ -1029,7 +1041,9 @@
         "archived": "アーカイブ"
       },
       "updateFailed": "更新に失敗しました",
-      "statusChanged": "{name} が {date} にステータスを変更"
+      "statusChanged": "{name} が {date} にステータスを変更",
+      "nextPage": "次のページ",
+      "backToLatest": "最新へ戻る"
     },
     "attendees": {
       "title": "参加者",
@@ -1446,6 +1460,15 @@
     "slugTaken": "スラッグ \"{slug}\" は既に使用されています",
     "eventNotFoundDeleted": "イベントが見つかりません。削除された可能性があります。",
     "eventCancelledRsvp": "このイベントは中止されたため、参加登録できません。",
+    "rsvpInvalidRole": "参加形態の指定が不正です。",
+    "rsvpPresenterNotAllowed": "このイベントは発表者を募集していません。",
+    "rsvpPresentationRequired": "発表タイトルと概要を入力してください。",
+    "rsvpPresentationTooLong": "発表タイトルまたは概要が長すぎます。",
+    "rsvpSurveyRequired": "アンケート「{key}」は必須です。",
+    "rsvpSurveyInvalidOption": "アンケート「{key}」に不正な選択肢が指定されています。",
+    "rsvpSurveyInvalidValue": "アンケート「{key}」の値が不正です。",
+    "rsvpSurveyTooLong": "アンケート「{key}」は{max}文字以内で入力してください。",
+    "rsvpSurveyUnknownKey": "不明なアンケート項目「{key}」が含まれています。",
     "cloneSourceEventNotFound": "複製元のイベントが見つかりません",
     "invalidDraftId": "不正な下書きIDが指定されました",
     "draftIdTaken": "下書きIDが既に使われています",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
@@ -107,10 +108,11 @@ export function Header({ user }: { user: SessionUser | null }) {
                 className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 {user.photoURL ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
+                  <Image
                     src={user.photoURL}
                     alt=""
+                    width={28}
+                    height={28}
                     className="h-7 w-7 rounded-full object-cover"
                   />
                 ) : (

@@ -1,11 +1,13 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
+import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
+import { PollDocSchema, PollVoteDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { PollDoc, PollStatus, PollVoteDoc } from "@/lib/types";
 
-function fromSnap(doc: FirebaseFirestore.QueryDocumentSnapshot): PollDoc {
-  const data = doc.data() as Omit<PollDoc, "id">;
+function toDoc(doc: SnapLike): PollDoc {
+  const data = fromSnap<Omit<PollDoc, "id">>(doc, PollDocSchema, "polls");
   return plainify({
     // `likeCount` is optional on the type for parity with `qa`/`posts` —
     // defaulting here keeps the runtime shape predictable on the client.
@@ -30,7 +32,7 @@ export async function listPoll(
     .orderBy("createdAt", "desc")
     .limit(limit)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function listMyPoll(uid: string): Promise<PollDoc[]> {
@@ -42,17 +44,13 @@ export async function listMyPoll(uid: string): Promise<PollDoc[]> {
     .orderBy("updatedAt", "desc")
     .limit(100)
     .get();
-  return snap.docs.map(fromSnap);
+  return snap.docs.map(toDoc);
 }
 
 export async function getPollById(id: string): Promise<PollDoc | null> {
   const snap = await adminDb().collection("polls").doc(id).get();
   if (!snap.exists) return null;
-  return plainify({
-    likeCount: 0,
-    ...(snap.data() as Omit<PollDoc, "id">),
-    id: snap.id,
-  });
+  return toDoc(snap);
 }
 
 export async function getPollBySlug(slug: string): Promise<PollDoc | null> {
@@ -62,7 +60,7 @@ export async function getPollBySlug(slug: string): Promise<PollDoc | null> {
     .limit(1)
     .get();
   if (snap.empty) return null;
-  return fromSnap(snap.docs[0]);
+  return toDoc(snap.docs[0]);
 }
 
 /**
@@ -82,5 +80,7 @@ export async function getMyPollVote(
     .doc(uid)
     .get();
   if (!snap.exists) return null;
-  return plainify(snap.data() as PollVoteDoc);
+  return plainify(
+    fromSnap<PollVoteDoc>(snap, PollVoteDocSchema, "polls/votes"),
+  );
 }

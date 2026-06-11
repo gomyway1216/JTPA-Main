@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
+import { findUniqueSlug, parseInput } from "@/lib/actions/shared";
 import {
   requireAdmin,
   requireEditor,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/auth/session";
 import { GUIDES_TAG } from "@/lib/data/cache-tags";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
-import { actionError, inputError } from "@/lib/i18n/action-errors";
+import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import {
   enqueueAdminNewGuideNotification,
@@ -23,7 +24,6 @@ import type {
   GuideStatus,
   SessionUser,
 } from "@/lib/types";
-import { slugify } from "@/lib/utils";
 
 // Default sort order for community-submitted guides — slotted near the
 // end of the list so they don't shove curated guides down. Admin / editor
@@ -65,17 +65,6 @@ export type GuideFormInput = z.input<typeof GuideInputSchema>;
 // { ok: true }.
 export type GuideActionResult = { ok: true } | { ok: false; error: string };
 
-async function parseGuideInput(
-  input: GuideFormInput,
-): Promise<
-  | { ok: true; data: z.infer<typeof GuideInputSchema> }
-  | { ok: false; error: string }
-> {
-  const result = GuideInputSchema.safeParse(input);
-  if (result.success) return { ok: true, data: result.data };
-  return { ok: false, error: await inputError(result.error.issues) };
-}
-
 function authorRef(user: {
   uid: string;
   displayName: string;
@@ -99,20 +88,6 @@ function revalidate(slug?: string) {
   revalidatePath("/admin/guides");
   revalidatePath("/my/guides");
   if (slug) revalidatePath(`/guide/${slug}`);
-}
-
-async function uniqueSlug(base: string, existingId?: string): Promise<string> {
-  const slug = slugify(base, "guide");
-  for (let i = 0; i < 20; i++) {
-    const candidate = i === 0 ? slug : `${slug}-${i}`;
-    const snap = await adminDb()
-      .collection("guides")
-      .where("slug", "==", candidate)
-      .limit(1)
-      .get();
-    if (snap.empty || snap.docs[0].id === existingId) return candidate;
-  }
-  return `${slug}-${Date.now().toString(36)}`;
 }
 
 // Caller-status → resolved status. Privileged authors (admin / editor /
@@ -238,7 +213,7 @@ export async function submitGuide(
   draftId?: string,
 ): Promise<GuideActionResult> {
   const user = await requireUser();
-  const pr = await parseGuideInput(input);
+  const pr = await parseInput(GuideInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const resolvedStatus = resolveStatus(user, parsed.status);
@@ -248,7 +223,9 @@ export async function submitGuide(
   // type to `unknown` — cast through the explicit shape so the result
   // type stays narrow downstream (revalidate, payload, etc).
   const requestedSlug = parsed.slug as string | undefined;
-  const slug: string = requestedSlug ?? (await uniqueSlug(parsed.title));
+  const slug: string =
+    requestedSlug ??
+    (await findUniqueSlug("guides", parsed.title, { prefix: "guide" }));
   if (requestedSlug) {
     const existing = await adminDb()
       .collection("guides")
@@ -366,7 +343,7 @@ export async function updateGuide(
   input: GuideFormInput,
 ): Promise<GuideActionResult> {
   const user = await requireUser();
-  const pr = await parseGuideInput(input);
+  const pr = await parseInput(GuideInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("guides").doc(guideId);

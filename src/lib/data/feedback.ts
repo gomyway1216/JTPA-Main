@@ -1,6 +1,9 @@
 import "server-only";
 
+import { FieldPath } from "firebase-admin/firestore";
+
 import { adminDb } from "@/lib/firebase/admin";
+import { decodePageCursor, slicePage } from "@/lib/data/page-cursor";
 import { plainify } from "@/lib/data/serialize";
 import type { FeedbackDoc, FeedbackStatus } from "@/lib/types";
 
@@ -22,28 +25,55 @@ function fromSnap(
   });
 }
 
+export const FEEDBACK_PAGE_SIZE = 50;
+
+export type FeedbackPage = {
+  entries: FeedbackDoc[];
+  // Opaque cursor for fetching the page after this one (pass it back as
+  // `opts.cursor`); null when this page reached the end of the list.
+  nextCursor: string | null;
+};
+
 /**
  * Admin-facing listing for /admin/feedback. Sorted newest first because
  * triage is "what's new" oriented; the default status filter excludes
  * `archived` so the page stays manageable, and admins can choose to see
  * everything via the dropdown filter.
  *
- * `limit` defaults high enough that a backlog can be cleared in one
- * scroll but low enough that we don't accidentally pull tens of
- * thousands of docs if the form gets spammed.
+ * Cursor-paged in (createdAt desc, doc id desc) order so the read stays
+ * bounded no matter how big the backlog grows — the explicit doc-id
+ * tiebreak matches the implicit __name__ ordering Firestore appends to
+ * the existing (status, createdAt desc) composite index, so no new
+ * index is needed.
  */
 export async function listFeedback(
-  opts: { statuses?: FeedbackStatus[]; limit?: number } = {},
-): Promise<FeedbackDoc[]> {
-  const { statuses = ["new", "read", "resolved"], limit = 200 } = opts;
-  if (statuses.length === 0) return [];
-  const snap = await adminDb()
+  opts: {
+    statuses?: FeedbackStatus[];
+    pageSize?: number;
+    cursor?: string | null;
+  } = {},
+): Promise<FeedbackPage> {
+  const {
+    statuses = ["new", "read", "resolved"],
+    pageSize = FEEDBACK_PAGE_SIZE,
+    cursor = null,
+  } = opts;
+  if (statuses.length === 0) return { entries: [], nextCursor: null };
+  let query = adminDb()
     .collection("feedback")
     .where("status", "in", statuses)
     .orderBy("createdAt", "desc")
-    .limit(limit)
-    .get();
-  return snap.docs.map(fromSnap);
+    .orderBy(FieldPath.documentId(), "desc")
+    // Overfetch by one so we know whether another page exists without a
+    // separate count() read; `slicePage` drops the extra doc.
+    .limit(pageSize + 1);
+  // A malformed cursor (hand-edited `?cursor=` URL) decodes to null and
+  // falls back to the first page rather than throwing.
+  const decoded = cursor ? decodePageCursor(cursor) : null;
+  if (decoded) query = query.startAfter(decoded.createdAt, decoded.id);
+  const snap = await query.get();
+  const { pageDocs, nextCursor } = slicePage(snap.docs, pageSize);
+  return { entries: pageDocs.map(fromSnap), nextCursor };
 }
 
 /**

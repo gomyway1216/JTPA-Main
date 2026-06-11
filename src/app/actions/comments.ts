@@ -5,21 +5,26 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { plainify } from "@/lib/data/serialize";
-import { requireUser } from "@/lib/auth/session";
+import { getSessionUser, requireUser } from "@/lib/auth/session";
 import {
   isParentPubliclyVisible,
   parentCollection,
   parentRoutePrefix,
 } from "@/lib/comments-parent";
+import { listComments } from "@/lib/data/comments";
+import { getMyLikesForParent } from "@/lib/data/likes";
+import { getPublicProfilesByUids, type PublicProfile } from "@/lib/data/users";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type {
   CommentDoc,
+  CommentParentType,
   GuideDoc,
   PollDoc,
   PostDoc,
   ProjectDoc,
   QaDoc,
+  SessionUser,
 } from "@/lib/types";
 
 const CommentSchema = z.object({
@@ -40,8 +45,18 @@ const DeleteSchema = z.object({
   hard: z.boolean().optional(),
 });
 
+const LoadMoreSchema = z.object({
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
+  parentId: z.string().min(1),
+  // Opaque page cursor from a previous listComments page. Required: the
+  // first page always arrives server-rendered, so this action only ever
+  // continues an existing listing.
+  cursor: z.string().min(1),
+});
+
 export type CommentInput = z.input<typeof CommentSchema>;
 export type DeleteCommentInput = z.input<typeof DeleteSchema>;
+export type LoadMoreCommentsInput = z.input<typeof LoadMoreSchema>;
 
 // Results returned to the client. Returning the error (rather than
 // throwing it) keeps the real message reachable — Next masks thrown
@@ -51,6 +66,18 @@ export type PostCommentResult =
   | { ok: false; error: string };
 export type DeleteCommentResult =
   | { ok: true; comment: CommentDoc | null }
+  | { ok: false; error: string };
+export type LoadMoreCommentsResult =
+  | {
+      ok: true;
+      comments: CommentDoc[];
+      nextCursor: string | null;
+      // Like-state + author profiles for the returned comments, so the
+      // client can extend the maps it was seeded with for page one
+      // (LikeButton initial state, AuthorBadge rendering).
+      likedKeys: string[];
+      profiles: Record<string, PublicProfile>;
+    }
   | { ok: false; error: string };
 
 async function parseOrError<T extends z.ZodTypeAny>(
@@ -122,6 +149,102 @@ export async function postComment(
   // (slugs in the route are server-validated this way).
   revalidatePath(`${parentRoutePrefix(parsed.parentType)}/${parentData.slug}`);
   return { ok: true, comment: plainify({ ...doc, id: ref.id }) };
+}
+
+// Read-path visibility: who may list comments under a parent. Mirrors
+// the corresponding detail pages exactly:
+//   - published/approved parents are public (anonymous included)
+//   - /qa and /poll render unpublished docs for the author and admins
+//   - /guide renders unpublished docs for the author, admins, and editors
+//   - /blog and /showcase 404 unpublished docs for everyone
+// Not a `requireUser` gate — anonymous viewers read comments on public
+// parents the same way the server-rendered first page does.
+function canReadComments(
+  parentType: CommentParentType,
+  data: { status: string; authorUid?: string; createdBy?: { uid?: string } },
+  user: SessionUser | null,
+): boolean {
+  if (isParentPubliclyVisible(parentType, data)) return true;
+  if (!user) return false;
+  switch (parentType) {
+    case "post":
+    case "project":
+      return false;
+    case "qa":
+    case "poll":
+      return user.isAdmin || user.uid === data.authorUid;
+    case "guide": {
+      // Same owner fallback the guide page uses for legacy docs that
+      // predate the `authorUid` field.
+      const ownerUid = data.authorUid ?? data.createdBy?.uid;
+      return user.isAdmin || user.isEditor || user.uid === ownerUid;
+    }
+  }
+}
+
+// Fetches the next comments page for a thread whose first page was
+// server-rendered. Also returns the viewer's like-state and the public
+// profiles for the page's authors — the same companion data the pages
+// prefetch for page one — so the client can merge them in.
+export async function loadMoreComments(
+  input: LoadMoreCommentsInput,
+): Promise<LoadMoreCommentsResult> {
+  const pr = await parseOrError(LoadMoreSchema, input);
+  if (!pr.ok) return pr;
+  const parsed = pr.data;
+
+  // Session + parent doc are independent — fetch together, like the
+  // detail pages do.
+  const [user, parentSnap] = await Promise.all([
+    getSessionUser(),
+    adminDb()
+      .collection(parentCollection(parsed.parentType))
+      .doc(parsed.parentId)
+      .get(),
+  ]);
+  if (!parentSnap.exists) {
+    return { ok: false, error: await actionError("commentParentNotFound") };
+  }
+  const parentData = parentSnap.data() as {
+    status: string;
+    authorUid?: string;
+    createdBy?: { uid?: string };
+  };
+  if (!canReadComments(parsed.parentType, parentData, user)) {
+    // Same response as a missing parent so this action doesn't leak
+    // whether an unpublished doc exists — the pages 404 identically.
+    return { ok: false, error: await actionError("commentParentNotFound") };
+  }
+
+  const { comments, nextCursor } = await listComments(
+    parsed.parentType,
+    parsed.parentId,
+    { cursor: parsed.cursor },
+  );
+  // An empty page is possible when every doc after the cursor was
+  // hard-deleted between page fetches. `nextCursor` still comes from the
+  // raw overfetch in `listComments`, so paging keeps advancing correctly;
+  // we just skip the companion lookups (which would otherwise do a stray
+  // record-like BatchGet for no comments) and return empty companion data.
+  if (comments.length === 0) {
+    return { ok: true, comments, nextCursor, likedKeys: [], profiles: {} };
+  }
+  const [likedKeys, profiles] = await Promise.all([
+    getMyLikesForParent({
+      parentType: parsed.parentType,
+      parentId: parsed.parentId,
+      commentIds: comments.map((c) => c.id),
+      uid: user?.uid ?? null,
+    }),
+    getPublicProfilesByUids(comments.map((c) => c.authorUid)),
+  ]);
+  return {
+    ok: true,
+    comments,
+    nextCursor,
+    likedKeys: [...likedKeys],
+    profiles: Object.fromEntries(profiles),
+  };
 }
 
 // ---------- delete ----------
