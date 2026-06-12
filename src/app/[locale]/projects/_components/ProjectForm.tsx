@@ -101,11 +101,19 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
 
   const [colorMode, setColorMode] = useState<"light" | "dark">("light");
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const update = () => setColorMode(mq.matches ? "dark" : "light");
+    const update = () =>
+      setColorMode(
+        document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light",
+      );
     update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
   }, []);
 
   function uploadOne(
@@ -181,6 +189,31 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     e.target.value = "";
   }
 
+  function insertMarkdownBlock(block: string) {
+    const ta = editorRef.current?.textarea ?? null;
+    const cursorStart = ta?.selectionStart ?? null;
+    const cursorEnd = ta?.selectionEnd ?? null;
+
+    if (ta && cursorStart !== null && cursorEnd !== null) {
+      setDescription((prev) => {
+        const s = Math.min(cursorStart, prev.length);
+        const e = Math.min(cursorEnd, prev.length);
+        return prev.slice(0, s) + block + prev.slice(e);
+      });
+      requestAnimationFrame(() => {
+        ta.focus();
+        const safeStart = Math.min(cursorStart, ta.value.length);
+        const pos = safeStart + block.length;
+        ta.setSelectionRange(pos, pos);
+      });
+      return;
+    }
+
+    setDescription(
+      (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+    );
+  }
+
   async function uploadAndInsert(files: File[]) {
     if (files.length === 0) return;
     if (uploadingRef.current) {
@@ -192,44 +225,29 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     setInlineProgress(0);
     setUploadInfo(t("uploadingCount", { count: files.length }));
 
-    const ta = editorRef.current?.textarea ?? null;
-    const cursorStart = ta?.selectionStart ?? null;
-    const cursorEnd = ta?.selectionEnd ?? null;
+    const inserts: string[] = [];
 
     try {
-      const inserts: string[] = [];
       for (const file of files) {
         const asset = await uploadOne(file, setInlineProgress);
         const altRaw = file.name.replace(/\.[^.]+$/, "");
         inserts.push(`\n![${escapeAlt(altRaw)}](${asset.url})\n`);
       }
-      const block = inserts.join("");
-
-      if (ta && cursorStart !== null && cursorEnd !== null) {
-        setDescription((prev) => {
-          const s = Math.min(cursorStart, prev.length);
-          const e = Math.min(cursorEnd, prev.length);
-          return prev.slice(0, s) + block + prev.slice(e);
-        });
-        requestAnimationFrame(() => {
-          ta.focus();
-          const safeStart = Math.min(cursorStart, ta.value.length);
-          const pos = safeStart + block.length;
-          ta.setSelectionRange(pos, pos);
-        });
-      } else {
-        setDescription(
-          (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
-        );
-      }
-
+      insertMarkdownBlock(inserts.join(""));
       setUploadInfo(t("uploadedCount", { count: files.length }));
       setTimeout(() => setUploadInfo(null), 3000);
     } catch (err) {
+      if (inserts.length > 0) {
+        insertMarkdownBlock(inserts.join(""));
+      }
       setError(
         err instanceof Error ? err.message : t("imageUploadFailed"),
       );
-      setUploadInfo(null);
+      setUploadInfo(
+        inserts.length > 0
+          ? t("uploadedCount", { count: inserts.length })
+          : null,
+      );
     } finally {
       uploadingRef.current = false;
       setInlineProgress(null);
