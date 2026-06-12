@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { decideProject } from "@/app/actions/projects";
+import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import type { PublicProfile } from "@/lib/data/users";
 import type { ProjectDoc } from "@/lib/types";
 
@@ -102,9 +103,9 @@ export function ProjectReviewCard({
           </Link>
         </div>
       </header>
-      <p className="mt-3 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-        {project.description}
-      </p>
+      <div className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
+        <MarkdownBody source={project.description} />
+      </div>
       {(project.thumbnail || (project.screenshots?.length ?? 0) > 0) && (
         <ul className="mt-3 flex flex-wrap gap-2">
           {project.thumbnail && (
