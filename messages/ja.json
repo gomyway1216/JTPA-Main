@@ -297,7 +297,8 @@
     "screenshots": "スクリーンショット",
     "openApp": "アプリを開く →",
     "sourceCode": "ソースコード",
-    "demoVideo": "デモ動画"
+    "demoVideo": "デモ動画",
+    "statusNotice": "このプロジェクトは現在<strong>{status}</strong>です。一般公開はされておらず、投稿者と管理者のみが閲覧できます。"
   },
   "BlogDetail": {
     "back": "← 記事一覧",

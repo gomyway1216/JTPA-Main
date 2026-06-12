@@ -11,11 +11,19 @@ import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { canViewProjectDetail } from "@/lib/projects-visibility";
 import { stripMarkdown, truncate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
 // project document is served from the shared data cache.
 export const dynamic = "force-dynamic";
+
+function loadProjectComments(projectId: string) {
+  return listComments("project", projectId).catch((err) => {
+    console.error("Failed to list project comments:", err);
+    return { comments: [], nextCursor: null };
+  });
+}
 
 export async function generateMetadata({
   params,
@@ -50,20 +58,24 @@ export default async function ProjectDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const t = await getTranslations("ShowcaseDetail");
-  const project = await getProjectBySlugCached(slug);
-  if (!project || project.status !== "approved") notFound();
-
-  // Session + comment listing are independent — kick them off together
-  // rather than serially. The like-state query depends on the comment
-  // ids so it stays after the join.
-  const [user, commentsPage] = await Promise.all([
-    getSessionUser(),
-    listComments("project", project.id).catch((err) => {
-      console.error("Failed to list project comments:", err);
-      return { comments: [], nextCursor: null };
-    }),
+  const userPromise = getSessionUser();
+  const [t, project] = await Promise.all([
+    getTranslations("ShowcaseDetail"),
+    getProjectBySlugCached(slug),
   ]);
+  if (!project) notFound();
+
+  const isPrivatePreview = project.status !== "approved";
+  const commentsPagePromise = isPrivatePreview
+    ? null
+    : loadProjectComments(project.id);
+  const user = await userPromise;
+  if (!canViewProjectDetail(project, user)) notFound();
+
+  const statusT = isPrivatePreview ? await getTranslations("Status") : null;
+  const commentsPage = await (
+    commentsPagePromise ?? loadProjectComments(project.id)
+  );
   const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "project",
@@ -84,6 +96,14 @@ export default async function ProjectDetailPage({
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{project.title}</h1>
+        {isPrivatePreview && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {t.rich("statusNotice", {
+              status: statusT ? statusT(project.status) : "",
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
+          </div>
+        )}
         <p className="flex items-center gap-1.5 text-sm text-zinc-500">
           <span>{t("author")}</span>
           <AuthorBadge
