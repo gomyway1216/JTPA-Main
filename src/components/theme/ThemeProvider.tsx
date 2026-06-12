@@ -2,14 +2,22 @@
 
 import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 
-export type ThemeMode = "light" | "dark" | "system";
-const STORAGE_KEY = "jtpa-theme";
+import {
+  applyThemeClass,
+  coerceThemeMode,
+  STORAGE_KEY,
+  syncThemeClassFromStorage,
+  type ResolvedTheme,
+  type ThemeMode,
+} from "./theme-script";
+
+export type { ThemeMode };
 
 // Module-level store. `useSyncExternalStore` is the React-19-idiomatic
 // way to read client-only state (localStorage, matchMedia) without
 // triggering cascading effects on mount and without SSR/CSR hydration
-// drift. Server snapshot is always "system" — the inline script in
-// layout.tsx already set the actual `.dark` class before hydration.
+// drift. Server snapshot is always "system" — instrumentation-client.ts
+// and this provider sync the actual `.dark` class on the client.
 
 const listeners = new Set<() => void>();
 // Cached localStorage read. `useSyncExternalStore` calls getSnapshot
@@ -26,7 +34,7 @@ function readStored(): ThemeMode {
   if (typeof window === "undefined") return "system";
   if (cachedMode !== null) return cachedMode;
   const v = window.localStorage.getItem(STORAGE_KEY);
-  cachedMode = v === "light" || v === "dark" || v === "system" ? v : "system";
+  cachedMode = coerceThemeMode(v);
   return cachedMode;
 }
 
@@ -35,20 +43,9 @@ function systemPrefersDark(): boolean {
   return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
-function resolveFor(mode: ThemeMode): "light" | "dark" {
+function resolveFor(mode: ThemeMode): ResolvedTheme {
   if (mode === "system") return systemPrefersDark() ? "dark" : "light";
   return mode;
-}
-
-function applyClass(resolved: "light" | "dark") {
-  const root = document.documentElement;
-  if (resolved === "dark") root.classList.add("dark");
-  else root.classList.remove("dark");
-}
-
-function syncThemeClass() {
-  if (typeof document === "undefined") return;
-  applyClass(resolveFor(readStored()));
 }
 
 function notify() {
@@ -56,20 +53,20 @@ function notify() {
 }
 
 function attachGlobalListeners(): () => void {
-  syncThemeClass();
+  syncThemeClassFromStorage();
 
   // Cross-tab sync: another tab wrote a new theme preference.
   const storageHandler = (e: StorageEvent) => {
     if (e.key !== STORAGE_KEY) return;
     cachedMode = null;
-    syncThemeClass();
+    syncThemeClassFromStorage();
     notify();
   };
   // OS-level theme change — only matters while we're in "system" mode.
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const mqHandler = () => {
     if (readStored() !== "system") return;
-    syncThemeClass();
+    syncThemeClassFromStorage();
     notify();
   };
   window.addEventListener("storage", storageHandler);
@@ -113,7 +110,7 @@ function getServerResolvedSnapshot(): "light" | "dark" {
 export function setMode(next: ThemeMode) {
   cachedMode = next;
   window.localStorage.setItem(STORAGE_KEY, next);
-  applyClass(resolveFor(next));
+  applyThemeClass(resolveFor(next));
   notify();
 }
 
@@ -131,28 +128,18 @@ export function useTheme(): {
   return { mode, setMode, resolved };
 }
 
-// Inline blocking script run in <head> before paint. Reads localStorage
-// and sets `.dark` on <html> synchronously so users don't see a flash of
-// the wrong theme. Kept as a string so we can dangerouslySetInnerHTML it
-// into the layout — must stay tiny.
-export const THEME_INIT_SCRIPT = `(function(){try{var k='${STORAGE_KEY}';var v=localStorage.getItem(k);var d=(v==='dark')||((v===null||v==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
-
 const useIsomorphicLayoutEffect =
   typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const resolved = useSyncExternalStore(
-    subscribe,
-    getResolvedSnapshot,
-    getServerResolvedSnapshot,
-  );
+  const mode = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   // Locale changes can re-apply the server-rendered <html> className,
   // which does not know about localStorage or matchMedia. Reassert the
-  // client theme whenever this provider mounts or the resolved theme changes.
+  // client theme whenever this provider mounts or the stored mode changes.
   useIsomorphicLayoutEffect(() => {
-    applyClass(resolved);
-  }, [resolved]);
+    syncThemeClassFromStorage();
+  }, [mode]);
 
   return <>{children}</>;
 }

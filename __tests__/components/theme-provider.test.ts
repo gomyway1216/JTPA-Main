@@ -1,80 +1,56 @@
 import { describe, expect, it } from "vitest";
 
-import { THEME_INIT_SCRIPT } from "@/components/theme/ThemeProvider";
+import { resolveStoredTheme } from "@/components/theme/theme-script";
 
 type StoredTheme = "light" | "dark" | "system" | null;
 
-function runThemeInit({
+function resolveTestTheme({
   storedTheme,
   prefersDark,
-  startsDark = false,
 }: {
   storedTheme: StoredTheme;
   prefersDark: boolean;
-  startsDark?: boolean;
 }) {
-  const classes = new Set(startsDark ? ["dark"] : []);
-  const localStorage = {
-    getItem(key: string) {
-      expect(key).toBe("jtpa-theme");
-      return storedTheme;
-    },
-  };
-  const matchMedia = (query: string) => {
-    expect(query).toBe("(prefers-color-scheme: dark)");
-    return { matches: prefersDark };
-  };
-  const document = {
-    documentElement: {
-      classList: {
-        toggle(name: string, force?: boolean) {
-          if (force) classes.add(name);
-          else classes.delete(name);
-          return classes.has(name);
-        },
-      },
-    },
-  };
-
-  Function("localStorage", "matchMedia", "document", THEME_INIT_SCRIPT)(
-    localStorage,
-    matchMedia,
-    document,
-  );
-
-  return classes.has("dark");
+  return resolveStoredTheme(storedTheme, prefersDark);
 }
 
-describe("THEME_INIT_SCRIPT", () => {
+describe("resolveStoredTheme", () => {
+  it("uses the system preference when no theme has been stored yet", () => {
+    expect(resolveTestTheme({ storedTheme: null, prefersDark: true })).toBe(
+      "dark",
+    );
+    expect(resolveTestTheme({ storedTheme: null, prefersDark: false })).toBe(
+      "light",
+    );
+  });
+
   it("uses the system dark preference when the stored mode is system", () => {
     expect(
-      runThemeInit({ storedTheme: "system", prefersDark: true }),
-    ).toBe(true);
+      resolveTestTheme({ storedTheme: "system", prefersDark: true }),
+    ).toBe("dark");
   });
 
   it("removes stale dark class when the resolved theme is light", () => {
     expect(
-      runThemeInit({
+      resolveTestTheme({
         storedTheme: "system",
         prefersDark: false,
-        startsDark: true,
       }),
-    ).toBe(false);
+    ).toBe("light");
   });
 
   it("lets explicit light override a dark system preference", () => {
     expect(
-      runThemeInit({
+      resolveTestTheme({
         storedTheme: "light",
         prefersDark: true,
-        startsDark: true,
       }),
-    ).toBe(false);
+    ).toBe("light");
   });
 
   it("lets explicit dark override a light system preference", () => {
     expect(
-      runThemeInit({ storedTheme: "dark", prefersDark: false }),
-    ).toBe(true);
+      resolveTestTheme({ storedTheme: "dark", prefersDark: false }),
+    ).toBe("dark");
   });
 });
