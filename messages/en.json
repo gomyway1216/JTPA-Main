@@ -295,7 +295,9 @@
     "screenshots": "Screenshots",
     "openApp": "Open app →",
     "sourceCode": "Source code",
-    "demoVideo": "Demo video"
+    "demoVideo": "Demo video",
+    "statusNoticePrefix": "This project is currently",
+    "statusNoticeSuffix": "and is only visible to the owner and admins."
   },
   "BlogDetail": {
     "back": "← Articles",

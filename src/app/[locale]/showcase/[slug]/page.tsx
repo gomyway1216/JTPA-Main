@@ -10,6 +10,7 @@ import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { canViewProjectDetail } from "@/lib/projects-visibility";
 import { truncate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
@@ -51,20 +52,22 @@ export default async function ProjectDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const t = await getTranslations("ShowcaseDetail");
-  const project = await getProjectBySlugCached(slug);
-  if (!project || project.status !== "approved") notFound();
-
-  // Session + comment listing are independent — kick them off together
-  // rather than serially. The like-state query depends on the comment
-  // ids so it stays after the join.
-  const [user, commentsPage] = await Promise.all([
+  const [t, statusT, project, user] = await Promise.all([
+    getTranslations("ShowcaseDetail"),
+    getTranslations("Status"),
+    getProjectBySlugCached(slug),
     getSessionUser(),
-    listComments("project", project.id).catch((err) => {
+  ]);
+  if (!project || !canViewProjectDetail(project, user)) notFound();
+
+  // The comment listing depends on the resolved project id. The like-state
+  // query depends on the comment ids, so it stays after the comments load.
+  const commentsPage = await listComments("project", project.id).catch(
+    (err) => {
       console.error("Failed to list project comments:", err);
       return { comments: [], nextCursor: null };
-    }),
-  ]);
+    },
+  );
   const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
     parentType: "project",
@@ -80,11 +83,19 @@ export default async function ProjectDetailPage({
     project.ownerUid,
     ...comments.map((c) => c.authorUid),
   ]);
+  const isPrivatePreview = project.status !== "approved";
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{project.title}</h1>
+        {isPrivatePreview && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            {t("statusNoticePrefix")}{" "}
+            <strong>{statusT(project.status)}</strong>{" "}
+            {t("statusNoticeSuffix")}
+          </div>
+        )}
         <p className="flex items-center gap-1.5 text-sm text-zinc-500">
           <span>{t("author")}</span>
           <AuthorBadge
