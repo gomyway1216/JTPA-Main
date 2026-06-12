@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -9,7 +8,7 @@ import "../globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { ThemeProvider, THEME_INIT_SCRIPT } from "@/components/theme/ThemeProvider";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { routing } from "@/i18n/routing";
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyAvatarUrl } from "@/lib/data/users";
@@ -90,16 +89,6 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Sets `.dark` on <html> before paint so users don't see a
-            flash of the wrong theme on first load. Must run synchronously
-            in <head>; the React state in ThemeProvider mounts later. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-        />
-      </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
         // color drift between the two layers — the whole point of also
