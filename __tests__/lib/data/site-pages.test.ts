@@ -41,10 +41,10 @@ describe("SITE_PAGE_DEFAULTS", () => {
     );
   });
 
-  it("renders the about page with JTPA-specific copy", () => {
+  it("renders the about page with community-specific copy", () => {
     // The fallback content is shown to real users before an admin has
     // ever saved /about — must not be lorem ipsum.
-    expect(SITE_PAGE_DEFAULTS.about.title).toBe("JTPAとは");
+    expect(SITE_PAGE_DEFAULTS.about.title).toBe("ベイエリアAI勉強会とは");
     expect(SITE_PAGE_DEFAULTS.about.body).toContain("JTPA");
   });
 });
