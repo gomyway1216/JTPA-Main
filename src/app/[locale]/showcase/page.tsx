@@ -8,6 +8,7 @@ import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listApprovedProjectsCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { stripMarkdown } from "@/lib/utils";
 
 // Per-request render (session-reading layout); the approved-project list
 // is served from the shared data cache (src/lib/data/cached.ts).
@@ -91,7 +92,7 @@ export default async function ShowcasePage() {
                       />
                     </p>
                     <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                      {p.description}
+                      {stripMarkdown(p.description)}
                     </p>
                     {p.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">

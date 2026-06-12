@@ -13,6 +13,7 @@
     }
   },
   "Header": {
+    "siteName": "JTPA",
     "nav": {
       "events": "イベント",
       "showcase": "みんなのプロジェクト",
@@ -38,10 +39,10 @@
     }
   },
   "Footer": {
-    "about": "ベイエリアAI勉強会とは",
-    "help": "ヘルプ・使い方",
-    "guide": "メモ・ノウハウ",
-    "qa": "質問・相談"
+    "events": "イベント",
+    "showcase": "みんなのプロジェクト",
+    "community": "みんなの投稿",
+    "help": "ヘルプ・使い方"
   },
   "Theme": {
     "toggle": "テーマを切り替える",
@@ -56,6 +57,7 @@
     "logout": "ログアウト"
   },
   "Home": {
+    "siteName": "JTPA",
     "eyebrow": "Bay Area の AI コミュニティ",
     "headlinePrefix": "の試行錯誤を、",
     "headlineSuffix": "みんなで持ち寄る場所。",
@@ -420,6 +422,12 @@
     "editReviewNotice": "編集すると再度「審査中」となり、管理者の承認後に再掲載されます。",
     "submitting": "送信中...",
     "uploadingButton": "アップロード中...",
+    "uploadImage": "画像をアップロード",
+    "imageHint": "ドラッグ&ドロップ / ペーストも可 (PNG / JPEG / WebP / GIF、5MB以下)",
+    "waitForUpload": "前のアップロードが完了するまでお待ちください",
+    "uploadingCount": "{count} 件アップロード中...",
+    "uploadedCount": "{count} 件アップロードしました",
+    "imageUploadFailed": "画像のアップロードに失敗しました",
     "submitForReview": "投稿して審査依頼",
     "updateForReview": "更新して再審査"
   },

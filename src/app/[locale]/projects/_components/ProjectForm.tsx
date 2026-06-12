@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { unstable_rethrow } from "next/navigation";
 import {
@@ -7,7 +8,11 @@ import {
   uploadBytesResumable,
 } from "firebase/storage";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+
+import type { RefMDEditor } from "@uiw/react-md-editor";
+import "@uiw/react-md-editor/markdown-editor.css";
+import "@uiw/react-markdown-preview/markdown.css";
 
 import {
   deleteMyProject,
@@ -21,6 +26,7 @@ import {
   errorTextClass,
   inputClass,
   primaryButtonClass,
+  secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { useRouter } from "@/i18n/navigation";
 import { clientStorage } from "@/lib/firebase/client";
@@ -40,6 +46,24 @@ const ALLOWED_MIME = [
   "image/gif",
 ] as const;
 const ACCEPT = ALLOWED_MIME.join(",");
+
+// `@uiw/react-md-editor` reads `window` during evaluation, so keep it
+// client-only. The pattern matches GuideForm and PostForm.
+const MDEditor = dynamic(() => import("@uiw/react-md-editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-72 animate-pulse rounded border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900" />
+  ),
+});
+
+function pickImageFiles(files: FileList | File[]): File[] {
+  const allow = ALLOWED_MIME as readonly string[];
+  return Array.from(files).filter((f) => allow.includes(f.type));
+}
+
+function escapeAlt(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
+}
 
 interface Props {
   mode: "create" | "edit";
@@ -65,9 +89,32 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   );
   const [thumbProgress, setThumbProgress] = useState<number | null>(null);
   const [shotProgress, setShotProgress] = useState<number | null>(null);
+  const [inlineProgress, setInlineProgress] = useState<number | null>(null);
+  const [uploadInfo, setUploadInfo] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [deletePending, startDeleteTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editorRef = useRef<RefMDEditor | null>(null);
+  const uploadingRef = useRef(false);
+
+  const [colorMode, setColorMode] = useState<"light" | "dark">("light");
+  useEffect(() => {
+    const update = () =>
+      setColorMode(
+        document.documentElement.classList.contains("dark")
+          ? "dark"
+          : "light",
+      );
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   function uploadOne(
     file: File,
@@ -142,6 +189,105 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     e.target.value = "";
   }
 
+  function insertMarkdownBlock(block: string) {
+    const ta = editorRef.current?.textarea ?? null;
+    const cursorStart = ta?.selectionStart ?? null;
+    const cursorEnd = ta?.selectionEnd ?? null;
+
+    if (ta && cursorStart !== null && cursorEnd !== null) {
+      setDescription((prev) => {
+        const s = Math.min(cursorStart, prev.length);
+        const e = Math.min(cursorEnd, prev.length);
+        return prev.slice(0, s) + block + prev.slice(e);
+      });
+      requestAnimationFrame(() => {
+        ta.focus();
+        const safeStart = Math.min(cursorStart, ta.value.length);
+        const pos = safeStart + block.length;
+        ta.setSelectionRange(pos, pos);
+      });
+      return;
+    }
+
+    setDescription(
+      (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+    );
+  }
+
+  async function uploadAndInsert(files: File[]) {
+    if (files.length === 0) return;
+    if (uploadingRef.current) {
+      setError(t("waitForUpload"));
+      return;
+    }
+    uploadingRef.current = true;
+    setError(null);
+    setInlineProgress(0);
+    setUploadInfo(t("uploadingCount", { count: files.length }));
+
+    const inserts: string[] = [];
+
+    try {
+      for (const file of files) {
+        const asset = await uploadOne(file, setInlineProgress);
+        const altRaw = file.name.replace(/\.[^.]+$/, "");
+        inserts.push(`\n![${escapeAlt(altRaw)}](${asset.url})\n`);
+      }
+      insertMarkdownBlock(inserts.join(""));
+      setUploadInfo(t("uploadedCount", { count: files.length }));
+      setTimeout(() => setUploadInfo(null), 3000);
+    } catch (err) {
+      if (inserts.length > 0) {
+        insertMarkdownBlock(inserts.join(""));
+      }
+      setError(
+        err instanceof Error ? err.message : t("imageUploadFailed"),
+      );
+      setUploadInfo(
+        inserts.length > 0
+          ? t("uploadedCount", { count: inserts.length })
+          : null,
+      );
+    } finally {
+      uploadingRef.current = false;
+      setInlineProgress(null);
+    }
+  }
+
+  function handleInlineImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    uploadAndInsert(pickImageFiles(files));
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    const imgs = pickImageFiles(files);
+    if (imgs.length === 0) return;
+    uploadAndInsert(imgs);
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === "file") {
+        const f = item.getAsFile();
+        if (f && (ALLOWED_MIME as readonly string[]).includes(f.type)) {
+          files.push(f);
+        }
+      }
+    }
+    if (files.length === 0) return;
+    e.preventDefault();
+    uploadAndInsert(files);
+  }
+
   function removeScreenshot(index: number) {
     setScreenshots((cur) => cur.filter((_, i) => i !== index));
   }
@@ -202,7 +348,10 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     });
   }
 
-  const uploading = thumbProgress !== null || shotProgress !== null;
+  const uploading =
+    thumbProgress !== null ||
+    shotProgress !== null ||
+    inlineProgress !== null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -216,19 +365,63 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
           className={inputClass}
         />
       </Field>
-      <Field
-        label={t("description")}
-        required
-        htmlFor="project-description"
-      >
-        <textarea
-          id="project-description"
-          required
-          rows={6}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className={inputClass}
-        />
+      <Field label={t("description")} required>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileInputRef.current?.click()}
+              className={secondaryButtonClassSm}
+            >
+              {inlineProgress !== null ? t("uploadingButton") : t("uploadImage")}
+            </button>
+            <span className="text-xs text-zinc-500">
+              {t("imageHint")}
+            </span>
+            {uploadInfo && (
+              <span className="text-xs text-emerald-700 dark:text-emerald-300">
+                {uploadInfo}
+              </span>
+            )}
+            {inlineProgress !== null && (
+              <span className="text-xs text-zinc-500">
+                {t("uploading", { progress: inlineProgress.toFixed(0) })}
+              </span>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={ACCEPT}
+            multiple
+            hidden
+            onChange={handleInlineImagePick}
+          />
+          <div
+            data-color-mode={colorMode}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!isDragging) setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+            className={
+              isDragging
+                ? "rounded outline-2 outline-dashed outline-blue-400"
+                : undefined
+            }
+          >
+            <MDEditor
+              ref={editorRef}
+              value={description}
+              onChange={(v) => setDescription(v ?? "")}
+              height={360}
+              preview="live"
+            />
+          </div>
+        </div>
       </Field>
       <Field label={t("tags")} htmlFor="project-tags">
         <input

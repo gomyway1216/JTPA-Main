@@ -10,7 +10,7 @@ import {
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
 import type { LocationType } from "@/lib/types";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, stripMarkdown } from "@/lib/utils";
 
 // The route still renders per request (the root layout reads the session
 // cookie for the header), but the Firestore reads below are served from
@@ -241,7 +241,7 @@ export default async function HomePage() {
                   <div className="flex flex-1 flex-col p-5">
                     <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
                     <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      {p.description}
+                      {stripMarkdown(p.description)}
                     </p>
                     {p.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">

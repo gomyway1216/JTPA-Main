@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyProjects } from "@/lib/data/projects";
+import { stripMarkdown } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function MyProjectsPage() {
                   <div>
                     <h2 className="text-lg font-semibold">{p.title}</h2>
                     <p className="mt-1 line-clamp-2 text-sm text-zinc-600 dark:text-zinc-400">
-                      {p.description}
+                      {stripMarkdown(p.description)}
                     </p>
                     {p.status === "rejected" && p.reviewNote && (
                       <p className="mt-2 text-sm text-red-700 dark:text-red-300">

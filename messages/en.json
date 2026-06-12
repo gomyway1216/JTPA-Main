@@ -13,6 +13,7 @@
     }
   },
   "Header": {
+    "siteName": "JTPA",
     "nav": {
       "events": "Events",
       "showcase": "Projects",
@@ -38,10 +39,10 @@
     }
   },
   "Footer": {
-    "about": "About JTPA",
-    "help": "Help",
-    "guide": "Notes & Know-how",
-    "qa": "Questions"
+    "events": "Events",
+    "showcase": "Projects",
+    "community": "Community Posts",
+    "help": "Help"
   },
   "Theme": {
     "toggle": "Change theme",
@@ -56,6 +57,7 @@
     "logout": "Log out"
   },
   "Home": {
+    "siteName": "JTPA",
     "eyebrow": "Bay Area AI community",
     "headlinePrefix": " ideas",
     "headlineSuffix": "get better when people share them.",
@@ -420,6 +422,12 @@
     "editReviewNotice": "Editing sends the project back to review. It will appear again after admin approval.",
     "submitting": "Sending...",
     "uploadingButton": "Uploading...",
+    "uploadImage": "Upload image",
+    "imageHint": "Drag & drop / paste supported (PNG / JPEG / WebP / GIF, 5MB or less)",
+    "waitForUpload": "Please wait for the previous upload to finish",
+    "uploadingCount": "Uploading {count} file(s)...",
+    "uploadedCount": "Uploaded {count} file(s)",
+    "imageUploadFailed": "Failed to upload image",
     "submitForReview": "Submit for review",
     "updateForReview": "Update for review"
   },
