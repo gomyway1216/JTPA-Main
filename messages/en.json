@@ -13,6 +13,7 @@
     }
   },
   "Header": {
+    "siteName": "JTPA",
     "nav": {
       "events": "Events",
       "showcase": "Projects",
@@ -56,6 +57,7 @@
     "logout": "Log out"
   },
   "Home": {
+    "siteName": "JTPA",
     "eyebrow": "Bay Area AI community",
     "headlinePrefix": " ideas",
     "headlineSuffix": "get better when people share them.",

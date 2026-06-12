@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useSyncExternalStore } from "react";
 
 export type ThemeMode = "light" | "dark" | "system";
 const STORAGE_KEY = "jtpa-theme";
@@ -46,23 +46,30 @@ function applyClass(resolved: "light" | "dark") {
   else root.classList.remove("dark");
 }
 
+function syncThemeClass() {
+  if (typeof document === "undefined") return;
+  applyClass(resolveFor(readStored()));
+}
+
 function notify() {
   for (const cb of listeners) cb();
 }
 
 function attachGlobalListeners(): () => void {
+  syncThemeClass();
+
   // Cross-tab sync: another tab wrote a new theme preference.
   const storageHandler = (e: StorageEvent) => {
     if (e.key !== STORAGE_KEY) return;
     cachedMode = null;
-    applyClass(resolveFor(readStored()));
+    syncThemeClass();
     notify();
   };
   // OS-level theme change — only matters while we're in "system" mode.
   const mq = window.matchMedia("(prefers-color-scheme: dark)");
   const mqHandler = () => {
     if (readStored() !== "system") return;
-    applyClass(resolveFor("system"));
+    syncThemeClass();
     notify();
   };
   window.addEventListener("storage", storageHandler);
@@ -128,10 +135,24 @@ export function useTheme(): {
 // and sets `.dark` on <html> synchronously so users don't see a flash of
 // the wrong theme. Kept as a string so we can dangerouslySetInnerHTML it
 // into the layout — must stay tiny.
-export const THEME_INIT_SCRIPT = `(function(){try{var k='${STORAGE_KEY}';var v=localStorage.getItem(k);var d=(v==='dark')||((v===null||v==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var k='${STORAGE_KEY}';var v=localStorage.getItem(k);var d=(v==='dark')||((v===null||v==='system')&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
-// Kept for backwards-compat in case any caller imports it; ThemeProvider
-// no longer needs to render anything since the store is module-level.
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const resolved = useSyncExternalStore(
+    subscribe,
+    getResolvedSnapshot,
+    getServerResolvedSnapshot,
+  );
+
+  // Locale changes can re-apply the server-rendered <html> className,
+  // which does not know about localStorage or matchMedia. Reassert the
+  // client theme whenever this provider mounts or the resolved theme changes.
+  useIsomorphicLayoutEffect(() => {
+    applyClass(resolved);
+  }, [resolved]);
+
   return <>{children}</>;
 }

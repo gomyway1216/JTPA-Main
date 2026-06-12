@@ -90,16 +90,6 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        {/* Sets `.dark` on <html> before paint so users don't see a
-            flash of the wrong theme on first load. Must run synchronously
-            in <head>; the React state in ThemeProvider mounts later. */}
-        <Script
-          id="theme-init"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-        />
-      </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
         // color drift between the two layers — the whole point of also
@@ -110,6 +100,15 @@ export default async function RootLayout({
         className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100"
         suppressHydrationWarning
       >
+        {/* Sets `.dark` on <html> before paint so users don't see a
+            flash of the wrong theme on first load. `beforeInteractive`
+            scripts are injected into <head> by Next regardless of where
+            they are placed in the root layout. */}
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <AuthProvider initialUser={user}>

@@ -13,6 +13,7 @@
     }
   },
   "Header": {
+    "siteName": "JTPA",
     "nav": {
       "events": "イベント",
       "showcase": "みんなのプロジェクト",
@@ -56,6 +57,7 @@
     "logout": "ログアウト"
   },
   "Home": {
+    "siteName": "JTPA",
     "eyebrow": "Bay Area の AI コミュニティ",
     "headlinePrefix": "の試行錯誤を、",
     "headlineSuffix": "みんなで持ち寄る場所。",
