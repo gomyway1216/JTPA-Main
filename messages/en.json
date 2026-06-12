@@ -298,8 +298,7 @@
     "openApp": "Open app →",
     "sourceCode": "Source code",
     "demoVideo": "Demo video",
-    "statusNoticePrefix": "This project is currently",
-    "statusNoticeSuffix": "and is only visible to the owner and admins."
+    "statusNotice": "This project is currently <strong>{status}</strong> and is only visible to the owner and admins."
   },
   "BlogDetail": {
     "back": "← Articles",

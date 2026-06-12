@@ -18,6 +18,13 @@ import { stripMarkdown, truncate } from "@/lib/utils";
 // project document is served from the shared data cache.
 export const dynamic = "force-dynamic";
 
+function loadProjectComments(projectId: string) {
+  return listComments("project", projectId).catch((err) => {
+    console.error("Failed to list project comments:", err);
+    return { comments: [], nextCursor: null };
+  });
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -51,21 +58,23 @@ export default async function ProjectDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [t, statusT, project, user] = await Promise.all([
+  const userPromise = getSessionUser();
+  const [t, project] = await Promise.all([
     getTranslations("ShowcaseDetail"),
-    getTranslations("Status"),
     getProjectBySlugCached(slug),
-    getSessionUser(),
   ]);
-  if (!project || !canViewProjectDetail(project, user)) notFound();
+  if (!project) notFound();
 
-  // The comment listing depends on the resolved project id. The like-state
-  // query depends on the comment ids, so it stays after the comments load.
-  const commentsPage = await listComments("project", project.id).catch(
-    (err) => {
-      console.error("Failed to list project comments:", err);
-      return { comments: [], nextCursor: null };
-    },
+  const isPrivatePreview = project.status !== "approved";
+  const commentsPagePromise = isPrivatePreview
+    ? null
+    : loadProjectComments(project.id);
+  const user = await userPromise;
+  if (!canViewProjectDetail(project, user)) notFound();
+
+  const statusT = isPrivatePreview ? await getTranslations("Status") : null;
+  const commentsPage = await (
+    commentsPagePromise ?? loadProjectComments(project.id)
   );
   const { comments, nextCursor: commentsNextCursor } = commentsPage;
   const likedSet = await getMyLikesForParent({
@@ -82,7 +91,6 @@ export default async function ProjectDetailPage({
     project.ownerUid,
     ...comments.map((c) => c.authorUid),
   ]);
-  const isPrivatePreview = project.status !== "approved";
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -90,9 +98,10 @@ export default async function ProjectDetailPage({
         <h1 className="text-3xl font-bold">{project.title}</h1>
         {isPrivatePreview && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-            {t("statusNoticePrefix")}{" "}
-            <strong>{statusT(project.status)}</strong>{" "}
-            {t("statusNoticeSuffix")}
+            {t.rich("statusNotice", {
+              status: statusT ? statusT(project.status) : "",
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </div>
         )}
         <p className="flex items-center gap-1.5 text-sm text-zinc-500">
