@@ -62,70 +62,54 @@ export default async function HomePage() {
           className="pointer-events-none absolute -bottom-32 -left-24 -z-10 h-[460px] w-[600px] max-w-full rounded-full bg-gradient-to-tr from-violet-500/20 via-indigo-500/15 to-blue-500/20 blur-3xl dark:from-violet-500/30 dark:via-indigo-500/25 dark:to-blue-500/30"
         />
 
-        <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-12 sm:gap-8 sm:py-16">
-          {/* Eyebrow tag: emerald dot gets a slow ping ring so the tag
-              reads as "live" rather than purely static decoration. */}
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-200 bg-white/70 px-3 py-1 text-xs font-medium text-zinc-700 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/70 dark:text-zinc-300">
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            </span>
-            {t("eyebrow")}
-          </span>
+        <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 lg:grid-cols-[5fr_2fr] lg:gap-12">
+          {/* Left: text content */}
+          <div className="flex flex-col gap-6 sm:gap-8">
+            <h1 className="text-3xl font-semibold leading-[1.1] tracking-tighter sm:text-5xl sm:leading-[1.05] lg:text-7xl">
+              <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
+                AI
+              </span>
+              {t("headlinePrefix")}
+              <br className="hidden sm:inline" />
+              <span className="sm:hidden">{locale === "en" ? " " : ""}</span>
+              {t("headlineSuffix")}
+            </h1>
 
-          {/* Display headline. `font-semibold` (not bold) + tighter
-              tracking + a bigger size scale gives the type the
-              "confident but quiet" weight characteristic of an Apple
-              hero — bold at this size starts to feel heavy.
-              `animate-gradient-shimmer` (defined in globals.css)
-              slides a wider-than-text gradient across the "AI" glyphs;
-              the loop is seamless because the gradient starts and ends
-              on blue. `leading-[1.05]` packs the lines a touch tighter
-              so the multi-line headline reads as one phrase.
+            <p className="text-lg text-zinc-600 sm:text-xl sm:leading-relaxed dark:text-zinc-300">
+              {t("intro1")} {t("intro2")}
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Link
+                href="/community"
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition-all hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950"
+              >
+                {t("communityCta")}
+              </Link>
+              <Link
+                href="/events"
+                className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
+              >
+                {t("eventsCta")}
+              </Link>
+              <Link
+                href="/showcase"
+                className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
+              >
+                {t("showcaseCta")}
+              </Link>
+            </div>
+          </div>
 
-              Mobile scale is `text-4xl` (36px) — the previous `text-6xl`
-              (60px) overflowed at 375px and forced an unbalanced
-              awkward 3-line wrap. At 36px the
-              phrase splits naturally onto two lines after the comma,
-              with no forced break required. The desktop `<br>` is
-              still suppressed below `sm` for that reason. */}
-          <h1 className="text-4xl font-semibold leading-[1.1] tracking-tighter sm:text-7xl sm:leading-[1.05] lg:text-8xl">
-            <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
-              AI
-            </span>
-            {t("headlinePrefix")}
-            <br className="hidden sm:inline" />
-            <span className="sm:hidden">{locale === "en" ? " " : ""}</span>
-            {t("headlineSuffix")}
-          </h1>
-
-          <p className="max-w-2xl text-lg text-zinc-600 sm:text-xl sm:leading-relaxed dark:text-zinc-300">
-            {t("intro1")} {t("intro2")}
-          </p>
-          <div className="flex flex-wrap gap-3 pt-4">
-            {/* Hero-only pill variant of the primary CTA — keep the
-                shared `primaryButtonClass` (rounded-md) for forms but
-                lean into a pill here so it matches the rounded
-                secondary CTA next to it. Same gradient + hover slide
-                as the shared primary, just resized for the hero. */}
-            <Link
-              href="/community"
-              className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition-all hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950"
-            >
-              {t("communityCta")}
-            </Link>
-            <Link
-              href="/events"
-              className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
-            >
-              {t("eventsCta")}
-            </Link>
-            <Link
-              href="/showcase"
-              className="rounded-full border border-zinc-300/70 bg-white/70 px-5 py-2 text-sm font-medium backdrop-blur transition hover:bg-white hover:shadow-sm dark:border-zinc-700/70 dark:bg-zinc-950/70 dark:hover:bg-zinc-900"
-            >
-              {t("showcaseCta")}
-            </Link>
+          {/* Right: logo */}
+          <div className="flex items-center justify-center">
+            <Image
+              src="/images/logo_640_460.png"
+              alt={t("siteName")}
+              width={640}
+              height={460}
+              priority
+              className="h-auto w-full"
+            />
           </div>
         </div>
       </section>
