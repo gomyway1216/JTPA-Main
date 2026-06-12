@@ -104,7 +104,7 @@ export default async function HomePage() {
           <div className="flex items-center justify-center">
             <Image
               src="/images/logo_640_460.png"
-              alt="ベイエリアAI勉強会"
+              alt={t("siteName")}
               width={640}
               height={460}
               priority
