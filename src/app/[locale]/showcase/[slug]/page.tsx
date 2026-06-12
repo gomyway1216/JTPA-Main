@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
+import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { truncate } from "@/lib/utils";
+import { stripMarkdown, truncate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
 // project document is served from the shared data cache.
@@ -24,9 +25,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const project = await getProjectBySlugCached(slug).catch(() => null);
   if (!project || project.status !== "approved") return {};
-  // Project descriptions are plain text (not Markdown — see the body
-  // rendering below), so no stripMarkdown pass is needed here.
-  const description = truncate(project.description, 160);
+  const description = truncate(stripMarkdown(project.description), 160);
   const images = project.thumbnail ? [project.thumbnail.url] : undefined;
   return {
     title: project.title,
@@ -134,10 +133,7 @@ export default async function ProjectDetailPage({
         />
       )}
 
-      {/* Plain-text description (not Markdown) — see events/[slug]/page.tsx. */}
-      <section className="whitespace-pre-wrap break-words leading-relaxed">
-        {project.description}
-      </section>
+      <MarkdownBody source={project.description} />
 
       {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">

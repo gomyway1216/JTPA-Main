@@ -420,6 +420,12 @@
     "editReviewNotice": "編集すると再度「審査中」となり、管理者の承認後に再掲載されます。",
     "submitting": "送信中...",
     "uploadingButton": "アップロード中...",
+    "uploadImage": "画像をアップロード",
+    "imageHint": "ドラッグ&ドロップ / ペーストも可 (PNG / JPEG / WebP / GIF、5MB以下)",
+    "waitForUpload": "前のアップロードが完了するまでお待ちください",
+    "uploadingCount": "{count} 件アップロード中...",
+    "uploadedCount": "{count} 件アップロードしました",
+    "imageUploadFailed": "画像のアップロードに失敗しました",
     "submitForReview": "投稿して審査依頼",
     "updateForReview": "更新して再審査"
   },

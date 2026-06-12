@@ -420,6 +420,12 @@
     "editReviewNotice": "Editing sends the project back to review. It will appear again after admin approval.",
     "submitting": "Sending...",
     "uploadingButton": "Uploading...",
+    "uploadImage": "Upload image",
+    "imageHint": "Drag & drop / paste supported (PNG / JPEG / WebP / GIF, 5MB or less)",
+    "waitForUpload": "Please wait for the previous upload to finish",
+    "uploadingCount": "Uploading {count} file(s)...",
+    "uploadedCount": "Uploaded {count} file(s)",
+    "imageUploadFailed": "Failed to upload image",
     "submitForReview": "Submit for review",
     "updateForReview": "Update for review"
   },
