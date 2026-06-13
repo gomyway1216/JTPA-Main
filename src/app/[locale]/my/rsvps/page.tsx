@@ -27,7 +27,7 @@ export default async function MyRsvpsPage() {
   const rows = (
     await Promise.all(
       rsvps.map(async ({ eventId, rsvp }) => {
-        const event = await getEventById(eventId);
+        const event = await getEventById(eventId).catch(() => null);
         return event ? { event, rsvp } : null;
       }),
     )

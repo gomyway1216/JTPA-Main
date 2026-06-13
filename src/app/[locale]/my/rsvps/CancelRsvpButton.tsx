@@ -10,7 +10,6 @@ export function CancelRsvpButton({ eventId }: { eventId: string }) {
   const t = useTranslations("MyRsvps");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [cancelled, setCancelled] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   function handleCancel() {
@@ -21,7 +20,6 @@ export function CancelRsvpButton({ eventId }: { eventId: string }) {
       try {
         const result = await cancelRsvp({ eventId });
         if (result.ok) {
-          setCancelled(true);
           router.refresh();
         } else {
           setError(result.error);
@@ -30,14 +28,6 @@ export function CancelRsvpButton({ eventId }: { eventId: string }) {
         setError(err instanceof Error ? err.message : t("cancelError"));
       }
     });
-  }
-
-  if (cancelled) {
-    return (
-      <span className="inline-flex rounded-full bg-zinc-100 px-2 py-1 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">
-        {t("status.cancelled")}
-      </span>
-    );
   }
 
   return (
