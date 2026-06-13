@@ -7,7 +7,9 @@ import { useEffect, useRef, useState } from "react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link, { usePathname } from "@/i18n/navigation";
-import type { SessionUser } from "@/lib/types";
+import { parentRoutePrefix } from "@/lib/comments-parent";
+import type { NotificationDoc, SessionUser } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "/events", key: "events" },
@@ -15,8 +17,27 @@ const NAV_LINKS = [
   { href: "/community", key: "community" },
 ] as const;
 
-export function Header({ user }: { user: SessionUser | null }) {
+type HeaderProps = {
+  user: SessionUser | null;
+  unreadNotificationCount?: number;
+  notifications?: NotificationDoc[];
+};
+
+function notificationHref(notification: NotificationDoc): string {
+  return `${parentRoutePrefix(notification.parentType)}/${notification.parentSlug}#comment-${notification.commentId}`;
+}
+
+function unreadBadgeLabel(count: number): string {
+  return count > 99 ? "99+" : String(count);
+}
+
+export function Header({
+  user,
+  unreadNotificationCount = 0,
+  notifications = [],
+}: HeaderProps) {
   const t = useTranslations("Header");
+  const notificationT = useTranslations("MyNotifications");
   const locale = useLocale();
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -105,7 +126,7 @@ export function Header({ user }: { user: SessionUser | null }) {
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
                 aria-label={user.displayName || user.email || t("userMenu")}
-                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                className="relative flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 {user.photoURL ? (
                   <Image
@@ -123,6 +144,11 @@ export function Header({ user }: { user: SessionUser | null }) {
                 <span className="hidden max-w-[10rem] truncate sm:inline">
                   {user.displayName || user.email}
                 </span>
+                {unreadNotificationCount > 0 && (
+                  <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-blue-600 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-white dark:ring-zinc-950">
+                    {unreadBadgeLabel(unreadNotificationCount)}
+                  </span>
+                )}
                 <svg
                   width="12"
                   height="12"
@@ -143,13 +169,83 @@ export function Header({ user }: { user: SessionUser | null }) {
               {userMenuOpen && (
                 <div
                   role="menu"
-                  className="absolute right-0 z-20 mt-2 w-48 overflow-hidden rounded-md border border-zinc-200 bg-white text-sm shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
+                  className="absolute right-0 z-20 mt-2 max-w-[calc(100vw-2rem)] w-80 overflow-hidden rounded-md border border-zinc-200 bg-white text-sm shadow-lg dark:border-zinc-800 dark:bg-zinc-900"
                 >
                   <div className="border-b border-zinc-100 px-3 py-2 text-xs text-zinc-500 dark:border-zinc-800">
                     <p className="truncate font-medium text-zinc-900 dark:text-zinc-100">
                       {user.displayName || t("userFallback")}
                     </p>
                     <p className="truncate">{user.email}</p>
+                  </div>
+                  <div className="border-b border-zinc-100 dark:border-zinc-800">
+                    <Link
+                      href="/my/notifications"
+                      role="menuitem"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center justify-between gap-3 px-3 py-2 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    >
+                      <span>{t("notifications")}</span>
+                      {unreadNotificationCount > 0 && (
+                        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                          {t("notificationsUnread", {
+                            count: unreadNotificationCount,
+                          })}
+                        </span>
+                      )}
+                    </Link>
+                    {notifications.length > 0 ? (
+                      <div>
+                        {notifications.map((notification) => {
+                          const isUnread = !notification.readAt;
+                          return (
+                            <Link
+                              key={notification.id}
+                              href={notificationHref(notification)}
+                              role="menuitem"
+                              onClick={() => setUserMenuOpen(false)}
+                              className={`block px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
+                                isUnread
+                                  ? "bg-blue-50/70 dark:bg-blue-950/20"
+                                  : ""
+                              }`}
+                            >
+                              <div className="flex items-start gap-2">
+                                {isUnread && (
+                                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="line-clamp-2 text-xs font-medium text-zinc-900 dark:text-zinc-100">
+                                    {notificationT(
+                                      notification.reason ===
+                                        "reply_to_comment"
+                                        ? "replyToComment"
+                                        : "commentOnContent",
+                                      {
+                                        actorName: notification.actorName,
+                                        title: notification.parentTitle,
+                                      },
+                                    )}
+                                  </p>
+                                  <p className="mt-1 line-clamp-1 text-xs text-zinc-600 dark:text-zinc-400">
+                                    {notification.commentPreview}
+                                  </p>
+                                  <p className="mt-1 text-[11px] text-zinc-500">
+                                    {formatDateTime(
+                                      notification.createdAt,
+                                      locale,
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="px-3 pb-3 pt-1 text-xs text-zinc-500">
+                        {t("notificationsEmpty")}
+                      </p>
+                    )}
                   </div>
                   <Link
                     href="/my"
