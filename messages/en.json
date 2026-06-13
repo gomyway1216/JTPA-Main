@@ -627,9 +627,11 @@
   "MyLikes": {
     "metadataTitle": "Likes Received",
     "title": "Likes Received",
-    "description": "Your comments that received likes",
-    "empty": "None of your comments have received likes yet.",
+    "description": "Your posts and comments that received likes",
+    "empty": "None of your posts or comments have received likes yet.",
     "deletedPage": "Deleted page",
+    "recordLabel": "Post",
+    "commentLabel": "Comment",
     "parent": {
       "post": "Article",
       "guide": "Notes & Know-how",

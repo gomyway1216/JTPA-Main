@@ -49,7 +49,7 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 | Account / profile | `/my/profile` | Edit `affiliation`, `bio`, public toggles, email opt-in |
 | Comment | inline on detail pages | `postComment` — 2000 char cap, replies are linear ("Re: @author") |
 | Like | inline on records + comments | `toggleLike` — transactional `likeCount` update |
-| Likes received | `/my/likes` | Cross-parent feed of liked comments authored by the user |
+| Likes received | `/my/likes` | Cross-parent feed of liked records and comments authored by the user |
 
 ## Admin / editor
 
