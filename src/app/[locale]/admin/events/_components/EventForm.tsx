@@ -119,17 +119,18 @@ export function EventForm({
     minutesToHoursInput(event?.checkInLateMinutes, DEFAULT_CHECKIN_LATE_MINUTES),
   );
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
+  const initialCoverImage = isProjectAsset(event?.coverImage)
+    ? event.coverImage
+    : undefined;
+  const initialSubImages = validProjectAssets(event?.subImages);
   const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
-    isProjectAsset(event?.coverImage) ? event.coverImage : undefined,
+    initialCoverImage,
   );
   const [subImages, setSubImages] = useState<ProjectAsset[]>(
-    validProjectAssets(event?.subImages),
+    initialSubImages,
   );
   const savedImagePathsRef = useRef(
-    projectAssetPathSet([
-      event?.coverImage,
-      ...validProjectAssets(event?.subImages),
-    ]),
+    projectAssetPathSet([event?.coverImage, ...initialSubImages]),
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [subProgress, setSubProgress] = useState<number | null>(null);
