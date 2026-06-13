@@ -467,7 +467,7 @@ export async function setRsvpStatus(input: {
           data: RsvpDoc;
         }
       | null = null;
-    if (prior.status === "confirmed" && input.status === "cancelled") {
+    if (prior.status === "confirmed" && input.status !== "confirmed") {
       const waitlistQuery = eventRef
         .collection("rsvps")
         .where("status", "==", "waitlist")
@@ -480,7 +480,7 @@ export async function setRsvpStatus(input: {
       }
     }
 
-    const clearsAttendance = input.status === "cancelled" && !!prior.attendedAt;
+    const clearsAttendance = input.status !== "confirmed" && !!prior.attendedAt;
     const userRef = adminDb().collection("users").doc(input.rsvpUid);
     const userSnap = clearsAttendance && !prior.isGuest ? await tx.get(userRef) : null;
     const now = Timestamp.now();

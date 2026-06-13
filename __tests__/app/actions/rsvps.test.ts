@@ -779,6 +779,55 @@ describe("setRsvpStatus — admin participant editing", () => {
     });
   });
 
+  it("waitlists a checked-in confirmed attendee, clears attendance, and promotes the oldest waitlister", async () => {
+    rsvpSnap = snap({
+      status: "confirmed",
+      role: "attendee",
+      attendedAt: { __fixed: "earlier" },
+    });
+    waitlistSnap = {
+      empty: false,
+      docs: [
+        {
+          ref: promoteeRef,
+          data: () => ({
+            email: "waiting@x",
+            displayName: "Waiting Wanda",
+            role: "presenter",
+          }),
+        },
+      ],
+    };
+
+    await setRsvpStatus({
+      eventId: "e1",
+      rsvpUid: "u2",
+      status: "waitlist",
+    });
+
+    expect(updateTo("rsvp")).toMatchObject({
+      status: "waitlist",
+      attendedAt: "__delete__",
+    });
+    expect(updateTo("promotee")).toMatchObject({ status: "confirmed" });
+    expect(updateTo("event")).toMatchObject({
+      presenterCount: { __inc: 1 },
+      attendanceCount: { __inc: -1 },
+    });
+    expect(updateTo("event")).not.toHaveProperty("rsvpCount");
+    expect(updateTo("event")).not.toHaveProperty("waitlistCount");
+    expect(updateTo("user")).toMatchObject({
+      eventAttendanceCount: 2,
+    });
+    expect(enqueuePromotionMock).toHaveBeenCalledWith({
+      to: "waiting@x",
+      displayName: "Waiting Wanda",
+      eventTitle: "JTPA Salon",
+      eventSlug: "jtpa-salon",
+      role: "presenter",
+    });
+  });
+
   it("clears attendance and decrements profile attendance when cancelling a checked-in RSVP", async () => {
     rsvpSnap = snap({
       status: "confirmed",
