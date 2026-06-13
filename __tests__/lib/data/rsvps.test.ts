@@ -8,7 +8,12 @@ vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => mock.adminDb(),
 }));
 
-import { getMyRsvp, listMyRsvpEventIds, listRsvps } from "@/lib/data/rsvps";
+import {
+  getMyRsvp,
+  listMyRsvpEventIds,
+  listMyRsvps,
+  listRsvps,
+} from "@/lib/data/rsvps";
 
 function snap(id: string, data: object) {
   return { id, data: () => data };
@@ -109,5 +114,55 @@ describe("listMyRsvpEventIds", () => {
       ],
     });
     expect(await listMyRsvpEventIds("uid-1")).toEqual(["evt-A"]);
+  });
+});
+
+describe("listMyRsvps", () => {
+  it("returns each RSVP with its parent event id", async () => {
+    mock.setGet({
+      docs: [
+        snapWithParent(
+          "uid-1",
+          {
+            uid: "uid-1",
+            status: "confirmed",
+            role: "attendee",
+            surveyResponses: {},
+          },
+          "evt-A",
+        ),
+        snapWithParent(
+          "uid-1",
+          {
+            uid: "uid-1",
+            status: "cancelled",
+            role: "presenter",
+            surveyResponses: {},
+          },
+          "evt-B",
+        ),
+      ],
+    });
+
+    expect(await listMyRsvps("uid-1")).toEqual([
+      {
+        eventId: "evt-A",
+        rsvp: {
+          uid: "uid-1",
+          status: "confirmed",
+          role: "attendee",
+          surveyResponses: {},
+        },
+      },
+      {
+        eventId: "evt-B",
+        rsvp: {
+          uid: "uid-1",
+          status: "cancelled",
+          role: "presenter",
+          surveyResponses: {},
+        },
+      },
+    ]);
   });
 });
