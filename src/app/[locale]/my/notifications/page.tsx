@@ -9,7 +9,10 @@ import {
   countUnreadNotifications,
   listMyNotifications,
 } from "@/lib/data/notifications";
-import { notificationMessageKey } from "@/lib/notification-copy";
+import {
+  notificationMessageKey,
+  notificationPreview,
+} from "@/lib/notification-copy";
 import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
@@ -66,44 +69,47 @@ export default async function MyNotificationsPage() {
         <p className="text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
-          {notifications.map((n) => (
-            <li
-              key={n.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-zinc-500">
-                    {t(`parent.${n.parentType}`)} ·{" "}
-                    {formatDateTime(n.createdAt, locale)}
-                  </p>
-                  <p className="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {t(notificationMessageKey(n), {
-                      actorName: n.actorName,
-                      title: n.parentTitle,
-                    })}
-                  </p>
-                  {n.commentPreview && (
-                    <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-                      {n.commentPreview}
+          {notifications.map((n) => {
+            const preview = notificationPreview(n);
+            return (
+              <li
+                key={n.id}
+                className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-zinc-500">
+                      {t(`parent.${n.parentType}`)} ·{" "}
+                      {formatDateTime(n.createdAt, locale)}
                     </p>
+                    <p className="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
+                      {t(notificationMessageKey(n), {
+                        actorName: n.actorName,
+                        title: n.parentTitle,
+                      })}
+                    </p>
+                    {preview && (
+                      <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+                        {preview}
+                      </p>
+                    )}
+                    <NotificationOpenLink
+                      notificationId={n.id}
+                      href={notificationHref(n)}
+                      className="mt-3 inline-flex text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      {t("open")}
+                    </NotificationOpenLink>
+                  </div>
+                  {!n.readAt && (
+                    <span className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                      {t("unread")}
+                    </span>
                   )}
-                  <NotificationOpenLink
-                    notificationId={n.id}
-                    href={notificationHref(n)}
-                    className="mt-3 inline-flex text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {t("open")}
-                  </NotificationOpenLink>
                 </div>
-                {!n.readAt && (
-                  <span className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
-                    {t("unread")}
-                  </span>
-                )}
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

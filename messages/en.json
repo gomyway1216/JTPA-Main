@@ -580,7 +580,7 @@
     "publicProfileTitle": "Public Profile",
     "publicProfileDescription": "Profile visible to others, including attendance and public contribution counts",
     "notificationsTitle": "Notifications",
-    "notificationsDescription": "Comments, replies, and likes on your posts and comments",
+    "notificationsDescription": "Comments, replies, likes, and review decisions for your submissions",
     "notificationsUnread": "{count, plural, =1 {# unread} other {# unread}}",
     "profileTitle": "Account Settings",
     "profileDescription": "Public name, affiliation, bio, links, and email notification settings"
@@ -648,7 +648,7 @@
   "MyNotifications": {
     "metadataTitle": "Notifications",
     "title": "Notifications",
-    "description": "Comments, replies, and likes on your posts and comments.",
+    "description": "Comments, replies, likes, and review decisions for your submissions.",
     "empty": "No notifications yet.",
     "markAllRead": "Mark all read",
     "unread": "Unread",
@@ -657,6 +657,12 @@
     "replyToComment": "{actorName} replied to your comment on \"{title}\".",
     "likeOnContent": "{actorName} liked \"{title}\".",
     "likeOnComment": "{actorName} liked your comment on \"{title}\".",
+    "projectApproved": "Your project \"{title}\" was published.",
+    "projectRejected": "Your project \"{title}\" was rejected.",
+    "postPublished": "Your article \"{title}\" was published.",
+    "postRejected": "Your article \"{title}\" was rejected.",
+    "guidePublished": "Your notes & know-how \"{title}\" was published.",
+    "guideRejected": "Your notes & know-how \"{title}\" was rejected.",
     "parent": {
       "post": "Article",
       "guide": "Notes & Know-how",

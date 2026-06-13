@@ -208,6 +208,59 @@ describe("enqueueLikeNotification", () => {
   });
 });
 
+describe("enqueueModerationDecisionNotification", () => {
+  it("writes an in-app moderation notification", async () => {
+    const { enqueueModerationDecisionNotification } = await importFresh();
+
+    await enqueueModerationDecisionNotification({
+      recipientUid: "author",
+      reason: "post_rejected",
+      actorUid: "admin",
+      actorName: "Admin",
+      actorPhotoURL: null,
+      parentType: "post",
+      parentId: "p1",
+      parentTitle: "Hello",
+      parentSlug: "hello",
+      moderationNote: "needs work",
+      createdAt: { _seconds: 1, _nanoseconds: 0 },
+    });
+
+    expect(collectionMock).toHaveBeenCalledWith("notifications");
+    expect(addMock).toHaveBeenCalledTimes(1);
+    expect(addMock.mock.calls[0][0]).toMatchObject({
+      recipientUid: "author",
+      type: "moderation",
+      reason: "post_rejected",
+      actorUid: "admin",
+      parentType: "post",
+      parentSlug: "hello",
+      commentId: null,
+      moderationNote: "needs work",
+      readAt: null,
+    });
+  });
+
+  it("skips self-addressed moderation notifications", async () => {
+    const { enqueueModerationDecisionNotification } = await importFresh();
+
+    await enqueueModerationDecisionNotification({
+      recipientUid: "admin",
+      reason: "guide_published",
+      actorUid: "admin",
+      actorName: "Admin",
+      actorPhotoURL: null,
+      parentType: "guide",
+      parentId: "g1",
+      parentTitle: "Guide",
+      parentSlug: "guide",
+      createdAt: { _seconds: 1, _nanoseconds: 0 },
+    });
+
+    expect(addMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("enqueueAdminNewProjectNotification", () => {
   it("skips the enqueue when env var empty AND no admin/editor users exist", async () => {
     // No recipients configured AND no admin / editor users in Auth →

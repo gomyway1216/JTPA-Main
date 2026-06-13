@@ -22,6 +22,7 @@ const userGetMock = vi.fn();
 const storageFileDeleteMock = vi.fn();
 const adminNewProjectMock = vi.fn();
 const decisionMock = vi.fn();
+const moderationDecisionMock = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
@@ -53,6 +54,8 @@ vi.mock("@/lib/notifications", () => ({
     adminNewProjectMock(...args),
   enqueueProjectDecisionNotification: (...args: unknown[]) =>
     decisionMock(...args),
+  enqueueModerationDecisionNotification: (...args: unknown[]) =>
+    moderationDecisionMock(...args),
 }));
 
 vi.mock("@/lib/firebase/admin", () => {
@@ -136,6 +139,7 @@ beforeEach(() => {
   storageFileDeleteMock.mockResolvedValue(undefined);
   adminNewProjectMock.mockResolvedValue(undefined);
   decisionMock.mockResolvedValue(undefined);
+  moderationDecisionMock.mockResolvedValue(undefined);
 });
 
 describe("submitProject — validation", () => {
@@ -378,5 +382,17 @@ describe("setProjectVisibility / decideProject — admin moderation", () => {
       decision: "rejected",
       note: "screenshots missing",
     });
+    expect(moderationDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "owner-9",
+        reason: "project_rejected",
+        actorUid: "admin-1",
+        parentType: "project",
+        parentId: "p1",
+        parentTitle: "T",
+        parentSlug: "s",
+        moderationNote: "screenshots missing",
+      }),
+    );
   });
 });

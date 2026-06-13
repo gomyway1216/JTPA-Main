@@ -8,7 +8,10 @@ import { SignOutButton } from "@/components/auth/SignOutButton";
 import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link, { usePathname } from "@/i18n/navigation";
-import { notificationMessageKey } from "@/lib/notification-copy";
+import {
+  notificationMessageKey,
+  notificationPreview,
+} from "@/lib/notification-copy";
 import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc, SessionUser } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
@@ -243,6 +246,7 @@ export function Header({
                       <div>
                         {notifications.map((notification) => {
                           const isUnread = !notification.readAt;
+                          const preview = notificationPreview(notification);
                           return (
                             <NotificationOpenLink
                               key={notification.id}
@@ -267,9 +271,9 @@ export function Header({
                                       title: notification.parentTitle,
                                     })}
                                   </p>
-                                  {notification.commentPreview && (
+                                  {preview && (
                                     <p className="mt-1 line-clamp-1 text-xs text-zinc-600 dark:text-zinc-400">
-                                      {notification.commentPreview}
+                                      {preview}
                                     </p>
                                   )}
                                   <p className="mt-1 text-[11px] text-zinc-500">
