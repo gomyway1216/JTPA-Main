@@ -11,6 +11,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { routing } from "@/i18n/routing";
 import { getSessionUser } from "@/lib/auth/session";
+import { countUnreadNotifications } from "@/lib/data/notifications";
 import { getMyAvatarUrl } from "@/lib/data/users";
 import { siteBaseUrl } from "@/lib/site";
 
@@ -59,6 +60,18 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   const sessionUser = await getSessionUser();
+  const [avatarUrl, unreadNotificationCount] = sessionUser
+    ? await Promise.all([
+        getMyAvatarUrl(sessionUser.uid).catch((err) => {
+          console.error("Failed to load header avatar:", err);
+          return null;
+        }),
+        countUnreadNotifications(sessionUser.uid).catch((err) => {
+          console.error("Failed to count header notifications:", err);
+          return 0;
+        }),
+      ])
+    : [null, 0];
   // The session cookie only carries the Google `photoURL` (decoded from
   // the cookie — never a Firestore read). Override it with a user-uploaded
   // avatar when one is set, so the header icon — and any future auth
@@ -67,8 +80,7 @@ export default async function RootLayout({
   const user = sessionUser
     ? {
         ...sessionUser,
-        photoURL:
-          (await getMyAvatarUrl(sessionUser.uid)) ?? sessionUser.photoURL,
+        photoURL: avatarUrl ?? sessionUser.photoURL,
       }
     : null;
 
@@ -102,7 +114,10 @@ export default async function RootLayout({
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <AuthProvider initialUser={user}>
-              <Header user={user} />
+              <Header
+                user={user}
+                unreadNotificationCount={unreadNotificationCount}
+              />
               <main className="flex-1">{children}</main>
               <Footer />
             </AuthProvider>
