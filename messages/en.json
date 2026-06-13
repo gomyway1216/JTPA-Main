@@ -66,6 +66,13 @@
     "communityCta": "Share a question or discovery",
     "eventsCta": "See upcoming events",
     "showcaseCta": "Explore projects",
+    "profileHubEyebrow": "Profile",
+    "profileHubTitle": "Public Profile and Settings",
+    "profileHubSignedInDescription": "Your public profile gathers numbers like event attendance and published articles, questions, and projects. You can control which name, affiliation, and bio are visible from profile settings.",
+    "profileHubGuestDescription": "Log in to use your public profile page and account settings. You can choose which information becomes public from profile settings.",
+    "profileHubPublicCta": "View public profile",
+    "profileHubSettingsCta": "Edit public settings",
+    "profileHubLoginCta": "Log in to create profile",
     "upcomingEvents": "Upcoming Events",
     "upcomingEventsDescription": "Study sessions, lightning talks, and meetups. Come to listen, ask, or bring something you are trying.",
     "noEvents": "No public events are scheduled right now.",
@@ -561,8 +568,10 @@
     "postsDescription": "Articles you posted, including drafts",
     "likesTitle": "Likes Received",
     "likesDescription": "Your comments that received likes",
+    "publicProfileTitle": "Public Profile",
+    "publicProfileDescription": "Profile visible to others, including attendance and public contribution counts",
     "profileTitle": "Account Settings",
-    "profileDescription": "Affiliation and email notification settings"
+    "profileDescription": "Public name, affiliation, bio, links, and email notification settings"
   },
   "MyCommon": {
     "newPost": "New post",

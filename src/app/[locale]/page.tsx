@@ -5,6 +5,8 @@ import Image from "next/image";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
+import { loginHref } from "@/i18n/paths";
+import { getSessionUser } from "@/lib/auth/session";
 import {
   listApprovedProjectsCached,
   listUpcomingEventsCached,
@@ -21,10 +23,12 @@ export default async function HomePage() {
   const locale = await getLocale();
   const t = await getTranslations("Home");
   const common = await getTranslations("Common");
-  const [events, projects] = await Promise.all([
+  const [events, projects, user] = await Promise.all([
     listUpcomingEventsCached(3).catch(() => []),
     listApprovedProjectsCached(6).catch(() => []),
+    getSessionUser(),
   ]);
+  const profileSetupHref = loginHref("/my/profile", locale);
 
   return (
     <div className="space-y-24 pb-20 sm:space-y-32 sm:pb-24">
@@ -115,6 +119,51 @@ export default async function HomePage() {
       </section>
 
       <div className="mx-auto max-w-6xl space-y-20 px-4">
+        <FadeUp
+          as="section"
+          className="border-y border-zinc-200 py-5 dark:border-zinc-800"
+        >
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-2xl">
+              <p className="text-xs font-medium uppercase text-zinc-500">
+                {t("profileHubEyebrow")}
+              </p>
+              <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+                {t("profileHubTitle")}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+                {user
+                  ? t("profileHubSignedInDescription")
+                  : t("profileHubGuestDescription")}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-wrap gap-3">
+              {user ? (
+                <>
+                  <Link
+                    href={`/u/${user.uid}`}
+                    className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
+                  >
+                    {t("profileHubPublicCta")}
+                  </Link>
+                  <Link
+                    href="/my/profile"
+                    className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-4 py-2 text-sm font-medium transition hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                  >
+                    {t("profileHubSettingsCta")}
+                  </Link>
+                </>
+              ) : (
+                <Link
+                  href={profileSetupHref}
+                  className="inline-flex items-center justify-center rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
+                >
+                  {t("profileHubLoginCta")}
+                </Link>
+              )}
+            </div>
+          </div>
+        </FadeUp>
 
       <FadeUp as="section" className="space-y-6">
         {/* Section head row. On phones the view-all link slides under
