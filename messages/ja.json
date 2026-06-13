@@ -223,6 +223,8 @@
   },
   "EventDetail": {
     "coverAlt": "{title} のカバー画像",
+    "subImagesLabel": "イベント写真",
+    "subImageAlt": "{title} のイベント写真 {index}",
     "memberOnly": "メンバー限定",
     "start": "開始",
     "end": "終了",
@@ -1130,6 +1132,8 @@
       "cover": "カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)",
       "coverPreviewAlt": "{title} のカバー画像プレビュー",
       "coverFallbackTitle": "イベント",
+      "subImages": "サブ画像 (任意・複数可・1枚10MBまで・PNG/JPEG/WebP/GIF)",
+      "subImagePreviewAlt": "{title} のサブ画像プレビュー {index}",
       "surveyTitle": "アンケート項目",
       "addSurveyField": "+ 項目を追加",
       "keyPlaceholder": "key (英数字)",

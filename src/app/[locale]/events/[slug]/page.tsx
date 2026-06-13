@@ -25,6 +25,15 @@ import {
 
 export const dynamic = "force-dynamic";
 
+function eventImageUrls(event: EventDoc): string[] {
+  return Array.from(
+    new Set([
+      event.coverImage?.url,
+      ...(event.subImages ?? []).map((image) => image.url),
+    ].filter((url): url is string => Boolean(url))),
+  );
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -38,7 +47,8 @@ export async function generateMetadata({
   // sent, so crawlers/unfurlers only see the login redirect.
   if (!event) return {};
   const description = truncate(stripMarkdown(event.description), 160);
-  const images = event.coverImage ? [event.coverImage.url] : undefined;
+  const imageUrls = eventImageUrls(event);
+  const images = imageUrls.length > 0 ? imageUrls : undefined;
   return {
     title: event.title,
     description,
@@ -48,7 +58,7 @@ export async function generateMetadata({
       images,
     },
     twitter: {
-      card: event.coverImage ? "summary_large_image" : "summary",
+      card: images ? "summary_large_image" : "summary",
       title: event.title,
       description,
       images,
@@ -62,6 +72,7 @@ export async function generateMetadata({
 // meeting link is only ever delivered to confirmed attendees and must not
 // leak into crawlable markup.
 function eventJsonLd(event: EventDoc, eventUrl: string) {
+  const images = eventImageUrls(event);
   const place = event.location.address
     ? { "@type": "Place", address: event.location.address }
     : null;
@@ -89,7 +100,7 @@ function eventJsonLd(event: EventDoc, eventUrl: string) {
         : locations.length === 1
           ? locations[0]
           : locations,
-    image: event.coverImage ? [event.coverImage.url] : undefined,
+    image: images.length > 0 ? images : undefined,
     url: eventUrl,
     organizer: {
       "@type": "Organization",
@@ -135,6 +146,7 @@ export default async function EventDetailPage({
   const presenterProfiles = await getPublicProfilesByUids(
     presentations.map((p) => p.presenterUid),
   );
+  const subImages = event.subImages ?? [];
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -236,6 +248,25 @@ export default async function EventDetailPage({
       <section>
         <MarkdownBody source={event.description} />
       </section>
+
+      {subImages.length > 0 && (
+        <section
+          aria-label={t("subImagesLabel")}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
+          {subImages.map((image, i) => (
+            <Image
+              key={image.path}
+              src={image.url}
+              alt={t("subImageAlt", { index: i + 1, title: event.title })}
+              width={960}
+              height={720}
+              sizes="(max-width: 640px) 100vw, 360px"
+              className="aspect-[4/3] w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
+            />
+          ))}
+        </section>
+      )}
 
       <hr className="border-zinc-200 dark:border-zinc-800" />
 

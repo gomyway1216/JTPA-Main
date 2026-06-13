@@ -87,6 +87,7 @@ export const EventDocSchema = z.looseObject({
   status: z.enum(["draft", "published", "past", "cancelled"]).optional(),
   visibility: z.enum(["public", "members_only"]).optional(),
   coverImage: ProjectAssetSchema.optional(),
+  subImages: z.array(ProjectAssetSchema).optional(),
   surveyFields: z.array(SurveyFieldSchema).optional(),
   rsvpCount: z.number().optional(),
   presenterCount: z.number().optional(),

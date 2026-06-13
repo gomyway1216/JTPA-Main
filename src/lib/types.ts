@@ -141,6 +141,8 @@ export interface EventDoc {
   // Uses the same {path, url} shape as ProjectDoc.thumbnail and
   // PostDoc.coverImage so the upload helpers in those forms transfer.
   coverImage?: ProjectAsset;
+  // Additional images shown on the event detail page.
+  subImages?: ProjectAsset[];
   surveyFields: SurveyField[];
   rsvpCount: number;
   presenterCount: number;

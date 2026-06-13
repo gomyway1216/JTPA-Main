@@ -223,6 +223,8 @@
   },
   "EventDetail": {
     "coverAlt": "Cover image for {title}",
+    "subImagesLabel": "Event photos",
+    "subImageAlt": "Event photo {index} for {title}",
     "memberOnly": "Members only",
     "start": "Start",
     "end": "End",
@@ -1130,6 +1132,8 @@
       "cover": "Cover image (optional, 10MB max, PNG/JPEG/WebP/GIF)",
       "coverPreviewAlt": "Cover image preview for {title}",
       "coverFallbackTitle": "event",
+      "subImages": "Sub images (optional, multiple, 10MB each, PNG/JPEG/WebP/GIF)",
+      "subImagePreviewAlt": "Sub image {index} preview for {title}",
       "surveyTitle": "Survey fields",
       "addSurveyField": "+ Add field",
       "keyPlaceholder": "key (letters/numbers)",
