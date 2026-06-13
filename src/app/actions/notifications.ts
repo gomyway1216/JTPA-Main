@@ -27,8 +27,8 @@ export async function markNotificationRead(
   const snap = await ref.get();
   if (!snap.exists) return;
 
-  const data = snap.data() as Partial<NotificationReadState> | undefined;
-  if (data?.recipientUid !== user.uid || data.readAt) return;
+  const data = snap.data() as NotificationReadState;
+  if (data.recipientUid !== user.uid || data.readAt) return;
 
   await ref.update({ readAt: Timestamp.now() });
   revalidateNotificationSurfaces();

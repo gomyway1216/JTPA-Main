@@ -36,8 +36,15 @@ export function NotificationOpenLink({
 }: NotificationOpenLinkProps) {
   const router = useRouter();
 
-  async function handleClick(event: MouseEvent<HTMLAnchorElement>) {
+  function markReadBestEffort() {
+    void markNotificationRead(notificationId).catch((err) => {
+      console.error("Failed to mark notification read:", err);
+    });
+  }
+
+  function handleClick(event: MouseEvent<HTMLAnchorElement>) {
     if (!shouldHandleInPlace(event)) {
+      markReadBestEffort();
       onNavigate?.();
       return;
     }
@@ -45,17 +52,18 @@ export function NotificationOpenLink({
     event.preventDefault();
     onNavigate?.();
 
-    try {
-      await markNotificationRead(notificationId);
-    } catch (err) {
-      console.error("Failed to mark notification read:", err);
-    } finally {
-      router.push(href);
-    }
+    markReadBestEffort();
+    router.push(href);
   }
 
   return (
-    <Link href={href} role={role} onClick={handleClick} className={className}>
+    <Link
+      href={href}
+      role={role}
+      onAuxClick={handleClick}
+      onClick={handleClick}
+      className={className}
+    >
       {children}
     </Link>
   );
