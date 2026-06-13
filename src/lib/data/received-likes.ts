@@ -11,6 +11,7 @@ export type ReceivedRecordLike = {
   parentId: string;
   title: string;
   slug: string;
+  status: string | null;
   likeCount: number;
   createdAt?: TsLike;
   updatedAt?: TsLike;
@@ -45,6 +46,11 @@ function tsField(data: Record<string, unknown>, key: string): TsLike | undefined
   return value === undefined ? undefined : (value as TsLike);
 }
 
+function statusField(data: Record<string, unknown>): string | null {
+  const value = data.status;
+  return typeof value === "string" ? value : null;
+}
+
 function likedRecordFromSnap(
   doc: SnapLike,
   parentType: CommentParentType,
@@ -62,6 +68,7 @@ function likedRecordFromSnap(
     parentId: doc.id,
     title,
     slug,
+    status: statusField(data),
     likeCount,
     createdAt: tsField(data, "createdAt"),
     updatedAt: tsField(data, "updatedAt"),
@@ -100,7 +107,13 @@ export async function listLikedRecordsByAuthor(
 ): Promise<ReceivedRecordLike[]> {
   const groups = await Promise.all(
     RECORD_LIKE_QUERIES.map((config) =>
-      listLikedRecordsForQuery(config, authorUid, limitPerType),
+      listLikedRecordsForQuery(config, authorUid, limitPerType).catch((err) => {
+        console.error(
+          `Failed to list liked records for ${config.collection}:`,
+          err,
+        );
+        return [];
+      }),
     ),
   );
   return groups.flat().sort(compareRecordLikes);

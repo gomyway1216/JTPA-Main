@@ -38,8 +38,10 @@ export type SnapStub =
       empty?: boolean;
     }
   | { exists: boolean; id?: string; data?: () => unknown };
+type GetStub = SnapStub | Error;
 
-function withEmpty(s: SnapStub): SnapStub {
+function withEmpty(s: GetStub): SnapStub {
+  if (s instanceof Error) throw s;
   if ("docs" in s) return { ...s, empty: s.docs.length === 0 };
   return s;
 }
@@ -51,7 +53,7 @@ export function createAdminDbMock() {
   };
   let nextGet: SnapStub = { docs: [] };
   let nextCount = 0;
-  let nextGetQueue: SnapStub[] = [];
+  let nextGetQueue: GetStub[] = [];
   // For `getAll(...)` calls we line up an array of per-ref results.
   let nextGetAll: Array<SnapStub> = [];
 
@@ -76,7 +78,7 @@ export function createAdminDbMock() {
   function setCount(count: number) {
     nextCount = count;
   }
-  function setGetQueue(snaps: SnapStub[]) {
+  function setGetQueue(snaps: GetStub[]) {
     nextGetQueue = [...snaps];
   }
   function setGetAll(snaps: SnapStub[]) {

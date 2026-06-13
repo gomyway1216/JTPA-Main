@@ -4,7 +4,10 @@ import { redirect } from "next/navigation";
 
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
-import { parentRoutePrefix } from "@/lib/comments-parent";
+import {
+  isParentPubliclyVisible,
+  parentRoutePrefix,
+} from "@/lib/comments-parent";
 import {
   fetchCommentParentMetas,
   listLikedCommentsByAuthor,
@@ -47,12 +50,37 @@ function compareItems(a: LikeListItem, b: LikeListItem): number {
   return b.likeCount - a.likeCount || itemTime(b) - itemTime(a);
 }
 
+function recordEditHref(record: ReceivedRecordLike): string {
+  switch (record.parentType) {
+    case "post":
+      return `/my/posts/${record.parentId}/edit`;
+    case "guide":
+      return `/my/guides/${record.parentId}/edit`;
+    case "project":
+      return `/my/projects/${record.parentId}/edit`;
+    case "qa":
+      return `/qa/${record.slug}/edit`;
+    case "poll":
+      return `/poll/${record.slug}/edit`;
+  }
+}
+
+function recordHref(record: ReceivedRecordLike): string {
+  if (
+    record.status &&
+    isParentPubliclyVisible(record.parentType, { status: record.status })
+  ) {
+    return `${parentRoutePrefix(record.parentType)}/${record.slug}`;
+  }
+  return recordEditHref(record);
+}
+
 function recordToItem(record: ReceivedRecordLike): LikeListItem {
   return {
     kind: "record",
     key: `record:${record.parentType}:${record.parentId}`,
     parentType: record.parentType,
-    href: `${parentRoutePrefix(record.parentType)}/${record.slug}`,
+    href: recordHref(record),
     title: record.title,
     likeCount: record.likeCount,
     date: record.updatedAt ?? record.createdAt,
@@ -91,7 +119,10 @@ export default async function MyLikesPage() {
 
   const parents = await fetchCommentParentMetas(
     comments.map((c) => ({ parentType: c.parentType, parentId: c.parentId })),
-  );
+  ).catch((err) => {
+    console.error("Failed to fetch comment parent metas:", err);
+    return new Map();
+  });
   const items = [
     ...records.map(recordToItem),
     ...comments.map((c: CommentDoc): LikeListItem => {
