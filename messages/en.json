@@ -579,7 +579,16 @@
   },
   "MyRsvps": {
     "title": "Event History",
-    "empty": "No event registrations yet."
+    "empty": "No event registrations yet.",
+    "cancel": "Cancel",
+    "cancelling": "Cancelling...",
+    "cancelConfirm": "Cancel your registration?",
+    "cancelError": "Failed to cancel",
+    "status": {
+      "confirmed": "Registered",
+      "waitlist": "Waitlisted",
+      "cancelled": "Cancelled"
+    }
   },
   "MyProjects": {
     "title": "My Projects"

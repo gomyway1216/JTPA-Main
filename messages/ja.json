@@ -579,7 +579,16 @@
   },
   "MyRsvps": {
     "title": "参加履歴",
-    "empty": "参加登録履歴はありません。"
+    "empty": "参加登録履歴はありません。",
+    "cancel": "キャンセル",
+    "cancelling": "キャンセル中...",
+    "cancelConfirm": "この参加登録をキャンセルしますか？",
+    "cancelError": "キャンセルに失敗しました",
+    "status": {
+      "confirmed": "参加登録済み",
+      "waitlist": "キャンセル待ち",
+      "cancelled": "キャンセル済み"
+    }
   },
   "MyProjects": {
     "title": "自分のプロジェクト"

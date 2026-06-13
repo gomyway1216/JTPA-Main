@@ -4,6 +4,11 @@ import { adminDb } from "@/lib/firebase/admin";
 import { plainify } from "@/lib/data/serialize";
 import type { RsvpDoc } from "@/lib/types";
 
+export interface MyRsvpEntry {
+  eventId: string;
+  rsvp: RsvpDoc;
+}
+
 export async function getMyRsvp(
   eventId: string,
   uid: string,
@@ -29,12 +34,20 @@ export async function listRsvps(eventId: string): Promise<RsvpDoc[]> {
 }
 
 export async function listMyRsvpEventIds(uid: string): Promise<string[]> {
+  return (await listMyRsvps(uid)).map(({ eventId }) => eventId);
+}
+
+export async function listMyRsvps(uid: string): Promise<MyRsvpEntry[]> {
   const snap = await adminDb()
     .collectionGroup("rsvps")
     .where("uid", "==", uid)
     .orderBy("createdAt", "desc")
     .get();
   return snap.docs
-    .map((d) => d.ref.parent.parent?.id)
-    .filter((v): v is string => !!v);
+    .map((d) => {
+      const eventId = d.ref.parent.parent?.id;
+      if (!eventId) return null;
+      return { eventId, rsvp: plainify(d.data() as RsvpDoc) };
+    })
+    .filter((v): v is MyRsvpEntry => !!v);
 }
