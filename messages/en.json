@@ -1072,6 +1072,13 @@
         "presenter": "Presenter",
         "attendee": "Attendee"
       },
+      "status": {
+        "confirmed": "Confirmed",
+        "waitlist": "Waitlist",
+        "cancelled": "Cancelled"
+      },
+      "statusCancelConfirm": "Mark this registration as cancelled?",
+      "statusUpdateFailed": "Failed to update status",
       "presenterOnly": "(presenters only)",
       "presentationTitle": "Presentation title",
       "presentationAbstract": "Presentation abstract",

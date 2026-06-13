@@ -11,6 +11,7 @@ import type { RsvpDoc, SurveyField } from "@/lib/types";
 
 import { AttendanceToggle } from "./_components/AttendanceToggle";
 import { AttendeeExportBar } from "./_components/AttendeeExportBar";
+import { RsvpStatusSelect } from "./_components/RsvpStatusSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -142,7 +143,18 @@ export default async function AdminAttendeesPage({
                   <td className="py-2">
                     {r.role === "presenter" ? t("role.presenter") : t("role.attendee")}
                   </td>
-                  <td className="py-2">{r.status}</td>
+                  <td className="py-2">
+                    {selectedId ? (
+                      <RsvpStatusSelect
+                        key={`${selectedId}-${r.uid}-${r.status}`}
+                        eventId={selectedId}
+                        rsvpUid={r.uid}
+                        initialStatus={r.status}
+                      />
+                    ) : (
+                      t(`status.${r.status}`)
+                    )}
+                  </td>
                   <td className="py-2">
                     {selectedId && (
                       // Key includes attendedAt so a server-side change
