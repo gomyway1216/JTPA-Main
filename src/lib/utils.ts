@@ -2,6 +2,10 @@ import type { TsLike } from "@/lib/types";
 
 export function toDate(value: TsLike | undefined | null): Date | null {
   if (!value) return null;
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
   if (value instanceof Date) return value;
   const obj = value as Record<string, unknown>;
   if (typeof obj.toDate === "function") {

@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { markAllNotificationsRead } from "@/app/actions/notifications";
@@ -46,18 +47,15 @@ export function Header({
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState(false);
-  const [localUnreadCount, setLocalUnreadCount] = useState({
-    source: unreadNotificationCount,
-    count: unreadNotificationCount,
-  });
+  const [unreadCountOverride, setUnreadCountOverride] = useState<number | null>(
+    null,
+  );
   const [markingAllRead, startMarkingAllRead] = useTransition();
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nextLocale = locale === "ja" ? "en" : "ja";
   const userMenuLabel = user?.displayName || user?.email || t("userMenu");
-  const unreadCount =
-    localUnreadCount.source === unreadNotificationCount
-      ? localUnreadCount.count
-      : unreadNotificationCount;
+  const unreadCount = unreadCountOverride ?? unreadNotificationCount;
   const userMenuAriaLabel =
     unreadCount > 0
       ? `${userMenuLabel} (${t("notificationsUnread", {
@@ -118,25 +116,26 @@ export function Header({
   }
 
   function markDropdownNotificationsRead() {
-    const previousUnreadCount = unreadCount;
+    const previousUnreadCountOverride = unreadCountOverride;
     const previousNotifications = notifications;
 
-    setLocalUnreadCount({ source: unreadNotificationCount, count: 0 });
+    setUnreadCountOverride(0);
     setNotifications((current) =>
       current.map((notification) =>
-        notification.readAt ? notification : { ...notification, readAt: new Date() },
+        notification.readAt
+          ? notification
+          : { ...notification, readAt: new Date().toISOString() },
       ),
     );
 
     startMarkingAllRead(async () => {
       try {
         await markAllNotificationsRead();
+        router.refresh();
+        setUnreadCountOverride(null);
       } catch (err) {
         console.error("Failed to mark notifications read:", err);
-        setLocalUnreadCount({
-          source: unreadNotificationCount,
-          count: previousUnreadCount,
-        });
+        setUnreadCountOverride(previousUnreadCountOverride);
         setNotifications(previousNotifications);
       }
     });
@@ -272,7 +271,7 @@ export function Header({
                         type="button"
                         role="menuitem"
                         onClick={markDropdownNotificationsRead}
-                        disabled={markingAllRead}
+                        disabled={markingAllRead || notificationsLoading}
                         className="mx-3 mb-2 rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
                       >
                         {markingAllRead

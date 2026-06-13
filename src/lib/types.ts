@@ -5,6 +5,7 @@ import type { Timestamp } from "firebase/firestore";
 // Admin Timestamps emit `_seconds`/`_nanoseconds`). All Date-like fields
 // use this helper type to cover every shape we might encounter.
 export type TsLike =
+  | string
   | Timestamp
   | Date
   | { seconds: number; nanoseconds: number }
