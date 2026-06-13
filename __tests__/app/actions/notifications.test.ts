@@ -2,10 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireUserMock = vi.fn();
 const collectionMock = vi.fn();
+const docMock = vi.fn();
 const whereMock = vi.fn();
 const limitMock = vi.fn();
 const getMock = vi.fn();
+const docGetMock = vi.fn();
 const updateMock = vi.fn();
+const docUpdateMock = vi.fn();
 const commitMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
@@ -36,11 +39,24 @@ vi.mock("@/lib/firebase/admin", () => {
     };
   }
 
+  function collection() {
+    return {
+      ...query(),
+      doc: (id: string) => {
+        docMock(id);
+        return {
+          get: () => docGetMock(),
+          update: (...args: unknown[]) => docUpdateMock(...args),
+        };
+      },
+    };
+  }
+
   return {
     adminDb: () => ({
       collection: (name: string) => {
         collectionMock(name);
-        return query();
+        return collection();
       },
       batch: () => ({
         update: (...args: unknown[]) => updateMock(...args),
@@ -50,7 +66,10 @@ vi.mock("@/lib/firebase/admin", () => {
   };
 });
 
-import { markAllNotificationsRead } from "@/app/actions/notifications";
+import {
+  markAllNotificationsRead,
+  markNotificationRead,
+} from "@/app/actions/notifications";
 
 function snap(ids: string[]) {
   return {
@@ -62,12 +81,56 @@ function snap(ids: string[]) {
 beforeEach(() => {
   requireUserMock.mockReset().mockResolvedValue({ uid: "u1" });
   collectionMock.mockReset();
+  docMock.mockReset();
   whereMock.mockReset();
   limitMock.mockReset();
   getMock.mockReset();
+  docGetMock.mockReset();
   updateMock.mockReset();
+  docUpdateMock.mockReset().mockResolvedValue(undefined);
   commitMock.mockReset().mockResolvedValue(undefined);
   revalidatePathMock.mockReset();
+});
+
+describe("markNotificationRead", () => {
+  it("marks the user's unread notification", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ recipientUid: "u1", readAt: null }),
+    });
+
+    await markNotificationRead("n1");
+
+    expect(collectionMock).toHaveBeenCalledWith("notifications");
+    expect(docMock).toHaveBeenCalledWith("n1");
+    expect(docUpdateMock).toHaveBeenCalledWith({ readAt: "__now__" });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/my");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/my/notifications");
+  });
+
+  it("does not mark notifications for another recipient", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ recipientUid: "u2", readAt: null }),
+    });
+
+    await markNotificationRead("n1");
+
+    expect(docUpdateMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
+
+  it("skips writes and revalidation when the notification is already read", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ recipientUid: "u1", readAt: "__past__" }),
+    });
+
+    await markNotificationRead("n1");
+
+    expect(docUpdateMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("markAllNotificationsRead", () => {

@@ -1,8 +1,8 @@
-import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
 import { markAllNotificationsRead } from "@/app/actions/notifications";
+import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import {
@@ -90,12 +90,13 @@ export default async function MyNotificationsPage() {
                   <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
                     {n.commentPreview}
                   </p>
-                  <Link
+                  <NotificationOpenLink
+                    notificationId={n.id}
                     href={notificationHref(n)}
                     className="mt-3 inline-flex text-sm font-medium text-blue-600 hover:underline"
                   >
                     {t("open")}
-                  </Link>
+                  </NotificationOpenLink>
                 </div>
                 {!n.readAt && (
                   <span className="whitespace-nowrap rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
