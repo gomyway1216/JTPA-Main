@@ -13,8 +13,8 @@ function toDoc(doc: SnapLike): NotificationDoc {
     "notifications",
   );
   return plainify({
-    readAt: null,
     ...data,
+    readAt: data.readAt ?? null,
     id: doc.id,
   });
 }
@@ -43,4 +43,15 @@ export async function listUnreadNotifications(
     .limit(limit)
     .get();
   return snap.docs.map(toDoc);
+}
+
+export async function countUnreadNotifications(uid: string): Promise<number> {
+  const snap = await adminDb()
+    .collection("notifications")
+    .where("recipientUid", "==", uid)
+    .where("readAt", "==", null)
+    .count()
+    .get();
+  const count = snap.data().count;
+  return typeof count === "number" && Number.isFinite(count) ? count : 0;
 }

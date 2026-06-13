@@ -10,6 +10,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 }));
 
 import {
+  countUnreadNotifications,
   listMyNotifications,
   listUnreadNotifications,
 } from "@/lib/data/notifications";
@@ -59,6 +60,14 @@ describe("listMyNotifications", () => {
       readAt: null,
     });
   });
+
+  it("defaults missing readAt to null after parsing", async () => {
+    mock.setGet({ docs: [notificationSnap("n1", { readAt: undefined })] });
+
+    const out = await listMyNotifications("u1");
+
+    expect(out[0].readAt).toBeNull();
+  });
 });
 
 describe("listUnreadNotifications", () => {
@@ -73,5 +82,21 @@ describe("listUnreadNotifications", () => {
       ["readAt", "==", null],
     ]);
     expect(mock.state.limit).toBe(100);
+  });
+});
+
+describe("countUnreadNotifications", () => {
+  it("uses a count aggregation over unread notifications", async () => {
+    mock.setCount(42);
+
+    const count = await countUnreadNotifications("u1");
+
+    expect(mock.state.collection).toBe("notifications");
+    expect(mock.state.whereCalls).toEqual([
+      ["recipientUid", "==", "u1"],
+      ["readAt", "==", null],
+    ]);
+    expect(mock.state.countCalled).toBe(true);
+    expect(count).toBe(42);
   });
 });

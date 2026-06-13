@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
-import { listMyNotifications } from "@/lib/data/notifications";
+import { countUnreadNotifications } from "@/lib/data/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -16,16 +16,15 @@ export default async function MyPage() {
     redirect(loginPath("/my", locale));
   }
 
-  const [t, profile, notifications] = await Promise.all([
+  const [t, profile, unreadCount] = await Promise.all([
     getTranslations("MyPage"),
     getMyProfile(user.uid).catch(() => null),
-    listMyNotifications(user.uid, 50).catch((err) => {
-      console.error("Failed to list notifications for my page:", err);
-      return [];
+    countUnreadNotifications(user.uid).catch((err) => {
+      console.error("Failed to count unread notifications for my page:", err);
+      return 0;
     }),
   ]);
   const attendanceCount = Math.max(0, profile?.eventAttendanceCount ?? 0);
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">

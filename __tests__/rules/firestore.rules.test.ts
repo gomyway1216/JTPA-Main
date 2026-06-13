@@ -169,10 +169,23 @@ describe("notifications", () => {
     await assertFails(getDoc(doc(anon(), "notifications/n1")));
   });
 
-  it("recipient can mark read but cannot mutate content fields", async () => {
-    await seed({ "notifications/n1": notification });
+  it("recipient can mark unread rows read with request.time only", async () => {
+    await seed({
+      "notifications/n1": notification,
+      "notifications/read": { ...notification, readAt: new Date() },
+    });
+    await assertFails(
+      updateDoc(doc(alice(), "notifications/n1"), {
+        readAt: new Date("2020-01-01T00:00:00Z"),
+      }),
+    );
     await assertSucceeds(
       updateDoc(doc(alice(), "notifications/n1"), {
+        readAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(alice(), "notifications/read"), {
         readAt: serverTimestamp(),
       }),
     );

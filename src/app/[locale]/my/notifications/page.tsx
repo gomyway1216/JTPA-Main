@@ -6,7 +6,10 @@ import { markAllNotificationsRead } from "@/app/actions/notifications";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { parentRoutePrefix } from "@/lib/comments-parent";
-import { listMyNotifications } from "@/lib/data/notifications";
+import {
+  countUnreadNotifications,
+  listMyNotifications,
+} from "@/lib/data/notifications";
 import type { NotificationDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
@@ -24,15 +27,18 @@ export default async function MyNotificationsPage() {
     redirect(loginPath("/my/notifications", locale));
   }
 
-  const [locale, t, notifications] = await Promise.all([
+  const [locale, t, notifications, unreadCount] = await Promise.all([
     getLocale(),
     getTranslations("MyNotifications"),
     listMyNotifications(user.uid).catch((err) => {
       console.error("Failed to list notifications:", err);
       return [] as NotificationDoc[];
     }),
+    countUnreadNotifications(user.uid).catch((err) => {
+      console.error("Failed to count unread notifications:", err);
+      return 0;
+    }),
   ]);
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
