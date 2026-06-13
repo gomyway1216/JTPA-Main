@@ -8,6 +8,7 @@ import { SignOutButton } from "@/components/auth/SignOutButton";
 import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link, { usePathname } from "@/i18n/navigation";
+import { notificationMessageKey } from "@/lib/notification-copy";
 import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc, SessionUser } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
@@ -261,20 +262,16 @@ export function Header({
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <p className="line-clamp-2 text-xs font-medium text-zinc-900 dark:text-zinc-100">
-                                    {notificationT(
-                                      notification.reason ===
-                                        "reply_to_comment"
-                                        ? "replyToComment"
-                                        : "commentOnContent",
-                                      {
-                                        actorName: notification.actorName,
-                                        title: notification.parentTitle,
-                                      },
-                                    )}
+                                    {notificationT(notificationMessageKey(notification), {
+                                      actorName: notification.actorName,
+                                      title: notification.parentTitle,
+                                    })}
                                   </p>
-                                  <p className="mt-1 line-clamp-1 text-xs text-zinc-600 dark:text-zinc-400">
-                                    {notification.commentPreview}
-                                  </p>
+                                  {notification.commentPreview && (
+                                    <p className="mt-1 line-clamp-1 text-xs text-zinc-600 dark:text-zinc-400">
+                                      {notification.commentPreview}
+                                    </p>
+                                  )}
                                   <p className="mt-1 text-[11px] text-zinc-500">
                                     {formatDateTime(
                                       notification.createdAt,

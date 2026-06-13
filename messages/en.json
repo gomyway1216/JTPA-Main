@@ -580,7 +580,7 @@
     "publicProfileTitle": "Public Profile",
     "publicProfileDescription": "Profile visible to others, including attendance and public contribution counts",
     "notificationsTitle": "Notifications",
-    "notificationsDescription": "Comments and replies to your posts",
+    "notificationsDescription": "Comments, replies, and likes on your posts and comments",
     "notificationsUnread": "{count, plural, =1 {# unread} other {# unread}}",
     "profileTitle": "Account Settings",
     "profileDescription": "Public name, affiliation, bio, links, and email notification settings"
@@ -648,13 +648,15 @@
   "MyNotifications": {
     "metadataTitle": "Notifications",
     "title": "Notifications",
-    "description": "Comments on your posts and replies to your comments.",
+    "description": "Comments, replies, and likes on your posts and comments.",
     "empty": "No notifications yet.",
     "markAllRead": "Mark all read",
     "unread": "Unread",
-    "open": "Open comment",
+    "open": "Open",
     "commentOnContent": "{actorName} commented on \"{title}\".",
     "replyToComment": "{actorName} replied to your comment on \"{title}\".",
+    "likeOnContent": "{actorName} liked \"{title}\".",
+    "likeOnComment": "{actorName} liked your comment on \"{title}\".",
     "parent": {
       "post": "Article",
       "guide": "Notes & Know-how",

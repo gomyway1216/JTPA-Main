@@ -328,16 +328,20 @@ export interface CommentDoc {
 // code should use `CommentDoc` directly.
 export type PostCommentDoc = CommentDoc;
 
-export type NotificationType = "comment";
+export type NotificationType = "comment" | "like";
 export type CommentNotificationReason =
   | "comment_on_content"
   | "reply_to_comment";
+export type LikeNotificationReason = "like_on_content" | "like_on_comment";
+export type NotificationReason =
+  | CommentNotificationReason
+  | LikeNotificationReason;
 
 export interface NotificationDoc {
   id: string;
   recipientUid: string;
   type: NotificationType;
-  reason: CommentNotificationReason;
+  reason: NotificationReason;
   actorUid: string;
   actorName: string;
   actorPhotoURL: string | null;
@@ -345,9 +349,9 @@ export interface NotificationDoc {
   parentId: string;
   parentTitle: string;
   parentSlug: string;
-  commentId: string;
+  commentId?: string | null;
   parentCommentId?: string | null;
-  commentPreview: string;
+  commentPreview?: string;
   readAt?: TsLike | null;
   createdAt: TsLike;
 }

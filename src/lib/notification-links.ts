@@ -7,5 +7,8 @@ type NotificationLinkTarget = Pick<
 >;
 
 export function notificationHref(notification: NotificationLinkTarget): string {
-  return `${parentRoutePrefix(notification.parentType)}/${notification.parentSlug}#comment-${notification.commentId}`;
+  const href = `${parentRoutePrefix(notification.parentType)}/${notification.parentSlug}`;
+  return notification.commentId
+    ? `${href}#comment-${notification.commentId}`
+    : href;
 }

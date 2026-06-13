@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const requireUserMock = vi.fn();
 const revalidatePathMock = vi.fn();
 const updateTagMock = vi.fn();
+const enqueueLikeNotificationMock = vi.fn();
 
 const txGetMock = vi.fn();
 const txSetMock = vi.fn();
@@ -68,6 +69,11 @@ vi.mock("@/lib/firebase/admin", () => ({
   }),
 }));
 
+vi.mock("@/lib/notifications", () => ({
+  enqueueLikeNotification: (...args: unknown[]) =>
+    enqueueLikeNotificationMock(...args),
+}));
+
 import { toggleLikeComment, toggleLikeRecord } from "@/app/actions/likes";
 
 // The toggles now return a discriminated result instead of throwing.
@@ -81,9 +87,14 @@ async function expectError(
 }
 
 beforeEach(() => {
-  requireUserMock.mockReset().mockResolvedValue({ uid: "u1" });
+  requireUserMock.mockReset().mockResolvedValue({
+    uid: "u1",
+    displayName: "Liker",
+    photoURL: null,
+  });
   revalidatePathMock.mockReset();
   updateTagMock.mockReset();
+  enqueueLikeNotificationMock.mockReset().mockResolvedValue(undefined);
   txGetMock.mockReset();
   txSetMock.mockReset();
   txUpdateMock.mockReset();
@@ -149,6 +160,63 @@ describe("toggleLikeRecord — happy paths", () => {
     if (res.ok) expect(res.result).toEqual({ liked: true, count: 6 });
     expect(txSetMock).toHaveBeenCalledTimes(1);
     expect(txDeleteMock).not.toHaveBeenCalled();
+  });
+
+  it("enqueues a notification when liking another user's record", async () => {
+    snapQueue.push(
+      { exists: false },
+      {
+        exists: true,
+        data: () => ({
+          status: "published",
+          slug: "hello",
+          title: "Hello",
+          authorUid: "author",
+          likeCount: 0,
+        }),
+      },
+    );
+
+    await toggleLikeRecord({
+      parentType: "post",
+      parentId: "p1",
+    });
+
+    expect(enqueueLikeNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "author",
+        reason: "like_on_content",
+        actorUid: "u1",
+        actorName: "Liker",
+        parentType: "post",
+        parentId: "p1",
+        parentTitle: "Hello",
+        parentSlug: "hello",
+      }),
+    );
+  });
+
+  it("does not enqueue a notification when liking your own record", async () => {
+    snapQueue.push(
+      { exists: false },
+      {
+        exists: true,
+        data: () => ({
+          status: "published",
+          slug: "hello",
+          title: "Hello",
+          authorUid: "u1",
+          likeCount: 0,
+        }),
+      },
+    );
+
+    await toggleLikeRecord({
+      parentType: "post",
+      parentId: "p1",
+    });
+
+    expect(enqueueLikeNotificationMock).not.toHaveBeenCalled();
   });
 
   it("treats missing likeCount as 0 (legacy docs)", async () => {
@@ -322,6 +390,48 @@ describe("toggleLikeComment", () => {
     // The increment patches the COMMENT doc (not the parent).
     const [, patch] = txUpdateMock.mock.calls[0] as [unknown, { likeCount: number }];
     expect(patch.likeCount).toBe(3);
+  });
+
+  it("enqueues a notification when liking another user's comment", async () => {
+    snapQueue.push(
+      { exists: false },
+      {
+        exists: true,
+        data: () => ({
+          authorUid: "commenter",
+          body: "Helpful comment",
+          likeCount: 2,
+        }),
+      },
+      {
+        exists: true,
+        data: () => ({
+          status: "published",
+          slug: "x",
+          title: "Post title",
+        }),
+      },
+    );
+
+    await toggleLikeComment({
+      parentType: "post",
+      parentId: "p1",
+      commentId: "c1",
+    });
+
+    expect(enqueueLikeNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "commenter",
+        reason: "like_on_comment",
+        actorUid: "u1",
+        parentType: "post",
+        parentId: "p1",
+        parentTitle: "Post title",
+        parentSlug: "x",
+        commentId: "c1",
+        commentPreview: "Helpful comment",
+      }),
+    );
   });
 
   it("refuses comment-likes when the PARENT is unpublished", async () => {

@@ -7,6 +7,7 @@ import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import type {
   CommentNotificationReason,
   CommentParentType,
+  LikeNotificationReason,
 } from "@/lib/types";
 import enMessages from "../../messages/en.json";
 import jaMessages from "../../messages/ja.json";
@@ -260,6 +261,45 @@ export async function enqueueCommentNotifications(opts: {
   // TODO: Add optional email delivery for comment notifications once the
   // delivery cost and provider limits are acceptable. Keep the in-app inbox
   // as the source of truth so comments remain visible without paid email.
+}
+
+export async function enqueueLikeNotification(opts: {
+  recipientUid: string;
+  reason: LikeNotificationReason;
+  actorUid: string;
+  actorName: string;
+  actorPhotoURL: string | null;
+  parentType: CommentParentType;
+  parentId: string;
+  parentTitle: string;
+  parentSlug: string;
+  commentId?: string | null;
+  commentPreview?: string;
+  createdAt: unknown;
+}): Promise<void> {
+  if (opts.recipientUid === opts.actorUid) return;
+
+  const notification: Record<string, unknown> = {
+    recipientUid: opts.recipientUid,
+    type: "like",
+    reason: opts.reason,
+    actorUid: opts.actorUid,
+    actorName: opts.actorName,
+    actorPhotoURL: opts.actorPhotoURL,
+    parentType: opts.parentType,
+    parentId: opts.parentId,
+    parentTitle: opts.parentTitle,
+    parentSlug: opts.parentSlug,
+    commentId: opts.commentId ?? null,
+    parentCommentId: null,
+    readAt: null,
+    createdAt: opts.createdAt,
+  };
+  if (opts.commentPreview) {
+    notification.commentPreview = opts.commentPreview;
+  }
+
+  await adminDb().collection("notifications").add(notification);
 }
 
 export async function enqueueProjectDecisionNotification(opts: {
