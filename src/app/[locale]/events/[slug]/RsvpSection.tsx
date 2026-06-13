@@ -11,6 +11,7 @@ export function RsvpSection({
   initialRsvp,
   user,
   profileAffiliation = "",
+  onRsvpChange,
 }: {
   event: EventDoc;
   initialRsvp: RsvpDoc | null;
@@ -20,6 +21,7 @@ export function RsvpSection({
   // its own value wins (the user may have intentionally typed a
   // different one for this specific event).
   profileAffiliation?: string;
+  onRsvpChange?: (rsvp: RsvpDoc | null) => void;
 }) {
   const t = useTranslations("Rsvp");
   const [rsvp, setRsvp] = useState<RsvpDoc | null>(initialRsvp);
@@ -78,8 +80,12 @@ export function RsvpSection({
           presentationAbstract:
             role === "presenter" ? presentationAbstract : undefined,
         });
-        if (result.ok) setRsvp(result.rsvp);
-        else setError(result.error);
+        if (result.ok) {
+          setRsvp(result.rsvp);
+          onRsvpChange?.(result.rsvp);
+        } else {
+          setError(result.error);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : t("submitError"));
       }
@@ -92,8 +98,12 @@ export function RsvpSection({
     startTransition(async () => {
       try {
         const result = await cancelRsvp({ eventId: event.id });
-        if (result.ok) setRsvp(null);
-        else setError(result.error);
+        if (result.ok) {
+          setRsvp(null);
+          onRsvpChange?.(null);
+        } else {
+          setError(result.error);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : t("cancelError"));
       }

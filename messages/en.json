@@ -265,6 +265,8 @@
     "title": "Presentation Materials",
     "add": "+ Add material",
     "empty": "No presentation materials have been added yet.",
+    "presenterOnlyHelp": "Only confirmed presenters can add presentation materials.",
+    "loginToAddHelp": "Sign in and register as a presenter to add presentation materials.",
     "untitled": "(Untitled)",
     "openFile": "Open file",
     "externalLink": "External link",
