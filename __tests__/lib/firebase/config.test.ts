@@ -33,10 +33,12 @@ describe("firebaseConfig", () => {
     );
   });
 
-  it("falls back to empty strings when env vars are unset (never undefined)", () => {
+  it("falls back to dev-safe strings when env vars are unset", () => {
     // Treat each field individually so a future addition gets caught.
     for (const value of Object.values(firebaseConfig)) {
       expect(typeof value).toBe("string");
+      expect(value.length).toBeGreaterThan(0);
     }
+    expect(firebaseConfig.apiKey).toMatch(/^AIza/);
   });
 });
