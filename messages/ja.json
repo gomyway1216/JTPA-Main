@@ -1072,6 +1072,13 @@
         "presenter": "発表者",
         "attendee": "参加者"
       },
+      "status": {
+        "confirmed": "確定",
+        "waitlist": "キャンセル待ち",
+        "cancelled": "キャンセル済み"
+      },
+      "statusCancelConfirm": "この参加登録をキャンセル済みにしますか？",
+      "statusUpdateFailed": "ステータス更新に失敗しました",
       "presenterOnly": "(発表者のみ)",
       "presentationTitle": "発表タイトル",
       "presentationAbstract": "発表概要",

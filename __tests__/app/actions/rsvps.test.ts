@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // refs get which FieldValue.increment payloads.)
 
 const requireUserMock = vi.fn();
+const requireAdminMock = vi.fn();
 const revalidatePathMock = vi.fn();
 const enqueuePromotionMock = vi.fn();
 
@@ -31,6 +32,7 @@ const limitMock = vi.fn();
 // and assertions can pick out the write aimed at a specific doc.
 const rsvpRef = { __kind: "rsvp" };
 const promoteeRef = { __kind: "promotee" };
+const userRef = { __kind: "user" };
 const waitlistQuery: {
   __kind: string;
   orderBy: (...args: unknown[]) => unknown;
@@ -64,9 +66,11 @@ const eventRef = {
 let eventSnap: { exists: boolean; data: () => unknown };
 let rsvpSnap: { exists: boolean; data: () => unknown };
 let waitlistSnap: { empty: boolean; docs: unknown[] };
+let userSnap: { exists: boolean; get: (field: string) => unknown };
 
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
+  requireAdmin: () => requireAdminMock(),
 }));
 
 vi.mock("next/cache", () => ({
@@ -80,14 +84,18 @@ vi.mock("next/cache", () => ({
 vi.mock("firebase-admin/firestore", () => ({
   Timestamp: { now: () => ({ __fixed: "now" }) },
   // Sentinel so counter assertions can see the exact delta requested.
-  FieldValue: { increment: (n: number) => ({ __inc: n }) },
+  FieldValue: {
+    increment: (n: number) => ({ __inc: n }),
+    delete: () => "__delete__",
+  },
 }));
 
 vi.mock("@/lib/firebase/admin", () => ({
   adminDb: () => ({
     collection: (name: string) => {
-      if (name !== "events") throw new Error(`unexpected collection: ${name}`);
-      return { doc: () => eventRef };
+      if (name === "events") return { doc: () => eventRef };
+      if (name === "users") return { doc: () => userRef };
+      throw new Error(`unexpected collection: ${name}`);
     },
     runTransaction: (cb: (tx: unknown) => Promise<unknown>) =>
       runTransactionMock(cb),
@@ -99,7 +107,7 @@ vi.mock("@/lib/notifications", () => ({
     enqueuePromotionMock(...args),
 }));
 
-import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
+import { cancelRsvp, setRsvpStatus, submitRsvp } from "@/app/actions/rsvps";
 
 function snap(data: Record<string, unknown> | null) {
   return data
@@ -181,6 +189,13 @@ beforeEach(() => {
     isAdmin: false,
     isEditor: false,
   });
+  requireAdminMock.mockReset().mockResolvedValue({
+    uid: "admin-1",
+    displayName: "Admin",
+    email: "admin@x",
+    isAdmin: true,
+    isEditor: false,
+  });
   revalidatePathMock.mockReset();
   enqueuePromotionMock.mockReset().mockResolvedValue(undefined);
   txSetMock.mockReset();
@@ -199,6 +214,8 @@ beforeEach(() => {
           return rsvpSnap;
         case "waitlistQuery":
           return waitlistSnap;
+        case "user":
+          return userSnap;
         default:
           throw new Error("test bug: unexpected tx.get target");
       }
@@ -208,6 +225,11 @@ beforeEach(() => {
   eventSnap = snap(eventData());
   rsvpSnap = snap(null);
   waitlistSnap = { empty: true, docs: [] };
+  userSnap = {
+    exists: true,
+    get: (field: string) =>
+      ({ eventAttendanceCount: 3 } as Record<string, unknown>)[field],
+  };
 });
 
 describe("submitRsvp — auth + event guards", () => {
@@ -687,5 +709,149 @@ describe("cancelRsvp — counter deltas + waitlist promotion", () => {
       presenterCount: { __inc: 0 },
     });
     expect(enqueuePromotionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("setRsvpStatus — admin participant editing", () => {
+  it("is admin-gated", async () => {
+    requireAdminMock.mockRejectedValueOnce(new Error("FORBIDDEN"));
+    await expect(
+      setRsvpStatus({ eventId: "e1", rsvpUid: "u2", status: "cancelled" }),
+    ).rejects.toThrow("FORBIDDEN");
+    expect(runTransactionMock).not.toHaveBeenCalled();
+  });
+
+  it("moves a waitlisted presenter to confirmed and updates every bucket", async () => {
+    rsvpSnap = snap({ status: "waitlist", role: "presenter" });
+    await setRsvpStatus({
+      eventId: "e1",
+      rsvpUid: "u2",
+      status: "confirmed",
+    });
+    expect(updateTo("rsvp")).toMatchObject({ status: "confirmed" });
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      waitlistCount: { __inc: -1 },
+      presenterCount: { __inc: 1 },
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/attendees");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/events/jtpa-salon");
+  });
+
+  it("cancels a confirmed attendee, promotes the oldest waitlister, and sends mail", async () => {
+    rsvpSnap = snap({ status: "confirmed", role: "attendee" });
+    waitlistSnap = {
+      empty: false,
+      docs: [
+        {
+          ref: promoteeRef,
+          data: () => ({
+            email: "waiting@x",
+            displayName: "Waiting Wanda",
+            role: "presenter",
+          }),
+        },
+      ],
+    };
+
+    await setRsvpStatus({
+      eventId: "e1",
+      rsvpUid: "u2",
+      status: "cancelled",
+    });
+
+    expect(whereMock).toHaveBeenCalledWith("status", "==", "waitlist");
+    expect(orderByMock).toHaveBeenCalledWith("createdAt", "asc");
+    expect(limitMock).toHaveBeenCalledWith(1);
+    expect(updateTo("rsvp")).toMatchObject({ status: "cancelled" });
+    expect(updateTo("promotee")).toMatchObject({ status: "confirmed" });
+    expect(updateTo("event")).toMatchObject({
+      waitlistCount: { __inc: -1 },
+      presenterCount: { __inc: 1 },
+    });
+    expect(updateTo("event")).not.toHaveProperty("rsvpCount");
+    expect(enqueuePromotionMock).toHaveBeenCalledWith({
+      to: "waiting@x",
+      displayName: "Waiting Wanda",
+      eventTitle: "JTPA Salon",
+      eventSlug: "jtpa-salon",
+      role: "presenter",
+    });
+  });
+
+  it("waitlists a checked-in confirmed attendee, clears attendance, and promotes the oldest waitlister", async () => {
+    rsvpSnap = snap({
+      status: "confirmed",
+      role: "attendee",
+      attendedAt: { __fixed: "earlier" },
+    });
+    waitlistSnap = {
+      empty: false,
+      docs: [
+        {
+          ref: promoteeRef,
+          data: () => ({
+            email: "waiting@x",
+            displayName: "Waiting Wanda",
+            role: "presenter",
+          }),
+        },
+      ],
+    };
+
+    await setRsvpStatus({
+      eventId: "e1",
+      rsvpUid: "u2",
+      status: "waitlist",
+    });
+
+    expect(updateTo("rsvp")).toMatchObject({
+      status: "waitlist",
+      attendedAt: "__delete__",
+    });
+    expect(updateTo("promotee")).toMatchObject({ status: "confirmed" });
+    expect(updateTo("event")).toMatchObject({
+      presenterCount: { __inc: 1 },
+      attendanceCount: { __inc: -1 },
+    });
+    expect(updateTo("event")).not.toHaveProperty("rsvpCount");
+    expect(updateTo("event")).not.toHaveProperty("waitlistCount");
+    expect(updateTo("user")).toMatchObject({
+      eventAttendanceCount: 2,
+    });
+    expect(enqueuePromotionMock).toHaveBeenCalledWith({
+      to: "waiting@x",
+      displayName: "Waiting Wanda",
+      eventTitle: "JTPA Salon",
+      eventSlug: "jtpa-salon",
+      role: "presenter",
+    });
+  });
+
+  it("clears attendance and decrements profile attendance when cancelling a checked-in RSVP", async () => {
+    rsvpSnap = snap({
+      status: "confirmed",
+      role: "attendee",
+      attendedAt: { __fixed: "earlier" },
+    });
+    await setRsvpStatus({
+      eventId: "e1",
+      rsvpUid: "u2",
+      status: "cancelled",
+    });
+
+    expect(updateTo("rsvp")).toMatchObject({
+      status: "cancelled",
+      attendedAt: "__delete__",
+    });
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: -1 },
+      attendanceCount: { __inc: -1 },
+    });
+    expect(updateTo("user")).toMatchObject({
+      eventAttendanceCount: 2,
+    });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/u/u2");
   });
 });

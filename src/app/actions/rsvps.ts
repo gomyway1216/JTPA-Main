@@ -3,7 +3,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, updateTag } from "next/cache";
 
-import { requireUser } from "@/lib/auth/session";
+import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { EVENTS_TAG } from "@/lib/data/cache-tags";
 import { plainify } from "@/lib/data/serialize";
 import {
@@ -15,7 +15,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { enqueueWaitlistPromotionNotification } from "@/lib/notifications";
 import { cancellationDeltas } from "@/lib/rsvp-counters";
-import type { RsvpDoc, SurveyField } from "@/lib/types";
+import type { RsvpDoc, RsvpRole, RsvpStatus, SurveyField } from "@/lib/types";
 
 // Presentation title/abstract are short identifiers, not long-form prose —
 // the abstract still gets a generous cap so the server rejects a multi-KB
@@ -54,6 +54,44 @@ interface SubmitRsvpInput {
   surveyResponses: Record<string, string>;
   presentationTitle?: string;
   presentationAbstract?: string;
+}
+
+function isRsvpStatus(value: string): value is RsvpStatus {
+  return value === "confirmed" || value === "waitlist" || value === "cancelled";
+}
+
+function statusCounterContribution(
+  status: RsvpStatus,
+  role: RsvpRole,
+): { rsvp: number; waitlist: number; presenter: number } {
+  return {
+    rsvp: status === "confirmed" ? 1 : 0,
+    waitlist: status === "waitlist" ? 1 : 0,
+    presenter: status === "confirmed" && role === "presenter" ? 1 : 0,
+  };
+}
+
+function statusChangeDeltas(
+  prior: RsvpDoc,
+  nextStatus: RsvpStatus,
+  promoteeRole: RsvpRole | null,
+): { rsvpDelta: number; waitlistDelta: number; presenterDelta: number } {
+  const before = statusCounterContribution(prior.status, prior.role);
+  const after = statusCounterContribution(nextStatus, prior.role);
+  const promoteeBefore = promoteeRole
+    ? statusCounterContribution("waitlist", promoteeRole)
+    : { rsvp: 0, waitlist: 0, presenter: 0 };
+  const promoteeAfter = promoteeRole
+    ? statusCounterContribution("confirmed", promoteeRole)
+    : { rsvp: 0, waitlist: 0, presenter: 0 };
+
+  return {
+    rsvpDelta: after.rsvp - before.rsvp + promoteeAfter.rsvp - promoteeBefore.rsvp,
+    waitlistDelta:
+      after.waitlist - before.waitlist + promoteeAfter.waitlist - promoteeBefore.waitlist,
+    presenterDelta:
+      after.presenter - before.presenter + promoteeAfter.presenter - promoteeBefore.presenter,
+  };
 }
 
 export async function submitRsvp(
@@ -383,5 +421,141 @@ export async function cancelRsvp({
   revalidatePath(`/events`);
   revalidatePath(`/events/[slug]`, "page");
   revalidatePath(`/my/rsvps`);
+  return { ok: true };
+}
+
+export async function setRsvpStatus(input: {
+  eventId: string;
+  rsvpUid: string;
+  status: RsvpStatus;
+}): Promise<{ ok: true }> {
+  await requireAdmin();
+  if (!isRsvpStatus(input.status)) throw new Error("INVALID_RSVP_STATUS");
+
+  const eventRef = adminDb().collection("events").doc(input.eventId);
+  const rsvpRef = eventRef.collection("rsvps").doc(input.rsvpUid);
+
+  type PromotionInfo = {
+    to: string;
+    displayName: string;
+    eventTitle: string;
+    eventSlug: string;
+    role: RsvpDoc["role"];
+  };
+
+  const result = await adminDb().runTransaction(async (tx) => {
+    const [rsvpSnap, eventSnap] = await Promise.all([
+      tx.get(rsvpRef),
+      tx.get(eventRef),
+    ]);
+    if (!rsvpSnap.exists) throw new Error("RSVP_NOT_FOUND");
+    if (!eventSnap.exists) throw new Error("EVENT_NOT_FOUND");
+
+    const prior = rsvpSnap.data() as RsvpDoc;
+    const event = eventSnap.data() as { title: string; slug: string };
+    if (prior.status === input.status) {
+      return {
+        changed: false,
+        eventSlug: event.slug,
+        promotion: null as PromotionInfo | null,
+      };
+    }
+
+    let promoteeDoc:
+      | {
+          ref: FirebaseFirestore.DocumentReference;
+          data: RsvpDoc;
+        }
+      | null = null;
+    if (prior.status === "confirmed" && input.status !== "confirmed") {
+      const waitlistQuery = eventRef
+        .collection("rsvps")
+        .where("status", "==", "waitlist")
+        .orderBy("createdAt", "asc")
+        .limit(1);
+      const waitlistSnap = await tx.get(waitlistQuery);
+      if (!waitlistSnap.empty) {
+        const doc = waitlistSnap.docs[0];
+        promoteeDoc = { ref: doc.ref, data: doc.data() as RsvpDoc };
+      }
+    }
+
+    const clearsAttendance = input.status !== "confirmed" && !!prior.attendedAt;
+    const userRef = adminDb().collection("users").doc(input.rsvpUid);
+    const userSnap = clearsAttendance && !prior.isGuest ? await tx.get(userRef) : null;
+    const now = Timestamp.now();
+    const { rsvpDelta, waitlistDelta, presenterDelta } = statusChangeDeltas(
+      prior,
+      input.status,
+      promoteeDoc ? promoteeDoc.data.role : null,
+    );
+
+    const rsvpPatch: Record<string, FirebaseFirestore.FieldValue | RsvpStatus | typeof now> = {
+      status: input.status,
+      updatedAt: now,
+    };
+    if (clearsAttendance) rsvpPatch.attendedAt = FieldValue.delete();
+    tx.update(rsvpRef, rsvpPatch);
+
+    if (promoteeDoc) {
+      tx.update(promoteeDoc.ref, {
+        status: "confirmed" as const,
+        updatedAt: now,
+      });
+    }
+
+    const eventPatch: Record<string, FirebaseFirestore.FieldValue | typeof now> = {};
+    if (rsvpDelta) eventPatch.rsvpCount = FieldValue.increment(rsvpDelta);
+    if (presenterDelta) {
+      eventPatch.presenterCount = FieldValue.increment(presenterDelta);
+    }
+    if (waitlistDelta) {
+      eventPatch.waitlistCount = FieldValue.increment(waitlistDelta);
+    }
+    if (clearsAttendance) {
+      eventPatch.attendanceCount = FieldValue.increment(-1);
+    }
+    if (Object.keys(eventPatch).length > 0) {
+      eventPatch.updatedAt = now;
+      tx.update(eventRef, eventPatch);
+    }
+
+    if (clearsAttendance && userSnap?.exists) {
+      const rawAttendance = userSnap.get("eventAttendanceCount");
+      const attendance =
+        typeof rawAttendance === "number" && Number.isFinite(rawAttendance)
+          ? Math.max(0, Math.trunc(rawAttendance) - 1)
+          : 0;
+      tx.update(userRef, {
+        eventAttendanceCount: attendance,
+        updatedAt: now,
+      });
+    }
+
+    const promotion = promoteeDoc
+      ? {
+          to: promoteeDoc.data.email,
+          displayName: promoteeDoc.data.displayName,
+          eventTitle: event.title,
+          eventSlug: event.slug,
+          role: promoteeDoc.data.role,
+        }
+      : null;
+    return { changed: true, eventSlug: event.slug, promotion };
+  });
+
+  if (!result.changed) return { ok: true };
+  if (result.promotion) {
+    await enqueueWaitlistPromotionNotification(result.promotion);
+  }
+
+  updateTag(EVENTS_TAG);
+  revalidatePath("/events");
+  revalidatePath(`/events/${result.eventSlug}`);
+  revalidatePath("/events/[slug]", "page");
+  revalidatePath("/admin/attendees");
+  revalidatePath("/admin/users");
+  revalidatePath("/my/rsvps");
+  revalidatePath(`/u/${input.rsvpUid}`);
   return { ok: true };
 }
