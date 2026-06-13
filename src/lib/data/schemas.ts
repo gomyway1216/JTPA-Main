@@ -243,7 +243,7 @@ export const NotificationDocSchema = z.looseObject({
   parentId: z.string().optional(),
   parentTitle: z.string().optional(),
   parentSlug: z.string().optional(),
-  commentId: z.string().optional(),
+  commentId: z.string().nullable().optional(),
   parentCommentId: z.string().nullable().optional(),
   commentPreview: z.string().optional(),
   readAt: TsLikeSchema.nullable().optional(),
