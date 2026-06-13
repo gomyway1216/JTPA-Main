@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents } from "@/lib/data/events";
+import { listEventsForAdmin } from "@/lib/data/events";
 import { countNewFeedback } from "@/lib/data/feedback";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
@@ -27,7 +27,7 @@ export default async function AdminHomePage() {
         listProjects({ status: "pending", limit: 5 }),
       ),
       safeLoad("upcoming events", () =>
-        listEvents({ statuses: ["draft", "published"], limit: 5 }),
+        listEventsForAdmin({ statuses: ["draft", "published"], limit: 5 }),
       ),
       safeLoad("pending posts", () => listPostsByStatus("pending", 5)),
       safeLoad("new feedback count", () => countNewFeedback()),
@@ -148,17 +148,22 @@ export default async function AdminHomePage() {
           <p className="text-sm text-zinc-500 mt-2">{t("eventsEmpty")}</p>
         ) : (
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {upcoming.map((e) => (
-              <li key={e.id} className="py-2">
-                <Link
-                  href={`/admin/events/${e.id}/edit`}
-                  className="flex items-center justify-between gap-3 text-sm hover:underline"
-                >
-                  <span>{e.title}</span>
-                  <span className="text-xs text-zinc-500">{e.status}</span>
-                </Link>
-              </li>
-            ))}
+            {upcoming.map((e) => {
+              const status =
+                (e as Partial<typeof e>).status ?? common("unknown");
+
+              return (
+                <li key={e.id} className="py-2">
+                  <Link
+                    href={`/admin/events/${e.id}/edit`}
+                    className="flex items-center justify-between gap-3 text-sm hover:underline"
+                  >
+                    <span>{e.title}</span>
+                    <span className="text-xs text-zinc-500">{status}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

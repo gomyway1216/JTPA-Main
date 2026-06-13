@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents } from "@/lib/data/events";
+import { listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
@@ -52,7 +52,7 @@ export default async function AdminAttendeesPage({
 
   const { eventId } = await searchParams;
   const eventsRes = await safeLoad("events", () =>
-    listEvents({
+    listEventsForAdmin({
       statuses: ["draft", "published", "past"],
       limit: 50,
     }),
@@ -84,11 +84,16 @@ export default async function AdminAttendeesPage({
           defaultValue={selectedId}
           className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         >
-          {events.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.title} ({formatDateTime(e.startAt, locale)})
-            </option>
-          ))}
+          {events.map((e) => {
+            const start =
+              formatDateTime(e.startAt, locale) || common("notAvailable");
+
+            return (
+              <option key={e.id} value={e.id}>
+                {e.title} ({start})
+              </option>
+            );
+          })}
         </select>
         <button
           type="submit"
