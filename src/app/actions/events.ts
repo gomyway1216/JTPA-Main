@@ -66,10 +66,24 @@ const EventInputSchema = z.object({
   checkInEarlyMinutes: CheckInWindowMinutesSchema.optional(),
   checkInLateMinutes: CheckInWindowMinutesSchema.optional(),
   coverImage: AssetSchema.optional(),
+  subImages: z.array(AssetSchema).default([]),
   surveyFields: z.array(SurveyFieldSchema).default([]),
 });
 
 export type EventFormInput = z.input<typeof EventInputSchema>;
+
+function uniqueStoragePaths(paths: Array<string | undefined>): string[] {
+  return Array.from(new Set(paths.filter((p): p is string => Boolean(p))));
+}
+
+function eventImagePaths(
+  event: Pick<EventDoc, "coverImage" | "subImages">,
+): string[] {
+  return uniqueStoragePaths([
+    event.coverImage?.path,
+    ...(event.subImages ?? []).map((image) => image.path),
+  ]);
+}
 
 // createEvent / cloneEvent redirect on success (so they only ever *return*
 // on failure); updateEvent returns { ok: true }. Returning the error rather
@@ -120,6 +134,7 @@ export async function createEvent(
     checkInLateMinutes:
       parsed.checkInLateMinutes ?? DEFAULT_CHECKIN_LATE_MINUTES,
     coverImage: parsed.coverImage,
+    subImages: parsed.subImages,
     surveyFields: parsed.surveyFields,
     rsvpCount: 0,
     presenterCount: 0,
@@ -172,15 +187,17 @@ export async function updateEvent(
     }
   }
 
-  // Capture the previous cover image path so we can sweep it after the
-  // Firestore write succeeds. Order matters — write first, cleanup after
-  // (pattern from PR #24): if the doc update fails, we don't want to have
-  // already deleted the file the doc still points to.
-  const orphan =
-    cur.coverImage &&
-    cur.coverImage.path !== parsed.coverImage?.path
-      ? cur.coverImage.path
-      : null;
+  // Capture previous event image paths so we can sweep only the removed
+  // Storage objects after the Firestore write succeeds. Order matters:
+  // write first, cleanup after (pattern from PR #24), so a failed doc
+  // update never deletes files the live doc still references.
+  const nextImagePaths = uniqueStoragePaths([
+    parsed.coverImage?.path,
+    ...parsed.subImages.map((image) => image.path),
+  ]);
+  const orphanPaths = eventImagePaths(cur).filter(
+    (path) => !nextImagePaths.includes(path),
+  );
 
   await ref.update({
     ...(requestedSlug ? { slug: requestedSlug } : {}),
@@ -203,6 +220,7 @@ export async function updateEvent(
     checkInLateMinutes:
       parsed.checkInLateMinutes ?? DEFAULT_CHECKIN_LATE_MINUTES,
     coverImage: parsed.coverImage ?? FieldValue.delete(),
+    subImages: parsed.subImages,
     // Drop the legacy `coverImagePath` field so existing docs normalize
     // to the new shape on first edit (same pattern as PR #24).
     coverImagePath: FieldValue.delete(),
@@ -210,7 +228,7 @@ export async function updateEvent(
     updatedAt: FieldValue.serverTimestamp(),
   });
 
-  if (orphan) await deleteStoragePaths([orphan]);
+  if (orphanPaths.length > 0) await deleteStoragePaths(orphanPaths);
 
   // Expire the cached / + /events lists (src/lib/data/cached.ts) in both locales.
   updateTag(EVENTS_TAG);
@@ -229,9 +247,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
   // doc alive but referencing a missing file (same delete-doc-first
   // pattern as projects + posts).
   await ref.delete();
-  if (cur?.coverImage) {
-    await deleteStoragePaths([cur.coverImage.path]);
-  }
+  if (cur) await deleteStoragePaths(eventImagePaths(cur));
   // Expire the cached / + /events lists (src/lib/data/cached.ts) in both locales.
   updateTag(EVENTS_TAG);
   revalidatePath("/events");

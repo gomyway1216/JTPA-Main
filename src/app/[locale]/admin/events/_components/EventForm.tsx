@@ -8,7 +8,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import {
   createEvent,
@@ -24,6 +24,11 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import {
+  isProjectAsset,
+  projectAssetPathSet,
+  validProjectAssets,
+} from "@/lib/assets";
 import {
   DEFAULT_CHECKIN_EARLY_MINUTES,
   DEFAULT_CHECKIN_LATE_MINUTES,
@@ -114,10 +119,21 @@ export function EventForm({
     minutesToHoursInput(event?.checkInLateMinutes, DEFAULT_CHECKIN_LATE_MINUTES),
   );
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
+  const initialCoverImage = isProjectAsset(event?.coverImage)
+    ? event.coverImage
+    : undefined;
+  const initialSubImages = validProjectAssets(event?.subImages);
   const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
-    event?.coverImage,
+    initialCoverImage,
+  );
+  const [subImages, setSubImages] = useState<ProjectAsset[]>(
+    initialSubImages,
+  );
+  const savedImagePathsRef = useRef(
+    projectAssetPathSet([event?.coverImage, ...initialSubImages]),
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
+  const [subProgress, setSubProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Bumped to `Date.now()` when save succeeds on the edit path —
   // updateEvent doesn't redirect, so without this the admin gets no
@@ -129,7 +145,7 @@ export function EventForm({
   const common = useTranslations("Admin.common");
   const actionErrors = useTranslations("ActionErrors");
 
-  function uploadCover(
+  function uploadImage(
     file: File,
     onProgress: (pct: number) => void,
   ): Promise<ProjectAsset> {
@@ -146,7 +162,8 @@ export function EventForm({
     // segment with admin write, so for both create (no event id yet) and
     // edit we just root under the admin's uid and let the doc reference
     // the resulting URL.
-    const path = `events/${user.uid}/${Date.now()}-${safeName}`;
+    const uniqueName = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const path = `events/${user.uid}/${uniqueName}-${safeName}`;
     const objectRef = storageRef(clientStorage, path);
     return new Promise<ProjectAsset>((resolve, reject) => {
       const task = uploadBytesResumable(objectRef, file, {
@@ -170,12 +187,10 @@ export function EventForm({
   }
 
   // True if the path on the current state was uploaded during this session
-  // (different from whatever the form was initialized with). The previous
-  // image lives only because the picker eagerly uploads; if the user
-  // replaces or deletes it without saving, we should drop the orphaned
-  // Storage object instead of relying on a hypothetical cleanup cron.
+  // (not one of the images the form was initialized with). Previously saved
+  // images must stay in Storage until the admin saves the doc mutation.
   function isUnsavedUpload(path: string | undefined): boolean {
-    return !!path && path !== event?.coverImage?.path;
+    return !!path && !savedImagePathsRef.current.has(path);
   }
 
   async function discardUnsavedUpload(path: string | undefined): Promise<void> {
@@ -185,7 +200,7 @@ export function EventForm({
     } catch (err) {
       // Best-effort — the file might already be gone, or perms shifted.
       // Don't block the UI on this.
-      console.warn("Failed to clean up unsaved cover image:", err);
+      console.warn("Failed to clean up unsaved event image:", err);
     }
   }
 
@@ -198,7 +213,7 @@ export function EventForm({
       // Replacing an unsaved upload: drop the previous file first so we
       // don't leak a Storage object the doc never references.
       await discardUnsavedUpload(coverImage?.path);
-      const asset = await uploadCover(file, setCoverProgress);
+      const asset = await uploadImage(file, setCoverProgress);
       setCoverImage(asset);
     } catch (err) {
       setError(err instanceof Error ? err.message : common("uploadFailed"));
@@ -208,7 +223,30 @@ export function EventForm({
     }
   }
 
-  const uploading = coverProgress !== null;
+  async function handleSubImagesPick(e: React.ChangeEvent<HTMLInputElement>) {
+    setError(null);
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    const uploaded: ProjectAsset[] = [];
+    try {
+      for (const file of files) {
+        setSubProgress(0);
+        const asset = await uploadImage(file, setSubProgress);
+        uploaded.push(asset);
+      }
+      setSubImages((cur) => [...cur, ...uploaded]);
+    } catch (err) {
+      await Promise.all(
+        uploaded.map((asset) => discardUnsavedUpload(asset.path)),
+      );
+      setError(err instanceof Error ? err.message : common("uploadFailed"));
+    } finally {
+      setSubProgress(null);
+      e.target.value = "";
+    }
+  }
+
+  const uploading = coverProgress !== null || subProgress !== null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -255,6 +293,7 @@ export function EventForm({
             DEFAULT_CHECKIN_LATE_MINUTES,
           ),
           coverImage,
+          subImages,
           surveyFields: fields,
         };
         const res =
@@ -274,7 +313,13 @@ export function EventForm({
         // `res?.ok` also avoids a false saved state if `res` is null —
         // i.e. an edit somehow rendered without an `event`. Per PR #116
         // Copilot review.
-        if (res?.ok) setSavedAt(Date.now());
+        if (res?.ok) {
+          savedImagePathsRef.current = projectAssetPathSet([
+            payload.coverImage,
+            ...(payload.subImages ?? []),
+          ]);
+          setSavedAt(Date.now());
+        }
       } catch (err) {
         // Server-Action `redirect()` (and `notFound()`, etc.) signal
         // navigation by throwing an internal Next.js error.
@@ -573,6 +618,56 @@ export function EventForm({
             <p className="text-xs text-zinc-500">
               {common("uploadWithProgress", {
                 progress: coverProgress.toFixed(0),
+              })}
+            </p>
+          )}
+        </div>
+      </Field>
+
+      <Field label={t("subImages")}>
+        <div className="space-y-3">
+          {subImages.length > 0 && (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {subImages.map((image, i) => (
+                <li key={image.path} className="space-y-2">
+                  <Image
+                    src={image.url}
+                    alt={t("subImagePreviewAlt", {
+                      index: i + 1,
+                      title: title || t("coverFallbackTitle"),
+                    })}
+                    width={320}
+                    height={240}
+                    className="aspect-[4/3] w-full rounded border border-zinc-200 object-cover dark:border-zinc-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await discardUnsavedUpload(image.path);
+                      setSubImages((cur) =>
+                        cur.filter((_, idx) => idx !== i),
+                      );
+                    }}
+                    className="text-xs text-red-600 hover:underline"
+                  >
+                    {common("delete")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <input
+            type="file"
+            accept={ACCEPT}
+            multiple
+            disabled={pending || uploading}
+            onChange={handleSubImagesPick}
+            className="block w-full text-sm disabled:opacity-50"
+          />
+          {subProgress !== null && (
+            <p className="text-xs text-zinc-500">
+              {common("uploadWithProgress", {
+                progress: subProgress.toFixed(0),
               })}
             </p>
           )}

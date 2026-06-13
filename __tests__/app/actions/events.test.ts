@@ -218,6 +218,7 @@ describe("createEvent — happy path", () => {
       visibility: "public",
       checkInEarlyMinutes: DEFAULT_CHECKIN_EARLY_MINUTES,
       checkInLateMinutes: DEFAULT_CHECKIN_LATE_MINUTES,
+      subImages: [],
       // A new event starts with empty buckets.
       rsvpCount: 0,
       presenterCount: 0,
@@ -353,6 +354,33 @@ describe("updateEvent", () => {
     );
     expect(storageDeleteMock).not.toHaveBeenCalled();
   });
+
+  it("persists sub images and sweeps removed ones only after the doc write", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        subImages: [
+          { path: "events/old-a.png", url: "https://x/old-a.png" },
+          { path: "events/old-b.png", url: "https://x/old-b.png" },
+        ],
+      }),
+    });
+    const kept = { path: "events/old-b.png", url: "https://x/old-b.png" };
+    const added = { path: "events/new-c.png", url: "https://x/new-c.png" };
+    await updateEvent(
+      "e1",
+      eventInput({
+        subImages: [kept, added],
+      }),
+    );
+    const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch.subImages).toEqual([kept, added]);
+    expect(storageDeleteMock).toHaveBeenCalledWith("events/old-a.png");
+    expect(storageDeleteMock).not.toHaveBeenCalledWith("events/old-b.png");
+    expect(docUpdateMock.mock.invocationCallOrder[0]).toBeLessThan(
+      storageDeleteMock.mock.invocationCallOrder[0],
+    );
+  });
 });
 
 describe("deleteEvent", () => {
@@ -367,6 +395,10 @@ describe("deleteEvent", () => {
       exists: true,
       data: () => ({
         coverImage: { path: "events/cover.png", url: "https://x/c.png" },
+        subImages: [
+          { path: "events/sub-a.png", url: "https://x/a.png" },
+          { path: "events/sub-b.png", url: "https://x/b.png" },
+        ],
       }),
     });
     // Server-side redirect (instead of client navigation) so the admin
@@ -376,6 +408,8 @@ describe("deleteEvent", () => {
     );
     expect(docDeleteMock).toHaveBeenCalledTimes(1);
     expect(storageDeleteMock).toHaveBeenCalledWith("events/cover.png");
+    expect(storageDeleteMock).toHaveBeenCalledWith("events/sub-a.png");
+    expect(storageDeleteMock).toHaveBeenCalledWith("events/sub-b.png");
     // Doc-first: a transient Storage failure must not leave a live doc
     // pointing at a missing file.
     expect(docDeleteMock.mock.invocationCallOrder[0]).toBeLessThan(
