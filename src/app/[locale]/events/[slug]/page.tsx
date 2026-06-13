@@ -8,6 +8,7 @@ import { RsvpSection } from "@/app/[locale]/events/[slug]/RsvpSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { localizedPath, loginHref, loginPath } from "@/i18n/paths";
+import { validProjectAssets } from "@/lib/assets";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
@@ -29,7 +30,7 @@ function eventImageUrls(event: EventDoc): string[] {
   return Array.from(
     new Set([
       event.coverImage?.url,
-      ...(event.subImages ?? []).map((image) => image.url),
+      ...validProjectAssets(event.subImages).map((image) => image.url),
     ].filter((url): url is string => Boolean(url))),
   );
 }
@@ -146,7 +147,7 @@ export default async function EventDetailPage({
   const presenterProfiles = await getPublicProfilesByUids(
     presentations.map((p) => p.presenterUid),
   );
-  const subImages = event.subImages ?? [];
+  const subImages = validProjectAssets(event.subImages);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">

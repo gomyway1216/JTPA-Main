@@ -8,7 +8,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import {
   createEvent,
@@ -24,6 +24,11 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
+import {
+  isProjectAsset,
+  projectAssetPathSet,
+  validProjectAssets,
+} from "@/lib/assets";
 import {
   DEFAULT_CHECKIN_EARLY_MINUTES,
   DEFAULT_CHECKIN_LATE_MINUTES,
@@ -115,10 +120,16 @@ export function EventForm({
   );
   const [fields, setFields] = useState<SurveyField[]>(event?.surveyFields ?? []);
   const [coverImage, setCoverImage] = useState<ProjectAsset | undefined>(
-    event?.coverImage,
+    isProjectAsset(event?.coverImage) ? event.coverImage : undefined,
   );
   const [subImages, setSubImages] = useState<ProjectAsset[]>(
-    event?.subImages ?? [],
+    validProjectAssets(event?.subImages),
+  );
+  const savedImagePathsRef = useRef(
+    projectAssetPathSet([
+      event?.coverImage,
+      ...validProjectAssets(event?.subImages),
+    ]),
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [subProgress, setSubProgress] = useState<number | null>(null);
@@ -174,16 +185,11 @@ export function EventForm({
     });
   }
 
-  const initialImagePaths = new Set([
-    event?.coverImage?.path,
-    ...(event?.subImages ?? []).map((image) => image.path),
-  ]);
-
   // True if the path on the current state was uploaded during this session
   // (not one of the images the form was initialized with). Previously saved
   // images must stay in Storage until the admin saves the doc mutation.
   function isUnsavedUpload(path: string | undefined): boolean {
-    return !!path && !initialImagePaths.has(path);
+    return !!path && !savedImagePathsRef.current.has(path);
   }
 
   async function discardUnsavedUpload(path: string | undefined): Promise<void> {
@@ -306,7 +312,13 @@ export function EventForm({
         // `res?.ok` also avoids a false saved state if `res` is null —
         // i.e. an edit somehow rendered without an `event`. Per PR #116
         // Copilot review.
-        if (res?.ok) setSavedAt(Date.now());
+        if (res?.ok) {
+          savedImagePathsRef.current = projectAssetPathSet([
+            payload.coverImage,
+            ...(payload.subImages ?? []),
+          ]);
+          setSavedAt(Date.now());
+        }
       } catch (err) {
         // Server-Action `redirect()` (and `notFound()`, etc.) signal
         // navigation by throwing an internal Next.js error.
