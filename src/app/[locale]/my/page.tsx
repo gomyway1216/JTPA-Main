@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getMyProfile } from "@/lib/data/users";
+import { listMyNotifications } from "@/lib/data/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,16 @@ export default async function MyPage() {
     redirect(loginPath("/my", locale));
   }
 
-  const [t, profile] = await Promise.all([
+  const [t, profile, notifications] = await Promise.all([
     getTranslations("MyPage"),
     getMyProfile(user.uid).catch(() => null),
+    listMyNotifications(user.uid, 50).catch((err) => {
+      console.error("Failed to list notifications for my page:", err);
+      return [];
+    }),
   ]);
   const attendanceCount = Math.max(0, profile?.eventAttendanceCount ?? 0);
+  const unreadCount = notifications.filter((n) => !n.readAt).length;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -40,6 +46,22 @@ export default async function MyPage() {
       </section>
 
       <nav className="grid gap-4 sm:grid-cols-2">
+        <Link
+          href="/my/notifications"
+          className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-lg font-semibold">{t("notificationsTitle")}</h2>
+            {unreadCount > 0 && (
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
+                {t("notificationsUnread", { count: unreadCount })}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {t("notificationsDescription")}
+          </p>
+        </Link>
         <Link
           href="/my/rsvps"
           className="rounded-lg border border-zinc-200 bg-white p-5 hover:border-zinc-400 dark:border-zinc-800 dark:bg-zinc-900"

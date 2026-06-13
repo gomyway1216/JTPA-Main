@@ -284,7 +284,10 @@ export function CommentsSection({
 
     if (isDeleted) {
       return (
-        <article className="rounded-md border border-dashed border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+        <article
+          id={`comment-${c.id}`}
+          className="scroll-mt-24 rounded-md border border-dashed border-zinc-200 bg-zinc-50 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/40"
+        >
           <header className="flex items-start justify-between gap-3">
             <span className="text-xs text-zinc-500">
               {formatDateTime(c.createdAt)}
@@ -319,7 +322,10 @@ export function CommentsSection({
     const likeKey = `comment:${c.id}`;
     const isReplyOpen = replyingTo === c.id;
     return (
-      <article className="rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+      <article
+        id={`comment-${c.id}`}
+        className="scroll-mt-24 rounded-md border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900"
+      >
         <header className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2">
             <AuthorBadge

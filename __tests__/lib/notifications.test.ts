@@ -10,11 +10,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // tests still observe an empty recipient list.
 
 const addMock = vi.fn();
-const collectionMock = vi.fn(() => ({ add: addMock }));
+const docMock = vi.fn(() => ({ id: "doc-id" }));
+const collectionMock = vi.fn(() => ({ add: addMock, doc: docMock }));
+const batchSetMock = vi.fn();
+const batchCommitMock = vi.fn();
+const getAllMock = vi.fn();
 const listUsersMock = vi.fn();
 
 vi.mock("@/lib/firebase/admin", () => ({
-  adminDb: () => ({ collection: collectionMock }),
+  adminDb: () => ({
+    collection: collectionMock,
+    batch: () => ({ set: batchSetMock, commit: batchCommitMock }),
+    getAll: getAllMock,
+  }),
   adminAuth: () => ({ listUsers: listUsersMock }),
 }));
 
@@ -44,7 +52,11 @@ const ORIGINAL_ENV = process.env;
 beforeEach(() => {
   addMock.mockReset();
   addMock.mockResolvedValue({ id: "mail-id" });
+  docMock.mockClear();
   collectionMock.mockClear();
+  batchSetMock.mockReset();
+  batchCommitMock.mockReset().mockResolvedValue(undefined);
+  getAllMock.mockReset().mockResolvedValue([]);
   listUsersMock.mockReset();
   // Default: no admin/editor users in Auth — keeps the env-var-empty
   // tests below observing an empty recipient list.
@@ -92,6 +104,45 @@ describe("enqueueMail", () => {
     ).resolves.toBeUndefined();
     expect(consoleErrorSpy).toHaveBeenCalled();
     consoleErrorSpy.mockRestore();
+  });
+});
+
+describe("enqueueCommentNotifications", () => {
+  it("writes in-app notifications without enqueueing comment emails", async () => {
+    const { enqueueCommentNotifications } = await importFresh();
+
+    await enqueueCommentNotifications({
+      recipients: [
+        { uid: "author", reason: "comment_on_content" },
+        { uid: "muted", reason: "reply_to_comment" },
+      ],
+      actorUid: "actor",
+      actorName: "Alice",
+      actorPhotoURL: null,
+      parentType: "post",
+      parentId: "p1",
+      parentTitle: "Hello",
+      parentSlug: "hello",
+      commentId: "c1",
+      parentCommentId: null,
+      commentPreview: "Nice post",
+      createdAt: { _seconds: 1, _nanoseconds: 0 },
+    });
+
+    expect(batchSetMock).toHaveBeenCalledTimes(2);
+    expect(batchSetMock.mock.calls[0][1]).toMatchObject({
+      recipientUid: "author",
+      type: "comment",
+      reason: "comment_on_content",
+      actorUid: "actor",
+      parentType: "post",
+      parentSlug: "hello",
+      commentId: "c1",
+      readAt: null,
+    });
+    expect(batchCommitMock).toHaveBeenCalledTimes(1);
+    expect(getAllMock).not.toHaveBeenCalled();
+    expect(addMock).not.toHaveBeenCalled();
   });
 });
 

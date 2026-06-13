@@ -145,6 +145,57 @@ describe("users", () => {
   });
 });
 
+describe("notifications", () => {
+  const notification = {
+    recipientUid: ALICE,
+    type: "comment",
+    reason: "comment_on_content",
+    actorUid: BOB,
+    actorName: "Bob",
+    parentType: "post",
+    parentId: "p1",
+    parentTitle: "Hello",
+    parentSlug: "hello",
+    commentId: "c1",
+    commentPreview: "Nice",
+    readAt: null,
+    createdAt: new Date(),
+  };
+
+  it("notifications are readable only by the recipient", async () => {
+    await seed({ "notifications/n1": notification });
+    await assertSucceeds(getDoc(doc(alice(), "notifications/n1")));
+    await assertFails(getDoc(doc(bob(), "notifications/n1")));
+    await assertFails(getDoc(doc(anon(), "notifications/n1")));
+  });
+
+  it("recipient can mark read but cannot mutate content fields", async () => {
+    await seed({ "notifications/n1": notification });
+    await assertSucceeds(
+      updateDoc(doc(alice(), "notifications/n1"), {
+        readAt: serverTimestamp(),
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(alice(), "notifications/n1"), {
+        parentTitle: "tampered",
+      }),
+    );
+    await assertFails(
+      updateDoc(doc(bob(), "notifications/n1"), {
+        readAt: serverTimestamp(),
+      }),
+    );
+  });
+
+  it("clients cannot create or delete notifications", async () => {
+    await assertFails(setDoc(doc(alice(), "notifications/n2"), notification));
+    await seed({ "notifications/n1": notification });
+    await assertFails(deleteDoc(doc(alice(), "notifications/n1")));
+    await assertFails(deleteDoc(doc(admin(), "notifications/n1")));
+  });
+});
+
 describe("events", () => {
   it("read visibility: published is public, members_only needs sign-in, draft is admin-only", async () => {
     await seed({

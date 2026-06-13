@@ -574,6 +574,9 @@
     "likesDescription": "いいねを受け取った自分のコメント",
     "publicProfileTitle": "公開プロフィール",
     "publicProfileDescription": "参加回数・公開投稿数など、他の人から見えるプロフィール",
+    "notificationsTitle": "通知",
+    "notificationsDescription": "自分の投稿へのコメント・返信",
+    "notificationsUnread": "未読 {count} 件",
     "profileTitle": "アカウント設定",
     "profileDescription": "公開する名前・所属・紹介文・リンク・メール通知の設定"
   },
@@ -627,6 +630,24 @@
     "description": "いいねを受け取った自分のコメント",
     "empty": "まだいいねを受け取ったコメントはありません。",
     "deletedPage": "削除されたページ",
+    "parent": {
+      "post": "記事",
+      "guide": "メモ・ノウハウ",
+      "qa": "質問・相談",
+      "project": "プロジェクト",
+      "poll": "みんなに聞く"
+    }
+  },
+  "MyNotifications": {
+    "metadataTitle": "通知",
+    "title": "通知",
+    "description": "自分の投稿へのコメントや、自分のコメントへの返信です。",
+    "empty": "まだ通知はありません。",
+    "markAllRead": "すべて既読にする",
+    "unread": "未読",
+    "open": "コメントを見る",
+    "commentOnContent": "{actorName} さんが「{title}」にコメントしました。",
+    "replyToComment": "{actorName} さんが「{title}」であなたのコメントに返信しました。",
     "parent": {
       "post": "記事",
       "guide": "メモ・ノウハウ",

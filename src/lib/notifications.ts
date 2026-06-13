@@ -4,6 +4,10 @@ import { getLocale } from "next-intl/server";
 
 import { routing, type AppLocale } from "@/i18n/routing";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import type {
+  CommentNotificationReason,
+  CommentParentType,
+} from "@/lib/types";
 import enMessages from "../../messages/en.json";
 import jaMessages from "../../messages/ja.json";
 
@@ -207,6 +211,55 @@ export async function enqueueAdminNewProjectNotification(opts: {
     category: "admin_project_pending",
     metadata: { projectId: opts.projectId },
   });
+}
+
+export type CommentNotificationRecipient = {
+  uid: string;
+  reason: CommentNotificationReason;
+};
+
+export async function enqueueCommentNotifications(opts: {
+  recipients: CommentNotificationRecipient[];
+  actorUid: string;
+  actorName: string;
+  actorPhotoURL: string | null;
+  parentType: CommentParentType;
+  parentId: string;
+  parentTitle: string;
+  parentSlug: string;
+  commentId: string;
+  parentCommentId: string | null;
+  commentPreview: string;
+  createdAt: unknown;
+}): Promise<void> {
+  if (opts.recipients.length === 0) return;
+
+  const db = adminDb();
+  const batch = db.batch();
+  for (const recipient of opts.recipients) {
+    const ref = db.collection("notifications").doc();
+    batch.set(ref, {
+      recipientUid: recipient.uid,
+      type: "comment",
+      reason: recipient.reason,
+      actorUid: opts.actorUid,
+      actorName: opts.actorName,
+      actorPhotoURL: opts.actorPhotoURL,
+      parentType: opts.parentType,
+      parentId: opts.parentId,
+      parentTitle: opts.parentTitle,
+      parentSlug: opts.parentSlug,
+      commentId: opts.commentId,
+      parentCommentId: opts.parentCommentId,
+      commentPreview: opts.commentPreview,
+      readAt: null,
+      createdAt: opts.createdAt,
+    });
+  }
+  await batch.commit();
+  // TODO: Add optional email delivery for comment notifications once the
+  // delivery cost and provider limits are acceptable. Keep the in-app inbox
+  // as the source of truth so comments remain visible without paid email.
 }
 
 export async function enqueueProjectDecisionNotification(opts: {

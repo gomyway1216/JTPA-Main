@@ -328,6 +328,30 @@ export interface CommentDoc {
 // code should use `CommentDoc` directly.
 export type PostCommentDoc = CommentDoc;
 
+export type NotificationType = "comment";
+export type CommentNotificationReason =
+  | "comment_on_content"
+  | "reply_to_comment";
+
+export interface NotificationDoc {
+  id: string;
+  recipientUid: string;
+  type: NotificationType;
+  reason: CommentNotificationReason;
+  actorUid: string;
+  actorName: string;
+  actorPhotoURL: string | null;
+  parentType: CommentParentType;
+  parentId: string;
+  parentTitle: string;
+  parentSlug: string;
+  commentId: string;
+  parentCommentId?: string | null;
+  commentPreview: string;
+  readAt?: TsLike | null;
+  createdAt: TsLike;
+}
+
 // `likes/{uid}` subcollection doc. Existence == liked; we don't store the
 // uid in the body because it's already the doc id.
 export interface LikeDoc {
