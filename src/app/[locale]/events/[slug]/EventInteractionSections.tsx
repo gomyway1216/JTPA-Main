@@ -39,7 +39,6 @@ export function EventInteractionSections({
         onRsvpChange={setRsvp}
       />
       <PresentationSection
-        key={rsvp ? `${rsvp.role}:${rsvp.status}` : "none"}
         eventId={event.id}
         eventSlug={event.slug}
         user={user}

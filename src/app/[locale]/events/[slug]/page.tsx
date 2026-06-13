@@ -252,6 +252,7 @@ export default async function EventDetailPage({
         </div>
       ) : user ? (
         <EventInteractionSections
+          key={event.id}
           event={event}
           initialRsvp={myRsvp}
           user={user}

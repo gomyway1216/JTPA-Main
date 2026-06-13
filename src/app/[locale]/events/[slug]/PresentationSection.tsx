@@ -73,6 +73,15 @@ export function PresentationSection({
   const [editingId, setEditingId] = useState<string | "new" | null>(
     canPresent && initialPresentations.length === 0 ? "new" : null,
   );
+  const [prevCanPresent, setPrevCanPresent] = useState(canPresent);
+  if (canPresent !== prevCanPresent) {
+    setPrevCanPresent(canPresent);
+    if (canPresent && presentations.length === 0) {
+      setEditingId("new");
+    } else if (!canPresent) {
+      setEditingId(null);
+    }
+  }
 
   function applyUpsert(saved: PresentationDoc) {
     setPresentations((cur) => {
