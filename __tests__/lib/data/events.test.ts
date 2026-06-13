@@ -25,6 +25,7 @@ vi.mock("firebase-admin/firestore", () => ({
 import {
   getEventById,
   getEventBySlug,
+  listEventsForAdmin,
   listEvents,
   listPastEvents,
 } from "@/lib/data/events";
@@ -82,6 +83,68 @@ describe("listEvents", () => {
       { id: "e1", slug: "a", title: "A" },
       { id: "e2", slug: "b", title: "B" },
     ]);
+  });
+});
+
+describe("listEventsForAdmin", () => {
+  it("loads the events collection without status filters or startAt ordering", async () => {
+    await listEventsForAdmin();
+    expect(mock.state.collection).toBe("events");
+    expect(mock.state.whereCalls).toEqual([]);
+    expect(mock.state.orderByCalls).toEqual([]);
+    expect(mock.state.limit).toBeUndefined();
+  });
+
+  it("keeps legacy events without status visible when filtering", async () => {
+    mock.setGet({
+      docs: [
+        snap("legacy", {
+          slug: "legacy",
+          title: "Legacy",
+          startAt: { _seconds: 1_700_000_000, _nanoseconds: 0 },
+        }),
+        snap("published", {
+          slug: "published",
+          title: "Published",
+          status: "published",
+          startAt: { _seconds: 1_700_000_001, _nanoseconds: 0 },
+        }),
+        snap("cancelled", {
+          slug: "cancelled",
+          title: "Cancelled",
+          status: "cancelled",
+          startAt: { _seconds: 1_700_000_002, _nanoseconds: 0 },
+        }),
+      ],
+    });
+
+    const result = await listEventsForAdmin({
+      statuses: ["draft", "published"],
+    });
+
+    expect(result.map((e) => e.id)).toEqual(["legacy", "published"]);
+  });
+
+  it("sorts in memory and applies the limit after sorting", async () => {
+    mock.setGet({
+      docs: [
+        snap("missing-start", { slug: "z", title: "Z" }),
+        snap("later", {
+          slug: "later",
+          title: "Later",
+          startAt: { _seconds: 1_700_000_100, _nanoseconds: 0 },
+        }),
+        snap("earlier", {
+          slug: "earlier",
+          title: "Earlier",
+          startAt: { _seconds: 1_700_000_000, _nanoseconds: 0 },
+        }),
+      ],
+    });
+
+    const result = await listEventsForAdmin({ limit: 2 });
+
+    expect(result.map((e) => e.id)).toEqual(["earlier", "later"]);
   });
 });
 

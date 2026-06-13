@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents } from "@/lib/data/events";
+import { listEventsForAdmin } from "@/lib/data/events";
 import { countNewFeedback } from "@/lib/data/feedback";
 import { listPostsByStatus } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
@@ -27,7 +27,7 @@ export default async function AdminHomePage() {
         listProjects({ status: "pending", limit: 5 }),
       ),
       safeLoad("upcoming events", () =>
-        listEvents({ statuses: ["draft", "published"], limit: 5 }),
+        listEventsForAdmin({ statuses: ["draft", "published"], limit: 5 }),
       ),
       safeLoad("pending posts", () => listPostsByStatus("pending", 5)),
       safeLoad("new feedback count", () => countNewFeedback()),

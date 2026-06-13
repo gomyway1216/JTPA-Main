@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents } from "@/lib/data/events";
+import { listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
@@ -51,7 +51,7 @@ export default async function AdminAttendeesPage({
 
   const { eventId } = await searchParams;
   const eventsRes = await safeLoad("events", () =>
-    listEvents({
+    listEventsForAdmin({
       statuses: ["draft", "published", "past"],
       limit: 50,
     }),

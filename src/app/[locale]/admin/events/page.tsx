@@ -4,7 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { CloneEventButton } from "@/app/[locale]/admin/events/_components/CloneEventButton";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEvents } from "@/lib/data/events";
+import { listEventsForAdmin } from "@/lib/data/events";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { formatDateTime } from "@/lib/utils";
@@ -21,10 +21,7 @@ export default async function AdminEventsPage() {
   ]);
 
   const eventsRes = await safeLoad("events", () =>
-    listEvents({
-      statuses: ["draft", "published", "past", "cancelled"],
-      limit: 100,
-    }),
+    listEventsForAdmin(),
   );
   const events = eventsRes.ok ? eventsRes.data : [];
 
