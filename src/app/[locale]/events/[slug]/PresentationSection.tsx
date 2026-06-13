@@ -66,12 +66,22 @@ export function PresentationSection({
   presenterProfiles: Record<string, PublicProfile>;
 }) {
   const t = useTranslations("Presentations");
-  const [presentations, setPresentations] =
-    useState<PresentationDoc[]>(initialPresentations);
-  const [editingId, setEditingId] = useState<string | "new" | null>(null);
-
   const canPresent =
     !!user && myRsvp?.role === "presenter" && myRsvp?.status === "confirmed";
+  const [presentations, setPresentations] =
+    useState<PresentationDoc[]>(initialPresentations);
+  const [editingId, setEditingId] = useState<string | "new" | null>(
+    canPresent && initialPresentations.length === 0 ? "new" : null,
+  );
+  const [prevCanPresent, setPrevCanPresent] = useState(canPresent);
+  if (canPresent !== prevCanPresent) {
+    setPrevCanPresent(canPresent);
+    if (canPresent && presentations.length === 0) {
+      setEditingId("new");
+    } else if (!canPresent) {
+      setEditingId(null);
+    }
+  }
 
   function applyUpsert(saved: PresentationDoc) {
     setPresentations((cur) => {
@@ -103,7 +113,14 @@ export function PresentationSection({
       </div>
 
       {presentations.length === 0 && editingId !== "new" && (
-        <p className="text-sm text-zinc-500">{t("empty")}</p>
+        <div className="space-y-1 text-sm text-zinc-500">
+          <p>{t("empty")}</p>
+          {!canPresent && (
+            <p className="text-xs">
+              {user ? t("presenterOnlyHelp") : t("loginToAddHelp")}
+            </p>
+          )}
+        </div>
       )}
 
       <ul className="space-y-3">

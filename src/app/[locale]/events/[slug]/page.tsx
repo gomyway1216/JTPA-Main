@@ -3,8 +3,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
+import { EventInteractionSections } from "@/app/[locale]/events/[slug]/EventInteractionSections";
 import { PresentationSection } from "@/app/[locale]/events/[slug]/PresentationSection";
-import { RsvpSection } from "@/app/[locale]/events/[slug]/RsvpSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { localizedPath, loginHref, loginPath } from "@/i18n/paths";
@@ -250,11 +250,14 @@ export default async function EventDetailPage({
           </p>
         </div>
       ) : user ? (
-        <RsvpSection
+        <EventInteractionSections
+          key={event.id}
           event={event}
           initialRsvp={myRsvp}
           user={user}
           profileAffiliation={profile?.affiliation ?? ""}
+          initialPresentations={presentations}
+          presenterProfiles={Object.fromEntries(presenterProfiles)}
         />
       ) : (
         <div className="rounded-lg border border-zinc-200 bg-white p-6 text-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -270,14 +273,16 @@ export default async function EventDetailPage({
         </div>
       )}
 
-      <PresentationSection
-        eventId={event.id}
-        eventSlug={event.slug}
-        user={user}
-        myRsvp={myRsvp}
-        initialPresentations={presentations}
-        presenterProfiles={Object.fromEntries(presenterProfiles)}
-      />
+      {(!user || isEventEnded(event)) && (
+        <PresentationSection
+          eventId={event.id}
+          eventSlug={event.slug}
+          user={user}
+          myRsvp={myRsvp}
+          initialPresentations={presentations}
+          presenterProfiles={Object.fromEntries(presenterProfiles)}
+        />
+      )}
     </div>
   );
 }
