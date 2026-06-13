@@ -38,8 +38,10 @@ export type SnapStub =
       empty?: boolean;
     }
   | { exists: boolean; id?: string; data?: () => unknown };
+type GetStub = SnapStub | Error;
 
-function withEmpty(s: SnapStub): SnapStub {
+function withEmpty(s: GetStub): SnapStub {
+  if (s instanceof Error) throw s;
   if ("docs" in s) return { ...s, empty: s.docs.length === 0 };
   return s;
 }
@@ -51,6 +53,7 @@ export function createAdminDbMock() {
   };
   let nextGet: SnapStub = { docs: [] };
   let nextCount = 0;
+  let nextGetQueue: GetStub[] = [];
   // For `getAll(...)` calls we line up an array of per-ref results.
   let nextGetAll: Array<SnapStub> = [];
 
@@ -65,6 +68,7 @@ export function createAdminDbMock() {
     state.docPath = undefined;
     nextGet = { docs: [] };
     nextCount = 0;
+    nextGetQueue = [];
     nextGetAll = [];
   }
 
@@ -73,6 +77,9 @@ export function createAdminDbMock() {
   }
   function setCount(count: number) {
     nextCount = count;
+  }
+  function setGetQueue(snaps: GetStub[]) {
+    nextGetQueue = [...snaps];
   }
   function setGetAll(snaps: SnapStub[]) {
     nextGetAll = snaps;
@@ -96,7 +103,9 @@ export function createAdminDbMock() {
         state.startAfter = values;
         return q;
       }),
-      get: vi.fn(async () => withEmpty(nextGet)),
+      get: vi.fn(async () =>
+        withEmpty(nextGetQueue.length > 0 ? nextGetQueue.shift()! : nextGet),
+      ),
       count: vi.fn(() => {
         state.countCalled = true;
         return { get: vi.fn(async () => ({ data: () => ({ count: nextCount }) })) };
@@ -131,5 +140,5 @@ export function createAdminDbMock() {
     getAll: vi.fn(async () => nextGetAll.map(withEmpty)),
   });
 
-  return { adminDb, state, reset, setGet, setCount, setGetAll };
+  return { adminDb, state, reset, setGet, setCount, setGetQueue, setGetAll };
 }

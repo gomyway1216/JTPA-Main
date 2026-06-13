@@ -351,7 +351,7 @@ The doc body is just `{ createdAt }` — existence == liked, doc id == liker's u
 
 Both are toggled via `toggleLike` in `src/app/actions/likes.ts`, which keeps the denormalized `likeCount` on the parent doc in sync inside a transaction.
 
-`/my/likes` queries `comments` with `where("authorUid", "==", uid).where("likeCount", ">", 0)` via a collectionGroup — see `firestore.indexes.json` for the matching composite index.
+`/my/likes` queries authored records in `posts`, `guides`, `qa`, `projects`, and `polls` with `where(author/owner uid, "==", uid).where("likeCount", ">", 0)`, then queries `comments` with `where("authorUid", "==", uid).where("likeCount", ">", 0)` via a collectionGroup. See `firestore.indexes.json` for the matching composite indexes.
 
 ## `sitePages/{slug}` (Admin-edited static content)
 
@@ -416,12 +416,12 @@ Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules
 
 Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
 - `events`: `status + startAt` (both directions), `status + endAt` (both directions)
-- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`
+- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
 - `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`
-- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`
-- `guides`: `status + order + updatedAt`
-- `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
-- `polls`: `status + createdAt DESC`, `authorUid + updatedAt DESC`
+- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
+- `guides`: `status + order + updatedAt`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
+- `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
+- `polls`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - **`comments` collection-group**: `authorUid + likeCount DESC` — powers `/my/likes`
 
 If you add a new sort/filter combination, prefer adding it locally + pushing rather than waiting for production to hit the missing-index error.

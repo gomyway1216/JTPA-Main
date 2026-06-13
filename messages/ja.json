@@ -627,9 +627,11 @@
   "MyLikes": {
     "metadataTitle": "もらったいいね",
     "title": "もらったいいね",
-    "description": "いいねを受け取った自分のコメント",
-    "empty": "まだいいねを受け取ったコメントはありません。",
+    "description": "いいねを受け取った自分の投稿とコメント",
+    "empty": "まだいいねを受け取った投稿やコメントはありません。",
     "deletedPage": "削除されたページ",
+    "recordLabel": "投稿",
+    "commentLabel": "コメント",
     "parent": {
       "post": "記事",
       "guide": "メモ・ノウハウ",

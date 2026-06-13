@@ -49,6 +49,14 @@
       ]
     },
     {
+      "collectionGroup": "projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "ownerUid", "order": "ASCENDING" },
+        { "fieldPath": "likeCount", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "rsvps",
       "queryScope": "COLLECTION_GROUP",
       "fields": [
@@ -89,6 +97,14 @@
       ]
     },
     {
+      "collectionGroup": "posts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "likeCount", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "guides",
       "queryScope": "COLLECTION",
       "fields": [
@@ -114,6 +130,14 @@
       ]
     },
     {
+      "collectionGroup": "guides",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "likeCount", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "qa",
       "queryScope": "COLLECTION",
       "fields": [
@@ -130,6 +154,14 @@
       ]
     },
     {
+      "collectionGroup": "qa",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "likeCount", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "polls",
       "queryScope": "COLLECTION",
       "fields": [
@@ -143,6 +175,14 @@
       "fields": [
         { "fieldPath": "authorUid", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "polls",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "authorUid", "order": "ASCENDING" },
+        { "fieldPath": "likeCount", "order": "DESCENDING" }
       ]
     },
     {
