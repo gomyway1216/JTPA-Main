@@ -146,6 +146,68 @@ describe("enqueueCommentNotifications", () => {
   });
 });
 
+describe("enqueueLikeNotification", () => {
+  it("writes an in-app notification for a record like", async () => {
+    const { enqueueLikeNotification } = await importFresh();
+
+    await enqueueLikeNotification({
+      recipientUid: "author",
+      reason: "like_on_content",
+      actorUid: "actor",
+      actorName: "Alice",
+      actorPhotoURL: null,
+      parentType: "post",
+      parentId: "p1",
+      parentTitle: "Hello",
+      parentSlug: "hello",
+      createdAt: { _seconds: 1, _nanoseconds: 0 },
+    });
+
+    expect(collectionMock).toHaveBeenCalledWith("notifications");
+    expect(addMock).toHaveBeenCalledTimes(1);
+    expect(addMock.mock.calls[0][0]).toMatchObject({
+      recipientUid: "author",
+      type: "like",
+      reason: "like_on_content",
+      actorUid: "actor",
+      parentType: "post",
+      parentSlug: "hello",
+      commentId: null,
+      readAt: null,
+    });
+    expect(addMock.mock.calls[0][0]).not.toHaveProperty("commentPreview");
+  });
+
+  it("writes an in-app notification for a comment like", async () => {
+    const { enqueueLikeNotification } = await importFresh();
+
+    await enqueueLikeNotification({
+      recipientUid: "commenter",
+      reason: "like_on_comment",
+      actorUid: "actor",
+      actorName: "Alice",
+      actorPhotoURL: null,
+      parentType: "post",
+      parentId: "p1",
+      parentTitle: "Hello",
+      parentSlug: "hello",
+      commentId: "c1",
+      commentPreview: "Nice post",
+      createdAt: { _seconds: 1, _nanoseconds: 0 },
+    });
+
+    expect(addMock).toHaveBeenCalledTimes(1);
+    expect(addMock.mock.calls[0][0]).toMatchObject({
+      recipientUid: "commenter",
+      type: "like",
+      reason: "like_on_comment",
+      commentId: "c1",
+      commentPreview: "Nice post",
+      readAt: null,
+    });
+  });
+});
+
 describe("enqueueAdminNewProjectNotification", () => {
   it("skips the enqueue when env var empty AND no admin/editor users exist", async () => {
     // No recipients configured AND no admin / editor users in Auth →

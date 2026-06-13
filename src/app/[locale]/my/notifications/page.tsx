@@ -9,6 +9,7 @@ import {
   countUnreadNotifications,
   listMyNotifications,
 } from "@/lib/data/notifications";
+import { notificationMessageKey } from "@/lib/notification-copy";
 import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
@@ -77,19 +78,16 @@ export default async function MyNotificationsPage() {
                     {formatDateTime(n.createdAt, locale)}
                   </p>
                   <p className="mt-2 text-sm font-medium text-zinc-900 dark:text-zinc-100">
-                    {t(
-                      n.reason === "reply_to_comment"
-                        ? "replyToComment"
-                        : "commentOnContent",
-                      {
-                        actorName: n.actorName,
-                        title: n.parentTitle,
-                      },
-                    )}
+                    {t(notificationMessageKey(n), {
+                      actorName: n.actorName,
+                      title: n.parentTitle,
+                    })}
                   </p>
-                  <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-                    {n.commentPreview}
-                  </p>
+                  {n.commentPreview && (
+                    <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
+                      {n.commentPreview}
+                    </p>
+                  )}
                   <NotificationOpenLink
                     notificationId={n.id}
                     href={notificationHref(n)}
