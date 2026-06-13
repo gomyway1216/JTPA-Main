@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link, { usePathname } from "@/i18n/navigation";
-import { parentRoutePrefix } from "@/lib/comments-parent";
+import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc, SessionUser } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
@@ -20,12 +20,11 @@ const NAV_LINKS = [
 type HeaderProps = {
   user: SessionUser | null;
   unreadNotificationCount?: number;
-  notifications?: NotificationDoc[];
 };
 
-function notificationHref(notification: NotificationDoc): string {
-  return `${parentRoutePrefix(notification.parentType)}/${notification.parentSlug}#comment-${notification.commentId}`;
-}
+type HeaderNotificationsResponse = {
+  notifications?: NotificationDoc[];
+};
 
 function unreadBadgeLabel(count: number): string {
   return count > 99 ? "99+" : String(count);
@@ -34,7 +33,6 @@ function unreadBadgeLabel(count: number): string {
 export function Header({
   user,
   unreadNotificationCount = 0,
-  notifications = [],
 }: HeaderProps) {
   const t = useTranslations("Header");
   const notificationT = useTranslations("MyNotifications");
@@ -42,8 +40,19 @@ export function Header({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationDoc[]>([]);
+  const [notificationsLoaded, setNotificationsLoaded] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nextLocale = locale === "ja" ? "en" : "ja";
+  const userMenuLabel = user?.displayName || user?.email || t("userMenu");
+  const userMenuAriaLabel =
+    unreadNotificationCount > 0
+      ? `${userMenuLabel} (${t("notificationsUnread", {
+          count: unreadNotificationCount,
+        })})`
+      : userMenuLabel;
 
   // Close user dropdown on outside click
   useEffect(() => {
@@ -69,6 +78,33 @@ export function Header({
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [mobileOpen, userMenuOpen]);
+
+  async function loadNotifications() {
+    if (!user || notificationsLoaded || notificationsLoading) return;
+    setNotificationsLoading(true);
+    setNotificationsError(false);
+
+    try {
+      const res = await fetch("/api/my/notifications", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`Failed to load notifications: ${res.status}`);
+      }
+      const data = (await res.json()) as HeaderNotificationsResponse;
+      setNotifications(data.notifications ?? []);
+    } catch (err) {
+      console.error("Failed to load header notifications:", err);
+      setNotifications([]);
+      setNotificationsError(true);
+    } finally {
+      setNotificationsLoaded(true);
+      setNotificationsLoading(false);
+    }
+  }
+
+  function toggleUserMenu() {
+    if (!userMenuOpen) void loadNotifications();
+    setUserMenuOpen((v) => !v);
+  }
 
   const avatarFallback = (
     user?.displayName?.charAt(0) ||
@@ -122,10 +158,10 @@ export function Header({
             <div className="relative" ref={userMenuRef}>
               <button
                 type="button"
-                onClick={() => setUserMenuOpen((v) => !v)}
+                onClick={toggleUserMenu}
                 aria-haspopup="menu"
                 aria-expanded={userMenuOpen}
-                aria-label={user.displayName || user.email || t("userMenu")}
+                aria-label={userMenuAriaLabel}
                 className="relative flex items-center gap-2 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 {user.photoURL ? (
@@ -193,7 +229,15 @@ export function Header({
                         </span>
                       )}
                     </Link>
-                    {notifications.length > 0 ? (
+                    {notificationsLoading ? (
+                      <p className="px-3 pb-3 pt-1 text-xs text-zinc-500">
+                        {t("notificationsLoading")}
+                      </p>
+                    ) : notificationsError ? (
+                      <p className="px-3 pb-3 pt-1 text-xs text-red-600 dark:text-red-400">
+                        {t("notificationsLoadFailed")}
+                      </p>
+                    ) : notifications.length > 0 ? (
                       <div>
                         {notifications.map((notification) => {
                           const isUnread = !notification.readAt;

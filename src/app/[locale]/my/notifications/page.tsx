@@ -5,11 +5,11 @@ import { redirect } from "next/navigation";
 import { markAllNotificationsRead } from "@/app/actions/notifications";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
-import { parentRoutePrefix } from "@/lib/comments-parent";
 import {
   countUnreadNotifications,
   listMyNotifications,
 } from "@/lib/data/notifications";
+import { notificationHref } from "@/lib/notification-links";
 import type { NotificationDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
@@ -109,8 +109,4 @@ export default async function MyNotificationsPage() {
       )}
     </div>
   );
-}
-
-function notificationHref(n: NotificationDoc): string {
-  return `${parentRoutePrefix(n.parentType)}/${n.parentSlug}#comment-${n.commentId}`;
 }
