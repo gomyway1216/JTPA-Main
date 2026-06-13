@@ -574,6 +574,9 @@
     "likesDescription": "Your comments that received likes",
     "publicProfileTitle": "Public Profile",
     "publicProfileDescription": "Profile visible to others, including attendance and public contribution counts",
+    "notificationsTitle": "Notifications",
+    "notificationsDescription": "Comments and replies to your posts",
+    "notificationsUnread": "{count, plural, =1 {# unread} other {# unread}}",
     "profileTitle": "Account Settings",
     "profileDescription": "Public name, affiliation, bio, links, and email notification settings"
   },
@@ -627,6 +630,24 @@
     "description": "Your comments that received likes",
     "empty": "None of your comments have received likes yet.",
     "deletedPage": "Deleted page",
+    "parent": {
+      "post": "Article",
+      "guide": "Notes & Know-how",
+      "qa": "Question",
+      "project": "Project",
+      "poll": "Ask Everyone"
+    }
+  },
+  "MyNotifications": {
+    "metadataTitle": "Notifications",
+    "title": "Notifications",
+    "description": "Comments on your posts and replies to your comments.",
+    "empty": "No notifications yet.",
+    "markAllRead": "Mark all read",
+    "unread": "Unread",
+    "open": "Open comment",
+    "commentOnContent": "{actorName} commented on \"{title}\".",
+    "replyToComment": "{actorName} replied to your comment on \"{title}\".",
     "parent": {
       "post": "Article",
       "guide": "Notes & Know-how",

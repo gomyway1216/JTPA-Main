@@ -221,3 +221,26 @@ export const PollVoteDocSchema = z.looseObject({
   createdAt: TsLikeSchema,
   updatedAt: TsLikeSchema,
 });
+
+// ---------- notifications ----------
+export const NotificationDocSchema = z.looseObject({
+  recipientUid: z.string().optional(),
+  type: z.enum(["comment"]).optional(),
+  reason: z
+    .enum(["comment_on_content", "reply_to_comment"])
+    .optional(),
+  actorUid: z.string().optional(),
+  actorName: z.string().optional(),
+  actorPhotoURL: z.string().nullable().optional(),
+  parentType: z
+    .enum(["post", "guide", "qa", "project", "poll"])
+    .optional(),
+  parentId: z.string().optional(),
+  parentTitle: z.string().optional(),
+  parentSlug: z.string().optional(),
+  commentId: z.string().optional(),
+  parentCommentId: z.string().nullable().optional(),
+  commentPreview: z.string().optional(),
+  readAt: TsLikeSchema.nullable().optional(),
+  createdAt: TsLikeSchema,
+});

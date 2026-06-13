@@ -16,6 +16,10 @@ import { getMyLikesForParent } from "@/lib/data/likes";
 import { getPublicProfilesByUids, type PublicProfile } from "@/lib/data/users";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
+import {
+  enqueueCommentNotifications,
+  type CommentNotificationRecipient,
+} from "@/lib/notifications";
 import type {
   CommentDoc,
   CommentParentType,
@@ -26,6 +30,7 @@ import type {
   QaDoc,
   SessionUser,
 } from "@/lib/types";
+import { truncate } from "@/lib/utils";
 
 const CommentSchema = z.object({
   parentType: z.enum(["post", "guide", "qa", "project", "poll"]),
@@ -80,6 +85,45 @@ export type LoadMoreCommentsResult =
     }
   | { ok: false; error: string };
 
+function parentAuthorUid(
+  parentType: CommentParentType,
+  data: PostDoc | GuideDoc | QaDoc | ProjectDoc | PollDoc,
+): string | null {
+  switch (parentType) {
+    case "project":
+      return (data as ProjectDoc).ownerUid ?? null;
+    case "guide":
+      return (
+        (data as GuideDoc).authorUid ?? (data as GuideDoc).createdBy?.uid ?? null
+      );
+    case "post":
+      return (data as PostDoc).authorUid ?? null;
+    case "qa":
+      return (data as QaDoc).authorUid ?? null;
+    case "poll":
+      return (data as PollDoc).authorUid ?? null;
+  }
+}
+
+function commentNotificationRecipients(opts: {
+  actorUid: string;
+  parentOwnerUid: string | null;
+  parentComment: CommentDoc | null;
+}): CommentNotificationRecipient[] {
+  const byUid = new Map<string, CommentNotificationRecipient>();
+  if (opts.parentOwnerUid && opts.parentOwnerUid !== opts.actorUid) {
+    byUid.set(opts.parentOwnerUid, {
+      uid: opts.parentOwnerUid,
+      reason: "comment_on_content",
+    });
+  }
+  const replyUid = opts.parentComment?.authorUid;
+  if (replyUid && replyUid !== opts.actorUid) {
+    byUid.set(replyUid, { uid: replyUid, reason: "reply_to_comment" });
+  }
+  return [...byUid.values()];
+}
+
 async function parseOrError<T extends z.ZodTypeAny>(
   schema: T,
   input: z.input<T>,
@@ -114,6 +158,7 @@ export async function postComment(
     return { ok: false, error: await actionError("commentPublishedOnly") };
   }
 
+  let parentComment: CommentDoc | null = null;
   // If this is a reply, validate the parent comment exists AND lives under
   // the same parent. Without this check, a malicious client could submit
   // `parentCommentId` pointing at a comment under a totally different
@@ -126,6 +171,12 @@ export async function postComment(
     if (!parentCommentSnap.exists) {
       return { ok: false, error: await actionError("replyCommentNotFound") };
     }
+    const parentCommentData = parentCommentSnap.data?.() as
+      | Omit<CommentDoc, "id">
+      | undefined;
+    parentComment = parentCommentData
+      ? { ...parentCommentData, id: parsed.parentCommentId }
+      : null;
   }
 
   const now = Timestamp.now();
@@ -144,6 +195,33 @@ export async function postComment(
   };
   await ref.set(doc);
   await parentRef.update({ updatedAt: FieldValue.serverTimestamp() });
+
+  const recipients = commentNotificationRecipients({
+    actorUid: user.uid,
+    parentOwnerUid: parentAuthorUid(parsed.parentType, parentData),
+    parentComment,
+  });
+  if (recipients.length > 0) {
+    await enqueueCommentNotifications({
+      recipients,
+      actorUid: user.uid,
+      actorName: user.displayName,
+      actorPhotoURL: user.photoURL,
+      parentType: parsed.parentType,
+      parentId: parsed.parentId,
+      parentTitle:
+        "title" in parentData && typeof parentData.title === "string"
+          ? parentData.title
+          : "",
+      parentSlug: parentData.slug,
+      commentId: ref.id,
+      parentCommentId: parsed.parentCommentId ?? null,
+      commentPreview: truncate(parsed.body.replace(/\s+/g, " "), 160),
+      createdAt: now,
+    }).catch((err) => {
+      console.error("Failed to enqueue comment notifications:", err);
+    });
+  }
 
   // Use the canonical slug from Firestore, not anything the caller sent
   // (slugs in the route are server-validated this way).

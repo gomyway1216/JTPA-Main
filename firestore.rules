@@ -665,6 +665,24 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ----- notifications -----
+    // Per-user notification inbox. Created only by Server Actions via Admin SDK.
+    // Recipients may read their own rows and mark unread rows read, but cannot
+    // create/delete notifications, mutate routing/content fields, or backdate
+    // the read timestamp.
+    match /notifications/{notificationId} {
+      allow read, list: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.recipientUid == request.auth.uid
+        && request.resource.data.recipientUid == resource.data.recipientUid
+        && resource.data.readAt == null
+        && request.resource.data.readAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['readAt']);
+      allow create, delete: if false;
+    }
+
     // ----- mail (Trigger Email extension) -----
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {

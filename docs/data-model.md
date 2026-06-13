@@ -31,6 +31,7 @@ polls/{pollId}
   │   └─ likes/{uid}
   └─ likes/{uid}
 sitePages/{slug}      ← admin-edited static-ish content (currently just `about`)
+notifications/{autoId} ← per-user comment/reply inbox (writes only via Admin SDK)
 mail/{autoId}         ← Trigger Email extension (writes only via Admin SDK)
 ```
 
@@ -167,6 +168,24 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 - `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below. Comment reads use the project's `status == 'approved'` gate (not `'published'` like the other parent types).
 
 Notification on decision is enqueued via `enqueueProjectDecisionNotification` — the Trigger Email extension picks it up and sends through Resend.
+
+## `notifications/{autoId}`
+
+Per-user notification inbox. Currently written when a new comment is posted on a user's content, or when someone replies to one of the user's comments. Email delivery is intentionally deferred for now; the in-app inbox is the source of truth.
+
+| Field | Type | Notes |
+|---|---|---|
+| `recipientUid` | string | User who should see the notification |
+| `type` | enum | Currently `"comment"` |
+| `reason` | enum | `"comment_on_content"` or `"reply_to_comment"` |
+| `actorUid`, `actorName`, `actorPhotoURL` | string / string / string \| null | Comment author snapshot |
+| `parentType`, `parentId`, `parentTitle`, `parentSlug` | string | Target content snapshot for routing/display |
+| `commentId`, `parentCommentId` | string / string \| null | Link target and reply context |
+| `commentPreview` | string | Plain text preview, capped at write time |
+| `readAt` | Timestamp \| null | `null` means unread |
+| `createdAt` | Timestamp | |
+
+**Rules**: recipients can read their own rows and update only `readAt`. Clients cannot create or delete notifications; comment posting goes through the `postComment` Server Action and `enqueueCommentNotifications`.
 
 ## `posts/{postId}` (Blog)
 

@@ -24,6 +24,7 @@ export interface QueryState {
   // Cursor values passed to `.startAfter(...)`; undefined when the query
   // never paged.
   startAfter?: unknown[];
+  countCalled?: boolean;
   docPath?: { collection: string; id: string };
 }
 
@@ -49,6 +50,7 @@ export function createAdminDbMock() {
     orderByCalls: [],
   };
   let nextGet: SnapStub = { docs: [] };
+  let nextCount = 0;
   // For `getAll(...)` calls we line up an array of per-ref results.
   let nextGetAll: Array<SnapStub> = [];
 
@@ -59,13 +61,18 @@ export function createAdminDbMock() {
     state.orderByCalls = [];
     state.limit = undefined;
     state.startAfter = undefined;
+    state.countCalled = undefined;
     state.docPath = undefined;
     nextGet = { docs: [] };
+    nextCount = 0;
     nextGetAll = [];
   }
 
   function setGet(s: SnapStub) {
     nextGet = s;
+  }
+  function setCount(count: number) {
+    nextCount = count;
   }
   function setGetAll(snaps: SnapStub[]) {
     nextGetAll = snaps;
@@ -90,6 +97,10 @@ export function createAdminDbMock() {
         return q;
       }),
       get: vi.fn(async () => withEmpty(nextGet)),
+      count: vi.fn(() => {
+        state.countCalled = true;
+        return { get: vi.fn(async () => ({ data: () => ({ count: nextCount }) })) };
+      }),
       doc: (id: string) => makeDoc(pathSoFar, id),
     };
     return q;
@@ -120,5 +131,5 @@ export function createAdminDbMock() {
     getAll: vi.fn(async () => nextGetAll.map(withEmpty)),
   });
 
-  return { adminDb, state, reset, setGet, setGetAll };
+  return { adminDb, state, reset, setGet, setCount, setGetAll };
 }

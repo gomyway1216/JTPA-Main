@@ -21,6 +21,7 @@ const revalidatePathMock = vi.fn();
 const listCommentsMock = vi.fn();
 const getMyLikesForParentMock = vi.fn();
 const getPublicProfilesByUidsMock = vi.fn();
+const enqueueCommentNotificationsMock = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
@@ -38,6 +39,11 @@ vi.mock("@/lib/data/likes", () => ({
 vi.mock("@/lib/data/users", () => ({
   getPublicProfilesByUids: (...args: unknown[]) =>
     getPublicProfilesByUidsMock(...args),
+}));
+
+vi.mock("@/lib/notifications", () => ({
+  enqueueCommentNotifications: (...args: unknown[]) =>
+    enqueueCommentNotificationsMock(...args),
 }));
 
 vi.mock("next/cache", () => ({
@@ -112,6 +118,7 @@ beforeEach(() => {
     .mockResolvedValue({ comments: [], nextCursor: null });
   getMyLikesForParentMock.mockReset().mockResolvedValue(new Set<string>());
   getPublicProfilesByUidsMock.mockReset().mockResolvedValue(new Map());
+  enqueueCommentNotificationsMock.mockReset().mockResolvedValue(undefined);
   requireUserMock.mockResolvedValue({
     uid: "u1",
     displayName: "Alice",
@@ -319,6 +326,146 @@ describe("postComment — author denormalization", () => {
       expect(res.comment.authorName).toBe("Alice");
       expect(res.comment.authorPhotoURL).toBe("https://x/a.png");
     }
+  });
+});
+
+describe("postComment — notifications", () => {
+  it("notifies the parent author when someone comments on their post", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        status: "published",
+        slug: "hello",
+        title: "Hello",
+        authorUid: "author-1",
+      }),
+    });
+
+    await postComment({
+      parentType: "post",
+      parentId: "p1",
+      body: "Thanks for writing this",
+    });
+
+    expect(enqueueCommentNotificationsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [
+          { uid: "author-1", reason: "comment_on_content" },
+        ],
+        actorUid: "u1",
+        actorName: "Alice",
+        parentType: "post",
+        parentId: "p1",
+        parentTitle: "Hello",
+        parentSlug: "hello",
+        commentId: newCommentRefId,
+        parentCommentId: null,
+        commentPreview: "Thanks for writing this",
+      }),
+    );
+  });
+
+  it("does not notify the commenter about their own post", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        status: "published",
+        slug: "mine",
+        title: "Mine",
+        authorUid: "u1",
+      }),
+    });
+
+    await postComment({
+      parentType: "post",
+      parentId: "p1",
+      body: "follow-up",
+    });
+
+    expect(enqueueCommentNotificationsMock).not.toHaveBeenCalled();
+  });
+
+  it("notifies both parent owner and reply target for a reply", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        status: "published",
+        slug: "thread",
+        title: "Thread",
+        authorUid: "owner-1",
+      }),
+    });
+    parentCommentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        parentType: "post",
+        parentId: "p1",
+        authorUid: "reply-target-1",
+        authorName: "Reply Target",
+        authorPhotoURL: null,
+        body: "original",
+        parentCommentId: null,
+        likeCount: 0,
+        createdAt: { _seconds: 1, _nanoseconds: 0 },
+        updatedAt: { _seconds: 1, _nanoseconds: 0 },
+      }),
+    });
+
+    await postComment({
+      parentType: "post",
+      parentId: "p1",
+      body: "reply",
+      parentCommentId: "c-parent",
+    });
+
+    expect(enqueueCommentNotificationsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [
+          { uid: "owner-1", reason: "comment_on_content" },
+          { uid: "reply-target-1", reason: "reply_to_comment" },
+        ],
+      }),
+    );
+  });
+
+  it("dedupes when the parent owner is also the reply target", async () => {
+    parentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        status: "published",
+        slug: "thread",
+        title: "Thread",
+        authorUid: "owner-1",
+      }),
+    });
+    parentCommentGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        parentType: "post",
+        parentId: "p1",
+        authorUid: "owner-1",
+        authorName: "Owner",
+        authorPhotoURL: null,
+        body: "original",
+        parentCommentId: null,
+        likeCount: 0,
+        createdAt: { _seconds: 1, _nanoseconds: 0 },
+        updatedAt: { _seconds: 1, _nanoseconds: 0 },
+      }),
+    });
+
+    await postComment({
+      parentType: "post",
+      parentId: "p1",
+      body: "reply",
+      parentCommentId: "c-parent",
+    });
+
+    expect(enqueueCommentNotificationsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipients: [{ uid: "owner-1", reason: "reply_to_comment" }],
+      }),
+    );
   });
 });
 
