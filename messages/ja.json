@@ -66,6 +66,13 @@
     "communityCta": "質問・発見を共有する",
     "eventsCta": "次のイベントを見る",
     "showcaseCta": "みんなのプロジェクトを見る",
+    "profileHubEyebrow": "プロフィール",
+    "profileHubTitle": "公開プロフィールと設定",
+    "profileHubSignedInDescription": "公開プロフィールでは、イベント参加回数や公開した記事・質問・プロジェクトなどの数字をまとめて確認できます。表示する名前・所属・紹介文は設定ページで調整できます。",
+    "profileHubGuestDescription": "ログインすると、自分の公開プロフィールページとアカウント設定を使えます。公開する情報はプロフィール設定から選べます。",
+    "profileHubPublicCta": "公開プロフィールを見る",
+    "profileHubSettingsCta": "公開設定を編集",
+    "profileHubLoginCta": "ログインしてプロフィールを作る",
     "upcomingEvents": "次に参加できるイベント",
     "upcomingEventsDescription": "勉強会、LT、交流会など。聞くだけでも、持ち寄って話すだけでも歓迎です。",
     "noEvents": "現在公開中のイベントはありません。",
@@ -565,8 +572,10 @@
     "postsDescription": "投稿した記事 (下書き含む)",
     "likesTitle": "もらったいいね",
     "likesDescription": "いいねを受け取った自分のコメント",
+    "publicProfileTitle": "公開プロフィール",
+    "publicProfileDescription": "参加回数・公開投稿数など、他の人から見えるプロフィール",
     "profileTitle": "アカウント設定",
-    "profileDescription": "所属・メール通知の設定"
+    "profileDescription": "公開する名前・所属・紹介文・リンク・メール通知の設定"
   },
   "MyCommon": {
     "newPost": "新規投稿",
