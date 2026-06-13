@@ -121,7 +121,7 @@ export default async function HomePage() {
       <div className="mx-auto max-w-6xl space-y-20 px-4">
         <FadeUp
           as="section"
-          className="border-y border-zinc-200 py-5 dark:border-zinc-800"
+          className="border-y border-zinc-200 py-8 sm:py-10 dark:border-zinc-800"
         >
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-2xl">
