@@ -146,18 +146,17 @@ export default async function EventDetailPage({
       />
 
       {event.coverImage?.url && (
-        // aspect-[21/9] keeps the hero a cinematic-ish banner regardless of
-        // the source aspect ratio — without this, a portrait upload would
-        // push the title way below the fold. `preload` because this is the
-        // above-the-fold LCP element whenever a cover exists.
+        // Keep the uploaded cover visible end-to-end instead of forcing it
+        // into a banner crop. `preload` because this is the above-the-fold
+        // LCP element whenever a cover exists.
         <Image
           src={event.coverImage.url}
           alt={t("coverAlt", { title: event.title })}
-          width={1680}
-          height={720}
+          width={1280}
+          height={920}
           preload
           sizes="(max-width: 768px) 100vw, 736px"
-          className="aspect-[21/9] w-full rounded-lg border border-zinc-200 object-cover dark:border-zinc-800"
+          className="h-auto w-full rounded-lg border border-zinc-200 dark:border-zinc-800"
         />
       )}
 
