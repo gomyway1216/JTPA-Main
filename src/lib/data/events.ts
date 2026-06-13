@@ -49,7 +49,10 @@ function adminEventStatus(event: EventDoc): EventStatus | undefined {
 
 function eventStartMillis(event: EventDoc): number {
   const start = toDate((event as Partial<EventDoc>).startAt);
-  return start?.getTime() ?? Number.POSITIVE_INFINITY;
+  const time = start?.getTime();
+  return typeof time === "number" && Number.isFinite(time)
+    ? time
+    : Number.POSITIVE_INFINITY;
 }
 
 function compareEventsByStartAt(a: EventDoc, b: EventDoc): number {

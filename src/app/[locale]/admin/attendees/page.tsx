@@ -83,11 +83,16 @@ export default async function AdminAttendeesPage({
           defaultValue={selectedId}
           className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         >
-          {events.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.title} ({formatDateTime(e.startAt, locale)})
-            </option>
-          ))}
+          {events.map((e) => {
+            const start =
+              formatDateTime(e.startAt, locale) || common("notAvailable");
+
+            return (
+              <option key={e.id} value={e.id}>
+                {e.title} ({start})
+              </option>
+            );
+          })}
         </select>
         <button
           type="submit"

@@ -52,41 +52,48 @@ export default async function AdminEventsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-            {events.map((e) => (
-              <tr key={e.id}>
-                <td className="py-2 font-medium">
-                  {e.title}
-                  {e.visibility === "members_only" && (
-                    <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                      {common("memberOnly")}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2 text-zinc-500">{formatDateTime(e.startAt, locale)}</td>
-                <td className="py-2">{e.status}</td>
-                <td className="py-2">
-                  {e.rsvpCount}
-                  {e.capacity > 0 ? ` / ${e.capacity}` : ""}
-                </td>
-                <td className="py-2 text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <Link
-                      href={`/admin/events/${e.id}/edit`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {common("edit")}
-                    </Link>
-                    <Link
-                      href={`/admin/events/${e.id}/checkin`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {common("checkIn")}
-                    </Link>
-                    <CloneEventButton eventId={e.id} eventTitle={e.title} />
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {events.map((e) => {
+              const start =
+                formatDateTime(e.startAt, locale) || common("notAvailable");
+              const status =
+                (e as Partial<typeof e>).status ?? common("unknown");
+
+              return (
+                <tr key={e.id}>
+                  <td className="py-2 font-medium">
+                    {e.title}
+                    {e.visibility === "members_only" && (
+                      <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                        {common("memberOnly")}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 text-zinc-500">{start}</td>
+                  <td className="py-2">{status}</td>
+                  <td className="py-2">
+                    {e.rsvpCount}
+                    {e.capacity > 0 ? ` / ${e.capacity}` : ""}
+                  </td>
+                  <td className="py-2 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/admin/events/${e.id}/edit`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {common("edit")}
+                      </Link>
+                      <Link
+                        href={`/admin/events/${e.id}/checkin`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {common("checkIn")}
+                      </Link>
+                      <CloneEventButton eventId={e.id} eventTitle={e.title} />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       )}

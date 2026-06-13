@@ -148,17 +148,22 @@ export default async function AdminHomePage() {
           <p className="text-sm text-zinc-500 mt-2">{t("eventsEmpty")}</p>
         ) : (
           <ul className="mt-2 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {upcoming.map((e) => (
-              <li key={e.id} className="py-2">
-                <Link
-                  href={`/admin/events/${e.id}/edit`}
-                  className="flex items-center justify-between gap-3 text-sm hover:underline"
-                >
-                  <span>{e.title}</span>
-                  <span className="text-xs text-zinc-500">{e.status}</span>
-                </Link>
-              </li>
-            ))}
+            {upcoming.map((e) => {
+              const status =
+                (e as Partial<typeof e>).status ?? common("unknown");
+
+              return (
+                <li key={e.id} className="py-2">
+                  <Link
+                    href={`/admin/events/${e.id}/edit`}
+                    className="flex items-center justify-between gap-3 text-sm hover:underline"
+                  >
+                    <span>{e.title}</span>
+                    <span className="text-xs text-zinc-500">{status}</span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
