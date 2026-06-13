@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
 import { SignOutButton } from "@/components/auth/SignOutButton";
+import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import Link, { usePathname } from "@/i18n/navigation";
 import { notificationHref } from "@/lib/notification-links";
@@ -242,11 +243,12 @@ export function Header({
                         {notifications.map((notification) => {
                           const isUnread = !notification.readAt;
                           return (
-                            <Link
+                            <NotificationOpenLink
                               key={notification.id}
+                              notificationId={notification.id}
                               href={notificationHref(notification)}
                               role="menuitem"
-                              onClick={() => setUserMenuOpen(false)}
+                              onNavigate={() => setUserMenuOpen(false)}
                               className={`block px-3 py-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
                                 isUnread
                                   ? "bg-blue-50/70 dark:bg-blue-950/20"
@@ -281,7 +283,7 @@ export function Header({
                                   </p>
                                 </div>
                               </div>
-                            </Link>
+                            </NotificationOpenLink>
                           );
                         })}
                       </div>
