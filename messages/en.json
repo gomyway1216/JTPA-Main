@@ -33,6 +33,8 @@
     "notificationsEmpty": "No notifications yet.",
     "notificationsLoading": "Loading notifications...",
     "notificationsLoadFailed": "Could not load notifications.",
+    "notificationsMarkAllRead": "Mark all read",
+    "notificationsMarkingRead": "Marking...",
     "admin": "Admin",
     "login": "Log in",
     "openMenu": "Open menu",

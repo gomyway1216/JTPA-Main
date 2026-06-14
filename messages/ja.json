@@ -33,6 +33,8 @@
     "notificationsEmpty": "通知はありません。",
     "notificationsLoading": "通知を読み込み中...",
     "notificationsLoadFailed": "通知を読み込めませんでした。",
+    "notificationsMarkAllRead": "すべて既読",
+    "notificationsMarkingRead": "既読にしています...",
     "admin": "管理",
     "login": "ログイン",
     "openMenu": "メニューを開く",

@@ -23,6 +23,12 @@ describe("toDate", () => {
     expect(toDate(d)).toBe(d);
   });
 
+  it("converts ISO date strings", () => {
+    const result = toDate("2025-01-01T00:00:00.000Z");
+    expect(result).toBeInstanceOf(Date);
+    expect(result!.toISOString()).toBe("2025-01-01T00:00:00.000Z");
+  });
+
   it("invokes toDate() on Firestore client Timestamps", () => {
     const expected = new Date("2025-06-15T12:34:56Z");
     const stub = { toDate: () => expected } as unknown as Parameters<

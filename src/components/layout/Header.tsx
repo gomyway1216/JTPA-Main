@@ -2,8 +2,10 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 
+import { markAllNotificationsRead } from "@/app/actions/notifications";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -49,13 +51,19 @@ export function Header({
   const [notificationsLoaded, setNotificationsLoaded] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState(false);
+  const [unreadCountOverride, setUnreadCountOverride] = useState<number | null>(
+    null,
+  );
+  const [markingAllRead, startMarkingAllRead] = useTransition();
+  const router = useRouter();
   const userMenuRef = useRef<HTMLDivElement>(null);
   const nextLocale = locale === "ja" ? "en" : "ja";
   const userMenuLabel = user?.displayName || user?.email || t("userMenu");
+  const unreadCount = unreadCountOverride ?? unreadNotificationCount;
   const userMenuAriaLabel =
-    unreadNotificationCount > 0
+    unreadCount > 0
       ? `${userMenuLabel} (${t("notificationsUnread", {
-          count: unreadNotificationCount,
+          count: unreadCount,
         })})`
       : userMenuLabel;
 
@@ -109,6 +117,32 @@ export function Header({
   function toggleUserMenu() {
     if (!userMenuOpen) void loadNotifications();
     setUserMenuOpen((v) => !v);
+  }
+
+  function markDropdownNotificationsRead() {
+    const previousUnreadCountOverride = unreadCountOverride;
+    const previousNotifications = notifications;
+
+    setUnreadCountOverride(0);
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.readAt
+          ? notification
+          : { ...notification, readAt: new Date().toISOString() },
+      ),
+    );
+
+    startMarkingAllRead(async () => {
+      try {
+        await markAllNotificationsRead();
+        router.refresh();
+        setUnreadCountOverride(null);
+      } catch (err) {
+        console.error("Failed to mark notifications read:", err);
+        setUnreadCountOverride(previousUnreadCountOverride);
+        setNotifications(previousNotifications);
+      }
+    });
   }
 
   const avatarFallback = (
@@ -185,9 +219,9 @@ export function Header({
                 <span className="hidden max-w-[10rem] truncate sm:inline">
                   {user.displayName || user.email}
                 </span>
-                {unreadNotificationCount > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute -right-1 -top-1 min-w-5 rounded-full bg-blue-600 px-1.5 py-0.5 text-center text-[10px] font-semibold leading-none text-white ring-2 ring-white dark:ring-zinc-950">
-                    {unreadBadgeLabel(unreadNotificationCount)}
+                    {unreadBadgeLabel(unreadCount)}
                   </span>
                 )}
                 <svg
@@ -219,21 +253,36 @@ export function Header({
                     <p className="truncate">{user.email}</p>
                   </div>
                   <div className="border-b border-zinc-100 dark:border-zinc-800">
-                    <Link
-                      href="/my/notifications"
-                      role="menuitem"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center justify-between gap-3 px-3 py-2 font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800"
-                    >
-                      <span>{t("notifications")}</span>
-                      {unreadNotificationCount > 0 && (
+                    <div className="flex items-center justify-between gap-2 px-3 py-2">
+                      <Link
+                        href="/my/notifications"
+                        role="menuitem"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="min-w-0 flex-1 truncate font-medium hover:underline"
+                      >
+                        {t("notifications")}
+                      </Link>
+                      {unreadCount > 0 && (
                         <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-900 dark:bg-blue-950 dark:text-blue-200">
                           {t("notificationsUnread", {
-                            count: unreadNotificationCount,
+                            count: unreadCount,
                           })}
                         </span>
                       )}
-                    </Link>
+                    </div>
+                    {unreadCount > 0 && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={markDropdownNotificationsRead}
+                        disabled={markingAllRead || notificationsLoading}
+                        className="mx-3 mb-2 rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                      >
+                        {markingAllRead
+                          ? t("notificationsMarkingRead")
+                          : t("notificationsMarkAllRead")}
+                      </button>
+                    )}
                     {notificationsLoading ? (
                       <p className="px-3 pb-3 pt-1 text-xs text-zinc-500">
                         {t("notificationsLoading")}
