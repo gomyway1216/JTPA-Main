@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import type { ReactNode } from "react";
 import { useTransition } from "react";
 
 import { markAllNotificationsRead } from "@/app/actions/notifications";
 
 type MarkAllNotificationsReadButtonProps = {
-  children: string;
-  pendingLabel?: string;
+  children: ReactNode;
+  pendingLabel?: ReactNode;
   className?: string;
 };
 
@@ -21,8 +22,12 @@ export function MarkAllNotificationsReadButton({
 
   function handleClick() {
     startTransition(async () => {
-      await markAllNotificationsRead();
-      router.refresh();
+      try {
+        await markAllNotificationsRead();
+        router.refresh();
+      } catch (err) {
+        console.error("Failed to mark all notifications read:", err);
+      }
     });
   }
 
