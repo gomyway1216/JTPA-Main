@@ -1,7 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
 
-import { markAllNotificationsRead } from "@/app/actions/notifications";
+import { MarkAllNotificationsReadButton } from "@/components/notifications/MarkAllNotificationsReadButton";
 import { NotificationOpenLink } from "@/components/notifications/NotificationOpenLink";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
@@ -54,14 +54,11 @@ export default async function MyNotificationsPage() {
           </p>
         </div>
         {unreadCount > 0 && (
-          <form action={markAllNotificationsRead}>
-            <button
-              type="submit"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              {t("markAllRead")}
-            </button>
-          </form>
+          <MarkAllNotificationsReadButton
+            className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+          >
+            {t("markAllRead")}
+          </MarkAllNotificationsReadButton>
         )}
       </header>
 
