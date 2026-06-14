@@ -6,6 +6,7 @@ import * as z from "zod";
 
 import {
   enqueueAdminNewPostNotification,
+  enqueueModerationDecisionNotification,
   enqueuePostDecisionNotification,
 } from "@/lib/notifications";
 import {
@@ -244,6 +245,20 @@ export async function publishPost(postId: string): Promise<PostSaveResult> {
         decision: "published",
       });
     }
+    await enqueueModerationDecisionNotification({
+      recipientUid: cur.authorUid,
+      reason: "post_published",
+      actorUid: admin.uid,
+      actorName: admin.displayName,
+      actorPhotoURL: admin.photoURL,
+      parentType: "post",
+      parentId: postId,
+      parentTitle: cur.title,
+      parentSlug: cur.slug,
+      createdAt: Timestamp.now(),
+    }).catch((err) => {
+      console.warn("Failed to enqueue post decision in-app notification:", err);
+    });
   }
 
   expirePostCache();
@@ -302,6 +317,21 @@ export async function decidePost(
         note: isRejection ? note : undefined,
       });
     }
+    await enqueueModerationDecisionNotification({
+      recipientUid: cur.authorUid,
+      reason: decision === "published" ? "post_published" : "post_rejected",
+      actorUid: admin.uid,
+      actorName: admin.displayName,
+      actorPhotoURL: admin.photoURL,
+      parentType: "post",
+      parentId: postId,
+      parentTitle: cur.title,
+      parentSlug: cur.slug,
+      moderationNote: isRejection ? note : undefined,
+      createdAt: Timestamp.now(),
+    }).catch((err) => {
+      console.warn("Failed to enqueue post decision in-app notification:", err);
+    });
   }
 
   expirePostCache();

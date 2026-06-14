@@ -17,6 +17,7 @@ import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import {
   enqueueAdminNewGuideNotification,
   enqueueGuideDecisionNotification,
+  enqueueModerationDecisionNotification,
 } from "@/lib/notifications";
 import type {
   GuideAuthorRef,
@@ -176,10 +177,13 @@ async function autoPromoteAuthor(
 // just means the mail doc didn't get queued, which is recoverable.
 async function notifyAuthorOfDecision(
   authorUid: string,
+  guideId: string,
   title: string,
+  slug: string,
   decision: "published" | "rejected",
   note: string | undefined,
   promoted: boolean,
+  reviewer: SessionUser,
 ): Promise<void> {
   if (!authorUid) return;
   try {
@@ -187,13 +191,27 @@ async function notifyAuthorOfDecision(
     const ownerEmail = ownerSnap.exists
       ? (ownerSnap.data()?.email as string)
       : null;
-    if (!ownerEmail) return;
-    await enqueueGuideDecisionNotification({
-      to: ownerEmail,
-      title,
-      decision,
-      note: decision === "rejected" ? note : undefined,
-      promoted,
+    if (ownerEmail) {
+      await enqueueGuideDecisionNotification({
+        to: ownerEmail,
+        title,
+        decision,
+        note: decision === "rejected" ? note : undefined,
+        promoted,
+      });
+    }
+    await enqueueModerationDecisionNotification({
+      recipientUid: authorUid,
+      reason: decision === "published" ? "guide_published" : "guide_rejected",
+      actorUid: reviewer.uid,
+      actorName: reviewer.displayName,
+      actorPhotoURL: reviewer.photoURL,
+      parentType: "guide",
+      parentId: guideId,
+      parentTitle: title,
+      parentSlug: slug,
+      moderationNote: decision === "rejected" ? note : undefined,
+      createdAt: Timestamp.now(),
     });
   } catch (err) {
     console.warn("Failed to enqueue guide decision notification:", err);
@@ -441,10 +459,13 @@ export async function updateGuide(
     const promoted = await autoPromoteAuthor(ownerUid, user.uid);
     await notifyAuthorOfDecision(
       ownerUid,
+      guideId,
       parsed.title,
+      requestedSlug ?? cur.slug,
       "published",
       undefined,
       promoted,
+      user,
     );
   }
 
@@ -543,10 +564,13 @@ export async function decideGuide(
   if ((isRejection || isFirstPublish) && authorUid) {
     await notifyAuthorOfDecision(
       authorUid,
+      guideId,
       cur.title,
+      cur.slug,
       decision,
       note,
       promoted,
+      reviewer,
     );
   }
 

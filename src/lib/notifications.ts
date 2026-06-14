@@ -8,6 +8,7 @@ import type {
   CommentNotificationReason,
   CommentParentType,
   LikeNotificationReason,
+  ModerationNotificationReason,
 } from "@/lib/types";
 import enMessages from "../../messages/en.json";
 import jaMessages from "../../messages/ja.json";
@@ -297,6 +298,44 @@ export async function enqueueLikeNotification(opts: {
   };
   if (opts.commentPreview) {
     notification.commentPreview = opts.commentPreview;
+  }
+
+  await adminDb().collection("notifications").add(notification);
+}
+
+export async function enqueueModerationDecisionNotification(opts: {
+  recipientUid: string;
+  reason: ModerationNotificationReason;
+  actorUid: string;
+  actorName: string;
+  actorPhotoURL: string | null;
+  parentType: Extract<CommentParentType, "project" | "post" | "guide">;
+  parentId: string;
+  parentTitle: string;
+  parentSlug: string;
+  moderationNote?: string;
+  createdAt: unknown;
+}): Promise<void> {
+  if (!opts.recipientUid || opts.recipientUid === opts.actorUid) return;
+
+  const notification: Record<string, unknown> = {
+    recipientUid: opts.recipientUid,
+    type: "moderation",
+    reason: opts.reason,
+    actorUid: opts.actorUid,
+    actorName: opts.actorName,
+    actorPhotoURL: opts.actorPhotoURL,
+    parentType: opts.parentType,
+    parentId: opts.parentId,
+    parentTitle: opts.parentTitle,
+    parentSlug: opts.parentSlug,
+    commentId: null,
+    parentCommentId: null,
+    readAt: null,
+    createdAt: opts.createdAt,
+  };
+  if (opts.moderationNote) {
+    notification.moderationNote = opts.moderationNote;
   }
 
   await adminDb().collection("notifications").add(notification);

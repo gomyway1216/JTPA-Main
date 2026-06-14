@@ -580,7 +580,7 @@
     "publicProfileTitle": "公開プロフィール",
     "publicProfileDescription": "参加回数・公開投稿数など、他の人から見えるプロフィール",
     "notificationsTitle": "通知",
-    "notificationsDescription": "自分の投稿へのコメント・返信、自分の投稿・コメントへのいいね",
+    "notificationsDescription": "自分の投稿へのコメント・返信、いいね、審査結果",
     "notificationsUnread": "未読 {count} 件",
     "profileTitle": "アカウント設定",
     "profileDescription": "公開する名前・所属・紹介文・リンク・メール通知の設定"
@@ -648,7 +648,7 @@
   "MyNotifications": {
     "metadataTitle": "通知",
     "title": "通知",
-    "description": "自分の投稿へのコメント・返信、自分の投稿・コメントへのいいねです。",
+    "description": "自分の投稿へのコメント・返信、いいね、審査結果です。",
     "empty": "まだ通知はありません。",
     "markAllRead": "すべて既読にする",
     "unread": "未読",
@@ -657,6 +657,12 @@
     "replyToComment": "{actorName} さんが「{title}」であなたのコメントに返信しました。",
     "likeOnContent": "{actorName} さんが「{title}」にいいねしました。",
     "likeOnComment": "{actorName} さんが「{title}」であなたのコメントにいいねしました。",
+    "projectApproved": "あなたのプロジェクト「{title}」が公開されました。",
+    "projectRejected": "あなたのプロジェクト「{title}」が却下されました。",
+    "postPublished": "あなたの記事「{title}」が公開されました。",
+    "postRejected": "あなたの記事「{title}」が却下されました。",
+    "guidePublished": "あなたのメモ・ノウハウ「{title}」が公開されました。",
+    "guideRejected": "あなたのメモ・ノウハウ「{title}」が却下されました。",
     "parent": {
       "post": "記事",
       "guide": "メモ・ノウハウ",

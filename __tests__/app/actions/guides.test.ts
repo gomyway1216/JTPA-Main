@@ -29,6 +29,7 @@ const setCustomUserClaimsMock = vi.fn();
 const deleteFilesMock = vi.fn();
 const adminNewGuideMock = vi.fn();
 const decisionMock = vi.fn();
+const moderationDecisionMock = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
@@ -61,6 +62,8 @@ vi.mock("@/lib/notifications", () => ({
     adminNewGuideMock(...args),
   enqueueGuideDecisionNotification: (...args: unknown[]) =>
     decisionMock(...args),
+  enqueueModerationDecisionNotification: (...args: unknown[]) =>
+    moderationDecisionMock(...args),
 }));
 
 vi.mock("@/lib/firebase/admin", () => {
@@ -163,6 +166,7 @@ beforeEach(() => {
   deleteFilesMock.mockResolvedValue(undefined);
   adminNewGuideMock.mockResolvedValue(undefined);
   decisionMock.mockResolvedValue(undefined);
+  moderationDecisionMock.mockResolvedValue(undefined);
 });
 
 describe("submitGuide — validation + status resolution", () => {
@@ -344,6 +348,17 @@ describe("updateGuide — authorization + status clamp", () => {
         promoted: true,
       }),
     );
+    expect(moderationDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "author-9",
+        reason: "guide_published",
+        actorUid: "editor-1",
+        parentType: "guide",
+        parentId: "g1",
+        parentTitle: "My Guide",
+        parentSlug: "g",
+      }),
+    );
   });
 });
 
@@ -399,6 +414,13 @@ describe("decideGuide / archiveGuide — review queue", () => {
     expect(setCustomUserClaimsMock).not.toHaveBeenCalled();
     expect(decisionMock).toHaveBeenCalledWith(
       expect.objectContaining({ decision: "rejected", note: "needs sources" }),
+    );
+    expect(moderationDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "author-9",
+        reason: "guide_rejected",
+        moderationNote: "needs sources",
+      }),
     );
   });
 

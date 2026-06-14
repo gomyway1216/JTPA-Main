@@ -328,14 +328,22 @@ export interface CommentDoc {
 // code should use `CommentDoc` directly.
 export type PostCommentDoc = CommentDoc;
 
-export type NotificationType = "comment" | "like";
+export type NotificationType = "comment" | "like" | "moderation";
 export type CommentNotificationReason =
   | "comment_on_content"
   | "reply_to_comment";
 export type LikeNotificationReason = "like_on_content" | "like_on_comment";
+export type ModerationNotificationReason =
+  | "project_approved"
+  | "project_rejected"
+  | "post_published"
+  | "post_rejected"
+  | "guide_published"
+  | "guide_rejected";
 export type NotificationReason =
   | CommentNotificationReason
-  | LikeNotificationReason;
+  | LikeNotificationReason
+  | ModerationNotificationReason;
 
 export interface NotificationDoc {
   id: string;
@@ -352,6 +360,7 @@ export interface NotificationDoc {
   commentId?: string | null;
   parentCommentId?: string | null;
   commentPreview?: string;
+  moderationNote?: string;
   readAt?: TsLike | null;
   createdAt: TsLike;
 }

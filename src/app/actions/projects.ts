@@ -6,6 +6,7 @@ import * as z from "zod";
 
 import {
   enqueueAdminNewProjectNotification,
+  enqueueModerationDecisionNotification,
   enqueueProjectDecisionNotification,
 } from "@/lib/notifications";
 import {
@@ -267,7 +268,7 @@ export async function decideProject(
   const ref = adminDb().collection("projects").doc(projectId);
   const snap = await ref.get();
   if (!snap.exists) return { ok: false, error: await actionError("projectNotFound") };
-  const cur = snap.data() as { ownerUid: string; title: string };
+  const cur = snap.data() as { ownerUid: string; title: string; slug: string };
 
   await ref.update({
     status: decision,
@@ -291,6 +292,21 @@ export async function decideProject(
       note,
     });
   }
+  await enqueueModerationDecisionNotification({
+    recipientUid: cur.ownerUid,
+    reason: decision === "approved" ? "project_approved" : "project_rejected",
+    actorUid: admin.uid,
+    actorName: admin.displayName,
+    actorPhotoURL: admin.photoURL,
+    parentType: "project",
+    parentId: projectId,
+    parentTitle: cur.title,
+    parentSlug: cur.slug,
+    moderationNote: decision === "rejected" ? note : undefined,
+    createdAt: Timestamp.now(),
+  }).catch((err) => {
+    console.warn("Failed to enqueue project decision in-app notification:", err);
+  });
 
   expireProjectCache();
   revalidateLocalizedPath("/showcase");

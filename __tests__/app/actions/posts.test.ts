@@ -25,6 +25,7 @@ const userGetMock = vi.fn();
 const storageFileDeleteMock = vi.fn();
 const adminNewPostMock = vi.fn();
 const decisionMock = vi.fn();
+const moderationDecisionMock = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   requireUser: () => requireUserMock(),
@@ -56,6 +57,8 @@ vi.mock("@/lib/notifications", () => ({
     adminNewPostMock(...args),
   enqueuePostDecisionNotification: (...args: unknown[]) =>
     decisionMock(...args),
+  enqueueModerationDecisionNotification: (...args: unknown[]) =>
+    moderationDecisionMock(...args),
 }));
 
 vi.mock("@/lib/firebase/admin", () => {
@@ -144,6 +147,7 @@ beforeEach(() => {
   storageFileDeleteMock.mockResolvedValue(undefined);
   adminNewPostMock.mockResolvedValue(undefined);
   decisionMock.mockResolvedValue(undefined);
+  moderationDecisionMock.mockResolvedValue(undefined);
 });
 
 describe("submitPost — validation + auth", () => {
@@ -348,6 +352,17 @@ describe("publishPost / decidePost — admin moderation", () => {
       title: "T",
       decision: "published",
     });
+    expect(moderationDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "author-9",
+        reason: "post_published",
+        actorUid: "admin-1",
+        parentType: "post",
+        parentId: "p1",
+        parentTitle: "T",
+        parentSlug: "s",
+      }),
+    );
   });
 
   it("re-publish keeps the original publishedAt and stays silent", async () => {
@@ -385,6 +400,13 @@ describe("publishPost / decidePost — admin moderation", () => {
     expect(patch.reviewNote).toBe("needs work");
     expect(decisionMock).toHaveBeenCalledWith(
       expect.objectContaining({ decision: "rejected", note: "needs work" }),
+    );
+    expect(moderationDecisionMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recipientUid: "author-9",
+        reason: "post_rejected",
+        moderationNote: "needs work",
+      }),
     );
   });
 

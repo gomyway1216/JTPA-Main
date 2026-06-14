@@ -225,13 +225,19 @@ export const PollVoteDocSchema = z.looseObject({
 // ---------- notifications ----------
 export const NotificationDocSchema = z.looseObject({
   recipientUid: z.string().optional(),
-  type: z.enum(["comment", "like"]).optional(),
+  type: z.enum(["comment", "like", "moderation"]).optional(),
   reason: z
     .enum([
       "comment_on_content",
       "reply_to_comment",
       "like_on_content",
       "like_on_comment",
+      "project_approved",
+      "project_rejected",
+      "post_published",
+      "post_rejected",
+      "guide_published",
+      "guide_rejected",
     ])
     .optional(),
   actorUid: z.string().optional(),
@@ -246,6 +252,7 @@ export const NotificationDocSchema = z.looseObject({
   commentId: z.string().nullable().optional(),
   parentCommentId: z.string().nullable().optional(),
   commentPreview: z.string().optional(),
+  moderationNote: z.string().optional(),
   readAt: TsLikeSchema.nullable().optional(),
   createdAt: TsLikeSchema,
 });
