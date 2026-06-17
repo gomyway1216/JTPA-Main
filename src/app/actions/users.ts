@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { requireAdmin, requireUser } from "@/lib/auth/session";
-import { adminDb, adminStorage } from "@/lib/firebase/admin";
+import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import type { ProjectAsset, UserLinks, UserProfile } from "@/lib/types";
 import {
@@ -104,6 +104,9 @@ export type UpdateProfileResult =
 export type SetEventAttendanceCountResult =
   | { ok: true }
   | { ok: false; error: string };
+export type DeleteManagedUserResult =
+  | { ok: true }
+  | { ok: false; error: string };
 
 // Public-availability probe used by the live-validation UI on
 // /my/profile. Returns "available" / "taken" / "yours" (already the
@@ -122,6 +125,19 @@ const EventAttendanceCountInputSchema = z.object({
   uid: z.string().min(1),
   count: z.coerce.number().int().min(0).max(100000),
 });
+
+const DeleteManagedUserInputSchema = z.object({
+  uid: z.string().min(1),
+});
+
+function isAuthUserNotFound(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "auth/user-not-found"
+  );
+}
 
 async function localizeProfileInputIssues(
   issues: readonly { path: readonly PropertyKey[]; message: string }[],
@@ -231,6 +247,83 @@ export async function setEventAttendanceCount(
     },
     updatedAt: now,
   });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/u/${uid}`);
+  return { ok: true };
+}
+
+export async function deleteManagedUser(
+  input: z.input<typeof DeleteManagedUserInputSchema>,
+): Promise<DeleteManagedUserResult> {
+  const admin = await requireAdmin();
+  const parsed = DeleteManagedUserInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: await actionError("userDeleteUidRequired") };
+  }
+
+  const { uid } = parsed.data;
+  if (uid === admin.uid) {
+    return { ok: false, error: await actionError("userDeleteSelf") };
+  }
+
+  let isTargetAdmin = false;
+  try {
+    const target = await adminAuth().getUser(uid);
+    isTargetAdmin = target.customClaims?.admin === true;
+  } catch (err) {
+    if (isAuthUserNotFound(err)) {
+      return { ok: false, error: await actionError("userDeleteNotFound") };
+    }
+    throw err;
+  }
+
+  // Keep account deletion narrower than role management: admin accounts must
+  // be demoted first. That avoids irreversible "delete the last admin" races
+  // across Firebase Auth, which does not support transactions.
+  if (isTargetAdmin) {
+    return { ok: false, error: await actionError("userDeleteAdmin") };
+  }
+
+  let avatarPath: string | null = null;
+  await adminDb().runTransaction(async (tx) => {
+    const userRef = adminDb().collection("users").doc(uid);
+    const userSnap = await tx.get(userRef);
+    if (!userSnap.exists) return;
+
+    const profile = userSnap.data() as UserProfile;
+    const username = profile.username;
+    const usernameRef = username
+      ? adminDb().collection("usernames").doc(username)
+      : null;
+    const usernameSnap = usernameRef ? await tx.get(usernameRef) : null;
+
+    avatarPath = profile.avatar?.path ?? null;
+    tx.delete(userRef);
+    if (
+      usernameRef &&
+      usernameSnap?.exists &&
+      (usernameSnap.data() as { uid?: string }).uid === uid
+    ) {
+      tx.delete(usernameRef);
+    }
+  });
+
+  try {
+    await adminAuth().deleteUser(uid);
+  } catch (err) {
+    if (!isAuthUserNotFound(err)) throw err;
+  }
+
+  if (avatarPath) {
+    await adminStorage()
+      .bucket()
+      .file(avatarPath)
+      .delete()
+      .catch((err) => {
+        console.warn(`Failed to delete avatar for deleted user ${uid}:`, err);
+      });
+  }
 
   revalidatePath("/admin/users");
   revalidatePath(`/u/${uid}`);

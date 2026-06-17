@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { setUserRole, type ManagedRole } from "@/app/actions/roles";
-import { setEventAttendanceCount } from "@/app/actions/users";
+import { deleteManagedUser, setEventAttendanceCount } from "@/app/actions/users";
 import type { AdminUserListEntry } from "@/lib/data/users-admin";
 
 function formatDate(iso: string | null, locale: string): string {
@@ -45,6 +45,7 @@ export function UserTable({
   const [pendingUid, setPendingUid] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations("Admin.users");
 
   // Filter by email OR displayName substring, case-insensitive. Empty query
@@ -78,6 +79,35 @@ export function UserTable({
         if (!res.ok) setError(res.error);
       } catch (err) {
         setError(err instanceof Error ? err.message : t("roleChangeFailed"));
+      } finally {
+        setPendingUid(null);
+      }
+    });
+  }
+
+  function handleDelete(user: AdminUserListEntry) {
+    setError(null);
+    if (
+      !window.confirm(
+        t("deleteConfirm", {
+          user: user.email || user.displayName || user.uid,
+        }),
+      )
+    ) {
+      return;
+    }
+
+    setPendingUid(user.uid);
+    startTransition(async () => {
+      try {
+        const res = await deleteManagedUser({ uid: user.uid });
+        if (!res.ok) {
+          setError(res.error);
+          return;
+        }
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
       } finally {
         setPendingUid(null);
       }
@@ -123,6 +153,7 @@ export function UserTable({
                 const isLastAdmin =
                   !truncated && u.isAdmin && totalAdmins <= 1;
                 const canRevokeAdmin = u.isAdmin && !isSelf && !isLastAdmin;
+                const canDelete = !isSelf && !u.isAdmin;
 
                 return (
                   <tr key={u.uid}>
@@ -242,6 +273,21 @@ export function UserTable({
                             {t("adminGrant")}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          disabled={isPending || !canDelete}
+                          title={
+                            isSelf
+                              ? t("cannotDeleteSelf")
+                              : u.isAdmin
+                                ? t("cannotDeleteAdmin")
+                                : undefined
+                          }
+                          onClick={() => handleDelete(u)}
+                          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+                        >
+                          {isPending ? t("deletingUser") : t("deleteUser")}
+                        </button>
                       </div>
                     </td>
                   </tr>
