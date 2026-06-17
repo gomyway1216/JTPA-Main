@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { LoadErrorBanner } from "@/app/[locale]/admin/_components/LoadErrorBanner";
 import { getSessionUser } from "@/lib/auth/session";
-import { listEventsForAdmin } from "@/lib/data/events";
+import { getEventById, listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
@@ -59,7 +59,18 @@ export default async function AdminAttendeesPage({
   );
   const events = eventsRes.ok ? eventsRes.data : [];
   const selectedId = eventId || events[0]?.id;
-  const selectedEvent = events.find((e) => e.id === selectedId);
+  const listedSelectedEvent = events.find((e) => e.id === selectedId);
+  const selectedEventRes =
+    selectedId && !listedSelectedEvent
+      ? await safeLoad("event", () => getEventById(selectedId))
+      : null;
+  const selectedEvent =
+    listedSelectedEvent ??
+    (selectedEventRes?.ok ? selectedEventRes.data ?? undefined : undefined);
+  const selectableEvents =
+    selectedEvent && !events.some((e) => e.id === selectedEvent.id)
+      ? [selectedEvent, ...events]
+      : events;
   const surveyFields = selectedEvent?.surveyFields ?? [];
   // `null` when no event is selected — that's "nothing to load", not a
   // failure, so it must not trip the banner.
@@ -67,7 +78,8 @@ export default async function AdminAttendeesPage({
     ? await safeLoad("RSVPs", () => listRsvps(selectedId))
     : null;
   const rsvps = rsvpsRes?.ok ? rsvpsRes.data : [];
-  const loadFailed = !eventsRes.ok || rsvpsRes?.ok === false;
+  const loadFailed =
+    !eventsRes.ok || selectedEventRes?.ok === false || rsvpsRes?.ok === false;
 
   return (
     <div className="space-y-6">
@@ -84,7 +96,10 @@ export default async function AdminAttendeesPage({
           defaultValue={selectedId}
           className="rounded border border-zinc-300 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         >
-          {events.map((e) => {
+          {selectedId && !selectedEvent && (
+            <option value={selectedId}>{selectedId}</option>
+          )}
+          {selectableEvents.map((e) => {
             const start =
               formatDateTime(e.startAt, locale) || common("notAvailable");
 
