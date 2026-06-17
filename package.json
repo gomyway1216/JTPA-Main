@@ -55,6 +55,8 @@
   "overrides": {
     "firebase-tools": {
       "universal-analytics": "0.5.3"
-    }
+    },
+    "protobufjs": "7.6.3",
+    "retry-request": "8.0.3"
   }
 }

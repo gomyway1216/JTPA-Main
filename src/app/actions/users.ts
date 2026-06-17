@@ -272,10 +272,7 @@ export async function deleteManagedUser(
     const target = await adminAuth().getUser(uid);
     isTargetAdmin = target.customClaims?.admin === true;
   } catch (err) {
-    if (isAuthUserNotFound(err)) {
-      return { ok: false, error: await actionError("userDeleteNotFound") };
-    }
-    throw err;
+    if (!isAuthUserNotFound(err)) throw err;
   }
 
   // Keep account deletion narrower than role management: admin accounts must
@@ -285,11 +282,16 @@ export async function deleteManagedUser(
     return { ok: false, error: await actionError("userDeleteAdmin") };
   }
 
-  let avatarPath: string | null = null;
-  await adminDb().runTransaction(async (tx) => {
+  try {
+    await adminAuth().deleteUser(uid);
+  } catch (err) {
+    if (!isAuthUserNotFound(err)) throw err;
+  }
+
+  const avatarPath = await adminDb().runTransaction(async (tx) => {
     const userRef = adminDb().collection("users").doc(uid);
     const userSnap = await tx.get(userRef);
-    if (!userSnap.exists) return;
+    if (!userSnap.exists) return null;
 
     const profile = userSnap.data() as UserProfile;
     const username = profile.username;
@@ -298,7 +300,6 @@ export async function deleteManagedUser(
       : null;
     const usernameSnap = usernameRef ? await tx.get(usernameRef) : null;
 
-    avatarPath = profile.avatar?.path ?? null;
     tx.delete(userRef);
     if (
       usernameRef &&
@@ -307,13 +308,8 @@ export async function deleteManagedUser(
     ) {
       tx.delete(usernameRef);
     }
+    return profile.avatar?.path ?? null;
   });
-
-  try {
-    await adminAuth().deleteUser(uid);
-  } catch (err) {
-    if (!isAuthUserNotFound(err)) throw err;
-  }
 
   if (avatarPath) {
     await adminStorage()

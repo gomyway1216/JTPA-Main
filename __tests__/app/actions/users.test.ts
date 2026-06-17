@@ -366,16 +366,39 @@ describe("deleteManagedUser — admin account deletion", () => {
       expect.objectContaining({ __col: "usernames", __id: "targetname" }),
     );
     expect(authDeleteUserMock).toHaveBeenCalledWith("u2");
+    expect(authDeleteUserMock.mock.invocationCallOrder[0]).toBeLessThan(
+      runTransactionMock.mock.invocationCallOrder[0],
+    );
     expect(storageDeleteMock).toHaveBeenCalledWith("users/u2/avatar.png");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
     expect(revalidatePathMock).toHaveBeenCalledWith("/u/u2");
   });
 
-  it("returns a localized error when the auth user is already gone", async () => {
+  it("cleans up Firestore when the auth user is already gone", async () => {
     authGetUserMock.mockRejectedValueOnce({ code: "auth/user-not-found" });
-    await expectError(deleteManagedUser({ uid: "ghost" }), "見つかりません");
-    expect(runTransactionMock).not.toHaveBeenCalled();
-    expect(authDeleteUserMock).not.toHaveBeenCalled();
+    authDeleteUserMock.mockRejectedValueOnce({ code: "auth/user-not-found" });
+    userTxSnap = {
+      exists: true,
+      data: () => ({
+        username: "ghostname",
+        avatar: null,
+      }),
+    };
+    usernameSnaps = {
+      ghostname: { exists: true, data: () => ({ uid: "ghost" }) },
+    };
+
+    await expect(deleteManagedUser({ uid: "ghost" })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(runTransactionMock).toHaveBeenCalled();
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "users", __id: "ghost" }),
+    );
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "usernames", __id: "ghostname" }),
+    );
   });
 });
 
