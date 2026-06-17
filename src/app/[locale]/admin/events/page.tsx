@@ -83,6 +83,12 @@ export default async function AdminEventsPage() {
                         {common("edit")}
                       </Link>
                       <Link
+                        href={`/admin/attendees?eventId=${encodeURIComponent(e.id)}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {common("attendees")}
+                      </Link>
+                      <Link
                         href={`/admin/events/${e.id}/checkin`}
                         className="text-blue-600 hover:underline"
                       >
