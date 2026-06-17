@@ -18,6 +18,8 @@ const txDeleteMock = vi.fn();
 const userDocGetMock = vi.fn();
 const userDocUpdateMock = vi.fn();
 const storageDeleteMock = vi.fn();
+const authGetUserMock = vi.fn();
+const authDeleteUserMock = vi.fn();
 
 // Scripted per test: the users/{uid} snapshot seen INSIDE the
 // transaction, and the usernames/{handle} reservation snapshots by id.
@@ -64,6 +66,10 @@ vi.mock("@/lib/firebase/admin", () => ({
     runTransaction: (cb: (tx: unknown) => Promise<unknown>) =>
       runTransactionMock(cb),
   }),
+  adminAuth: () => ({
+    getUser: (uid: string) => authGetUserMock(uid),
+    deleteUser: (uid: string) => authDeleteUserMock(uid),
+  }),
   adminStorage: () => ({
     bucket: () => ({
       file: (p: string) => ({ delete: () => storageDeleteMock(p) }),
@@ -72,6 +78,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 }));
 
 import {
+  deleteManagedUser,
   removeMyAvatar,
   setEventAttendanceCount,
   updateMyAvatar,
@@ -132,6 +139,8 @@ beforeEach(() => {
   userDocGetMock.mockResolvedValue({ exists: true, data: () => ({}) });
   userDocUpdateMock.mockResolvedValue(undefined);
   storageDeleteMock.mockResolvedValue(undefined);
+  authGetUserMock.mockResolvedValue({ customClaims: {} });
+  authDeleteUserMock.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -308,6 +317,88 @@ describe("setEventAttendanceCount — admin override", () => {
       },
       updatedAt: { __fixed: "now" },
     });
+  });
+});
+
+describe("deleteManagedUser — admin account deletion", () => {
+  it("is admin-gated (bubbles FORBIDDEN)", async () => {
+    requireAdminMock.mockRejectedValueOnce(new Error("FORBIDDEN"));
+    await expect(deleteManagedUser({ uid: "u2" })).rejects.toThrow("FORBIDDEN");
+    expect(authGetUserMock).not.toHaveBeenCalled();
+    expect(authDeleteUserMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses to delete the current admin account", async () => {
+    await expectError(deleteManagedUser({ uid: "admin-1" }), "自分自身");
+    expect(authGetUserMock).not.toHaveBeenCalled();
+    expect(runTransactionMock).not.toHaveBeenCalled();
+    expect(authDeleteUserMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses to delete an admin account until the admin role is revoked", async () => {
+    authGetUserMock.mockResolvedValueOnce({ customClaims: { admin: true } });
+    await expectError(deleteManagedUser({ uid: "u2" }), "admin ロール");
+    expect(runTransactionMock).not.toHaveBeenCalled();
+    expect(authDeleteUserMock).not.toHaveBeenCalled();
+  });
+
+  it("deletes the profile, owned username reservation, auth user, and avatar", async () => {
+    userTxSnap = {
+      exists: true,
+      data: () => ({
+        username: "targetname",
+        avatar: { path: "users/u2/avatar.png", url: "old" },
+      }),
+    };
+    usernameSnaps = {
+      targetname: { exists: true, data: () => ({ uid: "u2" }) },
+    };
+
+    await expect(deleteManagedUser({ uid: "u2" })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(authGetUserMock).toHaveBeenCalledWith("u2");
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "users", __id: "u2" }),
+    );
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "usernames", __id: "targetname" }),
+    );
+    expect(authDeleteUserMock).toHaveBeenCalledWith("u2");
+    expect(authDeleteUserMock.mock.invocationCallOrder[0]).toBeLessThan(
+      runTransactionMock.mock.invocationCallOrder[0],
+    );
+    expect(storageDeleteMock).toHaveBeenCalledWith("users/u2/avatar.png");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/users");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/u/u2");
+  });
+
+  it("cleans up Firestore when the auth user is already gone", async () => {
+    authGetUserMock.mockRejectedValueOnce({ code: "auth/user-not-found" });
+    authDeleteUserMock.mockRejectedValueOnce({ code: "auth/user-not-found" });
+    userTxSnap = {
+      exists: true,
+      data: () => ({
+        username: "ghostname",
+        avatar: null,
+      }),
+    };
+    usernameSnaps = {
+      ghostname: { exists: true, data: () => ({ uid: "ghost" }) },
+    };
+
+    await expect(deleteManagedUser({ uid: "ghost" })).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(runTransactionMock).toHaveBeenCalled();
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "users", __id: "ghost" }),
+    );
+    expect(txDeleteMock).toHaveBeenCalledWith(
+      expect.objectContaining({ __col: "usernames", __id: "ghostname" }),
+    );
   });
 });
 

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { setUserRole, type ManagedRole } from "@/app/actions/roles";
-import { setEventAttendanceCount } from "@/app/actions/users";
+import { deleteManagedUser, setEventAttendanceCount } from "@/app/actions/users";
 import type { AdminUserListEntry } from "@/lib/data/users-admin";
 
 function formatDate(iso: string | null, locale: string): string {
@@ -45,6 +45,7 @@ export function UserTable({
   const [pendingUid, setPendingUid] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const locale = useLocale();
+  const router = useRouter();
   const t = useTranslations("Admin.users");
 
   // Filter by email OR displayName substring, case-insensitive. Empty query
@@ -84,6 +85,35 @@ export function UserTable({
     });
   }
 
+  function handleDelete(user: AdminUserListEntry) {
+    setError(null);
+    if (
+      !window.confirm(
+        t("deleteConfirm", {
+          user: user.email || user.displayName || user.uid,
+        }),
+      )
+    ) {
+      return;
+    }
+
+    setPendingUid(user.uid);
+    startTransition(async () => {
+      try {
+        const res = await deleteManagedUser({ uid: user.uid });
+        if (!res.ok) {
+          setError(res.error);
+          setPendingUid(null);
+          return;
+        }
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : t("deleteFailed"));
+        setPendingUid(null);
+      }
+    });
+  }
+
   return (
     <div className="space-y-3">
       <input
@@ -114,7 +144,7 @@ export function UserTable({
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
               {filtered.map((u) => {
                 const isSelf = u.uid === currentUid;
-                const isPending = pendingUid === u.uid;
+                const isRowPending = pendingUid === u.uid;
                 // Last-admin guard (client-side mirror of the server check).
                 // Skip when the list is truncated — `totalAdmins` would
                 // be undercounting and could disable the button for a
@@ -123,6 +153,7 @@ export function UserTable({
                 const isLastAdmin =
                   !truncated && u.isAdmin && totalAdmins <= 1;
                 const canRevokeAdmin = u.isAdmin && !isSelf && !isLastAdmin;
+                const canDelete = !isSelf && !u.isAdmin;
 
                 return (
                   <tr key={u.uid}>
@@ -192,7 +223,7 @@ export function UserTable({
                       <div className="flex flex-wrap justify-end gap-1.5">
                         <button
                           type="button"
-                          disabled={isPending}
+                          disabled={isRowPending}
                           onClick={() =>
                             handleToggle(
                               u.uid,
@@ -208,7 +239,7 @@ export function UserTable({
                         </button>
                         <button
                           type="button"
-                          disabled={isPending}
+                          disabled={isRowPending}
                           onClick={() =>
                             handleToggle(u.uid, "editor", !u.isEditor)
                           }
@@ -219,7 +250,7 @@ export function UserTable({
                         {u.isAdmin ? (
                           <button
                             type="button"
-                            disabled={isPending || !canRevokeAdmin}
+                            disabled={isRowPending || !canRevokeAdmin}
                             title={
                               isSelf
                                 ? t("cannotRevokeSelf")
@@ -235,13 +266,28 @@ export function UserTable({
                         ) : (
                           <button
                             type="button"
-                            disabled={isPending}
+                            disabled={isRowPending}
                             onClick={() => handleToggle(u.uid, "admin", true)}
                             className="rounded border border-purple-300 px-2 py-1 text-xs text-purple-700 hover:bg-purple-50 disabled:opacity-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950"
                           >
                             {t("adminGrant")}
                           </button>
                         )}
+                        <button
+                          type="button"
+                          disabled={isRowPending || !canDelete}
+                          title={
+                            isSelf
+                              ? t("cannotDeleteSelf")
+                              : u.isAdmin
+                                ? t("cannotDeleteAdmin")
+                                : undefined
+                          }
+                          onClick={() => handleDelete(u)}
+                          className="rounded border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950"
+                        >
+                          {isRowPending ? t("deletingUser") : t("deleteUser")}
+                        </button>
                       </div>
                     </td>
                   </tr>
