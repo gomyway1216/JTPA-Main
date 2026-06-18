@@ -13,7 +13,7 @@
     }
   },
   "Header": {
-    "siteName": "JTPA",
+    "siteName": "ベイエリアAI勉強会",
     "nav": {
       "events": "イベント",
       "showcase": "みんなのプロジェクト",
@@ -387,7 +387,7 @@
   "NewProject": {
     "metadataTitle": "プロジェクトを投稿",
     "title": "プロジェクトを投稿",
-    "description": "投稿された内容は管理者の承認後にプロジェクト一覧へ掲載されます。"
+    "description": "投稿された内容は管理者の確認後にプロジェクト一覧へ掲載されます。"
   },
   "PostForm": {
     "imageTooLarge": "画像サイズは 5MB 以下にしてください",
@@ -410,8 +410,8 @@
     "saveDraft": "下書き保存",
     "submitting": "送信中...",
     "uploadingButton": "アップロード中...",
-    "submitForReview": "投稿して審査依頼",
-    "updateForReview": "更新して再審査"
+    "submitForReview": "投稿",
+    "updateForReview": "更新"
   },
   "ProjectForm": {
     "imageTooLarge": "画像サイズは 5MB 以下にしてください",
@@ -422,6 +422,7 @@
     "save": "保存",
     "title": "タイトル",
     "description": "説明 (Markdown可)",
+    "descriptionTemplate": "# <プロジェクトタイトル>\n\n## 作り始めた動機\n\n## 何を作ったか\n\n## どうやって作ったか\n\n## 作ったことで得られたインサイトなど",
     "tags": "タグ (カンマ区切り)",
     "appUrl": "アプリのURL (任意)",
     "appUrlPlaceholder": "https://your-app.example.com (CLI / ローカル専用なら空欄でOK)",
@@ -445,8 +446,8 @@
     "uploadingCount": "{count} 件アップロード中...",
     "uploadedCount": "{count} 件アップロードしました",
     "imageUploadFailed": "画像のアップロードに失敗しました",
-    "submitForReview": "投稿して審査依頼",
-    "updateForReview": "更新して再審査"
+    "submitForReview": "投稿",
+    "updateForReview": "更新"
   },
   "QaForm": {
     "imageTooLarge": "画像サイズは 5MB 以下にしてください",

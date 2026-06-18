@@ -13,7 +13,7 @@
     }
   },
   "Header": {
-    "siteName": "JTPA",
+    "siteName": "BayArea - AI",
     "nav": {
       "events": "Events",
       "showcase": "Projects",
@@ -422,6 +422,7 @@
     "save": "Save",
     "title": "Title",
     "description": "Description (Markdown supported)",
+    "descriptionTemplate": "# Title\n\n## Motivation\n\n## What I built\n\n## How I built it\n\n## Insights gained",
     "tags": "Tags (comma-separated)",
     "appUrl": "App URL (optional)",
     "appUrlPlaceholder": "https://your-app.example.com (leave blank for CLI/local-only tools)",

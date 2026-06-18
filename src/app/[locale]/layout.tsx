@@ -101,10 +101,11 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
-      {/* Blocking inline script — runs synchronously during HTML parse, before
-          React hydrates, so the dark class is already present when React reads
-          the DOM. suppressHydrationWarning on <html> covers the className diff.
-          Must stay a plain script (no type="module") to stay synchronous. */}
+      {/* Runs once during HTML parsing (SSR) to apply the dark class before
+          first paint. React 19 won't re-execute it on client navigation — that
+          is intentional; ThemeProvider handles subsequent updates. The React 19
+          "script in component" console warning is informational only and does
+          not affect functionality. */}
       <head>
         <script
           dangerouslySetInnerHTML={{
