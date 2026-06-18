@@ -101,6 +101,17 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
+      {/* Blocking inline script — runs synchronously during HTML parse, before
+          React hydrates, so the dark class is already present when React reads
+          the DOM. suppressHydrationWarning on <html> covers the className diff.
+          Must stay a plain script (no type="module") to stay synchronous. */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('jtpa-theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(m==='dark'||(m!=='light'&&d))document.documentElement.classList.add('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
         // color drift between the two layers — the whole point of also

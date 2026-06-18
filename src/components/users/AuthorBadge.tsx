@@ -14,6 +14,9 @@ interface Props {
   // and a nested anchor would be invalid HTML. Defaults true.
   linkable?: boolean;
   size?: "sm" | "md";
+  // Show the role pill (Admin / Editor / Contributor) next to the name.
+  // Defaults false — only the /u/[uid] profile page should show it.
+  showRole?: boolean;
 }
 
 // Single source of truth for the way a comment/post/project author is
@@ -34,7 +37,7 @@ interface Props {
 // role is denormalized from Auth custom claims on every claim change
 // AND on every sign-in bootstrap, so it stays in sync without per-
 // render Auth lookups.
-export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
+export function AuthorBadge({ profile, linkable = true, size = "sm", showRole = false }: Props) {
   const avatarClass = size === "sm" ? "h-5 w-5" : "h-6 w-6";
   // Intrinsic px size for next/image — matches the h-5/h-6 box above so
   // the optimizer serves a 1x/2x avatar instead of the full upload.
@@ -79,7 +82,7 @@ export function AuthorBadge({ profile, linkable = true, size = "sm" }: Props) {
         </span>
       )}
       <span>{label}</span>
-      {profile?.role && <RolePill role={profile.role} size={size} />}
+      {showRole && profile?.role && <RolePill role={profile.role} size={size} />}
     </>
   );
 

@@ -5,12 +5,14 @@ import Image from "next/image";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   listApprovedProjectsCached,
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
+import { getPublicProfilesByUids } from "@/lib/data/users";
 import type { LocationType } from "@/lib/types";
 import { formatDateTime, stripMarkdown } from "@/lib/utils";
 
@@ -28,6 +30,9 @@ export default async function HomePage() {
     listApprovedProjectsCached(6).catch(() => []),
     getSessionUser(),
   ]);
+  const ownerProfiles = await getPublicProfilesByUids(
+    projects.map((p) => p.ownerUid),
+  ).catch(() => new Map());
   const profileSetupHref = loginHref("/my/profile", locale);
 
   return (
@@ -289,6 +294,12 @@ export default async function HomePage() {
                   )}
                   <div className="flex flex-1 flex-col p-5">
                     <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
+                    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                      <AuthorBadge
+                        profile={ownerProfiles.get(p.ownerUid) ?? null}
+                        linkable={false}
+                      />
+                    </p>
                     <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
                       {stripMarkdown(p.description)}
                     </p>
