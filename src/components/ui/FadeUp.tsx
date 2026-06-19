@@ -130,10 +130,12 @@ export function FadeUp({
   const style: React.CSSProperties = settled
     ? {}
     : {
+        transitionProperty: "opacity, transform",
+        transitionDuration: "600ms",
+        transitionTimingFunction: "ease-out",
         transitionDelay: visible ? `${staggerMs}ms` : "0ms",
         transform: visible ? "translateY(0)" : `translateY(${distance}px)`,
         opacity: visible ? 1 : 0,
-        transition: "opacity 600ms ease-out, transform 600ms ease-out",
         // `will-change` opts the node into a compositor layer so the
         // transition doesn't repaint the surrounding content. The
         // earlier impl stripped this at the moment `visible` became

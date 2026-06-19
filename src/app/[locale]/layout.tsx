@@ -101,6 +101,18 @@ export default async function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-background antialiased`}
       suppressHydrationWarning
     >
+      {/* Runs once during HTML parsing (SSR) to apply the dark class before
+          first paint. React 19 won't re-execute it on client navigation — that
+          is intentional; ThemeProvider handles subsequent updates. The React 19
+          "script in component" console warning is informational only and does
+          not affect functionality. */}
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var m=localStorage.getItem('jtpa-theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(m==='dark'||(m!=='light'&&d))document.documentElement.classList.add('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
         // color drift between the two layers — the whole point of also

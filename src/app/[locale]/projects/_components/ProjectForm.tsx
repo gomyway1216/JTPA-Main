@@ -76,7 +76,9 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   const t = useTranslations("ProjectForm");
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
-  const [description, setDescription] = useState(project?.description ?? "");
+  const [description, setDescription] = useState(
+    project?.description ?? (mode === "create" ? t("descriptionTemplate") : ""),
+  );
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
   const [appUrl, setAppUrl] = useState(project?.appUrl ?? "");
   const [repoUrl, setRepoUrl] = useState(project?.repoUrl ?? "");
