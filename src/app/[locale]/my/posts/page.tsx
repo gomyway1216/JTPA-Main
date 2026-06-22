@@ -137,7 +137,7 @@ export default async function MyPostsPage() {
         id: `poll-${p.id}`,
         type: "poll",
         title: content.title,
-        summary: truncate(content.description, 200),
+        summary: truncate(content.description ?? "", 200),
         status: p.status,
         updatedAt: p.updatedAt,
         editHref: `/poll/${p.slug}/edit`,
@@ -228,8 +228,7 @@ export default async function MyPostsPage() {
                   >
                     {common("edit")}
                   </Link>
-                  {(item.status === "published" ||
-                    item.status === "archived") && (
+                  {item.status === "published" && (
                     <Link
                       href={item.publicHref}
                       className="text-blue-600 hover:underline"
