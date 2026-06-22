@@ -320,11 +320,11 @@
     "statusNotice": "このプロジェクトは現在<strong>{status}</strong>です。一般公開はされておらず、投稿者と管理者のみが閲覧できます。"
   },
   "BlogDetail": {
-    "back": "← 記事一覧",
+    "back": "← みんなの投稿",
     "coverAlt": "{title} のカバー画像"
   },
   "GuideDetail": {
-    "back": "← メモ・ノウハウ",
+    "back": "← みんなの投稿",
     "statusNoticePrefix": "このメモ・ノウハウは現在",
     "statusNoticeSuffix": "状態です。一般公開はされておらず、投稿者と管理者・エディタのみが閲覧できます。",
     "lastUpdated": "最終更新: {date}",
@@ -336,13 +336,13 @@
     }
   },
   "QaDetail": {
-    "back": "← 質問・相談",
+    "back": "← みんなの投稿",
     "archivedNoticePrefix": "この投稿は管理者によって",
     "archived": "アーカイブ",
     "archivedNoticeSuffix": "されています。あなた以外には表示されません。"
   },
   "PollDetail": {
-    "back": "← みんなに聞く",
+    "back": "← みんなの投稿",
     "archivedNoticePrefix": "この投稿は管理者によって",
     "archived": "アーカイブ",
     "archivedNoticeSuffix": "されています。あなた以外には表示されません。"

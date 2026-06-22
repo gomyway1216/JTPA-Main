@@ -94,7 +94,7 @@ export default async function PollDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/poll" className="text-xs text-zinc-500 hover:underline">
+      <Link href="/community" className="text-xs text-zinc-500 hover:underline">
         {t("back")}
       </Link>
 

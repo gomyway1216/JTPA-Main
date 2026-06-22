@@ -320,11 +320,11 @@
     "statusNotice": "This project is currently <strong>{status}</strong> and is only visible to the owner and admins."
   },
   "BlogDetail": {
-    "back": "← Articles",
+    "back": "← Community Posts",
     "coverAlt": "Cover image for {title}"
   },
   "GuideDetail": {
-    "back": "← Notes & Know-how",
+    "back": "← Community Posts",
     "statusNoticePrefix": "This note is currently",
     "statusNoticeSuffix": "and is only visible to the author, admins, and editors.",
     "lastUpdated": "Last updated: {date}",
@@ -336,13 +336,13 @@
     }
   },
   "QaDetail": {
-    "back": "← Questions",
+    "back": "← Community Posts",
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."
   },
   "PollDetail": {
-    "back": "← Ask Everyone",
+    "back": "← Community Posts",
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."

@@ -112,7 +112,7 @@ export default async function BlogPostPage({
         }}
       />
 
-      <Link href="/blog" className="text-xs text-zinc-500 hover:underline">
+      <Link href="/community" className="text-xs text-zinc-500 hover:underline">
         {t("back")}
       </Link>
 
