@@ -400,7 +400,7 @@
     "title": "タイトル",
     "excerpt": "抜粋 (一覧表示用・最大 300 字)",
     "body": "本文 (Markdown)",
-    "localization": "本文の言語",
+    "localization": "言語別本文",
     "locales": {
       "ja": "日本語",
       "en": "English"
@@ -428,7 +428,7 @@
     "title": "タイトル",
     "description": "説明 (Markdown可)",
     "descriptionTemplate": "# <プロジェクトタイトル>\n\n## 作り始めた動機\n\n## 何を作ったか\n\n## どうやって作ったか\n\n## 作ったことで得られたインサイトなど",
-    "localization": "本文の言語",
+    "localization": "言語別本文",
     "locales": {
       "ja": "日本語",
       "en": "English"

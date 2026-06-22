@@ -9,6 +9,7 @@ import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listPublishedPostsForLocaleCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPostContent } from "@/lib/localized-content";
 import { formatDate } from "@/lib/utils";
 
 // Still rendered per request (session-reading layout); the post list
@@ -62,57 +63,60 @@ export default async function BlogIndexPage() {
         />
       ) : (
         <ul className="space-y-4">
-          {posts.map((p, i) => (
-            <FadeUp
-              key={p.id}
-              as="li"
-              delay={i}
-              className={`${interactiveCardClass} relative flex flex-col overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
-            >
-              {p.coverImage?.url && (
-                // Full-width strip on phones, fixed 192px rail from sm:.
-                <Image
-                  src={p.coverImage.url}
-                  alt={common("coverImageAlt", { title: p.title })}
-                  width={1600}
-                  height={900}
-                  sizes="(max-width: 640px) 100vw, 192px"
-                  className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
-                />
-              )}
-              <div className="flex-1 p-5">
-                <h2 className="text-lg font-semibold">
-                  <Link
-                    href={`/blog/${p.slug}`}
-                    className="after:absolute after:inset-0 focus:outline-none"
-                  >
-                    {p.title}
-                  </Link>
-                </h2>
-                <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
-                  {p.publishedAt && <span>· {formatDate(p.publishedAt, locale)}</span>}
-                </p>
-                {p.excerpt && (
-                  <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    {p.excerpt}
+          {posts.map((p, i) => {
+            const content = getLocalizedPostContent(p, locale);
+            return (
+              <FadeUp
+                key={p.id}
+                as="li"
+                delay={i}
+                className={`${interactiveCardClass} relative flex flex-col overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
+              >
+                {p.coverImage?.url && (
+                  // Full-width strip on phones, fixed 192px rail from sm:.
+                  <Image
+                    src={p.coverImage.url}
+                    alt={common("coverImageAlt", { title: content.title })}
+                    width={1600}
+                    height={900}
+                    sizes="(max-width: 640px) 100vw, 192px"
+                    className="h-40 w-full object-cover sm:h-auto sm:w-48 sm:shrink-0"
+                  />
+                )}
+                <div className="flex-1 p-5">
+                  <h2 className="text-lg font-semibold">
+                    <Link
+                      href={`/blog/${p.slug}`}
+                      className="after:absolute after:inset-0 focus:outline-none"
+                    >
+                      {content.title}
+                    </Link>
+                  </h2>
+                  <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                    <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
+                    {p.publishedAt && <span>· {formatDate(p.publishedAt, locale)}</span>}
                   </p>
-                )}
-                {p.tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {p.tags.slice(0, 4).map((t) => (
-                      <span
-                        key={t}
-                        className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                      >
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FadeUp>
-          ))}
+                  {content.excerpt && (
+                    <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
+                      {content.excerpt}
+                    </p>
+                  )}
+                  {p.tags.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1">
+                      {p.tags.slice(0, 4).map((t) => (
+                        <span
+                          key={t}
+                          className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </FadeUp>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -31,13 +31,19 @@ import {
 import { localizedPath } from "@/i18n/paths";
 import {
   CONTENT_LOCALES,
+  preferredContentLocale,
   initialContentLocales,
   normalizeContentLocales,
   type ContentLocale,
 } from "@/lib/content-localization";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
-import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
+import type {
+  LocalizedPostContent,
+  PostDoc,
+  ProjectAsset,
+  SessionUser,
+} from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = [
@@ -78,6 +84,76 @@ function initialPostLocales(
   return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
 }
 
+function emptyPostContent(): LocalizedPostContent {
+  return { title: "", excerpt: "", body: "" };
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
+function emptyPostContentByLocale(): Record<ContentLocale, LocalizedPostContent> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, emptyPostContent()]),
+  ) as Record<ContentLocale, LocalizedPostContent>;
+}
+
+function initialPostContentByLocale(
+  post: PostDoc | undefined,
+): Record<ContentLocale, LocalizedPostContent> {
+  const next = emptyPostContentByLocale();
+  if (!post) return next;
+
+  let hasLocalized = false;
+  for (const locale of CONTENT_LOCALES) {
+    const content = post.localized?.[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: textValue(content.title),
+      excerpt: textValue(content.excerpt),
+      body: textValue(content.body),
+    };
+    hasLocalized = true;
+  }
+
+  if (!hasLocalized) {
+    const fallbackLocale = initialPostLocales(post)[0] ?? CONTENT_LOCALES[0];
+    next[fallbackLocale] = {
+      title: post.title,
+      excerpt: post.excerpt,
+      body: post.body,
+    };
+  }
+
+  return next;
+}
+
+function initialPostActiveLocale(
+  post: PostDoc | undefined,
+  currentLocale: string,
+): ContentLocale {
+  if (!post) {
+    return preferredContentLocale(undefined, currentLocale) ?? CONTENT_LOCALES[0];
+  }
+  const localizedLocales = CONTENT_LOCALES.filter((locale) => {
+    const content = post.localized?.[locale];
+    return Boolean(
+      content &&
+        (hasText(content.title) ||
+          hasText(content.excerpt) ||
+          hasText(content.body)),
+    );
+  });
+  if (localizedLocales.length > 0) {
+    return preferredContentLocale(localizedLocales, currentLocale) ?? localizedLocales[0];
+  }
+  return initialPostLocales(post)[0] ?? CONTENT_LOCALES[0];
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -88,11 +164,13 @@ interface Props {
 export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
   const locale = useLocale();
   const t = useTranslations("PostForm");
-  const [title, setTitle] = useState(post?.title ?? "");
-  const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
-  const [body, setBody] = useState<string>(post?.body ?? "");
-  const [locales, setLocales] = useState<ContentLocale[]>(
-    initialPostLocales(post),
+  const [activeLocale, setActiveLocale] = useState<ContentLocale>(
+    initialPostActiveLocale(post, locale),
+  );
+  const [localizedContent, setLocalizedContent] = useState<
+    Record<ContentLocale, LocalizedPostContent>
+  >(
+    initialPostContentByLocale(post),
   );
   const [tagsInput, setTagsInput] = useState(
     tagsToString(post?.tags ?? []),
@@ -103,6 +181,14 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const activeContent = localizedContent[activeLocale];
+
+  function updateActiveContent(patch: Partial<LocalizedPostContent>) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
+  }
 
   const [colorMode, setColorMode] = useState<"light" | "dark">("light");
   useEffect(() => {
@@ -167,10 +253,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     startTransition(async () => {
       try {
         const payload: PostFormInput = {
-          title,
-          excerpt,
-          body,
-          locales,
+          localized: localizedContent,
           tags: stringToTags(tagsInput),
           coverImage,
           intent,
@@ -191,16 +274,6 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("saveFailed"));
       }
-    });
-  }
-
-  function toggleLocale(value: ContentLocale) {
-    setLocales((cur) => {
-      if (cur.includes(value)) {
-        return cur.length === 1 ? cur : cur.filter((locale) => locale !== value);
-      }
-      const next = new Set([...cur, value]);
-      return CONTENT_LOCALES.filter((locale) => next.has(locale));
     });
   }
 
@@ -237,64 +310,71 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
       }}
       className="space-y-4"
     >
-      <Field label={t("title")} required htmlFor="post-title">
-        <input
-          id="post-title"
-          type="text"
-          required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
-
-      <Field
-        label={t("excerpt")}
-        required
-        htmlFor="post-excerpt"
-      >
-        <textarea
-          id="post-excerpt"
-          required
-          rows={2}
-          maxLength={300}
-          value={excerpt}
-          onChange={(e) => setExcerpt(e.target.value)}
-          className={inputClass}
-        />
-        <p className="mt-1 text-xs text-zinc-500">{excerpt.length} / 300</p>
-      </Field>
-
-      <Field label={t("body")} required>
-        <div data-color-mode={colorMode}>
-          <MDEditor
-            value={body}
-            onChange={(v) => setBody(v ?? "")}
-            height={500}
-            preview="live"
-          />
-        </div>
-      </Field>
-
-      <Field label={t("localization")} required>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-4">
+        <div
+          role="group"
+          aria-label={t("localization")}
+          className="flex flex-wrap gap-2"
+        >
           {CONTENT_LOCALES.map((value) => (
-            <label
+            <button
               key={value}
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+              type="button"
+              aria-pressed={activeLocale === value}
+              disabled={pending || uploading}
+              onClick={() => setActiveLocale(value)}
+              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                activeLocale === value
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              }`}
             >
-              <input
-                type="checkbox"
-                checked={locales.includes(value)}
-                disabled={pending || uploading}
-                onChange={() => toggleLocale(value)}
-                className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700"
-              />
-              <span>{t(`locales.${value}`)}</span>
-            </label>
+              {t(`locales.${value}`)}
+            </button>
           ))}
         </div>
-      </Field>
+
+        <Field label={t("title")} required htmlFor={`post-title-${activeLocale}`}>
+          <input
+            id={`post-title-${activeLocale}`}
+            type="text"
+            required
+            value={activeContent.title}
+            onChange={(e) => updateActiveContent({ title: e.target.value })}
+            className={inputClass}
+          />
+        </Field>
+
+        <Field
+          label={t("excerpt")}
+          required
+          htmlFor={`post-excerpt-${activeLocale}`}
+        >
+          <textarea
+            id={`post-excerpt-${activeLocale}`}
+            rows={2}
+            maxLength={300}
+            required
+            value={activeContent.excerpt}
+            onChange={(e) => updateActiveContent({ excerpt: e.target.value })}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-zinc-500">
+            {activeContent.excerpt.length} / 300
+          </p>
+        </Field>
+
+        <Field label={t("body")} required>
+          <div data-color-mode={colorMode}>
+            <MDEditor
+              value={activeContent.body}
+              onChange={(v) => updateActiveContent({ body: v ?? "" })}
+              height={500}
+              preview="live"
+            />
+          </div>
+        </Field>
+      </div>
 
       <Field label={t("tags")} htmlFor="post-tags">
         <input

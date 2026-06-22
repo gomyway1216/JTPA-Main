@@ -149,8 +149,9 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 |---|---|---|
 | `slug` | string | Unique |
 | `ownerUid`, `ownerName` | string | |
-| `title`, `description` | string | |
+| `title`, `description` | string | Fallback / primary localized content, kept for legacy readers |
 | `locales?` | string[] | App locales the project has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
+| `localized?` | object | Per-locale project content, e.g. `{ ja: { title, description }, en: { title, description } }` |
 | `tags` | string[] | Max 10 |
 | `appUrl` | string | Required |
 | `repoUrl`, `demoVideoUrl` | string? | Optional |
@@ -195,9 +196,10 @@ Community blog entries. Members can submit posts; admins approve before public r
 | Field | Type | Notes |
 |---|---|---|
 | `slug` | string | Unique URL slug |
-| `title`, `excerpt` | string | Excerpt shown on the list view |
-| `body` | string | Markdown source, rendered via `MarkdownBody` |
+| `title`, `excerpt` | string | Fallback / primary localized content. Excerpt is shown on the list view |
+| `body` | string | Fallback / primary Markdown source, rendered via `MarkdownBody` |
 | `locales?` | string[] | App locales the post has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
+| `localized?` | object | Per-locale post content, e.g. `{ ja: { title, excerpt, body }, en: { title, excerpt, body } }` |
 | `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
 | `tags` | string[] | Up to 8 |
 | `authorUid`, `authorName` | string | Denormalized from auth |
@@ -418,9 +420,9 @@ Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules
 
 Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
 - `events`: `status + startAt` (both directions), `status + endAt` (both directions)
-- `projects`: `status + submittedAt DESC`, `status + locales ARRAY_CONTAINS + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
+- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
 - `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`
-- `posts`: `status + publishedAt DESC`, `status + locales ARRAY_CONTAINS + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
+- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `guides`: `status + order + updatedAt`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `polls`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`

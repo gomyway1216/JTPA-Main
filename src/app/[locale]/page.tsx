@@ -13,6 +13,7 @@ import {
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedProjectContent } from "@/lib/localized-content";
 import type { LocationType } from "@/lib/types";
 import { formatDateTime, stripMarkdown } from "@/lib/utils";
 
@@ -276,49 +277,54 @@ export default async function HomePage() {
           />
         ) : (
           <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map((p, i) => (
-              <FadeUp key={p.id} as="li" delay={i} className="flex">
-                <Link
-                  href={`/showcase/${p.slug}`}
-                  className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
-                >
-                  {p.thumbnail?.url && (
-                    <Image
-                      src={p.thumbnail.url}
-                      alt={common("thumbnailAlt", { title: p.title })}
-                      width={1600}
-                      height={900}
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      className="aspect-[16/9] w-full object-cover"
-                    />
-                  )}
-                  <div className="flex flex-1 flex-col p-5">
-                    <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                      <AuthorBadge
-                        profile={ownerProfiles.get(p.ownerUid) ?? null}
-                        linkable={false}
+            {projects.map((p, i) => {
+              const content = getLocalizedProjectContent(p, locale);
+              return (
+                <FadeUp key={p.id} as="li" delay={i} className="flex">
+                  <Link
+                    href={`/showcase/${p.slug}`}
+                    className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
+                  >
+                    {p.thumbnail?.url && (
+                      <Image
+                        src={p.thumbnail.url}
+                        alt={common("thumbnailAlt", { title: content.title })}
+                        width={1600}
+                        height={900}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="aspect-[16/9] w-full object-cover"
                       />
-                    </p>
-                    <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
-                      {stripMarkdown(p.description)}
-                    </p>
-                    {p.tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1">
-                        {p.tags.slice(0, 4).map((t) => (
-                          <span
-                            key={t}
-                            className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                          >
-                            {t}
-                          </span>
-                        ))}
-                      </div>
                     )}
-                  </div>
-                </Link>
-              </FadeUp>
-            ))}
+                    <div className="flex flex-1 flex-col p-5">
+                      <h3 className="line-clamp-2 text-lg font-semibold">
+                        {content.title}
+                      </h3>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                        <AuthorBadge
+                          profile={ownerProfiles.get(p.ownerUid) ?? null}
+                          linkable={false}
+                        />
+                      </p>
+                      <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        {stripMarkdown(content.description)}
+                      </p>
+                      {p.tags.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1">
+                          {p.tags.slice(0, 4).map((t) => (
+                            <span
+                              key={t}
+                              className="rounded bg-zinc-100 px-2 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                </FadeUp>
+              );
+            })}
           </ul>
         )}
       </FadeUp>

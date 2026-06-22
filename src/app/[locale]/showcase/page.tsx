@@ -8,6 +8,7 @@ import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listApprovedProjectsForLocaleCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedProjectContent } from "@/lib/localized-content";
 import { stripMarkdown } from "@/lib/utils";
 
 // Per-request render (session-reading layout); the approved-project list
@@ -58,6 +59,7 @@ export default async function ShowcasePage() {
       ) : (
         <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {projects.map((p, i) => {
+            const content = getLocalizedProjectContent(p, locale);
             // Cover image. Falls back to the first screenshot when the
             // submitter didn't upload a dedicated thumbnail.
             const cover = p.thumbnail?.url || p.screenshots?.[0]?.url;
@@ -70,7 +72,7 @@ export default async function ShowcasePage() {
                   {cover && (
                     <Image
                       src={cover}
-                      alt={common("coverImageAlt", { title: p.title })}
+                      alt={common("coverImageAlt", { title: content.title })}
                       width={1600}
                       height={900}
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -78,7 +80,7 @@ export default async function ShowcasePage() {
                     />
                   )}
                   <div className="flex flex-1 flex-col p-5">
-                    <h3 className="line-clamp-2 text-lg font-semibold">{p.title}</h3>
+                    <h3 className="line-clamp-2 text-lg font-semibold">{content.title}</h3>
                     {/*
                       AuthorBadge instead of a hand-rolled `by @username`
                       so role pills (Admin / Editor / Contributor) and
@@ -95,7 +97,7 @@ export default async function ShowcasePage() {
                       />
                     </p>
                     <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                      {stripMarkdown(p.description)}
+                      {stripMarkdown(content.description)}
                     </p>
                     {p.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">

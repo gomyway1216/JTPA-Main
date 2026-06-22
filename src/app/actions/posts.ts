@@ -18,12 +18,20 @@ import { requireAdmin, requireUser } from "@/lib/auth/session";
 import {
   CONTENT_LOCALES,
   DEFAULT_CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
 } from "@/lib/content-localization";
 import { POSTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
-import type { PostDoc, PostStatus, ProjectAsset } from "@/lib/types";
+import type {
+  LocalizedContentMap,
+  LocalizedPostContent,
+  PostDoc,
+  PostStatus,
+  ProjectAsset,
+} from "@/lib/types";
 
 const AssetSchema = z.object({
   path: z.string().min(1),
@@ -35,19 +43,126 @@ const AssetSchema = z.object({
 // `publishPost` / `decidePost` actions for the rest.
 const SubmitIntent = z.enum(["draft", "pending"]);
 
+const PostLocalizedContentInputSchema = z.object({
+  title: z.string().max(200).default(""),
+  excerpt: z.string().max(300).default(""),
+  body: z.string().max(50_000).default(""),
+});
+
+const LocalizedPostInputSchema = z.object({
+  ja: PostLocalizedContentInputSchema.optional(),
+  en: PostLocalizedContentInputSchema.optional(),
+}).default({});
+
+function hasAnyPostContent(content: LocalizedPostContent): boolean {
+  return Boolean(
+    content.title.trim() ||
+      content.excerpt.trim() ||
+      content.body.trim(),
+  );
+}
+
+function validatePostContent(
+  content: LocalizedPostContent,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): boolean {
+  let ok = true;
+  if (content.title.trim().length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "title"],
+      message: "Title must be at least 2 characters.",
+    });
+    ok = false;
+  }
+  if (!content.excerpt.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "excerpt"],
+      message: "Excerpt is required.",
+    });
+    ok = false;
+  }
+  if (!content.body.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "body"],
+      message: "Body is required.",
+    });
+    ok = false;
+  }
+  return ok;
+}
+
 const PostInputSchema = z.object({
-  title: z.string().min(2).max(200),
-  excerpt: z.string().min(1).max(300),
-  body: z.string().min(1).max(50_000),
+  title: z.string().max(200).optional(),
+  excerpt: z.string().max(300).optional(),
+  body: z.string().max(50_000).optional(),
+  localized: LocalizedPostInputSchema,
   locales: z
     .array(z.enum(CONTENT_LOCALES))
     .min(1)
     .max(CONTENT_LOCALES.length)
-    .default([...DEFAULT_CONTENT_LOCALES])
-    .transform((locales) => [...new Set(locales)]),
+    .optional()
+    .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
   tags: z.array(z.string().min(1).max(30)).max(8).default([]),
   coverImage: AssetSchema.optional(),
   intent: SubmitIntent.default("pending"),
+}).transform((input, ctx) => {
+  const localized: LocalizedContentMap<LocalizedPostContent> = {};
+  const locales: ContentLocale[] = [];
+  let sawContent = false;
+
+  for (const locale of CONTENT_LOCALES) {
+    const content = input.localized[locale] ?? {
+      title: "",
+      excerpt: "",
+      body: "",
+    };
+    if (!hasAnyPostContent(content)) continue;
+    sawContent = true;
+    if (!validatePostContent(content, ctx, ["localized", locale])) continue;
+    localized[locale] = content;
+    locales.push(locale);
+  }
+
+  const legacyContent = {
+    title: input.title ?? "",
+    excerpt: input.excerpt ?? "",
+    body: input.body ?? "",
+  };
+  if (locales.length === 0 && hasAnyPostContent(legacyContent)) {
+    sawContent = true;
+    if (validatePostContent(legacyContent, ctx, [])) {
+      const legacyLocale =
+        normalizeContentLocales(input.locales)[0] ?? DEFAULT_CONTENT_LOCALES[0];
+      localized[legacyLocale] = legacyContent;
+      locales.push(legacyLocale);
+    }
+  }
+
+  if (!sawContent) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["localized"],
+      message: "Enter content for at least one language.",
+    });
+  }
+
+  const primary = localized[locales[0]] ?? {
+    title: "",
+    excerpt: "",
+    body: "",
+  };
+  return {
+    ...input,
+    title: primary.title,
+    excerpt: primary.excerpt,
+    body: primary.body,
+    locales,
+    localized,
+  };
 });
 
 export type PostFormInput = z.input<typeof PostInputSchema>;
@@ -107,6 +222,7 @@ export async function submitPost(
     excerpt: parsed.excerpt,
     body: parsed.body,
     locales: parsed.locales,
+    localized: parsed.localized,
     coverImage: parsed.coverImage,
     tags: parsed.tags,
     authorUid: user.uid,
@@ -174,6 +290,7 @@ export async function updateMyPost(
     excerpt: parsed.excerpt,
     body: parsed.body,
     locales: parsed.locales,
+    localized: parsed.localized,
     coverImage: parsed.coverImage ?? FieldValue.delete(),
     tags: parsed.tags,
     status: nextStatus,

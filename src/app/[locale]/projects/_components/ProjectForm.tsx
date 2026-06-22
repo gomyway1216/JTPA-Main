@@ -7,7 +7,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { RefMDEditor } from "@uiw/react-md-editor";
@@ -33,11 +33,17 @@ import {
   CONTENT_LOCALES,
   initialContentLocales,
   normalizeContentLocales,
+  preferredContentLocale,
   type ContentLocale,
 } from "@/lib/content-localization";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
-import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
+import type {
+  LocalizedProjectContent,
+  ProjectAsset,
+  ProjectDoc,
+  SessionUser,
+} from "@/lib/types";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // matches storage.rules
 const MAX_SCREENSHOTS = 8;
@@ -79,6 +85,80 @@ function initialProjectLocales(
   return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
 }
 
+function emptyProjectContent(): LocalizedProjectContent {
+  return { title: "", description: "" };
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
+function emptyProjectContentByLocale(): Record<
+  ContentLocale,
+  LocalizedProjectContent
+> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, emptyProjectContent()]),
+  ) as Record<ContentLocale, LocalizedProjectContent>;
+}
+
+function initialProjectContentByLocale(
+  project: ProjectDoc | undefined,
+  initialLocale: ContentLocale,
+  descriptionTemplate: string,
+): Record<ContentLocale, LocalizedProjectContent> {
+  const next = emptyProjectContentByLocale();
+  if (!project) {
+    next[initialLocale] = { title: "", description: descriptionTemplate };
+    return next;
+  }
+
+  let hasLocalized = false;
+  for (const locale of CONTENT_LOCALES) {
+    const content = project.localized?.[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: textValue(content.title),
+      description: textValue(content.description),
+    };
+    hasLocalized = true;
+  }
+
+  if (!hasLocalized) {
+    const fallbackLocale = initialProjectLocales(project)[0] ?? CONTENT_LOCALES[0];
+    next[fallbackLocale] = {
+      title: project.title,
+      description: project.description,
+    };
+  }
+
+  return next;
+}
+
+function initialProjectActiveLocale(
+  project: ProjectDoc | undefined,
+  currentLocale: string,
+): ContentLocale {
+  if (!project) {
+    return preferredContentLocale(undefined, currentLocale) ?? CONTENT_LOCALES[0];
+  }
+  const localizedLocales = CONTENT_LOCALES.filter((locale) => {
+    const content = project.localized?.[locale];
+    return Boolean(
+      content &&
+        (hasText(content.title) || hasText(content.description)),
+    );
+  });
+  if (localizedLocales.length > 0) {
+    return preferredContentLocale(localizedLocales, currentLocale) ?? localizedLocales[0];
+  }
+  return initialProjectLocales(project)[0] ?? CONTENT_LOCALES[0];
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -87,14 +167,20 @@ interface Props {
 }
 
 export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
+  const locale = useLocale();
   const t = useTranslations("ProjectForm");
   const router = useRouter();
-  const [title, setTitle] = useState(project?.title ?? "");
-  const [description, setDescription] = useState(
-    project?.description ?? (mode === "create" ? t("descriptionTemplate") : ""),
+  const [activeLocale, setActiveLocale] = useState<ContentLocale>(
+    initialProjectActiveLocale(project, locale),
   );
-  const [locales, setLocales] = useState<ContentLocale[]>(
-    initialProjectLocales(project),
+  const [localizedContent, setLocalizedContent] = useState<
+    Record<ContentLocale, LocalizedProjectContent>
+  >(
+    initialProjectContentByLocale(
+      project,
+      activeLocale,
+      mode === "create" ? t("descriptionTemplate") : "",
+    ),
   );
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
   const [appUrl, setAppUrl] = useState(project?.appUrl ?? "");
@@ -117,6 +203,24 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const editorRef = useRef<RefMDEditor | null>(null);
   const uploadingRef = useRef(false);
+  const activeContent = localizedContent[activeLocale];
+
+  function updateActiveContent(patch: Partial<LocalizedProjectContent>) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
+  }
+
+  function updateActiveDescription(updater: (prev: string) => string) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: {
+        ...cur[activeLocale],
+        description: updater(cur[activeLocale].description),
+      },
+    }));
+  }
 
   const [colorMode, setColorMode] = useState<"light" | "dark">("light");
   useEffect(() => {
@@ -214,7 +318,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     const cursorEnd = ta?.selectionEnd ?? null;
 
     if (ta && cursorStart !== null && cursorEnd !== null) {
-      setDescription((prev) => {
+      updateActiveDescription((prev) => {
         const s = Math.min(cursorStart, prev.length);
         const e = Math.min(cursorEnd, prev.length);
         return prev.slice(0, s) + block + prev.slice(e);
@@ -228,7 +332,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
       return;
     }
 
-    setDescription(
+    updateActiveDescription(
       (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
     );
   }
@@ -317,9 +421,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     startTransition(async () => {
       try {
         const payload = {
-          title,
-          description,
-          locales,
+          localized: localizedContent,
           tags: tags
             .split(",")
             .map((t) => t.trim())
@@ -349,16 +451,6 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     });
   }
 
-  function toggleLocale(value: ContentLocale) {
-    setLocales((cur) => {
-      if (cur.includes(value)) {
-        return cur.length === 1 ? cur : cur.filter((locale) => locale !== value);
-      }
-      const next = new Set([...cur, value]);
-      return CONTENT_LOCALES.filter((locale) => next.has(locale));
-    });
-  }
-
   async function handleDelete() {
     if (!project) return;
     if (!confirm(t("deleteConfirm"))) return;
@@ -385,16 +477,44 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label={t("title")} required htmlFor="project-title">
-        <input
-          id="project-title"
-          type="text"
+      <div className="space-y-4">
+        <div
+          role="group"
+          aria-label={t("localization")}
+          className="flex flex-wrap gap-2"
+        >
+          {CONTENT_LOCALES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={activeLocale === value}
+              disabled={pending || deletePending || uploading}
+              onClick={() => setActiveLocale(value)}
+              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                activeLocale === value
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              }`}
+            >
+              {t(`locales.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <Field
+          label={t("title")}
           required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
+          htmlFor={`project-title-${activeLocale}`}
+        >
+          <input
+            id={`project-title-${activeLocale}`}
+            type="text"
+            required
+            value={activeContent.title}
+            onChange={(e) => updateActiveContent({ title: e.target.value })}
+            className={inputClass}
+          />
+        </Field>
       <Field label={t("description")} required>
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -445,33 +565,17 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
           >
             <MDEditor
               ref={editorRef}
-              value={description}
-              onChange={(v) => setDescription(v ?? "")}
+              value={activeContent.description}
+              onChange={(v) =>
+                updateActiveContent({ description: v ?? "" })
+              }
               height={360}
               preview="live"
             />
           </div>
         </div>
       </Field>
-      <Field label={t("localization")} required>
-        <div className="flex flex-wrap gap-2">
-          {CONTENT_LOCALES.map((value) => (
-            <label
-              key={value}
-              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
-            >
-              <input
-                type="checkbox"
-                checked={locales.includes(value)}
-                disabled={pending || deletePending || uploading}
-                onChange={() => toggleLocale(value)}
-                className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700"
-              />
-              <span>{t(`locales.${value}`)}</span>
-            </label>
-          ))}
-        </div>
-      </Field>
+      </div>
       <Field label={t("tags")} htmlFor="project-tags">
         <input
           id="project-tags"
