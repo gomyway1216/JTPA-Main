@@ -114,7 +114,7 @@ const GuideInputSchema = z
       .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
     tags: z.array(z.string().min(1).max(40)).max(20).default([]),
     status: StatusInputSchema,
-    order: z.coerce.number().int().min(0).max(99999).default(100),
+    order: optionalNonEmpty(z.coerce.number().int().min(0).max(99999)),
   })
   .transform((input, ctx) => {
     const localized: LocalizedContentMap<LocalizedGuideContent> = {};
@@ -342,10 +342,14 @@ export async function submitGuide(
   const resolvedStatus = resolveStatus(user, parsed.status);
   const isCurator = hasCuratorAccess(user);
 
-  // `optionalNonEmpty` uses `z.preprocess` which widens the inferred
-  // type to `unknown` — cast through the explicit shape so the result
-  // type stays narrow downstream (revalidate, payload, etc).
-  const requestedSlug = parsed.slug as string | undefined;
+  // Slug is a curator-only override. Public authoring routes always use
+  // generated URLs, and crafted non-curator payloads are ignored here.
+  // `optionalNonEmpty` uses `z.preprocess` which widens the inferred type
+  // to `unknown` — cast through the explicit shape so the result type stays
+  // narrow downstream (revalidate, payload, etc).
+  const requestedSlug = isCurator
+    ? (parsed.slug as string | undefined)
+    : undefined;
   const slug: string =
     requestedSlug ??
     (await findUniqueSlug("guides", parsed.title, { prefix: "guide" }));
@@ -364,7 +368,9 @@ export async function submitGuide(
   // non-admin/editor users, but a crafted client payload could
   // otherwise let a contributor pin their guide to the top of the
   // public list with `order: 0`. Force the default for non-curators.
-  const resolvedOrder = isCurator ? parsed.order : DEFAULT_GUIDE_ORDER;
+  const resolvedOrder = isCurator
+    ? (parsed.order ?? DEFAULT_GUIDE_ORDER)
+    : DEFAULT_GUIDE_ORDER;
 
   const now = Timestamp.now();
   const author = authorRef(user);
@@ -485,9 +491,12 @@ export async function updateGuide(
     return { ok: false, error: await actionError("guideEditForbidden") };
   }
 
-  // Same `unknown`-widening hazard from `optionalNonEmpty` as in
-  // `submitGuide` above — narrow once for the rest of the function.
-  const requestedSlug = parsed.slug as string | undefined;
+  // Slug remains a curator-only override on edit. Same `unknown`-widening
+  // hazard from `optionalNonEmpty` as in `submitGuide` above — narrow once
+  // for the rest of the function.
+  const requestedSlug = isCurator
+    ? (parsed.slug as string | undefined)
+    : undefined;
   if (requestedSlug && requestedSlug !== cur.slug) {
     const conflict = await adminDb()
       .collection("guides")
@@ -514,7 +523,7 @@ export async function updateGuide(
   // field) so a crafted contributor payload can't reorder the public
   // guide list — matches the `order` clamp in submitGuide.
   const resolvedOrder = isCurator
-    ? parsed.order
+    ? (parsed.order ?? cur.order ?? DEFAULT_GUIDE_ORDER)
     : (cur.order ?? DEFAULT_GUIDE_ORDER);
 
   // When an admin/editor approves a community submission directly from
