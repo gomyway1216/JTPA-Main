@@ -6,6 +6,7 @@ import { collection, doc } from "firebase/firestore";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import type { RefMDEditor } from "@uiw/react-md-editor";
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
@@ -35,6 +36,7 @@ import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
   GUIDE_IMAGE_LABEL,
+  GUIDE_IMAGE_TYPES,
   MAX_GUIDE_IMAGE_BYTES,
   uploadQaImage,
 } from "@/lib/firebase/uploads";
@@ -60,6 +62,11 @@ function stringToTags(s: string): string[] {
 }
 function tagsToString(tags: string[]): string {
   return tags.join(", ");
+}
+
+function pickImageFiles(files: FileList | File[]): File[] {
+  const allow = GUIDE_IMAGE_TYPES as readonly string[];
+  return Array.from(files).filter((f) => allow.includes(f.type));
 }
 
 function initialQaLocales(qa: QaDoc | undefined): ContentLocale[] {
@@ -138,6 +145,10 @@ function initialQaActiveLocale(
   return initialQaLocales(qa)[0] ?? CONTENT_LOCALES[0];
 }
 
+function escapeAlt(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -164,6 +175,8 @@ export function QaForm({ mode, user, qa }: Props) {
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadInfo, setUploadInfo] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [pending, startTransition] = useTransition();
   const activeContent = localizedContent[activeLocale];
 
@@ -208,40 +221,123 @@ export function QaForm({ mode, user, qa }: Props) {
   }, []);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const editorRef = useRef<RefMDEditor | null>(null);
+  const uploadingRef = useRef(false);
 
-  async function handleImagePick(e: React.ChangeEvent<HTMLInputElement>) {
-    setError(null);
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const uploadLocale = activeLocale;
-    if (file.size > MAX_GUIDE_IMAGE_BYTES) {
-      setError(t("imageTooLarge"));
-      e.target.value = "";
+  async function uploadAndInsert(files: File[]) {
+    if (files.length === 0) return;
+    if (uploadingRef.current) {
+      setError(t("waitForUpload"));
       return;
     }
-    setUploading(true);
-    try {
-      const url = await uploadQaImage(
-        qaId,
-        user.uid,
-        file,
-        imageUploadMessages,
-      );
-      const alt = file.name.replace(/\.[^.]+$/, "");
-      // Append the image link at the end of the body. Simpler than the
-      // GuideForm caret-aware insertion — Q&A bodies tend to be short
-      // and the user can rearrange afterwards.
-      updateBodyForLocale(
-        uploadLocale,
-        (prev) =>
-          `${prev}${prev && !prev.endsWith("\n") ? "\n\n" : ""}![${alt}](${url})\n`,
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("uploadFailed"));
-    } finally {
-      setUploading(false);
-      e.target.value = "";
+    if (files.some((file) => file.size > MAX_GUIDE_IMAGE_BYTES)) {
+      setError(t("imageTooLarge"));
+      return;
     }
+    const uploadLocale = activeLocale;
+    uploadingRef.current = true;
+    setError(null);
+    setUploading(true);
+    setUploadInfo(t("uploadingCount", { count: files.length }));
+
+    const ta = editorRef.current?.textarea ?? null;
+    const cursorStart = ta?.selectionStart ?? null;
+    const cursorEnd = ta?.selectionEnd ?? null;
+
+    try {
+      const results = await Promise.allSettled(
+        files.map(async (file) => {
+          const url = await uploadQaImage(
+            qaId,
+            user.uid,
+            file,
+            imageUploadMessages,
+          );
+          const altRaw = file.name.replace(/\.[^.]+$/, "");
+          return `\n![${escapeAlt(altRaw)}](${url})\n`;
+        }),
+      );
+      const inserts = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
+      const block = inserts.join("");
+
+      if (block) {
+        if (ta && cursorStart !== null && cursorEnd !== null) {
+          updateBodyForLocale(uploadLocale, (prev) => {
+            const s = Math.min(cursorStart, prev.length);
+            const e = Math.min(cursorEnd, prev.length);
+            return prev.slice(0, s) + block + prev.slice(e);
+          });
+          requestAnimationFrame(() => {
+            ta.focus();
+            const safeStart = Math.min(cursorStart, ta.value.length);
+            const pos = safeStart + block.length;
+            ta.setSelectionRange(pos, pos);
+          });
+        } else {
+          updateBodyForLocale(
+            uploadLocale,
+            (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+          );
+        }
+      }
+
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) {
+        const reason = failed.reason;
+        setError(
+          reason instanceof Error ? reason.message : t("imageUploadFailed"),
+        );
+      }
+      setUploadInfo(
+        inserts.length > 0
+          ? t("uploadedCount", { count: inserts.length })
+          : null,
+      );
+      if (inserts.length > 0) {
+        setTimeout(() => setUploadInfo(null), 3000);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("imageUploadFailed"));
+      setUploadInfo(null);
+    } finally {
+      uploadingRef.current = false;
+      setUploading(false);
+    }
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    uploadAndInsert(pickImageFiles(files));
+    e.target.value = "";
+  }
+
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    const imgs = pickImageFiles(files);
+    if (imgs.length === 0) return;
+    uploadAndInsert(imgs);
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === "file") {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    const imgs = pickImageFiles(files);
+    if (imgs.length === 0) return;
+    e.preventDefault();
+    uploadAndInsert(imgs);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -345,31 +441,55 @@ export function QaForm({ mode, user, qa }: Props) {
 
       <Field label={t("body")} required>
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={pending || uploading}
               className={secondaryButtonClassSm}
             >
-              {uploading ? t("uploading") : `📷 ${t("addImage")}`}
+              {uploading ? t("uploading") : `📷 ${t("uploadImage")}`}
             </button>
             <span className="text-xs text-zinc-500">
-              {t("imageHint", { types: GUIDE_IMAGE_LABEL })}
+              {t("imageHint", {
+                types: GUIDE_IMAGE_LABEL,
+                size: MAX_GUIDE_IMAGE_BYTES / 1024 / 1024,
+              })}
             </span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={GUIDE_IMAGE_ACCEPT}
-              onChange={handleImagePick}
-              className="hidden"
-            />
+            {uploadInfo && (
+              <span className="text-xs text-emerald-700 dark:text-emerald-300">
+                {uploadInfo}
+              </span>
+            )}
           </div>
-          <div data-color-mode={colorMode}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={GUIDE_IMAGE_ACCEPT}
+            multiple
+            hidden
+            onChange={handleFileInputChange}
+          />
+          <div
+            data-color-mode={colorMode}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!isDragging) setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+            className={
+              isDragging
+                ? "rounded outline-2 outline-dashed outline-blue-400"
+                : undefined
+            }
+          >
             <MDEditor
+              ref={editorRef}
               value={activeContent.body}
               onChange={(v) => updateActiveContent({ body: v ?? "" })}
-              height={400}
+              height={500}
               preview="live"
             />
           </div>

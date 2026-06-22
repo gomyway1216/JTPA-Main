@@ -36,7 +36,7 @@ export default async function EditQaPage({
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 space-y-6">
+    <div className="mx-auto max-w-6xl px-4 py-10 space-y-4">
       <header>
         <h1 className="text-2xl font-bold">{t("qa")}</h1>
       </header>
