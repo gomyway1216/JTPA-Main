@@ -193,6 +193,7 @@
       "blog": "Article"
     },
     "showing": "Showing {filtered} of {total}",
+    "showingCompact": "{filtered} / {total}",
     "empty": "No community posts yet.",
     "emptyHint": "Start with something you tried, something you are stuck on, or a small discovery.",
     "noMatches": "No posts in this category yet.",
