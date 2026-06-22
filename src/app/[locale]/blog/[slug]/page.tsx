@@ -113,7 +113,7 @@ export default async function BlogPostPage({
       />
 
       <Link href="/community" className="text-xs text-zinc-500 hover:underline">
-        {t("back")}
+        {common("backToCommunity")}
       </Link>
 
       <header className="space-y-3">
