@@ -230,6 +230,10 @@ export function QaForm({ mode, user, qa }: Props) {
       setError(t("waitForUpload"));
       return;
     }
+    if (files.some((file) => file.size > MAX_GUIDE_IMAGE_BYTES)) {
+      setError(t("imageTooLarge"));
+      return;
+    }
     const uploadLocale = activeLocale;
     uploadingRef.current = true;
     setError(null);
@@ -241,40 +245,59 @@ export function QaForm({ mode, user, qa }: Props) {
     const cursorEnd = ta?.selectionEnd ?? null;
 
     try {
-      const inserts: string[] = [];
-      for (const file of files) {
-        const url = await uploadQaImage(
-          qaId,
-          user.uid,
-          file,
-          imageUploadMessages,
-        );
-        const altRaw = file.name.replace(/\.[^.]+$/, "");
-        inserts.push(`\n![${escapeAlt(altRaw)}](${url})\n`);
-      }
+      const results = await Promise.allSettled(
+        files.map(async (file) => {
+          const url = await uploadQaImage(
+            qaId,
+            user.uid,
+            file,
+            imageUploadMessages,
+          );
+          const altRaw = file.name.replace(/\.[^.]+$/, "");
+          return `\n![${escapeAlt(altRaw)}](${url})\n`;
+        }),
+      );
+      const inserts = results.flatMap((result) =>
+        result.status === "fulfilled" ? [result.value] : [],
+      );
       const block = inserts.join("");
 
-      if (ta && cursorStart !== null && cursorEnd !== null) {
-        updateBodyForLocale(uploadLocale, (prev) => {
-          const s = Math.min(cursorStart, prev.length);
-          const e = Math.min(cursorEnd, prev.length);
-          return prev.slice(0, s) + block + prev.slice(e);
-        });
-        requestAnimationFrame(() => {
-          ta.focus();
-          const safeStart = Math.min(cursorStart, ta.value.length);
-          const pos = safeStart + block.length;
-          ta.setSelectionRange(pos, pos);
-        });
-      } else {
-        updateBodyForLocale(
-          uploadLocale,
-          (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
-        );
+      if (block) {
+        if (ta && cursorStart !== null && cursorEnd !== null) {
+          updateBodyForLocale(uploadLocale, (prev) => {
+            const s = Math.min(cursorStart, prev.length);
+            const e = Math.min(cursorEnd, prev.length);
+            return prev.slice(0, s) + block + prev.slice(e);
+          });
+          requestAnimationFrame(() => {
+            ta.focus();
+            const safeStart = Math.min(cursorStart, ta.value.length);
+            const pos = safeStart + block.length;
+            ta.setSelectionRange(pos, pos);
+          });
+        } else {
+          updateBodyForLocale(
+            uploadLocale,
+            (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+          );
+        }
       }
 
-      setUploadInfo(t("uploadedCount", { count: files.length }));
-      setTimeout(() => setUploadInfo(null), 3000);
+      const failed = results.find((result) => result.status === "rejected");
+      if (failed) {
+        const reason = failed.reason;
+        setError(
+          reason instanceof Error ? reason.message : t("imageUploadFailed"),
+        );
+      }
+      setUploadInfo(
+        inserts.length > 0
+          ? t("uploadedCount", { count: inserts.length })
+          : null,
+      );
+      if (inserts.length > 0) {
+        setTimeout(() => setUploadInfo(null), 3000);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("imageUploadFailed"));
       setUploadInfo(null);
