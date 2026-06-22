@@ -11,6 +11,7 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getMyPollVote, getPollBySlug } from "@/lib/data/poll";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPollContent } from "@/lib/localized-content";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,15 +22,19 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const poll = await getPollBySlug(slug).catch(() => null);
+  const [locale, poll] = await Promise.all([
+    getLocale(),
+    getPollBySlug(slug).catch(() => null),
+  ]);
   if (!poll || poll.status !== "published") return {};
-  const description = poll.description
-    ? truncate(poll.description, 160)
-    : `${poll.options.map((o) => o.label).join(" / ")}`;
+  const content = getLocalizedPollContent(poll, locale);
+  const description = content.description
+    ? truncate(content.description, 160)
+    : `${content.options.map((o) => o.label).join(" / ")}`;
   return {
-    title: poll.title,
+    title: content.title,
     description,
-    openGraph: { title: poll.title, description },
+    openGraph: { title: content.title, description },
   };
 }
 
@@ -85,6 +90,7 @@ export default async function PollDetailPage({
 
   const canEdit = isAuthorOrAdmin;
   const initialSelectedIds = myVote?.optionIds ?? [];
+  const content = getLocalizedPollContent(poll, locale);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -100,7 +106,7 @@ export default async function PollDetailPage({
       )}
 
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">{poll.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
             profile={profilesByUid.get(poll.authorUid) ?? null}
@@ -129,9 +135,9 @@ export default async function PollDetailPage({
         </div>
       </header>
 
-      {poll.description && (
+      {content.description && (
         <p className="whitespace-pre-wrap text-sm text-zinc-700 dark:text-zinc-300">
-          {poll.description}
+          {content.description}
         </p>
       )}
 
@@ -151,7 +157,7 @@ export default async function PollDetailPage({
         key={`vote-${poll.id}`}
         pollId={poll.id}
         pollSlug={poll.slug}
-        initialOptions={poll.options}
+        initialOptions={content.options}
         initialSelectedIds={initialSelectedIds}
         initialVoterCount={poll.voterCount ?? 0}
         user={user}

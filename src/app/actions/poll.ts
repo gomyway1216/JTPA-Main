@@ -7,10 +7,18 @@ import { revalidatePath } from "next/cache";
 import * as z from "zod";
 
 import { requireAdmin, requireUser } from "@/lib/auth/session";
+import {
+  CONTENT_LOCALES,
+  DEFAULT_CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError, inputError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import type {
+  LocalizedContentMap,
+  LocalizedPollContent,
   PollDoc,
   PollOption,
   PollStatus,
@@ -31,18 +39,186 @@ const OptionInputSchema = z.object({
   label: z.string().trim().min(1).max(80),
 });
 
-const PollFormSchema = z.object({
-  title: z.string().trim().min(2).max(120),
-  // Description is plain text (not Markdown) — polls are short by
-  // convention. Empty string is allowed; the UI hides the section when
-  // it's blank.
-  description: z.string().trim().max(2000).default(""),
-  options: z
-    .array(OptionInputSchema)
-    .min(MIN_OPTIONS, POLL_MIN_OPTIONS)
-    .max(MAX_OPTIONS, POLL_MAX_OPTIONS),
-  slug: z.string().trim().min(2).max(80).optional(),
+const LocalizedPollOptionInputSchema = z.object({
+  id: z.string().min(1).max(40).optional(),
+  label: z.string().trim().max(80).default(""),
 });
+
+const PollLocalizedContentInputSchema = z.object({
+  title: z.string().trim().max(120).default(""),
+  description: z.string().trim().max(2000).default(""),
+  options: z.array(LocalizedPollOptionInputSchema).max(MAX_OPTIONS).default([]),
+});
+
+const LocalizedPollInputSchema = z
+  .object({
+    ja: PollLocalizedContentInputSchema.optional(),
+    en: PollLocalizedContentInputSchema.optional(),
+  })
+  .default({});
+
+interface PollContentInput {
+  title: string;
+  description: string;
+  options: Array<{ id?: string; label: string }>;
+}
+
+function cleanPollContent(content: PollContentInput): LocalizedPollContent {
+  return {
+    title: content.title.trim(),
+    description: content.description.trim(),
+    options: content.options.map((option) => ({
+      id: option.id ?? "",
+      label: option.label.trim(),
+    })),
+  };
+}
+
+function hasAnyPollContent(content: LocalizedPollContent): boolean {
+  return Boolean(
+    content.title.trim() ||
+    content.description.trim() ||
+    content.options.some((option) => option.label.trim()),
+  );
+}
+
+function validatePollContent(
+  content: LocalizedPollContent,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): boolean {
+  let ok = true;
+  if (content.title.trim().length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "title"],
+      message: "Title must be at least 2 characters.",
+    });
+    ok = false;
+  }
+  if (
+    content.options.filter((option) => option.label.trim()).length < MIN_OPTIONS
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "options"],
+      message: POLL_MIN_OPTIONS,
+    });
+    ok = false;
+  }
+  return ok;
+}
+
+function localizedPollContentWithOptionIds(
+  localized: LocalizedContentMap<LocalizedPollContent>,
+  locales: ContentLocale[],
+  options: PollOption[],
+  sourceIndices?: number[],
+): LocalizedContentMap<LocalizedPollContent> {
+  const next: LocalizedContentMap<LocalizedPollContent> = {};
+  for (const locale of locales) {
+    const content = localized[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: content.title,
+      description: content.description,
+      options: options.map((option, index) => {
+        const byId = content.options.find(
+          (candidate) => candidate.id === option.id,
+        );
+        const byIndex = content.options[sourceIndices?.[index] ?? index];
+        return {
+          id: option.id,
+          label: byId?.label || byIndex?.label || option.label,
+        };
+      }),
+    };
+  }
+  return next;
+}
+
+const PollFormSchema = z
+  .object({
+    title: z.string().trim().max(120).optional(),
+    // Description is plain text (not Markdown) — polls are short by
+    // convention. Empty string is allowed; the UI hides the section when
+    // it's blank.
+    description: z.string().trim().max(2000).default(""),
+    options: z
+      .array(OptionInputSchema)
+      .max(MAX_OPTIONS, POLL_MAX_OPTIONS)
+      .optional()
+      .default([]),
+    localized: LocalizedPollInputSchema,
+    locales: z
+      .array(z.enum(CONTENT_LOCALES))
+      .min(1)
+      .max(CONTENT_LOCALES.length)
+      .optional()
+      .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
+    slug: z.string().trim().min(2).max(80).optional(),
+  })
+  .transform((input, ctx) => {
+    const localized: LocalizedContentMap<LocalizedPollContent> = {};
+    const locales: ContentLocale[] = [];
+    let sawContent = false;
+
+    for (const locale of CONTENT_LOCALES) {
+      const content = cleanPollContent(
+        input.localized[locale] ?? {
+          title: "",
+          description: "",
+          options: [],
+        },
+      );
+      if (!hasAnyPollContent(content)) continue;
+      sawContent = true;
+      if (!validatePollContent(content, ctx, ["localized", locale])) continue;
+      localized[locale] = content;
+      locales.push(locale);
+    }
+
+    const legacyContent = cleanPollContent({
+      title: input.title ?? "",
+      description: input.description ?? "",
+      options: input.options.map((option) => ({
+        id: option.id ?? "",
+        label: option.label,
+      })),
+    });
+    if (locales.length === 0 && hasAnyPollContent(legacyContent)) {
+      sawContent = true;
+      if (validatePollContent(legacyContent, ctx, [])) {
+        const legacyLocale =
+          normalizeContentLocales(input.locales)[0] ??
+          DEFAULT_CONTENT_LOCALES[0];
+        localized[legacyLocale] = legacyContent;
+        locales.push(legacyLocale);
+      }
+    }
+
+    if (!sawContent) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["localized"],
+        message: "Enter content for at least one language.",
+      });
+    }
+
+    const primary = localized[locales[0]] ?? {
+      title: "",
+      description: "",
+      options: [],
+    };
+    return {
+      ...input,
+      title: primary.title,
+      description: primary.description,
+      options: primary.options,
+      locales,
+      localized,
+    };
+  });
 
 export type PollFormInput = z.input<typeof PollFormSchema>;
 
@@ -102,7 +278,8 @@ function newOptionId(): string {
 async function findFreePollSlug(seed: string): Promise<string> {
   const base = slugify(seed, "poll");
   for (let attempt = 0; attempt < 4; attempt++) {
-    const candidate = attempt === 0 ? base : `${base}-${Date.now().toString(36)}`;
+    const candidate =
+      attempt === 0 ? base : `${base}-${Date.now().toString(36)}`;
     const snap = await adminDb()
       .collection("polls")
       .where("slug", "==", candidate)
@@ -133,15 +310,19 @@ export async function submitPoll(
   // id, so a single ballot for that id would update both rows.
   const seen = new Set<string>();
   const cleanedOptions: PollOption[] = [];
-  for (const opt of parsed.options) {
-    const key = opt.label.toLowerCase();
+  const cleanedOptionSourceIndices: number[] = [];
+  for (const [index, opt] of parsed.options.entries()) {
+    const label = opt.label.trim();
+    if (!label) continue;
+    const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     cleanedOptions.push({
       id: newOptionId(),
-      label: opt.label,
+      label,
       voteCount: 0,
     });
+    cleanedOptionSourceIndices.push(index);
   }
   if (cleanedOptions.length < MIN_OPTIONS) {
     return {
@@ -158,6 +339,13 @@ export async function submitPoll(
     title: parsed.title,
     description: parsed.description,
     options: cleanedOptions,
+    locales: parsed.locales,
+    localized: localizedPollContentWithOptionIds(
+      parsed.localized,
+      parsed.locales,
+      cleanedOptions,
+      cleanedOptionSourceIndices,
+    ),
     authorUid: user.uid,
     authorName: user.displayName,
     authorPhotoURL: user.photoURL,
@@ -221,8 +409,7 @@ export async function updateMyPoll(
   }
 
   const committed = await adminDb().runTransaction<
-    | { ok: false; error: string }
-    | { ok: true; slug: string; prevSlug: string }
+    { ok: false; error: string } | { ok: true; slug: string; prevSlug: string }
   >(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) {
@@ -241,6 +428,7 @@ export async function updateMyPoll(
     const optionsFrozen = (cur.voterCount ?? 0) > 0;
 
     let nextOptions: PollOption[] = cur.options;
+    let nextOptionSourceIndices: number[] | undefined;
     if (!optionsFrozen) {
       // Build the next option list with two independent dedupe sets:
       //   - labels (lowercased) so "Claude" and "claude" can't both land
@@ -253,8 +441,11 @@ export async function updateMyPoll(
       const seenLabels = new Set<string>();
       const seenIds = new Set<string>();
       const cleaned: PollOption[] = [];
-      for (const opt of parsed.options) {
-        const labelKey = opt.label.toLowerCase();
+      const sourceIndices: number[] = [];
+      for (const [index, opt] of parsed.options.entries()) {
+        const label = opt.label.trim();
+        if (!label) continue;
+        const labelKey = label.toLowerCase();
         if (seenLabels.has(labelKey)) continue;
         seenLabels.add(labelKey);
         let id = opt.id;
@@ -262,15 +453,19 @@ export async function updateMyPoll(
           id = newOptionId();
         }
         seenIds.add(id);
-        cleaned.push({ id, label: opt.label, voteCount: 0 });
+        cleaned.push({ id, label, voteCount: 0 });
+        sourceIndices.push(index);
       }
       if (cleaned.length < MIN_OPTIONS) {
         return {
           ok: false as const,
-          error: await actionError("pollDedupeMinOptions", { count: MIN_OPTIONS }),
+          error: await actionError("pollDedupeMinOptions", {
+            count: MIN_OPTIONS,
+          }),
         };
       }
       nextOptions = cleaned;
+      nextOptionSourceIndices = sourceIndices;
     }
 
     tx.update(ref, {
@@ -278,6 +473,13 @@ export async function updateMyPoll(
       title: parsed.title,
       description: parsed.description,
       options: nextOptions,
+      locales: parsed.locales,
+      localized: localizedPollContentWithOptionIds(
+        parsed.localized,
+        parsed.locales,
+        nextOptions,
+        nextOptionSourceIndices,
+      ),
       updatedAt: Timestamp.now(),
     });
 
@@ -323,7 +525,8 @@ export async function setPollStatus(
 
   const ref = adminDb().collection("polls").doc(parsed.pollId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("pollNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("pollNotFound") };
   const cur = snap.data() as PollDoc;
 
   if (cur.status === parsed.status) return { ok: true };
@@ -388,7 +591,10 @@ export async function castPollVote(
     }
     const poll = pollSnap.data() as PollDoc;
     if (poll.status !== "published") {
-      return { ok: false as const, error: await actionError("pollPublishedOnly") };
+      return {
+        ok: false as const,
+        error: await actionError("pollPublishedOnly"),
+      };
     }
 
     // Validate every incoming optionId actually exists on the poll.
@@ -399,11 +605,15 @@ export async function castPollVote(
     const dedupedNewIds = [...new Set(parsed.optionIds)];
     for (const id of dedupedNewIds) {
       if (!validIds.has(id)) {
-        return { ok: false as const, error: await actionError("pollInvalidOptions") };
+        return {
+          ok: false as const,
+          error: await actionError("pollInvalidOptions"),
+        };
       }
     }
 
-    const oldIds = (voteSnap.exists ? (voteSnap.data() as PollVoteDoc).optionIds : []) ?? [];
+    const oldIds =
+      (voteSnap.exists ? (voteSnap.data() as PollVoteDoc).optionIds : []) ?? [];
     const oldSet = new Set(oldIds);
     const newSet = new Set(dedupedNewIds);
 

@@ -423,6 +423,10 @@ export interface GuideDoc {
   slug: string;
   title: string;
   body: string;
+  // Locales this guide has content for. Public pages fall back to any
+  // available locale instead of hiding the guide from other app locales.
+  locales?: ContentLocale[];
+  localized?: LocalizedContentMap<LocalizedGuideContent>;
   tags: string[];
   status: GuideStatus;
   order: number;
@@ -453,6 +457,11 @@ export interface GuideDoc {
   updatedBy: GuideAuthorRef;
 }
 
+export interface LocalizedGuideContent {
+  title: string;
+  body: string;
+}
+
 // ---------- site pages (admin-edited static-ish content) ----------
 // One Firestore doc per slug under `sitePages/{slug}` — `/about` is the
 // only consumer today. The page renders fallback content when the doc is
@@ -478,6 +487,10 @@ export interface QaDoc {
   slug: string;
   title: string;
   body: string; // Markdown
+  // Locales this Q&A has content for. Public pages fall back to any available
+  // locale instead of hiding the question from other app locales.
+  locales?: ContentLocale[];
+  localized?: LocalizedContentMap<LocalizedQaContent>;
   tags: string[];
   authorUid: string;
   authorName: string;
@@ -487,6 +500,11 @@ export interface QaDoc {
   likeCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
+}
+
+export interface LocalizedQaContent {
+  title: string;
+  body: string;
 }
 
 // ---------- polls (community-posted polls / votes) ----------
@@ -507,6 +525,17 @@ export interface PollOption {
   voteCount: number;
 }
 
+export interface LocalizedPollOptionContent {
+  id: string;
+  label: string;
+}
+
+export interface LocalizedPollContent {
+  title: string;
+  description: string;
+  options: LocalizedPollOptionContent[];
+}
+
 export interface PollDoc {
   id: string;
   slug: string;
@@ -515,6 +544,10 @@ export interface PollDoc {
   // comments"). Body is short by convention — polls aren't long-form.
   description: string;
   options: PollOption[];
+  // Locales this poll has content for. Option translations keep the same ids
+  // as `options` so vote counts and ballots remain locale-independent.
+  locales?: ContentLocale[];
+  localized?: LocalizedContentMap<LocalizedPollContent>;
   authorUid: string;
   authorName: string;
   authorPhotoURL: string | null;

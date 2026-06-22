@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyGuides } from "@/lib/data/guides";
+import { getLocalizedGuideContent } from "@/lib/localized-content";
 import { formatDate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +20,7 @@ export async function generateMetadata() {
 // surface "archived" prominently for authors).
 const STATUS_CLASSES: Record<string, string> = {
   draft: "bg-zinc-200 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200",
-  pending:
-    "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
+  pending: "bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-200",
   published:
     "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200",
   rejected: "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-200",
@@ -76,6 +76,7 @@ export default async function MyGuidesPage() {
         <ul className="space-y-3">
           {guides.map((g) => {
             const cls = STATUS_CLASSES[g.status] ?? STATUS_CLASSES.draft;
+            const content = getLocalizedGuideContent(g, locale);
             return (
               <li
                 key={g.id}
@@ -83,7 +84,7 @@ export default async function MyGuidesPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-semibold">{g.title}</h2>
+                    <h2 className="text-lg font-semibold">{content.title}</h2>
                     <p className="mt-1 text-xs text-zinc-500">
                       {common("lastUpdated", {
                         date: formatDate(g.updatedAt, locale),

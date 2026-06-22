@@ -32,7 +32,7 @@ export default async function NewCommunityGuidePage() {
     user.isAdmin || user.isEditor || user.isContributor;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10 space-y-4">
+    <div className="mx-auto max-w-6xl px-4 py-10 space-y-4">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {canPublishDirectly ? (

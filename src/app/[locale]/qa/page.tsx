@@ -10,6 +10,7 @@ import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedQaContent } from "@/lib/localized-content";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +43,9 @@ export default async function QaListPage() {
           subtitle gets cramped next to the CTA otherwise. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            {t("title")}
+          </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             {t("description")}
           </p>
@@ -65,55 +68,57 @@ export default async function QaListPage() {
       </header>
 
       {items.length === 0 ? (
-        <EmptyState
-          message={t("empty")}
-          hint={t("emptyHint")}
-        />
+        <EmptyState message={t("empty")} hint={t("emptyHint")} />
       ) : (
         <ul className="space-y-3">
-          {items.map((q, i) => (
-            <FadeUp
-              key={q.id}
-              as="li"
-              delay={i}
-              className={`${interactiveCardClass} relative flex flex-col p-5 focus-within:ring-2 focus-within:ring-indigo-500`}
-            >
-              <h2 className="text-lg font-semibold">
-                {/* Stretched-link pattern: the title is the only real
+          {items.map((q, i) => {
+            const content = getLocalizedQaContent(q, locale);
+            return (
+              <FadeUp
+                key={q.id}
+                as="li"
+                delay={i}
+                className={`${interactiveCardClass} relative flex flex-col p-5 focus-within:ring-2 focus-within:ring-indigo-500`}
+              >
+                <h2 className="text-lg font-semibold">
+                  {/* Stretched-link pattern: the title is the only real
                     link to /qa/[slug], but its ::after pseudo-element
                     covers the whole card so clicking anywhere outside
                     a nested interactive element still navigates. */}
-                <Link
-                  href={`/qa/${q.slug}`}
-                  className="after:absolute after:inset-0 focus:outline-none"
-                >
-                  {q.title}
-                </Link>
-              </h2>
-              <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                <AuthorBadge profile={authorProfiles.get(q.authorUid) ?? null} />
-                <span>· {formatDate(q.createdAt, locale)}</span>
-                {(q.likeCount ?? 0) > 0 && (
-                  <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
+                  <Link
+                    href={`/qa/${q.slug}`}
+                    className="after:absolute after:inset-0 focus:outline-none"
+                  >
+                    {content.title}
+                  </Link>
+                </h2>
+                <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
+                  <AuthorBadge
+                    profile={authorProfiles.get(q.authorUid) ?? null}
+                  />
+                  <span>· {formatDate(q.createdAt, locale)}</span>
+                  {(q.likeCount ?? 0) > 0 && (
+                    <span className="ml-2 text-rose-600">♥ {q.likeCount}</span>
+                  )}
+                </p>
+                <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
+                  {truncate(stripMarkdown(content.body), 200)}
+                </p>
+                {q.tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {q.tags.map((t) => (
+                      <span
+                        key={t}
+                        className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                      >
+                        {t}
+                      </span>
+                    ))}
+                  </div>
                 )}
-              </p>
-              <p className="mt-2 line-clamp-3 text-sm text-zinc-700 dark:text-zinc-300">
-                {truncate(stripMarkdown(q.body), 200)}
-              </p>
-              {q.tags.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1">
-                  {q.tags.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </FadeUp>
-          ))}
+              </FadeUp>
+            );
+          })}
         </ul>
       )}
     </div>

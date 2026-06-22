@@ -468,6 +468,11 @@
     "title": "Title",
     "titlePlaceholder": "Example: Tips for getting Claude Code to write tests?",
     "body": "Body (Markdown)",
+    "localization": "Localized content",
+    "locales": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "addImage": "Add image",
     "uploading": "Uploading...",
     "imageHint": "{types}, 5MB or less",
@@ -488,6 +493,11 @@
     "titlePlaceholder": "Example: Which AI do you use most often?",
     "description": "Description (optional)",
     "descriptionPlaceholder": "Notes such as \"leave other answers in comments\"",
+    "localization": "Localized content",
+    "locales": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "options": "Options ({min} to {max})",
     "optionsLocked": "Options cannot be changed because responses have already been submitted. You can still edit the title and description.",
     "optionPlaceholder": "Option {number}",
@@ -513,6 +523,11 @@
     "tagsPlaceholder": "Claude, setup, beginner",
     "order": "Display order (lower appears first)",
     "body": "Body (Markdown)",
+    "localization": "Localized content",
+    "locales": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "uploadImage": "Upload image",
     "uploading": "Uploading...",
     "imageHint": "Drag & drop / paste supported ({types}, {size}MB or less)",
@@ -887,11 +902,7 @@
           "Use <myProfileLink>Profile settings</myProfileLink> to edit the information shown on your public profile."
         ],
         "table": {
-          "headers": [
-            "Field",
-            "Default",
-            "Visibility"
-          ],
+          "headers": ["Field", "Default", "Visibility"],
           "rows": [
             {
               "cells": [
@@ -931,10 +942,7 @@
           "Open <myPageLink>My Page</myPageLink> from the account menu to manage your registrations, submissions, settings, and received likes."
         ],
         "table": {
-          "headers": [
-            "Menu",
-            "What it shows"
-          ],
+          "headers": ["Menu", "What it shows"],
           "rows": [
             {
               "href": "/my/rsvps",
@@ -945,24 +953,15 @@
             },
             {
               "href": "/my/projects",
-              "cells": [
-                "My projects",
-                "Projects you shared."
-              ]
+              "cells": ["My projects", "Projects you shared."]
             },
             {
               "href": "/my/posts",
-              "cells": [
-                "My articles",
-                "Articles you posted, including drafts."
-              ]
+              "cells": ["My articles", "Articles you posted, including drafts."]
             },
             {
               "href": "/my/qa",
-              "cells": [
-                "My Questions",
-                "Questions you posted."
-              ]
+              "cells": ["My Questions", "Questions you posted."]
             },
             {
               "href": "/my/likes",
@@ -1373,10 +1372,7 @@
             "Signed-in users can have <code>admin</code>, <code>editor</code>, <code>contributor</code>, or a combination of those roles. They are stored as Firebase Auth custom claims and take effect after the user signs in again."
           ],
           "table": {
-            "headers": [
-              "Role",
-              "Capabilities"
-            ],
+            "headers": ["Role", "Capabilities"],
             "rows": [
               {
                 "cells": [

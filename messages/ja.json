@@ -468,6 +468,11 @@
     "title": "タイトル",
     "titlePlaceholder": "例: Claude Code でテスト書かせるコツは？",
     "body": "本文 (Markdown)",
+    "localization": "言語別本文",
+    "locales": {
+      "ja": "日本語",
+      "en": "English"
+    },
     "addImage": "画像を追加",
     "uploading": "アップロード中...",
     "imageHint": "{types}、5MB 以下",
@@ -488,6 +493,11 @@
     "titlePlaceholder": "例: 普段どのAIを一番使ってる？",
     "description": "説明 (任意)",
     "descriptionPlaceholder": "補足や「その他はコメントで」などの注記",
+    "localization": "言語別本文",
+    "locales": {
+      "ja": "日本語",
+      "en": "English"
+    },
     "options": "選択肢 ({min}〜{max}つ)",
     "optionsLocked": "既に回答が入っているため、選択肢は変更できません。タイトル・説明のみ編集可能です。",
     "optionPlaceholder": "選択肢 {number}",
@@ -513,6 +523,11 @@
     "tagsPlaceholder": "Claude, 環境構築, 初心者向け",
     "order": "表示順 (小さいほど上)",
     "body": "本文 (Markdown)",
+    "localization": "言語別本文",
+    "locales": {
+      "ja": "日本語",
+      "en": "English"
+    },
     "uploadImage": "画像をアップロード",
     "uploading": "アップロード中...",
     "imageHint": "ドラッグ&ドロップ / ペーストも可 ({types}、{size}MB以下)",
@@ -887,11 +902,7 @@
           "<myProfileLink>プロフィール設定</myProfileLink>で公開プロフィールに表示する内容を編集できます。"
         ],
         "table": {
-          "headers": [
-            "項目",
-            "デフォルト",
-            "公開先"
-          ],
+          "headers": ["項目", "デフォルト", "公開先"],
           "rows": [
             {
               "cells": [
@@ -931,38 +942,23 @@
           "右上のアカウントメニューから<myPageLink>マイページ</myPageLink>を開くと、参加履歴・投稿・設定・受け取ったいいねを管理できます。"
         ],
         "table": {
-          "headers": [
-            "メニュー",
-            "内容"
-          ],
+          "headers": ["メニュー", "内容"],
           "rows": [
             {
               "href": "/my/rsvps",
-              "cells": [
-                "参加履歴",
-                "イベントRSVPの一覧とキャンセル操作。"
-              ]
+              "cells": ["参加履歴", "イベントRSVPの一覧とキャンセル操作。"]
             },
             {
               "href": "/my/projects",
-              "cells": [
-                "自分のプロジェクト",
-                "共有したプロジェクト。"
-              ]
+              "cells": ["自分のプロジェクト", "共有したプロジェクト。"]
             },
             {
               "href": "/my/posts",
-              "cells": [
-                "自分の記事",
-                "投稿した記事。下書きも含みます。"
-              ]
+              "cells": ["自分の記事", "投稿した記事。下書きも含みます。"]
             },
             {
               "href": "/my/qa",
-              "cells": [
-                "自分の質問・相談",
-                "自分が投稿した質問・相談。"
-              ]
+              "cells": ["自分の質問・相談", "自分が投稿した質問・相談。"]
             },
             {
               "href": "/my/likes",
@@ -1373,10 +1369,7 @@
             "ログインユーザーには <code>admin</code> / <code>editor</code> / <code>contributor</code> のいずれか (または複数の組み合わせ) が付与されます。これらは Firebase Auth の Custom Claim として保存され、ログインしなおさないと反映されません。"
           ],
           "table": {
-            "headers": [
-              "権限",
-              "できること"
-            ],
+            "headers": ["権限", "できること"],
             "rows": [
               {
                 "cells": [

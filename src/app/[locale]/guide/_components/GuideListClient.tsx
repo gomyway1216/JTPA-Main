@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
+import { getLocalizedGuideContent } from "@/lib/localized-content";
 import type { GuideDoc } from "@/lib/types";
 import { stripMarkdown, truncate } from "@/lib/utils";
 
@@ -17,6 +18,14 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
   // guides that match either one.
   const [selectedTags, setSelectedTags] = useState<ReadonlySet<string>>(
     new Set(),
+  );
+  const localizedGuides = useMemo(
+    () =>
+      guides.map((guide) => ({
+        guide,
+        content: getLocalizedGuideContent(guide, locale),
+      })),
+    [guides, locale],
   );
 
   // Aggregate tag → count from the full list so the chip bar reflects
@@ -39,16 +48,16 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
   // wasted work at 200 entries × multi-KB bodies; do it once and reuse.
   const haystacks = useMemo(
     () =>
-      guides.map((g) =>
-        `${g.title}\n${(g.tags ?? []).join(" ")}\n${g.body}`.toLowerCase(),
+      localizedGuides.map(({ guide, content }) =>
+        `${content.title}\n${(guide.tags ?? []).join(" ")}\n${content.body}`.toLowerCase(),
       ),
-    [guides],
+    [localizedGuides],
   );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return guides.filter((g, i) => {
-      const tags = g.tags ?? [];
+    return localizedGuides.filter(({ guide }, i) => {
+      const tags = guide.tags ?? [];
       if (selectedTags.size > 0) {
         const hit = tags.some((t) => selectedTags.has(t));
         if (!hit) return false;
@@ -56,7 +65,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
       if (!q) return true;
       return haystacks[i].includes(q);
     });
-  }, [guides, haystacks, query, selectedTags]);
+  }, [haystacks, localizedGuides, query, selectedTags]);
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => {
@@ -121,12 +130,15 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
         </p>
       ) : (
         <ul className="space-y-3">
-          {filtered.map((g, i) => {
-            const tags = g.tags ?? [];
+          {filtered.map(({ guide, content }, i) => {
+            const tags = guide.tags ?? [];
             return (
-              <FadeUp key={g.id} as="li" delay={i} className="block">
-                <Link href={`/guide/${g.slug}`} className={`${interactiveCardClass} block p-5`}>
-                  <h2 className="text-lg font-semibold">{g.title}</h2>
+              <FadeUp key={guide.id} as="li" delay={i} className="block">
+                <Link
+                  href={`/guide/${guide.slug}`}
+                  className={`${interactiveCardClass} block p-5`}
+                >
+                  <h2 className="text-lg font-semibold">{content.title}</h2>
                   {tags.length > 0 && (
                     <div className="mt-2 flex flex-wrap gap-1">
                       {tags.map((t) => (
@@ -140,7 +152,7 @@ export function GuideListClient({ guides }: { guides: GuideDoc[] }) {
                     </div>
                   )}
                   <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                    {truncate(stripMarkdown(g.body), 140)}
+                    {truncate(stripMarkdown(content.body), 140)}
                   </p>
                 </Link>
               </FadeUp>

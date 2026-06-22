@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { unstable_rethrow } from "next/navigation";
 import { collection, doc } from "firebase/firestore";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import "@uiw/react-md-editor/markdown-editor.css";
@@ -24,6 +24,13 @@ import {
   primaryButtonClass,
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
+import {
+  CONTENT_LOCALES,
+  initialContentLocales,
+  normalizeContentLocales,
+  preferredContentLocale,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -31,7 +38,7 @@ import {
   MAX_GUIDE_IMAGE_BYTES,
   uploadQaImage,
 } from "@/lib/firebase/uploads";
-import type { QaDoc, SessionUser } from "@/lib/types";
+import type { LocalizedQaContent, QaDoc, SessionUser } from "@/lib/types";
 
 // `@uiw/react-md-editor` reads `window` during evaluation; load on the
 // client only. Same pattern as PostForm / GuideForm.
@@ -55,6 +62,82 @@ function tagsToString(tags: string[]): string {
   return tags.join(", ");
 }
 
+function initialQaLocales(qa: QaDoc | undefined): ContentLocale[] {
+  if (!qa) return initialContentLocales(undefined);
+  const normalized = normalizeContentLocales(qa.locales);
+  return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
+}
+
+function emptyQaContent(): LocalizedQaContent {
+  return { title: "", body: "" };
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
+function emptyQaContentByLocale(): Record<ContentLocale, LocalizedQaContent> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, emptyQaContent()]),
+  ) as Record<ContentLocale, LocalizedQaContent>;
+}
+
+function initialQaContentByLocale(
+  qa: QaDoc | undefined,
+): Record<ContentLocale, LocalizedQaContent> {
+  const next = emptyQaContentByLocale();
+  if (!qa) return next;
+
+  let hasLocalized = false;
+  for (const locale of CONTENT_LOCALES) {
+    const content = qa.localized?.[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: textValue(content.title),
+      body: textValue(content.body),
+    };
+    hasLocalized = true;
+  }
+
+  if (!hasLocalized) {
+    const fallbackLocale = initialQaLocales(qa)[0] ?? CONTENT_LOCALES[0];
+    next[fallbackLocale] = {
+      title: qa.title,
+      body: qa.body,
+    };
+  }
+
+  return next;
+}
+
+function initialQaActiveLocale(
+  qa: QaDoc | undefined,
+  currentLocale: string,
+): ContentLocale {
+  if (!qa) {
+    return (
+      preferredContentLocale(undefined, currentLocale) ?? CONTENT_LOCALES[0]
+    );
+  }
+  const localizedLocales = CONTENT_LOCALES.filter((locale) => {
+    const content = qa.localized?.[locale];
+    return Boolean(
+      content && (hasText(content.title) || hasText(content.body)),
+    );
+  });
+  if (localizedLocales.length > 0) {
+    return (
+      preferredContentLocale(localizedLocales, currentLocale) ??
+      localizedLocales[0]
+    );
+  }
+  return initialQaLocales(qa)[0] ?? CONTENT_LOCALES[0];
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -62,6 +145,7 @@ interface Props {
 }
 
 export function QaForm({ mode, user, qa }: Props) {
+  const locale = useLocale();
   const t = useTranslations("QaForm");
   const actionErrors = useTranslations("ActionErrors");
   const imageUploadMessages = {
@@ -71,12 +155,37 @@ export function QaForm({ mode, user, qa }: Props) {
     unsupportedType: (types: string) => actionErrors("imageType", { types }),
     tooLarge: (size: number) => actionErrors("imageTooLarge", { size }),
   };
-  const [title, setTitle] = useState(qa?.title ?? "");
-  const [body, setBody] = useState<string>(qa?.body ?? "");
+  const [activeLocale, setActiveLocale] = useState<ContentLocale>(
+    initialQaActiveLocale(qa, locale),
+  );
+  const [localizedContent, setLocalizedContent] = useState<
+    Record<ContentLocale, LocalizedQaContent>
+  >(initialQaContentByLocale(qa));
   const [tagsInput, setTagsInput] = useState(tagsToString(qa?.tags ?? []));
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const activeContent = localizedContent[activeLocale];
+
+  function updateActiveContent(patch: Partial<LocalizedQaContent>) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
+  }
+
+  function updateBodyForLocale(
+    targetLocale: ContentLocale,
+    updater: (prev: string) => string,
+  ) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [targetLocale]: {
+        ...cur[targetLocale],
+        body: updater(cur[targetLocale].body),
+      },
+    }));
+  }
 
   // Pre-generate a Firestore auto-id on create so the user can upload
   // images to `qa/{qaId}/...` before the doc itself is saved. The same
@@ -104,6 +213,7 @@ export function QaForm({ mode, user, qa }: Props) {
     setError(null);
     const file = e.target.files?.[0];
     if (!file) return;
+    const uploadLocale = activeLocale;
     if (file.size > MAX_GUIDE_IMAGE_BYTES) {
       setError(t("imageTooLarge"));
       e.target.value = "";
@@ -111,12 +221,21 @@ export function QaForm({ mode, user, qa }: Props) {
     }
     setUploading(true);
     try {
-      const url = await uploadQaImage(qaId, user.uid, file, imageUploadMessages);
+      const url = await uploadQaImage(
+        qaId,
+        user.uid,
+        file,
+        imageUploadMessages,
+      );
       const alt = file.name.replace(/\.[^.]+$/, "");
       // Append the image link at the end of the body. Simpler than the
       // GuideForm caret-aware insertion — Q&A bodies tend to be short
       // and the user can rearrange afterwards.
-      setBody((prev) => `${prev}${prev && !prev.endsWith("\n") ? "\n\n" : ""}![${alt}](${url})\n`);
+      updateBodyForLocale(
+        uploadLocale,
+        (prev) =>
+          `${prev}${prev && !prev.endsWith("\n") ? "\n\n" : ""}![${alt}](${url})\n`,
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t("uploadFailed"));
     } finally {
@@ -134,8 +253,7 @@ export function QaForm({ mode, user, qa }: Props) {
       // Without this, submitQa would assign a different random id and
       // images would orphan under the wrong prefix.
       ...(mode === "create" ? { id: qaId } : {}),
-      title: title.trim(),
-      body: body.trim(),
+      localized: localizedContent,
       tags: stringToTags(tagsInput),
     };
     startTransition(async () => {
@@ -180,21 +298,50 @@ export function QaForm({ mode, user, qa }: Props) {
     });
   }
 
+  const canSubmit = CONTENT_LOCALES.some((value) => {
+    const content = localizedContent[value];
+    return content.title.trim().length >= 2 && content.body.trim().length > 0;
+  });
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label={t("title")} required htmlFor="qa-title">
-        <input
-          id="qa-title"
-          type="text"
-          required
-          minLength={2}
-          maxLength={120}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("titlePlaceholder")}
-          className={inputClass}
-        />
-      </Field>
+      <div className="space-y-4">
+        <div
+          role="group"
+          aria-label={t("localization")}
+          className="flex flex-wrap gap-2"
+        >
+          {CONTENT_LOCALES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={activeLocale === value}
+              disabled={pending || uploading}
+              onClick={() => setActiveLocale(value)}
+              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                activeLocale === value
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              }`}
+            >
+              {t(`locales.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <Field label={t("title")} required htmlFor={`qa-title-${activeLocale}`}>
+          <input
+            id={`qa-title-${activeLocale}`}
+            type="text"
+            aria-required="true"
+            maxLength={120}
+            value={activeContent.title}
+            onChange={(e) => updateActiveContent({ title: e.target.value })}
+            placeholder={t("titlePlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+      </div>
 
       <Field label={t("body")} required>
         <div className="space-y-2">
@@ -220,8 +367,8 @@ export function QaForm({ mode, user, qa }: Props) {
           </div>
           <div data-color-mode={colorMode}>
             <MDEditor
-              value={body}
-              onChange={(v) => setBody(v ?? "")}
+              value={activeContent.body}
+              onChange={(v) => updateActiveContent({ body: v ?? "" })}
               height={400}
               preview="live"
             />
@@ -245,7 +392,7 @@ export function QaForm({ mode, user, qa }: Props) {
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
-          disabled={pending || uploading || !title.trim() || !body.trim()}
+          disabled={pending || uploading || !canSubmit}
           className={primaryButtonClass}
         >
           {pending

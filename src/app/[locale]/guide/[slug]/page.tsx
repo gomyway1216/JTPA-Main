@@ -10,6 +10,7 @@ import { getGuideBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedGuideContent } from "@/lib/localized-content";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 // Per-request render (session-based draft preview, like state, comments
@@ -22,14 +23,18 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const guide = await getGuideBySlugCached(slug).catch(() => null);
+  const [locale, guide] = await Promise.all([
+    getLocale(),
+    getGuideBySlugCached(slug).catch(() => null),
+  ]);
   if (!guide || guide.status !== "published") return {};
-  const description = truncate(stripMarkdown(guide.body), 160);
+  const content = getLocalizedGuideContent(guide, locale);
+  const description = truncate(stripMarkdown(content.body), 160);
   return {
-    title: guide.title,
+    title: content.title,
     description,
     openGraph: {
-      title: guide.title,
+      title: content.title,
       description,
     },
   };
@@ -66,6 +71,7 @@ export default async function GuideDetailPage({
   if (guide.status !== "published" && !isAuthorOrCurator) {
     notFound();
   }
+  const content = getLocalizedGuideContent(guide, locale);
 
   const tags = guide.tags ?? [];
   const statusLabel =
@@ -114,7 +120,7 @@ export default async function GuideDetailPage({
       )}
 
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">{guide.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="text-xs text-zinc-500">
           {t("lastUpdated", { date: formatDate(guide.updatedAt, locale) })}
         </p>
@@ -143,7 +149,7 @@ export default async function GuideDetailPage({
         </div>
       </header>
 
-      <MarkdownBody source={guide.body} />
+      <MarkdownBody source={content.body} />
 
       <CommentsSection
         key={guide.id}

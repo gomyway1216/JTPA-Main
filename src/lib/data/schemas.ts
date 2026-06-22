@@ -40,6 +40,23 @@ const LocalizedPostContentSchema = z.looseObject({
   excerpt: z.string().optional(),
   body: z.string().optional(),
 });
+const LocalizedGuideContentSchema = z.looseObject({
+  title: z.string().optional(),
+  body: z.string().optional(),
+});
+const LocalizedQaContentSchema = z.looseObject({
+  title: z.string().optional(),
+  body: z.string().optional(),
+});
+const LocalizedPollOptionContentSchema = z.looseObject({
+  id: z.string().optional(),
+  label: z.string().optional(),
+});
+const LocalizedPollContentSchema = z.looseObject({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  options: z.array(LocalizedPollOptionContentSchema).optional(),
+});
 const LocalizedProjectMapSchema = z.object({
   ja: LocalizedProjectContentSchema.optional(),
   en: LocalizedProjectContentSchema.optional(),
@@ -47,6 +64,18 @@ const LocalizedProjectMapSchema = z.object({
 const LocalizedPostMapSchema = z.object({
   ja: LocalizedPostContentSchema.optional(),
   en: LocalizedPostContentSchema.optional(),
+});
+const LocalizedGuideMapSchema = z.object({
+  ja: LocalizedGuideContentSchema.optional(),
+  en: LocalizedGuideContentSchema.optional(),
+});
+const LocalizedQaMapSchema = z.object({
+  ja: LocalizedQaContentSchema.optional(),
+  en: LocalizedQaContentSchema.optional(),
+});
+const LocalizedPollMapSchema = z.object({
+  ja: LocalizedPollContentSchema.optional(),
+  en: LocalizedPollContentSchema.optional(),
 });
 
 // ---------- users ----------
@@ -184,6 +213,8 @@ export const GuideDocSchema = z.looseObject({
   slug: z.string().optional(),
   title: z.string().optional(),
   body: z.string().optional(),
+  locales: ContentLocalesSchema.optional(),
+  localized: LocalizedGuideMapSchema.optional(),
   tags: z.array(z.string()).optional(),
   status: z
     .enum(["draft", "pending", "published", "rejected", "archived"])
@@ -209,6 +240,8 @@ export const QaDocSchema = z.looseObject({
   slug: z.string().optional(),
   title: z.string().optional(),
   body: z.string().optional(),
+  locales: ContentLocalesSchema.optional(),
+  localized: LocalizedQaMapSchema.optional(),
   tags: z.array(z.string()).optional(),
   authorUid: z.string().optional(),
   authorName: z.string().optional(),
@@ -231,6 +264,8 @@ export const PollDocSchema = z.looseObject({
   title: z.string().optional(),
   description: z.string().optional(),
   options: z.array(PollOptionSchema).optional(),
+  locales: ContentLocalesSchema.optional(),
+  localized: LocalizedPollMapSchema.optional(),
   authorUid: z.string().optional(),
   authorName: z.string().optional(),
   authorPhotoURL: z.string().nullable().optional(),
@@ -268,9 +303,7 @@ export const NotificationDocSchema = z.looseObject({
   actorUid: z.string().optional(),
   actorName: z.string().optional(),
   actorPhotoURL: z.string().nullable().optional(),
-  parentType: z
-    .enum(["post", "guide", "qa", "project", "poll"])
-    .optional(),
+  parentType: z.enum(["post", "guide", "qa", "project", "poll"]).optional(),
   parentId: z.string().optional(),
   parentTitle: z.string().optional(),
   parentSlug: z.string().optional(),
