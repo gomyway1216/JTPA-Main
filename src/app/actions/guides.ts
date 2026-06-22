@@ -114,7 +114,7 @@ const GuideInputSchema = z
       .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
     tags: z.array(z.string().min(1).max(40)).max(20).default([]),
     status: StatusInputSchema,
-    order: z.coerce.number().int().min(0).max(99999).optional(),
+    order: optionalNonEmpty(z.coerce.number().int().min(0).max(99999)),
   })
   .transform((input, ctx) => {
     const localized: LocalizedContentMap<LocalizedGuideContent> = {};

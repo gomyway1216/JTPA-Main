@@ -236,6 +236,17 @@ describe("submitGuide — validation + status resolution", () => {
     expect(payload.order).toBe(0);
   });
 
+  it("treats a cleared curator order field as the default on create", async () => {
+    requireUserMock.mockResolvedValueOnce(
+      sessionUser({ uid: "editor-1", isEditor: true }),
+    );
+    await expect(
+      submitGuide({ ...validInput, status: "published", order: "" }),
+    ).rejects.toThrow("__REDIRECT__:/admin/guides/new-guide-id/edit");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.order).toBe(100);
+  });
+
   it("ignores a non-curator's explicitly-requested slug", async () => {
     await expect(
       submitGuide({ ...validInput, slug: "vanity-url" }),
@@ -308,6 +319,21 @@ describe("updateGuide — authorization + status clamp", () => {
     });
     await expect(
       updateGuide("g1", { ...validInput, status: "draft", order: 0 }),
+    ).resolves.toEqual({ ok: true });
+    const [patch] = guideUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch.order).toBe(42);
+  });
+
+  it("keeps the existing order when a curator clears the order field on edit", async () => {
+    requireUserMock.mockResolvedValueOnce(
+      sessionUser({ uid: "editor-1", isEditor: true }),
+    );
+    guideGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ authorUid: "u1", slug: "g", status: "draft", order: 42 }),
+    });
+    await expect(
+      updateGuide("g1", { ...validInput, status: "draft", order: "" }),
     ).resolves.toEqual({ ok: true });
     const [patch] = guideUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.order).toBe(42);
