@@ -45,9 +45,11 @@ const AssetSchema = z.object({
   url: z.string().url(),
 });
 
+const PROJECT_DESCRIPTION_MAX_LENGTH = 100_000;
+
 const ProjectLocalizedContentInputSchema = z.object({
   title: z.string().max(120).default(""),
-  description: z.string().max(5000).default(""),
+  description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).default(""),
 });
 
 const LocalizedProjectInputSchema = z.object({
@@ -102,7 +104,7 @@ function expireProjectCache() {
 
 const ProjectInputSchema = z.object({
   title: z.string().max(120).optional(),
-  description: z.string().max(5000).optional(),
+  description: z.string().max(PROJECT_DESCRIPTION_MAX_LENGTH).optional(),
   localized: LocalizedProjectInputSchema,
   locales: z
     .array(z.enum(CONTENT_LOCALES))

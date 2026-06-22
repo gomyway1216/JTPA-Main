@@ -151,6 +151,21 @@ describe("submitProject — validation", () => {
     expect(addMock).not.toHaveBeenCalled();
   });
 
+  it("rejects descriptions longer than 100,000 characters", async () => {
+    await expectError(
+      submitProject({
+        localized: {
+          ja: {
+            title: "長い説明のプロジェクト",
+            description: "あ".repeat(100_001),
+          },
+        },
+      }),
+      "入力エラー",
+    );
+    expect(addMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a malformed repoUrl", async () => {
     await expectError(
       submitProject({ ...validInput, repoUrl: "not-a-url" }),
@@ -221,6 +236,26 @@ describe("submitProject — create", () => {
     expect(payload.locales).toEqual(["en"]);
     expect(payload.localized).toEqual({ en });
     expect(payload.title).toBe("English App");
+  });
+
+  it("stores long localized Japanese and English descriptions", async () => {
+    const ja = {
+      title: "長い説明のプロジェクト",
+      description: "日本語の説明文です。".repeat(700),
+    };
+    const en = {
+      title: "Long English App",
+      description: "This is a long English project description. "
+        .repeat(180)
+        .trim(),
+    };
+    await expect(submitProject({ localized: { ja, en } })).rejects.toThrow(
+      "__REDIRECT__:/my/projects",
+    );
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.locales).toEqual(["ja", "en"]);
+    expect(payload.description).toBe(ja.description);
+    expect(payload.localized).toEqual({ ja, en });
   });
 });
 
