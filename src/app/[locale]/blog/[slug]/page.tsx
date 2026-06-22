@@ -9,7 +9,6 @@ import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
-import { contentMatchesLocale } from "@/lib/content-localization";
 import { getPostBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -25,13 +24,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { slug } = await params;
   const post = await getPostBySlugCached(slug).catch(() => null);
-  if (
-    !post ||
-    post.status !== "published" ||
-    !contentMatchesLocale(post.locales, locale)
-  ) {
+  if (!post || post.status !== "published") {
     return {};
   }
   return {
@@ -56,11 +51,7 @@ export default async function BlogPostPage({
     getTranslations("BlogDetail"),
   ]);
   const post = await getPostBySlugCached(slug);
-  if (
-    !post ||
-    post.status !== "published" ||
-    !contentMatchesLocale(post.locales, locale)
-  ) {
+  if (!post || post.status !== "published") {
     notFound();
   }
 

@@ -18,14 +18,14 @@ describe("canViewProjectDetail", () => {
     ).toBe(true);
   });
 
-  it("hides approved projects from unmatched public locales", () => {
+  it("allows approved projects to fall back across public locales", () => {
     expect(
       canViewProjectDetail(
         { ...project("approved"), locales: ["ja"] },
         null,
         "en",
       ),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       canViewProjectDetail(
         { ...project("approved"), locales: ["ja"] },

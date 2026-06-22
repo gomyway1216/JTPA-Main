@@ -17,7 +17,7 @@ import {
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import {
   CONTENT_LOCALES,
-  DEFAULT_CONTENT_LOCALE,
+  DEFAULT_CONTENT_LOCALES,
 } from "@/lib/content-localization";
 import { POSTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
@@ -43,7 +43,7 @@ const PostInputSchema = z.object({
     .array(z.enum(CONTENT_LOCALES))
     .min(1)
     .max(CONTENT_LOCALES.length)
-    .default([DEFAULT_CONTENT_LOCALE])
+    .default([...DEFAULT_CONTENT_LOCALES])
     .transform((locales) => [...new Set(locales)]),
   tags: z.array(z.string().min(1).max(30)).max(8).default([]),
   coverImage: AssetSchema.optional(),
@@ -79,8 +79,8 @@ function postReturnPath(returnTo: PostReturnTo, isAdmin: boolean): string {
 // tags), so one call is enough. `updateTag` (vs
 // `revalidateTag(tag, "max")`) blocks the next read until fresh data is
 // fetched, so an author who publishes and lands back on /blog sees their
-// post immediately. Covers locale-filtered list caches and per-slug detail
-// entries at once. The revalidatePath calls in each action remain for
+// post immediately. Covers public list caches and per-slug detail entries
+// at once. The revalidatePath calls in each action remain for
 // client-router refresh semantics.
 function expirePostCache() {
   updateTag(POSTS_TAG);

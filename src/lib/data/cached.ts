@@ -76,6 +76,8 @@ export const listPublishedPostsCached = unstable_cache(
 );
 
 export const listPublishedPostsForLocaleCached = unstable_cache(
+  // Locale-specific call sites intentionally still receive the full public
+  // list; renderers can fall back to any available content locale.
   (locale: string, limit: number) => listPublishedPostsForLocale(locale, limit),
   ["public-posts-list-by-locale"],
   { tags: [POSTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },
@@ -125,6 +127,8 @@ export const listApprovedProjectsCached = unstable_cache(
 );
 
 export const listApprovedProjectsForLocaleCached = unstable_cache(
+  // Locale-specific call sites intentionally still receive the full public
+  // list; renderers can fall back to any available content locale.
   (locale: string, limit: number) => listProjects({ limit, locale }),
   ["public-projects-list-by-locale"],
   { tags: [PROJECTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },

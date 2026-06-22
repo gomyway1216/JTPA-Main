@@ -7,7 +7,6 @@ import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
-import { contentMatchesLocale } from "@/lib/content-localization";
 import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -31,13 +30,9 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { locale, slug } = await params;
+  const { slug } = await params;
   const project = await getProjectBySlugCached(slug).catch(() => null);
-  if (
-    !project ||
-    project.status !== "approved" ||
-    !contentMatchesLocale(project.locales, locale)
-  ) {
+  if (!project || project.status !== "approved") {
     return {};
   }
   const description = truncate(stripMarkdown(project.description), 160);

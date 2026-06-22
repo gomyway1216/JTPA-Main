@@ -229,9 +229,8 @@ export interface ProjectDoc {
   ownerName: string;
   title: string;
   description: string;
-  // Locales this project should appear in. Missing on legacy docs is treated
-  // as visible in every app locale by detail/sitemap fallback paths; list
-  // queries expect legacy docs to be backfilled.
+  // Locales this project has content for. Public pages fall back to any
+  // available locale instead of hiding the project from other app locales.
   locales?: ContentLocale[];
   tags: string[];
   appUrl: string;
@@ -284,9 +283,8 @@ export interface PostDoc {
   title: string;
   excerpt: string;
   body: string;
-  // Locales this post should appear in. Missing on legacy docs is treated as
-  // visible in every app locale by detail/sitemap fallback paths; list queries
-  // expect legacy docs to be backfilled.
+  // Locales this post has content for. Public pages fall back to any available
+  // locale instead of hiding the post from other app locales.
   locales?: ContentLocale[];
   coverImage?: ProjectAsset; // reuse the {path, url} shape from projects
   tags: string[];

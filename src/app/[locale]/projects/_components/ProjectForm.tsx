@@ -7,7 +7,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { RefMDEditor } from "@uiw/react-md-editor";
@@ -73,9 +73,8 @@ function escapeAlt(s: string): string {
 
 function initialProjectLocales(
   project: ProjectDoc | undefined,
-  locale: string,
 ): ContentLocale[] {
-  if (!project) return initialContentLocales(undefined, locale);
+  if (!project) return initialContentLocales(undefined);
   const normalized = normalizeContentLocales(project.locales);
   return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
 }
@@ -88,7 +87,6 @@ interface Props {
 }
 
 export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
-  const locale = useLocale();
   const t = useTranslations("ProjectForm");
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
@@ -96,7 +94,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     project?.description ?? (mode === "create" ? t("descriptionTemplate") : ""),
   );
   const [locales, setLocales] = useState<ContentLocale[]>(
-    initialProjectLocales(project, locale),
+    initialProjectLocales(project),
   );
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
   const [appUrl, setAppUrl] = useState(project?.appUrl ?? "");

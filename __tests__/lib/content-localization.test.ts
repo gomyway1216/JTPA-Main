@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  contentMatchesLocale,
   initialContentLocales,
   normalizeContentLocales,
+  preferredContentLocale,
 } from "@/lib/content-localization";
 
 describe("content localization helpers", () => {
@@ -14,18 +14,18 @@ describe("content localization helpers", () => {
     ]);
   });
 
-  it("defaults new content to the current supported locale", () => {
-    expect(initialContentLocales(undefined, "en")).toEqual(["en"]);
-    expect(initialContentLocales(undefined, "fr")).toEqual(["ja"]);
+  it("defaults new content to all supported locales", () => {
+    expect(initialContentLocales(undefined)).toEqual(["ja", "en"]);
   });
 
-  it("treats missing legacy locales as visible everywhere", () => {
-    expect(contentMatchesLocale(undefined, "ja")).toBe(true);
+  it("uses the requested locale for legacy docs without locale metadata", () => {
+    expect(preferredContentLocale(undefined, "ja")).toBe("ja");
+    expect(preferredContentLocale(undefined, "fr")).toBe("ja");
   });
 
-  it("matches only selected locales when the field is present", () => {
-    expect(contentMatchesLocale(["ja"], "ja")).toBe(true);
-    expect(contentMatchesLocale(["ja"], "en")).toBe(false);
-    expect(contentMatchesLocale([], "en")).toBe(false);
+  it("falls back to an available locale when the requested one is missing", () => {
+    expect(preferredContentLocale(["ja", "en"], "en")).toBe("en");
+    expect(preferredContentLocale(["ja"], "en")).toBe("ja");
+    expect(preferredContentLocale([], "en")).toBeUndefined();
   });
 });
