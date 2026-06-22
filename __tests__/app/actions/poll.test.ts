@@ -209,12 +209,22 @@ describe("submitPoll — validation + option hygiene", () => {
     const ja = {
       title: "好きなスタックは？",
       description: "複数選択できます",
-      options: [{ label: "Next.js" }, { label: "Rails" }],
+      options: [
+        { label: "Next.js" },
+        { label: "" },
+        { label: "Rails" },
+        { label: "Python" },
+      ],
     };
     const en = {
       title: "Favorite stack?",
       description: "Choose all that apply",
-      options: [{ label: "Next.js" }, { label: "Ruby on Rails" }],
+      options: [
+        { label: "Next.js" },
+        { label: "" },
+        { label: "Ruby on Rails" },
+        { label: "Python" },
+      ],
     };
     await expect(submitPoll({ localized: { ja, en } })).rejects.toThrow(
       "__REDIRECT__:/poll",
@@ -234,12 +244,20 @@ describe("submitPoll — validation + option hygiene", () => {
     expect(payload.title).toBe(ja.title);
     expect(payload.description).toBe(ja.description);
     expect(payload.locales).toEqual(["ja", "en"]);
-    expect(payload.localized.ja.options.map((option) => option.id)).toEqual(
-      payload.options.map((option) => option.id),
-    );
+    expect(payload.options.map((option) => option.label)).toEqual([
+      "Next.js",
+      "Rails",
+      "Python",
+    ]);
+    expect(payload.localized.ja.options).toEqual([
+      { id: payload.options[0].id, label: "Next.js" },
+      { id: payload.options[1].id, label: "Rails" },
+      { id: payload.options[2].id, label: "Python" },
+    ]);
     expect(payload.localized.en.options).toEqual([
       { id: payload.options[0].id, label: "Next.js" },
       { id: payload.options[1].id, label: "Ruby on Rails" },
+      { id: payload.options[2].id, label: "Python" },
     ]);
   });
 });

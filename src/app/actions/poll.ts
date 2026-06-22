@@ -67,12 +67,10 @@ function cleanPollContent(content: PollContentInput): LocalizedPollContent {
   return {
     title: content.title.trim(),
     description: content.description.trim(),
-    options: content.options
-      .map((option) => ({
-        id: option.id ?? "",
-        label: option.label.trim(),
-      }))
-      .filter((option) => option.label.length > 0),
+    options: content.options.map((option) => ({
+      id: option.id ?? "",
+      label: option.label.trim(),
+    })),
   };
 }
 
@@ -98,7 +96,9 @@ function validatePollContent(
     });
     ok = false;
   }
-  if (content.options.length < MIN_OPTIONS) {
+  if (
+    content.options.filter((option) => option.label.trim()).length < MIN_OPTIONS
+  ) {
     ctx.addIssue({
       code: "custom",
       path: [...path, "options"],
@@ -113,6 +113,7 @@ function localizedPollContentWithOptionIds(
   localized: LocalizedContentMap<LocalizedPollContent>,
   locales: ContentLocale[],
   options: PollOption[],
+  sourceIndices?: number[],
 ): LocalizedContentMap<LocalizedPollContent> {
   const next: LocalizedContentMap<LocalizedPollContent> = {};
   for (const locale of locales) {
@@ -125,7 +126,7 @@ function localizedPollContentWithOptionIds(
         const byId = content.options.find(
           (candidate) => candidate.id === option.id,
         );
-        const byIndex = content.options[index];
+        const byIndex = content.options[sourceIndices?.[index] ?? index];
         return {
           id: option.id,
           label: byId?.label || byIndex?.label || option.label,
@@ -309,15 +310,19 @@ export async function submitPoll(
   // id, so a single ballot for that id would update both rows.
   const seen = new Set<string>();
   const cleanedOptions: PollOption[] = [];
-  for (const opt of parsed.options) {
-    const key = opt.label.toLowerCase();
+  const cleanedOptionSourceIndices: number[] = [];
+  for (const [index, opt] of parsed.options.entries()) {
+    const label = opt.label.trim();
+    if (!label) continue;
+    const key = label.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
     cleanedOptions.push({
       id: newOptionId(),
-      label: opt.label,
+      label,
       voteCount: 0,
     });
+    cleanedOptionSourceIndices.push(index);
   }
   if (cleanedOptions.length < MIN_OPTIONS) {
     return {
@@ -339,6 +344,7 @@ export async function submitPoll(
       parsed.localized,
       parsed.locales,
       cleanedOptions,
+      cleanedOptionSourceIndices,
     ),
     authorUid: user.uid,
     authorName: user.displayName,
@@ -422,6 +428,7 @@ export async function updateMyPoll(
     const optionsFrozen = (cur.voterCount ?? 0) > 0;
 
     let nextOptions: PollOption[] = cur.options;
+    let nextOptionSourceIndices: number[] | undefined;
     if (!optionsFrozen) {
       // Build the next option list with two independent dedupe sets:
       //   - labels (lowercased) so "Claude" and "claude" can't both land
@@ -434,8 +441,11 @@ export async function updateMyPoll(
       const seenLabels = new Set<string>();
       const seenIds = new Set<string>();
       const cleaned: PollOption[] = [];
-      for (const opt of parsed.options) {
-        const labelKey = opt.label.toLowerCase();
+      const sourceIndices: number[] = [];
+      for (const [index, opt] of parsed.options.entries()) {
+        const label = opt.label.trim();
+        if (!label) continue;
+        const labelKey = label.toLowerCase();
         if (seenLabels.has(labelKey)) continue;
         seenLabels.add(labelKey);
         let id = opt.id;
@@ -443,7 +453,8 @@ export async function updateMyPoll(
           id = newOptionId();
         }
         seenIds.add(id);
-        cleaned.push({ id, label: opt.label, voteCount: 0 });
+        cleaned.push({ id, label, voteCount: 0 });
+        sourceIndices.push(index);
       }
       if (cleaned.length < MIN_OPTIONS) {
         return {
@@ -454,6 +465,7 @@ export async function updateMyPoll(
         };
       }
       nextOptions = cleaned;
+      nextOptionSourceIndices = sourceIndices;
     }
 
     tx.update(ref, {
@@ -466,6 +478,7 @@ export async function updateMyPoll(
         parsed.localized,
         parsed.locales,
         nextOptions,
+        nextOptionSourceIndices,
       ),
       updatedAt: Timestamp.now(),
     });

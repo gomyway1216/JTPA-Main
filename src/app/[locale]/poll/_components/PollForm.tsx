@@ -307,8 +307,7 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           <input
             id={`poll-title-${activeLocale}`}
             type="text"
-            required
-            minLength={2}
+            aria-required="true"
             maxLength={120}
             value={activeContent.title}
             onChange={(e) => updateActiveContent({ title: e.target.value })}

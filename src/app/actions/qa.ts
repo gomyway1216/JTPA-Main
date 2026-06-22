@@ -31,8 +31,8 @@ const FIRESTORE_AUTO_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const QA_INVALID_ID = "qaInvalidId";
 
 const QaLocalizedContentInputSchema = z.object({
-  title: z.string().max(120).default(""),
-  body: z.string().max(20000).default(""),
+  title: z.string().trim().max(120).default(""),
+  body: z.string().trim().max(20000).default(""),
 });
 
 const LocalizedQaInputSchema = z

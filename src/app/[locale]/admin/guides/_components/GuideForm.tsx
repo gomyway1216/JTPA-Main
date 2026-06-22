@@ -498,7 +498,7 @@ export function GuideForm({
           <input
             id={`guide-title-${activeLocale}`}
             type="text"
-            required
+            aria-required="true"
             value={activeContent.title}
             onChange={(e) => updateActiveContent({ title: e.target.value })}
             className={inputClass}

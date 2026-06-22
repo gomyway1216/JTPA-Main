@@ -133,16 +133,18 @@ describe("submitQa — create", () => {
   });
 
   it("stores localized Q&A content on create", async () => {
-    const ja = { title: "質問タイトル", body: "質問本文" };
-    const en = { title: "Question title", body: "Question body" };
+    const ja = { title: " 質問タイトル ", body: "\n質問本文\n" };
+    const en = { title: " Question title ", body: "\nQuestion body\n" };
+    const expectedJa = { title: "質問タイトル", body: "質問本文" };
+    const expectedEn = { title: "Question title", body: "Question body" };
     await expect(submitQa({ localized: { ja, en } })).rejects.toThrow(
       "__REDIRECT__:/qa",
     );
     const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
-    expect(payload.title).toBe(ja.title);
-    expect(payload.body).toBe(ja.body);
+    expect(payload.title).toBe(expectedJa.title);
+    expect(payload.body).toBe(expectedJa.body);
     expect(payload.locales).toEqual(["ja", "en"]);
-    expect(payload.localized).toEqual({ ja, en });
+    expect(payload.localized).toEqual({ ja: expectedJa, en: expectedEn });
   });
 
   it("honors a pre-generated client id via create() instead of add()", async () => {

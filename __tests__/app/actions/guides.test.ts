@@ -201,7 +201,8 @@ describe("submitGuide — validation + status resolution", () => {
   });
 
   it("stores localized guide content on create", async () => {
-    const en = { title: "English guide", body: "Useful details" };
+    const en = { title: " English guide ", body: "\nUseful details\n" };
+    const expectedEn = { title: "English guide", body: "Useful details" };
     await expect(
       submitGuide({
         localized: { en },
@@ -209,10 +210,10 @@ describe("submitGuide — validation + status resolution", () => {
       }),
     ).rejects.toThrow("__REDIRECT__:/my/guides");
     const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
-    expect(payload.title).toBe(en.title);
-    expect(payload.body).toBe(en.body);
+    expect(payload.title).toBe(expectedEn.title);
+    expect(payload.body).toBe(expectedEn.body);
     expect(payload.locales).toEqual(["en"]);
-    expect(payload.localized).toEqual({ en });
+    expect(payload.localized).toEqual({ en: expectedEn });
   });
 
   it("clamps a non-curator's order to the default (no pin-to-top via crafted payload)", async () => {

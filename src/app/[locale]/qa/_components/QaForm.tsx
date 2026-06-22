@@ -333,8 +333,7 @@ export function QaForm({ mode, user, qa }: Props) {
           <input
             id={`qa-title-${activeLocale}`}
             type="text"
-            required
-            minLength={2}
+            aria-required="true"
             maxLength={120}
             value={activeContent.title}
             onChange={(e) => updateActiveContent({ title: e.target.value })}

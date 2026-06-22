@@ -54,8 +54,8 @@ const optionalNonEmpty = (schema: z.ZodTypeAny) =>
 const StatusInputSchema = z.enum(["draft", "pending", "published"]);
 
 const GuideLocalizedContentInputSchema = z.object({
-  title: z.string().max(200).default(""),
-  body: z.string().max(50000).default(""),
+  title: z.string().trim().max(200).default(""),
+  body: z.string().trim().max(50000).default(""),
 });
 
 const LocalizedGuideInputSchema = z
