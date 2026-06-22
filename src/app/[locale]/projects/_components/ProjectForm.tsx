@@ -89,6 +89,14 @@ function emptyProjectContent(): LocalizedProjectContent {
   return { title: "", description: "" };
 }
 
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
 function emptyProjectContentByLocale(): Record<
   ContentLocale,
   LocalizedProjectContent
@@ -113,7 +121,10 @@ function initialProjectContentByLocale(
   for (const locale of CONTENT_LOCALES) {
     const content = project.localized?.[locale];
     if (!content) continue;
-    next[locale] = content;
+    next[locale] = {
+      title: textValue(content.title),
+      description: textValue(content.description),
+    };
     hasLocalized = true;
   }
 
@@ -139,7 +150,7 @@ function initialProjectActiveLocale(
     const content = project.localized?.[locale];
     return Boolean(
       content &&
-        (content.title.trim() || content.description.trim()),
+        (hasText(content.title) || hasText(content.description)),
     );
   });
   if (localizedLocales.length > 0) {
@@ -468,7 +479,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-4">
         <div
-          role="tablist"
+          role="group"
           aria-label={t("localization")}
           className="flex flex-wrap gap-2"
         >
@@ -476,8 +487,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
             <button
               key={value}
               type="button"
-              role="tab"
-              aria-selected={activeLocale === value}
+              aria-pressed={activeLocale === value}
               disabled={pending || deletePending || uploading}
               onClick={() => setActiveLocale(value)}
               className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
@@ -499,6 +509,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
           <input
             id={`project-title-${activeLocale}`}
             type="text"
+            required
             value={activeContent.title}
             onChange={(e) => updateActiveContent({ title: e.target.value })}
             className={inputClass}

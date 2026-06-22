@@ -31,14 +31,14 @@ const ProjectAssetSchema = z.looseObject({
 });
 
 const ContentLocalesSchema = z.array(z.enum(CONTENT_LOCALES));
-const LocalizedProjectContentSchema = z.object({
-  title: z.string(),
-  description: z.string(),
+const LocalizedProjectContentSchema = z.looseObject({
+  title: z.string().optional(),
+  description: z.string().optional(),
 });
-const LocalizedPostContentSchema = z.object({
-  title: z.string(),
-  excerpt: z.string(),
-  body: z.string(),
+const LocalizedPostContentSchema = z.looseObject({
+  title: z.string().optional(),
+  excerpt: z.string().optional(),
+  body: z.string().optional(),
 });
 const LocalizedProjectMapSchema = z.object({
   ja: LocalizedProjectContentSchema.optional(),

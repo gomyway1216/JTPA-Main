@@ -88,6 +88,14 @@ function emptyPostContent(): LocalizedPostContent {
   return { title: "", excerpt: "", body: "" };
 }
 
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
 function emptyPostContentByLocale(): Record<ContentLocale, LocalizedPostContent> {
   return Object.fromEntries(
     CONTENT_LOCALES.map((locale) => [locale, emptyPostContent()]),
@@ -104,7 +112,11 @@ function initialPostContentByLocale(
   for (const locale of CONTENT_LOCALES) {
     const content = post.localized?.[locale];
     if (!content) continue;
-    next[locale] = content;
+    next[locale] = {
+      title: textValue(content.title),
+      excerpt: textValue(content.excerpt),
+      body: textValue(content.body),
+    };
     hasLocalized = true;
   }
 
@@ -131,9 +143,9 @@ function initialPostActiveLocale(
     const content = post.localized?.[locale];
     return Boolean(
       content &&
-        (content.title.trim() ||
-          content.excerpt.trim() ||
-          content.body.trim()),
+        (hasText(content.title) ||
+          hasText(content.excerpt) ||
+          hasText(content.body)),
     );
   });
   if (localizedLocales.length > 0) {
@@ -300,7 +312,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     >
       <div className="space-y-4">
         <div
-          role="tablist"
+          role="group"
           aria-label={t("localization")}
           className="flex flex-wrap gap-2"
         >
@@ -308,8 +320,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
             <button
               key={value}
               type="button"
-              role="tab"
-              aria-selected={activeLocale === value}
+              aria-pressed={activeLocale === value}
               disabled={pending || uploading}
               onClick={() => setActiveLocale(value)}
               className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
@@ -327,6 +338,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
           <input
             id={`post-title-${activeLocale}`}
             type="text"
+            required
             value={activeContent.title}
             onChange={(e) => updateActiveContent({ title: e.target.value })}
             className={inputClass}
@@ -342,6 +354,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
             id={`post-excerpt-${activeLocale}`}
             rows={2}
             maxLength={300}
+            required
             value={activeContent.excerpt}
             onChange={(e) => updateActiveContent({ excerpt: e.target.value })}
             className={inputClass}

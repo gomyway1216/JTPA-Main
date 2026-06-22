@@ -11,14 +11,18 @@ import type {
   ProjectDoc,
 } from "@/lib/types";
 
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function isCompletePostContent(
   content: LocalizedPostContent | undefined,
 ): content is LocalizedPostContent {
   return Boolean(
     content &&
-      content.title.trim() &&
-      content.excerpt.trim() &&
-      content.body.trim(),
+      hasText(content.title) &&
+      hasText(content.excerpt) &&
+      hasText(content.body),
   );
 }
 
@@ -27,8 +31,8 @@ function isCompleteProjectContent(
 ): content is LocalizedProjectContent {
   return Boolean(
     content &&
-      content.title.trim() &&
-      content.description.trim(),
+      hasText(content.title) &&
+      hasText(content.description),
   );
 }
 

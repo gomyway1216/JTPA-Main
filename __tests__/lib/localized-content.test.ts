@@ -37,6 +37,28 @@ describe("localized content helpers", () => {
     expect(getLocalizedPostContent(post, "en").title).toBe("日本語");
   });
 
+  it("ignores incomplete localized post content instead of throwing", () => {
+    const post = {
+      title: "Fallback",
+      excerpt: "Fallback excerpt",
+      body: "Fallback body",
+      localized: {
+        ja: { title: "日本語" },
+      },
+    };
+
+    expect(
+      getLocalizedPostContent(
+        post as unknown as Parameters<typeof getLocalizedPostContent>[0],
+        "ja",
+      ),
+    ).toEqual({
+      title: "Fallback",
+      excerpt: "Fallback excerpt",
+      body: "Fallback body",
+    });
+  });
+
   it("falls back to legacy project fields when no localized content exists", () => {
     const project = {
       title: "Legacy project",
@@ -44,6 +66,26 @@ describe("localized content helpers", () => {
     };
 
     expect(getLocalizedProjectContent(project, "ja")).toEqual({
+      title: "Legacy project",
+      description: "Legacy description",
+    });
+  });
+
+  it("ignores incomplete localized project content instead of throwing", () => {
+    const project = {
+      title: "Legacy project",
+      description: "Legacy description",
+      localized: {
+        en: { title: "English project" },
+      },
+    };
+
+    expect(
+      getLocalizedProjectContent(
+        project as unknown as Parameters<typeof getLocalizedProjectContent>[0],
+        "en",
+      ),
+    ).toEqual({
       title: "Legacy project",
       description: "Legacy description",
     });
