@@ -75,7 +75,7 @@ export default async function CommunityPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-5 px-4 py-8">
       <header className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-zinc-800">
-        <div className="space-y-1.5">
+        <div className="min-w-0 flex-1 space-y-1.5">
           <h1 className="text-3xl font-semibold tracking-tight">
             {t("title")}
           </h1>

@@ -53,11 +53,11 @@ export function CommunityFeed({ items }: { items: CommunityFeedItem[] }) {
 
   return (
     <section className="space-y-4">
-      <div className="flex flex-col gap-2 border-b border-zinc-200 pb-2 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
+      <div className="flex flex-col gap-2 border-b border-zinc-200 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
         <div
           role="group"
           aria-label={t("filtersLabel")}
-          className="-mx-1 flex min-w-0 flex-1 gap-4 overflow-x-auto px-1 text-sm"
+          className="-mx-1 -mb-px flex min-w-0 flex-1 gap-4 overflow-x-auto px-1 text-sm"
         >
           {FILTERS.map((item) => {
             const active = item === filter;
@@ -87,7 +87,7 @@ export function CommunityFeed({ items }: { items: CommunityFeedItem[] }) {
             );
           })}
         </div>
-        <p className="shrink-0 text-xs text-zinc-500">
+        <p className="shrink-0 pb-2 text-xs text-zinc-500 sm:pb-0">
           {t("showingCompact", {
             filtered: visibleItems.length,
             total: items.length,
