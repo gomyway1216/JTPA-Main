@@ -222,6 +222,13 @@ export interface ProjectAsset {
   url: string;
 }
 
+export type LocalizedContentMap<T> = Partial<Record<ContentLocale, T>>;
+
+export interface LocalizedProjectContent {
+  title: string;
+  description: string;
+}
+
 export interface ProjectDoc {
   id: string;
   slug: string;
@@ -232,6 +239,7 @@ export interface ProjectDoc {
   // Locales this project has content for. Public pages fall back to any
   // available locale instead of hiding the project from other app locales.
   locales?: ContentLocale[];
+  localized?: LocalizedContentMap<LocalizedProjectContent>;
   tags: string[];
   appUrl: string;
   repoUrl?: string;
@@ -286,6 +294,7 @@ export interface PostDoc {
   // Locales this post has content for. Public pages fall back to any available
   // locale instead of hiding the post from other app locales.
   locales?: ContentLocale[];
+  localized?: LocalizedContentMap<LocalizedPostContent>;
   coverImage?: ProjectAsset; // reuse the {path, url} shape from projects
   tags: string[];
   authorUid: string;
@@ -301,6 +310,12 @@ export interface PostDoc {
   likeCount?: number;
   createdAt: TsLike;
   updatedAt: TsLike;
+}
+
+export interface LocalizedPostContent {
+  title: string;
+  excerpt: string;
+  body: string;
 }
 
 // ---------- comments + likes (shared across post + guide + qa + project + poll) ----------

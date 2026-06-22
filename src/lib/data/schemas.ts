@@ -31,6 +31,23 @@ const ProjectAssetSchema = z.looseObject({
 });
 
 const ContentLocalesSchema = z.array(z.enum(CONTENT_LOCALES));
+const LocalizedProjectContentSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+});
+const LocalizedPostContentSchema = z.object({
+  title: z.string(),
+  excerpt: z.string(),
+  body: z.string(),
+});
+const LocalizedProjectMapSchema = z.object({
+  ja: LocalizedProjectContentSchema.optional(),
+  en: LocalizedProjectContentSchema.optional(),
+});
+const LocalizedPostMapSchema = z.object({
+  ja: LocalizedPostContentSchema.optional(),
+  en: LocalizedPostContentSchema.optional(),
+});
 
 // ---------- users ----------
 const UserLinksSchema = z.looseObject({
@@ -113,6 +130,7 @@ export const ProjectDocSchema = z.looseObject({
   title: z.string().optional(),
   description: z.string().optional(),
   locales: ContentLocalesSchema.optional(),
+  localized: LocalizedProjectMapSchema.optional(),
   tags: z.array(z.string()).optional(),
   appUrl: z.string().optional(),
   repoUrl: z.string().optional(),
@@ -136,6 +154,7 @@ export const PostDocSchema = z.looseObject({
   excerpt: z.string().optional(),
   body: z.string().optional(),
   locales: ContentLocalesSchema.optional(),
+  localized: LocalizedPostMapSchema.optional(),
   coverImage: ProjectAssetSchema.optional(),
   tags: z.array(z.string()).optional(),
   authorUid: z.string().optional(),

@@ -400,7 +400,7 @@
     "title": "Title",
     "excerpt": "Excerpt (for lists, max 300 characters)",
     "body": "Body (Markdown)",
-    "localization": "Content language",
+    "localization": "Localized content",
     "locales": {
       "ja": "Japanese",
       "en": "English"
@@ -428,7 +428,7 @@
     "title": "Title",
     "description": "Description (Markdown supported)",
     "descriptionTemplate": "# Title\n\n## Motivation\n\n## What I built\n\n## How I built it\n\n## Insights gained",
-    "localization": "Content language",
+    "localization": "Localized content",
     "locales": {
       "ja": "Japanese",
       "en": "English"

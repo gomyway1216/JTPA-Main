@@ -13,6 +13,7 @@ import { getPostBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPostContent } from "@/lib/localized-content";
 import { formatDate, toDate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
@@ -24,17 +25,18 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const post = await getPostBySlugCached(slug).catch(() => null);
   if (!post || post.status !== "published") {
     return {};
   }
+  const content = getLocalizedPostContent(post, locale);
   return {
-    title: post.title,
-    description: post.excerpt,
+    title: content.title,
+    description: content.excerpt,
     openGraph: {
-      title: post.title,
-      description: post.excerpt,
+      title: content.title,
+      description: content.excerpt,
       images: post.coverImage ? [post.coverImage.url] : undefined,
     },
   };
@@ -54,6 +56,7 @@ export default async function BlogPostPage({
   if (!post || post.status !== "published") {
     notFound();
   }
+  const content = getLocalizedPostContent(post, locale);
 
   // Session + comment listing are independent — kick them off together
   // rather than serially. The like-state query depends on the comment
@@ -95,8 +98,8 @@ export default async function BlogPostPage({
         data={{
           "@context": "https://schema.org",
           "@type": "BlogPosting",
-          headline: post.title,
-          description: post.excerpt,
+          headline: content.title,
+          description: content.excerpt,
           datePublished: toDate(post.publishedAt)?.toISOString(),
           author: { "@type": "Person", name: post.authorName },
           image: post.coverImage ? [post.coverImage.url] : undefined,
@@ -108,7 +111,7 @@ export default async function BlogPostPage({
       </Link>
 
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">{post.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
             profile={profilesByUid.get(post.authorUid) ?? null}
@@ -151,7 +154,7 @@ export default async function BlogPostPage({
         // `preload`: the cover is the LCP element on posts that have one.
         <Image
           src={post.coverImage.url}
-          alt={t("coverAlt", { title: post.title })}
+          alt={t("coverAlt", { title: content.title })}
           width={1600}
           height={900}
           preload
@@ -160,7 +163,7 @@ export default async function BlogPostPage({
         />
       )}
 
-      <MarkdownBody source={post.body} />
+      <MarkdownBody source={content.body} />
 
       {/* key={post.id} forces a fresh instance per post so local state
           (draft text, optimistic comment list) doesn't leak when the

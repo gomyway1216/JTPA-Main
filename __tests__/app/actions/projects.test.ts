@@ -185,7 +185,13 @@ describe("submitProject — create", () => {
     expect(payload).toMatchObject({
       slug: "my-app",
       ownerUid: "u1",
-      locales: ["ja", "en"],
+      locales: ["ja"],
+      localized: {
+        ja: {
+          title: "My App",
+          description: "A cool demo application",
+        },
+      },
       status: "pending",
       reviewerUid: null,
     });
@@ -203,12 +209,18 @@ describe("submitProject — create", () => {
     expect(payload.slug).toBe("my-app-1");
   });
 
-  it("stores the selected locales on create", async () => {
+  it("stores localized English content on create", async () => {
+    const en = {
+      title: "English App",
+      description: "An English demo application",
+    };
     await expect(
-      submitProject({ ...validInput, locales: ["en"] }),
+      submitProject({ localized: { en } }),
     ).rejects.toThrow("__REDIRECT__:/my/projects");
     const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
     expect(payload.locales).toEqual(["en"]);
+    expect(payload.localized).toEqual({ en });
+    expect(payload.title).toBe("English App");
   });
 });
 
@@ -237,7 +249,7 @@ describe("updateMyProject — authorization + state machine", () => {
     );
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("pending");
-    expect(patch.locales).toEqual(["ja", "en"]);
+    expect(patch.locales).toEqual(["ja"]);
     expect(patch.submittedAt).toEqual({ __fixed: "now" });
     // The legacy field normalizes away on first save (PR #24).
     expect(patch.thumbnailPath).toBe("__field_delete__");
@@ -265,16 +277,25 @@ describe("updateMyProject — authorization + state machine", () => {
     expect(patch).not.toHaveProperty("submittedAt");
   });
 
-  it("updates the selected locales", async () => {
+  it("updates localized content", async () => {
     docGetMock.mockResolvedValueOnce({
       exists: true,
       data: () => ({ ownerUid: "u1", slug: "s", status: "pending" }),
     });
+    const ja = {
+      title: "My App",
+      description: "A cool demo application",
+    };
+    const en = {
+      title: "English App",
+      description: "An English demo application",
+    };
     await expect(
-      updateMyProject("p1", { ...validInput, locales: ["ja", "en"] }),
+      updateMyProject("p1", { localized: { ja, en } }),
     ).rejects.toThrow("__REDIRECT__");
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.locales).toEqual(["ja", "en"]);
+    expect(patch.localized).toEqual({ ja, en });
   });
 
   it("sweeps orphaned screenshots + thumbnail from Storage, keeping survivors", async () => {

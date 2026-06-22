@@ -13,6 +13,7 @@ import { listPoll } from "@/lib/data/poll";
 import { listPublishedPostsForLocale } from "@/lib/data/posts";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPostContent } from "@/lib/localized-content";
 import type { GuideDoc, PollDoc, PostDoc, QaDoc, TsLike } from "@/lib/types";
 import { formatDate, stripMarkdown, toDate, truncate } from "@/lib/utils";
 
@@ -194,12 +195,13 @@ function postItem(
   locale: string,
   authorProfiles: Awaited<ReturnType<typeof getPublicProfilesByUids>>,
 ): CommunityFeedItem {
+  const content = getLocalizedPostContent(post, locale);
   return baseItem({
     id: post.id,
     kind: "blog",
     href: `/blog/${post.slug}`,
-    title: post.title,
-    excerpt: post.excerpt || truncate(stripMarkdown(post.body), 180),
+    title: content.title,
+    excerpt: content.excerpt || truncate(stripMarkdown(content.body), 180),
     tags: post.tags,
     date: post.publishedAt ?? post.createdAt,
     locale,

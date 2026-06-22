@@ -18,13 +18,20 @@ import { requireAdmin, requireUser } from "@/lib/auth/session";
 import {
   CONTENT_LOCALES,
   DEFAULT_CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
 } from "@/lib/content-localization";
 import { PROJECTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { routing } from "@/i18n/routing";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
-import type { ProjectAsset, ProjectDoc } from "@/lib/types";
+import type {
+  LocalizedContentMap,
+  LocalizedProjectContent,
+  ProjectAsset,
+  ProjectDoc,
+} from "@/lib/types";
 
 // Pre-process empty strings to `undefined` so blank optional URL fields don't
 // trip the `.url()` validator.
@@ -37,6 +44,45 @@ const AssetSchema = z.object({
   path: z.string().min(1),
   url: z.string().url(),
 });
+
+const ProjectLocalizedContentInputSchema = z.object({
+  title: z.string().max(120).default(""),
+  description: z.string().max(5000).default(""),
+});
+
+const LocalizedProjectInputSchema = z.object({
+  ja: ProjectLocalizedContentInputSchema.optional(),
+  en: ProjectLocalizedContentInputSchema.optional(),
+}).default({});
+
+function hasAnyProjectContent(content: LocalizedProjectContent): boolean {
+  return Boolean(content.title.trim() || content.description.trim());
+}
+
+function validateProjectContent(
+  content: LocalizedProjectContent,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): boolean {
+  let ok = true;
+  if (content.title.trim().length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "title"],
+      message: "Title must be at least 2 characters.",
+    });
+    ok = false;
+  }
+  if (content.description.trim().length < 10) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "description"],
+      message: "Description must be at least 10 characters.",
+    });
+    ok = false;
+  }
+  return ok;
+}
 
 function revalidateLocalizedPath(path: string): void {
   revalidatePath(path);
@@ -55,14 +101,15 @@ function expireProjectCache() {
 }
 
 const ProjectInputSchema = z.object({
-  title: z.string().min(2).max(120),
-  description: z.string().min(10).max(5000),
+  title: z.string().max(120).optional(),
+  description: z.string().max(5000).optional(),
+  localized: LocalizedProjectInputSchema,
   locales: z
     .array(z.enum(CONTENT_LOCALES))
     .min(1)
     .max(CONTENT_LOCALES.length)
-    .default([...DEFAULT_CONTENT_LOCALES])
-    .transform((locales) => [...new Set(locales)]),
+    .optional()
+    .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
   tags: z.array(z.string().min(1).max(30)).max(10).default([]),
   // appUrl optional: per #38, projects can be CLI tools, local-only
   // experiments, hardware demos, etc. — not every project has a public
@@ -73,6 +120,53 @@ const ProjectInputSchema = z.object({
   demoVideoUrl: optionalUrl,
   thumbnail: AssetSchema.optional(),
   screenshots: z.array(AssetSchema).max(8).default([]),
+}).transform((input, ctx) => {
+  const localized: LocalizedContentMap<LocalizedProjectContent> = {};
+  const locales: ContentLocale[] = [];
+  let sawContent = false;
+
+  for (const locale of CONTENT_LOCALES) {
+    const content = input.localized[locale] ?? {
+      title: "",
+      description: "",
+    };
+    if (!hasAnyProjectContent(content)) continue;
+    sawContent = true;
+    if (!validateProjectContent(content, ctx, ["localized", locale])) continue;
+    localized[locale] = content;
+    locales.push(locale);
+  }
+
+  const legacyContent = {
+    title: input.title ?? "",
+    description: input.description ?? "",
+  };
+  if (locales.length === 0 && hasAnyProjectContent(legacyContent)) {
+    sawContent = true;
+    if (validateProjectContent(legacyContent, ctx, [])) {
+      const legacyLocale =
+        normalizeContentLocales(input.locales)[0] ?? DEFAULT_CONTENT_LOCALES[0];
+      localized[legacyLocale] = legacyContent;
+      locales.push(legacyLocale);
+    }
+  }
+
+  if (!sawContent) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["localized"],
+      message: "Enter content for at least one language.",
+    });
+  }
+
+  const primary = localized[locales[0]] ?? { title: "", description: "" };
+  return {
+    ...input,
+    title: primary.title,
+    description: primary.description,
+    locales,
+    localized,
+  };
 });
 
 export type ProjectFormInput = z.input<typeof ProjectInputSchema>;
@@ -121,6 +215,7 @@ export async function submitProject(
     title: parsed.title,
     description: parsed.description,
     locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",
@@ -188,6 +283,7 @@ export async function updateMyProject(
     title: parsed.title,
     description: parsed.description,
     locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",

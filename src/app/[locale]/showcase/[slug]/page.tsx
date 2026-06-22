@@ -11,6 +11,7 @@ import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedProjectContent } from "@/lib/localized-content";
 import { canViewProjectDetail } from "@/lib/projects-visibility";
 import { stripMarkdown, truncate } from "@/lib/utils";
 
@@ -30,24 +31,25 @@ export async function generateMetadata({
 }: {
   params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const project = await getProjectBySlugCached(slug).catch(() => null);
   if (!project || project.status !== "approved") {
     return {};
   }
-  const description = truncate(stripMarkdown(project.description), 160);
+  const content = getLocalizedProjectContent(project, locale);
+  const description = truncate(stripMarkdown(content.description), 160);
   const images = project.thumbnail ? [project.thumbnail.url] : undefined;
   return {
-    title: project.title,
+    title: content.title,
     description,
     openGraph: {
-      title: project.title,
+      title: content.title,
       description,
       images,
     },
     twitter: {
       card: project.thumbnail ? "summary_large_image" : "summary",
-      title: project.title,
+      title: content.title,
       description,
       images,
     },
@@ -73,6 +75,7 @@ export default async function ProjectDetailPage({
     : loadProjectComments(project.id);
   const user = await userPromise;
   if (!canViewProjectDetail(project, user, locale)) notFound();
+  const content = getLocalizedProjectContent(project, locale);
 
   const statusT = isPrivatePreview ? await getTranslations("Status") : null;
   const commentsPage = await (
@@ -97,7 +100,7 @@ export default async function ProjectDetailPage({
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
       <header className="space-y-2">
-        <h1 className="text-3xl font-bold">{project.title}</h1>
+        <h1 className="text-3xl font-bold">{content.title}</h1>
         {isPrivatePreview && (
           <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
             {t.rich("statusNotice", {
@@ -146,7 +149,7 @@ export default async function ProjectDetailPage({
         // `preload`: the cover is the LCP element on projects that have one.
         <Image
           src={project.thumbnail.url}
-          alt={t("coverAlt", { title: project.title })}
+          alt={t("coverAlt", { title: content.title })}
           width={1600}
           height={900}
           preload
@@ -155,7 +158,7 @@ export default async function ProjectDetailPage({
         />
       )}
 
-      <MarkdownBody source={project.description} />
+      <MarkdownBody source={content.description} />
 
       {(project.screenshots?.length ?? 0) > 0 && (
         <section className="space-y-2">
@@ -171,7 +174,7 @@ export default async function ProjectDetailPage({
                 >
                   <Image
                     src={s.url}
-                    alt={`${project.title} screenshot ${i + 1}`}
+                    alt={`${content.title} screenshot ${i + 1}`}
                     width={640}
                     height={360}
                     sizes="(max-width: 640px) 50vw, 240px"
