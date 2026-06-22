@@ -10,7 +10,7 @@ import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listGuides } from "@/lib/data/guides";
 import { listPoll } from "@/lib/data/poll";
-import { listPublishedPosts } from "@/lib/data/posts";
+import { listPublishedPostsForLocale } from "@/lib/data/posts";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import type { GuideDoc, PollDoc, PostDoc, QaDoc, TsLike } from "@/lib/types";
@@ -45,7 +45,7 @@ export default async function CommunityPage() {
       console.error("Failed to list polls for community:", err);
       return [] as PollDoc[];
     }),
-    listPublishedPosts(40).catch((err) => {
+    listPublishedPostsForLocale(locale, 40).catch((err) => {
       console.error("Failed to list posts for community:", err);
       return [] as PostDoc[];
     }),

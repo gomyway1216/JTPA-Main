@@ -400,6 +400,11 @@
     "title": "タイトル",
     "excerpt": "抜粋 (一覧表示用・最大 300 字)",
     "body": "本文 (Markdown)",
+    "localization": "表示する言語",
+    "locales": {
+      "ja": "日本語",
+      "en": "English"
+    },
     "tags": "タグ (カンマ区切り・最大 8)",
     "tagsPlaceholder": "お知らせ、勉強会, レポート",
     "cover": "カバー画像 (任意・5MB まで)",
@@ -423,6 +428,11 @@
     "title": "タイトル",
     "description": "説明 (Markdown可)",
     "descriptionTemplate": "# <プロジェクトタイトル>\n\n## 作り始めた動機\n\n## 何を作ったか\n\n## どうやって作ったか\n\n## 作ったことで得られたインサイトなど",
+    "localization": "表示する言語",
+    "locales": {
+      "ja": "日本語",
+      "en": "English"
+    },
     "tags": "タグ (カンマ区切り)",
     "appUrl": "アプリのURL (任意)",
     "appUrlPlaceholder": "https://your-app.example.com (CLI / ローカル専用なら空欄でOK)",

@@ -1,7 +1,11 @@
 import type { MetadataRoute } from "next";
 
 import { localizedPath } from "@/i18n/paths";
-import { routing } from "@/i18n/routing";
+import {
+  CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { listEvents } from "@/lib/data/events";
 import { listGuides } from "@/lib/data/guides";
 import { listPublishedPosts } from "@/lib/data/posts";
@@ -41,14 +45,18 @@ const STATIC_PATHS = [
 function localizedEntries(
   path: string,
   lastModified?: TsLike,
+  contentLocales?: readonly unknown[],
 ): MetadataRoute.Sitemap {
   const base = siteBaseUrl();
+  const contentLocaleList = normalizeContentLocales(contentLocales);
+  const locales: readonly ContentLocale[] =
+    contentLocaleList.length > 0 ? contentLocaleList : CONTENT_LOCALES;
   const urlFor = (locale: string) => `${base}${localizedPath(path, locale)}`;
   const languages = Object.fromEntries(
-    routing.locales.map((locale) => [locale, urlFor(locale)]),
+    locales.map((locale) => [locale, urlFor(locale)]),
   );
   const date = toDate(lastModified) ?? undefined;
-  return routing.locales.map((locale) => ({
+  return locales.map((locale) => ({
     url: urlFor(locale),
     lastModified: date,
     alternates: { languages },
@@ -69,7 +77,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...STATIC_PATHS.flatMap((path) => localizedEntries(path)),
-    ...posts.flatMap((p) => localizedEntries(`/blog/${p.slug}`, p.updatedAt)),
+    ...posts.flatMap((p) =>
+      localizedEntries(`/blog/${p.slug}`, p.updatedAt, p.locales),
+    ),
     ...guides.flatMap((g) => localizedEntries(`/guide/${g.slug}`, g.updatedAt)),
     ...events
       // Members-only events redirect anonymous visitors (crawlers included)
@@ -77,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .filter((e) => e.visibility !== "members_only")
       .flatMap((e) => localizedEntries(`/events/${e.slug}`, e.updatedAt)),
     ...projects.flatMap((p) =>
-      localizedEntries(`/showcase/${p.slug}`, p.updatedAt),
+      localizedEntries(`/showcase/${p.slug}`, p.updatedAt, p.locales),
     ),
   ];
 }

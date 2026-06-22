@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase/firestore";
+import type { ContentLocale } from "@/lib/content-localization";
 
 // Firestore timestamps round-trip differently between client/admin SDKs,
 // and again across the Server→Client component boundary (JSON-stringified
@@ -228,6 +229,10 @@ export interface ProjectDoc {
   ownerName: string;
   title: string;
   description: string;
+  // Locales this project should appear in. Missing on legacy docs is treated
+  // as visible in every app locale by detail/sitemap fallback paths; list
+  // queries expect legacy docs to be backfilled.
+  locales?: ContentLocale[];
   tags: string[];
   appUrl: string;
   repoUrl?: string;
@@ -279,6 +284,10 @@ export interface PostDoc {
   title: string;
   excerpt: string;
   body: string;
+  // Locales this post should appear in. Missing on legacy docs is treated as
+  // visible in every app locale by detail/sitemap fallback paths; list queries
+  // expect legacy docs to be backfilled.
+  locales?: ContentLocale[];
   coverImage?: ProjectAsset; // reuse the {path, url} shape from projects
   tags: string[];
   authorUid: string;

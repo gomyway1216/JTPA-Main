@@ -34,6 +34,7 @@ vi.mock("next/cache", () => ({
 }));
 
 const listPublishedPostsMock = vi.fn();
+const listPublishedPostsForLocaleMock = vi.fn();
 const getPostBySlugMock = vi.fn();
 const listGuidesMock = vi.fn();
 const getGuideBySlugMock = vi.fn();
@@ -45,6 +46,8 @@ const readSitePageMock = vi.fn();
 
 vi.mock("@/lib/data/posts", () => ({
   listPublishedPosts: (...args: unknown[]) => listPublishedPostsMock(...args),
+  listPublishedPostsForLocale: (...args: unknown[]) =>
+    listPublishedPostsForLocaleMock(...args),
   getPostBySlug: (...args: unknown[]) => getPostBySlugMock(...args),
 }));
 vi.mock("@/lib/data/guides", () => ({
@@ -70,15 +73,18 @@ import {
   getPostBySlugCached,
   getProjectBySlugCached,
   getSitePageCached,
+  listApprovedProjectsForLocaleCached,
   listApprovedProjectsCached,
   listPastEventsCached,
   listPublishedGuidesCached,
+  listPublishedPostsForLocaleCached,
   listPublishedPostsCached,
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
 
 beforeEach(() => {
   listPublishedPostsMock.mockReset();
+  listPublishedPostsForLocaleMock.mockReset();
   getPostBySlugMock.mockReset();
   listGuidesMock.mockReset();
   getGuideBySlugMock.mockReset();
@@ -117,6 +123,14 @@ describe("list wrappers — tags, windows, delegation", () => {
       revalidate: CONTENT_REVALIDATE_SECONDS,
     },
     {
+      name: "listPublishedPostsForLocaleCached",
+      call: () => listPublishedPostsForLocaleCached("en", 50),
+      mock: listPublishedPostsForLocaleMock,
+      expectedArgs: ["en", 50],
+      tag: "posts",
+      revalidate: CONTENT_REVALIDATE_SECONDS,
+    },
+    {
       name: "listPublishedGuidesCached",
       call: () => listPublishedGuidesCached(200),
       mock: listGuidesMock,
@@ -129,6 +143,14 @@ describe("list wrappers — tags, windows, delegation", () => {
       call: () => listApprovedProjectsCached(6),
       mock: listProjectsMock,
       expectedArgs: [{ limit: 6 }],
+      tag: "projects",
+      revalidate: CONTENT_REVALIDATE_SECONDS,
+    },
+    {
+      name: "listApprovedProjectsForLocaleCached",
+      call: () => listApprovedProjectsForLocaleCached("ja", 6),
+      mock: listProjectsMock,
+      expectedArgs: [{ limit: 6, locale: "ja" }],
       tag: "projects",
       revalidate: CONTENT_REVALIDATE_SECONDS,
     },

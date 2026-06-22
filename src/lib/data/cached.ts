@@ -14,7 +14,11 @@ import {
 } from "@/lib/data/cache-tags";
 import { listEvents, listPastEvents } from "@/lib/data/events";
 import { getGuideBySlug, listGuides } from "@/lib/data/guides";
-import { getPostBySlug, listPublishedPosts } from "@/lib/data/posts";
+import {
+  getPostBySlug,
+  listPublishedPosts,
+  listPublishedPostsForLocale,
+} from "@/lib/data/posts";
 import { getProjectBySlug, listProjects } from "@/lib/data/projects";
 import { readSitePage, type SitePageSlug } from "@/lib/data/site-pages";
 import type { GuideDoc, PostDoc, ProjectDoc } from "@/lib/types";
@@ -71,6 +75,12 @@ export const listPublishedPostsCached = unstable_cache(
   { tags: [POSTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },
 );
 
+export const listPublishedPostsForLocaleCached = unstable_cache(
+  (locale: string, limit: number) => listPublishedPostsForLocale(locale, limit),
+  ["public-posts-list-by-locale"],
+  { tags: [POSTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },
+);
+
 export function getPostBySlugCached(slug: string): Promise<PostDoc | null> {
   // The wrapper is created per call so the entity tag can include the
   // slug (the `tags` option is fixed at wrap time). The cache key is
@@ -111,6 +121,12 @@ export const listApprovedProjectsCached = unstable_cache(
   // surfaces render. Admin review queues call listProjects directly.
   (limit: number) => listProjects({ limit }),
   ["public-projects-list"],
+  { tags: [PROJECTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },
+);
+
+export const listApprovedProjectsForLocaleCached = unstable_cache(
+  (locale: string, limit: number) => listProjects({ limit, locale }),
+  ["public-projects-list-by-locale"],
   { tags: [PROJECTS_TAG], revalidate: CONTENT_REVALIDATE_SECONDS },
 );
 

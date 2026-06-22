@@ -7,7 +7,7 @@ import {
   ref as storageRef,
   uploadBytesResumable,
 } from "firebase/storage";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import type { RefMDEditor } from "@uiw/react-md-editor";
@@ -29,6 +29,12 @@ import {
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { useRouter } from "@/i18n/navigation";
+import {
+  CONTENT_LOCALES,
+  initialContentLocales,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { ProjectAsset, ProjectDoc, SessionUser } from "@/lib/types";
@@ -65,6 +71,15 @@ function escapeAlt(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
+function initialProjectLocales(
+  project: ProjectDoc | undefined,
+  locale: string,
+): ContentLocale[] {
+  if (!project) return initialContentLocales(undefined, locale);
+  const normalized = normalizeContentLocales(project.locales);
+  return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -73,11 +88,15 @@ interface Props {
 }
 
 export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
+  const locale = useLocale();
   const t = useTranslations("ProjectForm");
   const router = useRouter();
   const [title, setTitle] = useState(project?.title ?? "");
   const [description, setDescription] = useState(
     project?.description ?? (mode === "create" ? t("descriptionTemplate") : ""),
+  );
+  const [locales, setLocales] = useState<ContentLocale[]>(
+    initialProjectLocales(project, locale),
   );
   const [tags, setTags] = useState(project?.tags?.join(", ") ?? "");
   const [appUrl, setAppUrl] = useState(project?.appUrl ?? "");
@@ -302,6 +321,7 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
         const payload = {
           title,
           description,
+          locales,
           tags: tags
             .split(",")
             .map((t) => t.trim())
@@ -328,6 +348,16 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("submitFailed"));
       }
+    });
+  }
+
+  function toggleLocale(value: ContentLocale) {
+    setLocales((cur) => {
+      if (cur.includes(value)) {
+        return cur.length === 1 ? cur : cur.filter((locale) => locale !== value);
+      }
+      const next = new Set([...cur, value]);
+      return CONTENT_LOCALES.filter((locale) => next.has(locale));
     });
   }
 
@@ -423,6 +453,25 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
               preview="live"
             />
           </div>
+        </div>
+      </Field>
+      <Field label={t("localization")} required>
+        <div className="flex flex-wrap gap-2">
+          {CONTENT_LOCALES.map((value) => (
+            <label
+              key={value}
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            >
+              <input
+                type="checkbox"
+                checked={locales.includes(value)}
+                disabled={pending || deletePending || uploading}
+                onChange={() => toggleLocale(value)}
+                className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700"
+              />
+              <span>{t(`locales.${value}`)}</span>
+            </label>
+          ))}
         </div>
       </Field>
       <Field label={t("tags")} htmlFor="project-tags">

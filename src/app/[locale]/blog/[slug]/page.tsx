@@ -9,6 +9,7 @@ import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
+import { contentMatchesLocale } from "@/lib/content-localization";
 import { getPostBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -22,11 +23,17 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const post = await getPostBySlugCached(slug).catch(() => null);
-  if (!post || post.status !== "published") return {};
+  if (
+    !post ||
+    post.status !== "published" ||
+    !contentMatchesLocale(post.locales, locale)
+  ) {
+    return {};
+  }
   return {
     title: post.title,
     description: post.excerpt,
@@ -41,7 +48,7 @@ export async function generateMetadata({
 export default async function BlogPostPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
   const { slug } = await params;
   const [locale, t] = await Promise.all([
@@ -49,7 +56,13 @@ export default async function BlogPostPage({
     getTranslations("BlogDetail"),
   ]);
   const post = await getPostBySlugCached(slug);
-  if (!post || post.status !== "published") notFound();
+  if (
+    !post ||
+    post.status !== "published" ||
+    !contentMatchesLocale(post.locales, locale)
+  ) {
+    notFound();
+  }
 
   // Session + comment listing are independent — kick them off together
   // rather than serially. The like-state query depends on the comment

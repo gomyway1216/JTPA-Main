@@ -185,6 +185,7 @@ describe("submitProject — create", () => {
     expect(payload).toMatchObject({
       slug: "my-app",
       ownerUid: "u1",
+      locales: ["ja"],
       status: "pending",
       reviewerUid: null,
     });
@@ -200,6 +201,14 @@ describe("submitProject — create", () => {
     await expect(submitProject(validInput)).rejects.toThrow("__REDIRECT__");
     const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
     expect(payload.slug).toBe("my-app-1");
+  });
+
+  it("stores the selected locales on create", async () => {
+    await expect(
+      submitProject({ ...validInput, locales: ["en"] }),
+    ).rejects.toThrow("__REDIRECT__:/my/projects");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.locales).toEqual(["en"]);
   });
 });
 
@@ -228,6 +237,7 @@ describe("updateMyProject — authorization + state machine", () => {
     );
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("pending");
+    expect(patch.locales).toEqual(["ja"]);
     expect(patch.submittedAt).toEqual({ __fixed: "now" });
     // The legacy field normalizes away on first save (PR #24).
     expect(patch.thumbnailPath).toBe("__field_delete__");
@@ -253,6 +263,18 @@ describe("updateMyProject — authorization + state machine", () => {
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("approved");
     expect(patch).not.toHaveProperty("submittedAt");
+  });
+
+  it("updates the selected locales", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ ownerUid: "u1", slug: "s", status: "pending" }),
+    });
+    await expect(
+      updateMyProject("p1", { ...validInput, locales: ["ja", "en"] }),
+    ).rejects.toThrow("__REDIRECT__");
+    const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch.locales).toEqual(["ja", "en"]);
   });
 
   it("sweeps orphaned screenshots + thumbnail from Storage, keeping survivors", async () => {

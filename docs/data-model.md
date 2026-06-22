@@ -150,6 +150,7 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 | `slug` | string | Unique |
 | `ownerUid`, `ownerName` | string | |
 | `title`, `description` | string | |
+| `locales?` | string[] | App locales where the project appears (`"ja"`, `"en"`). Legacy docs should be backfilled to both locales. |
 | `tags` | string[] | Max 10 |
 | `appUrl` | string | Required |
 | `repoUrl`, `demoVideoUrl` | string? | Optional |
@@ -196,6 +197,7 @@ Community blog entries. Members can submit posts; admins approve before public r
 | `slug` | string | Unique URL slug |
 | `title`, `excerpt` | string | Excerpt shown on the list view |
 | `body` | string | Markdown source, rendered via `MarkdownBody` |
+| `locales?` | string[] | App locales where the post appears (`"ja"`, `"en"`). Legacy docs should be backfilled to both locales. |
 | `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
 | `tags` | string[] | Up to 8 |
 | `authorUid`, `authorName` | string | Denormalized from auth |
@@ -416,9 +418,9 @@ Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules
 
 Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
 - `events`: `status + startAt` (both directions), `status + endAt` (both directions)
-- `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
+- `projects`: `status + submittedAt DESC`, `status + locales ARRAY_CONTAINS + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
 - `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`
-- `posts`: `status + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
+- `posts`: `status + publishedAt DESC`, `status + locales ARRAY_CONTAINS + publishedAt DESC`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `guides`: `status + order + updatedAt`, `status + updatedAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `qa`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`
 - `polls`: `status + createdAt DESC`, `authorUid + updatedAt DESC`, `authorUid + likeCount DESC`

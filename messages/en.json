@@ -400,6 +400,11 @@
     "title": "Title",
     "excerpt": "Excerpt (for lists, max 300 characters)",
     "body": "Body (Markdown)",
+    "localization": "Display language",
+    "locales": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "tags": "Tags (comma-separated, max 8)",
     "tagsPlaceholder": "Announcement, meetup, report",
     "cover": "Cover image (optional, max 5MB)",
@@ -423,6 +428,11 @@
     "title": "Title",
     "description": "Description (Markdown supported)",
     "descriptionTemplate": "# Title\n\n## Motivation\n\n## What I built\n\n## How I built it\n\n## Insights gained",
+    "localization": "Display language",
+    "locales": {
+      "ja": "Japanese",
+      "en": "English"
+    },
     "tags": "Tags (comma-separated)",
     "appUrl": "App URL (optional)",
     "appUrlPlaceholder": "https://your-app.example.com (leave blank for CLI/local-only tools)",

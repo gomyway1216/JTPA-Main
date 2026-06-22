@@ -89,6 +89,7 @@ import {
   listMyPosts,
   listPostsByStatus,
   listPublishedPosts,
+  listPublishedPostsForLocale,
 } from "@/lib/data/posts";
 
 function snap(id: string, data: object) {
@@ -116,6 +117,22 @@ describe("listPublishedPosts", () => {
   it("respects a custom limit", async () => {
     await listPublishedPosts(7);
     expect(lastCall.limit).toBe(7);
+  });
+
+  it("filters by locale in Firestore", async () => {
+    getResult = {
+      docs: [
+        snap("en", { slug: "en", title: "EN", locales: ["en"] }),
+      ],
+    };
+    const posts = await listPublishedPostsForLocale("en", 2);
+    expect(lastCall.whereCalls).toEqual([
+      ["status", "==", "published"],
+      ["locales", "array-contains", "en"],
+    ]);
+    expect(lastCall.orderByCalls).toEqual([["publishedAt", "desc"]]);
+    expect(lastCall.limit).toBe(2);
+    expect(posts).toEqual([{ id: "en", slug: "en", title: "EN", locales: ["en"] }]);
   });
 });
 

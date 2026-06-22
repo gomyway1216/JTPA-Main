@@ -53,6 +53,22 @@ describe("listProjects", () => {
       { id: "p2", slug: "b", title: "B" },
     ]);
   });
+
+  it("filters by locale in Firestore", async () => {
+    mock.setGet({
+      docs: [
+        snap("p-en", { slug: "en", title: "EN", locales: ["en"] }),
+      ],
+    });
+    const out = await listProjects({ locale: "en", limit: 2 });
+    expect(mock.state.whereCalls).toEqual([
+      ["status", "==", "approved"],
+      ["locales", "array-contains", "en"],
+    ]);
+    expect(mock.state.orderByCalls).toEqual([["submittedAt", "desc"]]);
+    expect(mock.state.limit).toBe(2);
+    expect(out).toEqual([{ id: "p-en", slug: "en", title: "EN", locales: ["en"] }]);
+  });
 });
 
 describe("listMyProjects", () => {
