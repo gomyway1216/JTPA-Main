@@ -31,6 +31,7 @@ type SnapStub =
   | { exists: boolean; id?: string; data?: () => unknown };
 
 let getResult: SnapStub = { docs: [] };
+let getResults: Array<SnapStub | Error> = [];
 
 function withEmpty(s: SnapStub): SnapStub {
   // Firestore's QuerySnapshot exposes `.empty` derived from docs.length;
@@ -56,7 +57,11 @@ function makeQuery() {
       lastCall.limit = n;
       return q;
     }),
-    get: vi.fn(async () => withEmpty(getResult)),
+    get: vi.fn(async () => {
+      const next = getResults.length > 0 ? getResults.shift()! : getResult;
+      if (next instanceof Error) throw next;
+      return withEmpty(next);
+    }),
   };
   return q;
 }
@@ -99,6 +104,7 @@ function snap(id: string, data: object) {
 beforeEach(() => {
   resetCall();
   getResult = { docs: [] };
+  getResults = [];
 });
 
 describe("listPublishedPosts", () => {
@@ -158,6 +164,31 @@ describe("listMyPosts", () => {
     expect(lastCall.orderByCalls).toEqual([["updatedAt", "desc"]]);
     // No limit — full personal archive.
     expect(lastCall.limit).toBeUndefined();
+  });
+
+  it("falls back to author-only query and in-memory sort if the composite index is missing", async () => {
+    getResults = [
+      new Error("FAILED_PRECONDITION: The query requires an index."),
+      {
+        docs: [
+          snap("old", {
+            slug: "old",
+            title: "Old",
+            updatedAt: { seconds: 10, nanoseconds: 0 },
+          }),
+          snap("new", {
+            slug: "new",
+            title: "New",
+            updatedAt: { seconds: 20, nanoseconds: 0 },
+          }),
+        ],
+      },
+    ];
+    const posts = await listMyPosts("uid-1");
+
+    expect(lastCall.whereCalls).toEqual([["authorUid", "==", "uid-1"]]);
+    expect(lastCall.orderByCalls).toEqual([["updatedAt", "desc"]]);
+    expect(posts.map((post) => post.id)).toEqual(["new", "old"]);
   });
 });
 
