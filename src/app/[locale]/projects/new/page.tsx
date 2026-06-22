@@ -21,7 +21,7 @@ export default async function NewProjectPage() {
   if (!user) redirect(loginPath("/projects/new", locale));
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10 space-y-4">
+    <div className="mx-auto max-w-6xl px-4 py-10 space-y-4">
       <header className="space-y-1">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400">

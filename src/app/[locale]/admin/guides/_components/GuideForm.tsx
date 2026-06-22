@@ -27,6 +27,13 @@ import {
   secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { localizedPath } from "@/i18n/paths";
+import {
+  CONTENT_LOCALES,
+  initialContentLocales,
+  normalizeContentLocales,
+  preferredContentLocale,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { clientDb } from "@/lib/firebase/client";
 import {
   GUIDE_IMAGE_ACCEPT,
@@ -35,7 +42,7 @@ import {
   MAX_GUIDE_IMAGE_BYTES,
   uploadGuideImage,
 } from "@/lib/firebase/uploads";
-import type { GuideDoc, SessionUser } from "@/lib/types";
+import type { GuideDoc, LocalizedGuideContent, SessionUser } from "@/lib/types";
 
 // `@uiw/react-md-editor` reads `window` during evaluation, so it has to
 // load on the client only.
@@ -67,6 +74,85 @@ function stringToTags(s: string): string[] {
 function pickImageFiles(files: FileList | File[]): File[] {
   const allow = GUIDE_IMAGE_TYPES as readonly string[];
   return Array.from(files).filter((f) => allow.includes(f.type));
+}
+
+function initialGuideLocales(guide: GuideDoc | undefined): ContentLocale[] {
+  if (!guide) return initialContentLocales(undefined);
+  const normalized = normalizeContentLocales(guide.locales);
+  return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
+}
+
+function emptyGuideContent(): LocalizedGuideContent {
+  return { title: "", body: "" };
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
+function emptyGuideContentByLocale(): Record<
+  ContentLocale,
+  LocalizedGuideContent
+> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, emptyGuideContent()]),
+  ) as Record<ContentLocale, LocalizedGuideContent>;
+}
+
+function initialGuideContentByLocale(
+  guide: GuideDoc | undefined,
+): Record<ContentLocale, LocalizedGuideContent> {
+  const next = emptyGuideContentByLocale();
+  if (!guide) return next;
+
+  let hasLocalized = false;
+  for (const locale of CONTENT_LOCALES) {
+    const content = guide.localized?.[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: textValue(content.title),
+      body: textValue(content.body),
+    };
+    hasLocalized = true;
+  }
+
+  if (!hasLocalized) {
+    const fallbackLocale = initialGuideLocales(guide)[0] ?? CONTENT_LOCALES[0];
+    next[fallbackLocale] = {
+      title: guide.title,
+      body: guide.body,
+    };
+  }
+
+  return next;
+}
+
+function initialGuideActiveLocale(
+  guide: GuideDoc | undefined,
+  currentLocale: string,
+): ContentLocale {
+  if (!guide) {
+    return (
+      preferredContentLocale(undefined, currentLocale) ?? CONTENT_LOCALES[0]
+    );
+  }
+  const localizedLocales = CONTENT_LOCALES.filter((locale) => {
+    const content = guide.localized?.[locale];
+    return Boolean(
+      content && (hasText(content.title) || hasText(content.body)),
+    );
+  });
+  if (localizedLocales.length > 0) {
+    return (
+      preferredContentLocale(localizedLocales, currentLocale) ??
+      localizedLocales[0]
+    );
+  }
+  return initialGuideLocales(guide)[0] ?? CONTENT_LOCALES[0];
 }
 
 // Markdown image syntax is `![alt](url)`. An unescaped `]` in the alt
@@ -106,11 +192,15 @@ export function GuideForm({
   // bounced from the admin layout, so they need to land on /my/guides.
   const hasAdminAccess = user.isAdmin || user.isEditor;
 
-  const [title, setTitle] = useState(guide?.title ?? "");
+  const [activeLocale, setActiveLocale] = useState<ContentLocale>(
+    initialGuideActiveLocale(guide, locale),
+  );
+  const [localizedContent, setLocalizedContent] = useState<
+    Record<ContentLocale, LocalizedGuideContent>
+  >(initialGuideContentByLocale(guide));
   const [slug, setSlug] = useState(guide?.slug ?? "");
   const [tagsInput, setTagsInput] = useState(tagsToString(guide?.tags ?? []));
   const [order, setOrder] = useState(String(guide?.order ?? 100));
-  const [body, setBody] = useState<string>(guide?.body ?? "");
   const [error, setError] = useState<string | null>(null);
   // Bumped to `Date.now()` when save succeeds on the edit path —
   // updateGuide doesn't redirect, so without this the user gets no
@@ -121,6 +211,27 @@ export function GuideForm({
   const [uploading, setUploading] = useState(false);
   const [uploadInfo, setUploadInfo] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const activeContent = localizedContent[activeLocale];
+
+  function updateActiveContent(patch: Partial<LocalizedGuideContent>) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
+  }
+
+  function updateBodyForLocale(
+    targetLocale: ContentLocale,
+    updater: (prev: string) => string,
+  ) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [targetLocale]: {
+        ...cur[targetLocale],
+        body: updater(cur[targetLocale].body),
+      },
+    }));
+  }
 
   // Pre-generate a Firestore auto-id on create so images can be uploaded
   // to `guides/{guideId}/{uid}/...` BEFORE the doc is saved — same id is
@@ -165,6 +276,7 @@ export function GuideForm({
       setError(t("waitForUpload"));
       return;
     }
+    const uploadLocale = activeLocale;
     uploadingRef.current = true;
     setError(null);
     setUploading(true);
@@ -172,8 +284,8 @@ export function GuideForm({
 
     // Snapshot the caret BEFORE we kick off uploads. Splicing once at the
     // end (rather than per-image) keeps the math simple and avoids the
-    // stale-state trap of reading `body` from the closure inside an
-    // async loop. We use functional setBody at splice time so anything
+    // stale-state trap of reading the body from the closure inside an
+    // async loop. We use a functional state update at splice time so anything
     // the user typed during the upload window is preserved.
     const ta = editorRef.current?.textarea ?? null;
     const cursorStart = ta?.selectionStart ?? null;
@@ -199,7 +311,7 @@ export function GuideForm({
       const block = inserts.join("");
 
       if (ta && cursorStart !== null && cursorEnd !== null) {
-        setBody((prev) => {
+        updateBodyForLocale(uploadLocale, (prev) => {
           // Clamp the snapshot offsets to the current length — if the
           // user typed (or, more importantly, deleted) during upload,
           // the original indices may now point past the end of the
@@ -219,7 +331,8 @@ export function GuideForm({
         });
       } else {
         // Editor still lazy-loading — append at the end.
-        setBody(
+        updateBodyForLocale(
+          uploadLocale,
           (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
         );
       }
@@ -227,11 +340,7 @@ export function GuideForm({
       setUploadInfo(t("uploadedCount", { count: files.length }));
       setTimeout(() => setUploadInfo(null), 3000);
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t("imageUploadFailed"),
-      );
+      setError(err instanceof Error ? err.message : t("imageUploadFailed"));
       setUploadInfo(null);
     } finally {
       uploadingRef.current = false;
@@ -288,9 +397,8 @@ export function GuideForm({
     startTransition(async () => {
       try {
         const payload: GuideFormInput = {
-          title,
+          localized: localizedContent,
           slug: slug || undefined,
-          body,
           tags: stringToTags(tagsInput),
           status: intent,
           order,
@@ -358,16 +466,45 @@ export function GuideForm({
       }}
       className="space-y-4"
     >
-      <Field label={t("title")} required htmlFor="guide-title">
-        <input
-          id="guide-title"
-          type="text"
+      <div className="space-y-4">
+        <div
+          role="group"
+          aria-label={t("localization")}
+          className="flex flex-wrap gap-2"
+        >
+          {CONTENT_LOCALES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={activeLocale === value}
+              disabled={pending || uploading}
+              onClick={() => setActiveLocale(value)}
+              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                activeLocale === value
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              }`}
+            >
+              {t(`locales.${value}`)}
+            </button>
+          ))}
+        </div>
+
+        <Field
+          label={t("title")}
           required
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className={inputClass}
-        />
-      </Field>
+          htmlFor={`guide-title-${activeLocale}`}
+        >
+          <input
+            id={`guide-title-${activeLocale}`}
+            type="text"
+            required
+            value={activeContent.title}
+            onChange={(e) => updateActiveContent({ title: e.target.value })}
+            className={inputClass}
+          />
+        </Field>
+      </div>
       <Field label={t("slug")} htmlFor="guide-slug">
         <input
           id="guide-slug"
@@ -452,8 +589,8 @@ export function GuideForm({
           >
             <MDEditor
               ref={editorRef}
-              value={body}
-              onChange={(v) => setBody(v ?? "")}
+              value={activeContent.body}
+              onChange={(v) => updateActiveContent({ body: v ?? "" })}
               height={500}
               preview="live"
             />
@@ -463,9 +600,7 @@ export function GuideForm({
 
       {error && <p className={errorTextClass}>{error}</p>}
       {mode === "edit" && !canPublishDirectly && (
-        <p className="text-xs text-zinc-500">
-          {t("editReviewNotice")}
-        </p>
+        <p className="text-xs text-zinc-500">{t("editReviewNotice")}</p>
       )}
 
       <div className="flex items-center justify-between gap-3">

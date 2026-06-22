@@ -190,9 +190,7 @@ describe("submitGuide — validation + status resolution", () => {
   });
 
   it("lets a contributor self-publish (publishedAt stamped, no admin mail)", async () => {
-    requireUserMock.mockResolvedValueOnce(
-      sessionUser({ isContributor: true }),
-    );
+    requireUserMock.mockResolvedValueOnce(sessionUser({ isContributor: true }));
     await expect(
       submitGuide({ ...validInput, status: "published" }),
     ).rejects.toThrow("__REDIRECT__:/my/guides");
@@ -202,10 +200,23 @@ describe("submitGuide — validation + status resolution", () => {
     expect(adminNewGuideMock).not.toHaveBeenCalled();
   });
 
+  it("stores localized guide content on create", async () => {
+    const en = { title: "English guide", body: "Useful details" };
+    await expect(
+      submitGuide({
+        localized: { en },
+        status: "pending",
+      }),
+    ).rejects.toThrow("__REDIRECT__:/my/guides");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.title).toBe(en.title);
+    expect(payload.body).toBe(en.body);
+    expect(payload.locales).toEqual(["en"]);
+    expect(payload.localized).toEqual({ en });
+  });
+
   it("clamps a non-curator's order to the default (no pin-to-top via crafted payload)", async () => {
-    requireUserMock.mockResolvedValueOnce(
-      sessionUser({ isContributor: true }),
-    );
+    requireUserMock.mockResolvedValueOnce(sessionUser({ isContributor: true }));
     await expect(
       submitGuide({ ...validInput, status: "draft", order: 0 }),
     ).rejects.toThrow("__REDIRECT__");

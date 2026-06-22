@@ -11,6 +11,7 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getQaBySlug } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedQaContent } from "@/lib/localized-content";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -21,13 +22,17 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const qa = await getQaBySlug(slug).catch(() => null);
+  const [locale, qa] = await Promise.all([
+    getLocale(),
+    getQaBySlug(slug).catch(() => null),
+  ]);
   if (!qa || qa.status !== "published") return {};
-  const description = truncate(stripMarkdown(qa.body), 160);
+  const content = getLocalizedQaContent(qa, locale);
+  const description = truncate(stripMarkdown(content.body), 160);
   return {
-    title: qa.title,
+    title: content.title,
     description,
-    openGraph: { title: qa.title, description },
+    openGraph: { title: content.title, description },
   };
 }
 
@@ -48,8 +53,7 @@ export default async function QaDetailPage({
   // open archived items.
   const [user, qa] = await Promise.all([getSessionUser(), getQaBySlug(slug)]);
   if (!qa) notFound();
-  const isAuthorOrAdmin =
-    !!user && (user.uid === qa.authorUid || user.isAdmin);
+  const isAuthorOrAdmin = !!user && (user.uid === qa.authorUid || user.isAdmin);
   if (qa.status !== "published" && !isAuthorOrAdmin) {
     // Don't leak whether the slug exists — return the same 404 we'd
     // give to a slug that was never written.
@@ -81,6 +85,7 @@ export default async function QaDetailPage({
   ]);
 
   const canEdit = isAuthorOrAdmin;
+  const content = getLocalizedQaContent(qa, locale);
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -98,7 +103,7 @@ export default async function QaDetailPage({
       )}
 
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">{qa.title}</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
             profile={profilesByUid.get(qa.authorUid) ?? null}
@@ -139,7 +144,7 @@ export default async function QaDetailPage({
         </div>
       </header>
 
-      <MarkdownBody source={qa.body} />
+      <MarkdownBody source={content.body} />
 
       <CommentsSection
         key={qa.id}

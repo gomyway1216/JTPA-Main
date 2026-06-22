@@ -6,10 +6,21 @@ import * as z from "zod";
 
 import { findUniqueSlug, parseInput } from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
+import {
+  CONTENT_LOCALES,
+  DEFAULT_CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
-import type { QaDoc, QaStatus } from "@/lib/types";
+import type {
+  LocalizedContentMap,
+  LocalizedQaContent,
+  QaDoc,
+  QaStatus,
+} from "@/lib/types";
 
 // Same shape Firestore auto-ids use; QaForm pre-generates one via
 // `doc(collection(clientDb, "qa")).id` so it can upload images to
@@ -19,26 +30,118 @@ import type { QaDoc, QaStatus } from "@/lib/types";
 const FIRESTORE_AUTO_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const QA_INVALID_ID = "qaInvalidId";
 
-const QaFormSchema = z.object({
-  // Pre-generated client-side id. When present, `submitQa` writes the
-  // doc at exactly that id so images uploaded under `qa/{id}/...` line
-  // up with the Firestore doc. Optional so future non-image callers
-  // can still hit the action without owning an id ahead of time.
-  id: z
-    .string()
-    .regex(FIRESTORE_AUTO_ID, QA_INVALID_ID)
-    .optional(),
-  title: z.string().trim().min(2).max(120),
-  body: z.string().trim().min(1).max(20000),
-  // Tags arrive as a CSV from the form; the action normalizes them. Cap
-  // at 8 to discourage tag spam and keep the listing UI sane.
-  tags: z
-    .array(z.string().trim().min(1).max(40))
-    .max(8)
-    .optional()
-    .default([]),
-  slug: z.string().trim().min(2).max(80).optional(),
+const QaLocalizedContentInputSchema = z.object({
+  title: z.string().max(120).default(""),
+  body: z.string().max(20000).default(""),
 });
+
+const LocalizedQaInputSchema = z
+  .object({
+    ja: QaLocalizedContentInputSchema.optional(),
+    en: QaLocalizedContentInputSchema.optional(),
+  })
+  .default({});
+
+function hasAnyQaContent(content: LocalizedQaContent): boolean {
+  return Boolean(content.title.trim() || content.body.trim());
+}
+
+function validateQaContent(
+  content: LocalizedQaContent,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): boolean {
+  let ok = true;
+  if (content.title.trim().length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "title"],
+      message: "Title must be at least 2 characters.",
+    });
+    ok = false;
+  }
+  if (!content.body.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "body"],
+      message: "Body is required.",
+    });
+    ok = false;
+  }
+  return ok;
+}
+
+const QaFormSchema = z
+  .object({
+    // Pre-generated client-side id. When present, `submitQa` writes the
+    // doc at exactly that id so images uploaded under `qa/{id}/...` line
+    // up with the Firestore doc. Optional so future non-image callers
+    // can still hit the action without owning an id ahead of time.
+    id: z.string().regex(FIRESTORE_AUTO_ID, QA_INVALID_ID).optional(),
+    title: z.string().trim().max(120).optional(),
+    body: z.string().trim().max(20000).optional(),
+    localized: LocalizedQaInputSchema,
+    locales: z
+      .array(z.enum(CONTENT_LOCALES))
+      .min(1)
+      .max(CONTENT_LOCALES.length)
+      .optional()
+      .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
+    // Tags arrive as a CSV from the form; the action normalizes them. Cap
+    // at 8 to discourage tag spam and keep the listing UI sane.
+    tags: z
+      .array(z.string().trim().min(1).max(40))
+      .max(8)
+      .optional()
+      .default([]),
+    slug: z.string().trim().min(2).max(80).optional(),
+  })
+  .transform((input, ctx) => {
+    const localized: LocalizedContentMap<LocalizedQaContent> = {};
+    const locales: ContentLocale[] = [];
+    let sawContent = false;
+
+    for (const locale of CONTENT_LOCALES) {
+      const content = input.localized[locale] ?? { title: "", body: "" };
+      if (!hasAnyQaContent(content)) continue;
+      sawContent = true;
+      if (!validateQaContent(content, ctx, ["localized", locale])) continue;
+      localized[locale] = content;
+      locales.push(locale);
+    }
+
+    const legacyContent = {
+      title: input.title ?? "",
+      body: input.body ?? "",
+    };
+    if (locales.length === 0 && hasAnyQaContent(legacyContent)) {
+      sawContent = true;
+      if (validateQaContent(legacyContent, ctx, [])) {
+        const legacyLocale =
+          normalizeContentLocales(input.locales)[0] ??
+          DEFAULT_CONTENT_LOCALES[0];
+        localized[legacyLocale] = legacyContent;
+        locales.push(legacyLocale);
+      }
+    }
+
+    if (!sawContent) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["localized"],
+        message: "Enter content for at least one language.",
+      });
+    }
+
+    const primary = localized[locales[0]] ?? { title: "", body: "" };
+    return {
+      ...input,
+      title: primary.title,
+      body: primary.body,
+      locales,
+      localized,
+    };
+  });
 
 export type QaFormInput = z.input<typeof QaFormSchema>;
 
@@ -96,6 +199,8 @@ export async function submitQa(input: QaFormInput): Promise<QaActionResult> {
     slug,
     title: parsed.title,
     body: parsed.body,
+    locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     authorUid: user.uid,
     authorName: user.displayName,
@@ -147,7 +252,8 @@ export async function updateMyQa(
 
   const ref = adminDb().collection("qa").doc(qaId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
   if (cur.authorUid !== user.uid && !user.isAdmin) {
     return { ok: false, error: await actionError("qaEditForbidden") };
@@ -165,6 +271,8 @@ export async function updateMyQa(
     slug: newSlug,
     title: parsed.title,
     body: parsed.body,
+    locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     updatedAt: Timestamp.now(),
   });
@@ -210,7 +318,8 @@ export async function setQaStatus(
 
   const ref = adminDb().collection("qa").doc(parsed.qaId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("qaNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("qaNotFound") };
   const cur = snap.data() as QaDoc;
 
   if (cur.status === parsed.status) return { ok: true }; // no-op

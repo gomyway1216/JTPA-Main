@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyQa } from "@/lib/data/qa";
+import { getLocalizedQaContent } from "@/lib/localized-content";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -49,39 +50,45 @@ export default async function MyQaPage() {
         <p className="text-zinc-500">{common("emptyPosts")}</p>
       ) : (
         <ul className="space-y-3">
-          {items.map((q) => (
-            <li
-              key={q.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <Link href={`/qa/${q.slug}`} className="font-semibold hover:underline">
-                  {q.title}
-                </Link>
-                {q.status === "archived" && (
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    {statusT("archivedDone")}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">
-                {common("lastUpdated", {
-                  date: formatDate(q.updatedAt, locale),
-                })}
-              </p>
-              <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-                {truncate(stripMarkdown(q.body), 200)}
-              </p>
-              <div className="mt-2 flex gap-3 text-xs">
-                <Link
-                  href={`/qa/${q.slug}/edit`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {common("edit")}
-                </Link>
-              </div>
-            </li>
-          ))}
+          {items.map((q) => {
+            const content = getLocalizedQaContent(q, locale);
+            return (
+              <li
+                key={q.id}
+                className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/qa/${q.slug}`}
+                    className="font-semibold hover:underline"
+                  >
+                    {content.title}
+                  </Link>
+                  {q.status === "archived" && (
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      {statusT("archivedDone")}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {common("lastUpdated", {
+                    date: formatDate(q.updatedAt, locale),
+                  })}
+                </p>
+                <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+                  {truncate(stripMarkdown(content.body), 200)}
+                </p>
+                <div className="mt-2 flex gap-3 text-xs">
+                  <Link
+                    href={`/qa/${q.slug}/edit`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {common("edit")}
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

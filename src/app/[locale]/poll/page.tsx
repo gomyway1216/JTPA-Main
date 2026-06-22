@@ -10,6 +10,7 @@ import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listPoll } from "@/lib/data/poll";
 import { getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPollContent } from "@/lib/localized-content";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,9 @@ export default async function PollListPage() {
       {/* Stack on mobile — same rationale as /blog, /guide, /qa. */}
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">{t("title")}</h1>
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            {t("title")}
+          </h1>
           <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
             {t("description")}
           </p>
@@ -64,16 +67,14 @@ export default async function PollListPage() {
       </header>
 
       {items.length === 0 ? (
-        <EmptyState
-          message={t("empty")}
-          hint={t("emptyHint")}
-        />
+        <EmptyState message={t("empty")} hint={t("emptyHint")} />
       ) : (
         <ul className="space-y-3">
           {items.map((p, i) => {
+            const content = getLocalizedPollContent(p, locale);
             // Show the top 2 option labels in the list preview so the
             // reader can guess the topic without opening the detail.
-            const topOptions = [...p.options]
+            const topOptions = [...content.options]
               .sort((a, b) => (b.voteCount ?? 0) - (a.voteCount ?? 0))
               .slice(0, 2);
             return (
@@ -88,11 +89,13 @@ export default async function PollListPage() {
                     href={`/poll/${p.slug}`}
                     className="after:absolute after:inset-0 focus:outline-none"
                   >
-                    {p.title}
+                    {content.title}
                   </Link>
                 </h2>
                 <p className="relative z-10 mt-1 flex flex-wrap items-center gap-x-1.5 text-xs text-zinc-500">
-                  <AuthorBadge profile={authorProfiles.get(p.authorUid) ?? null} />
+                  <AuthorBadge
+                    profile={authorProfiles.get(p.authorUid) ?? null}
+                  />
                   <span>
                     · {formatDate(p.createdAt, locale)} ·{" "}
                     {t("voterCount", { count: p.voterCount ?? 0 })}
@@ -101,13 +104,13 @@ export default async function PollListPage() {
                     <span className="ml-2 text-rose-600">♥ {p.likeCount}</span>
                   )}
                 </p>
-                {p.description && (
+                {content.description && (
                   <p className="mt-2 line-clamp-2 text-sm text-zinc-700 dark:text-zinc-300">
-                    {truncate(p.description, 160)}
+                    {truncate(content.description, 160)}
                   </p>
                 )}
                 <p className="mt-2 text-xs text-zinc-500">
-                  {t("optionCount", { count: p.options.length })}
+                  {t("optionCount", { count: content.options.length })}
                   {topOptions.length > 0 && (
                     <> · {topOptions.map((o) => o.label).join(" / ")}…</>
                   )}

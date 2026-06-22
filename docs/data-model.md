@@ -46,18 +46,18 @@ into every comment so we can build cross-parent activity feeds (e.g.
 
 Bootstrapped on first sign-in by `signInWithIdToken` (`src/app/actions/auth.ts`). Mirrors the Firebase Auth identity plus app-specific fields.
 
-| Field | Type | Notes |
-|---|---|---|
-| `uid` | string | Same as the doc id, redundant on purpose for collection-group queries |
-| `email` | string | From Google OAuth |
-| `displayName` | string | From Google OAuth (falls back to email prefix) |
-| `photoURL` | string \| null | From Google OAuth |
-| `affiliation` | string? | Free text. Edited by the user on `/my/profile` and visible on `/u/[uid]` iff `affiliationPublic === true`. |
-| `bio` | string? | Plain-text self-introduction (multi-line; rendered with `whitespace-pre-wrap`). Visible on `/u/[uid]` iff `bioPublic === true`. |
-| `affiliationPublic`, `bioPublic` | boolean? | Per-field public/private toggles. Default `false` on older docs (opt-in migration). Email is **never** publicly toggleable. |
-| `emailOptIn` | boolean | Defaults to `true`; gate for future notification opt-out. |
-| `eventAttendanceCount` | number? | Cumulative count of events where the user was marked attended. Updated by QR check-in and admin attendance toggles; admin can correct it on `/admin/users`. Missing = 0 on legacy docs. |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                            | Type           | Notes                                                                                                                                                                                   |
+| -------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uid`                            | string         | Same as the doc id, redundant on purpose for collection-group queries                                                                                                                   |
+| `email`                          | string         | From Google OAuth                                                                                                                                                                       |
+| `displayName`                    | string         | From Google OAuth (falls back to email prefix)                                                                                                                                          |
+| `photoURL`                       | string \| null | From Google OAuth                                                                                                                                                                       |
+| `affiliation`                    | string?        | Free text. Edited by the user on `/my/profile` and visible on `/u/[uid]` iff `affiliationPublic === true`.                                                                              |
+| `bio`                            | string?        | Plain-text self-introduction (multi-line; rendered with `whitespace-pre-wrap`). Visible on `/u/[uid]` iff `bioPublic === true`.                                                         |
+| `affiliationPublic`, `bioPublic` | boolean?       | Per-field public/private toggles. Default `false` on older docs (opt-in migration). Email is **never** publicly toggleable.                                                             |
+| `emailOptIn`                     | boolean        | Defaults to `true`; gate for future notification opt-out.                                                                                                                               |
+| `eventAttendanceCount`           | number?        | Cumulative count of events where the user was marked attended. Updated by QR check-in and admin attendance toggles; admin can correct it on `/admin/users`. Missing = 0 on legacy docs. |
+| `createdAt`, `updatedAt`         | Timestamp      |                                                                                                                                                                                         |
 
 **Rules**: self-read, self-write (uid + email immutable) except `eventAttendanceCount`, which is server/admin-managed. Admins can read all.
 The public profile loader (`getPublicProfile` in `src/lib/data/users.ts`)
@@ -68,26 +68,27 @@ public plus the cumulative attendance count; it does **not** rely on rules.
 
 ## `events/{eventId}`
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | URL-safe; auto-generated from title via `slugify()`. Unique across collection. |
-| `title`, `description` | string | |
-| `startAt`, `endAt` | Timestamp | |
-| `location` | object | `{ type: "online"\|"offline"\|"hybrid", address?, mapUrl?, meetingUrl? }` |
-| `capacity` | number | `0` = unlimited |
-| `presenterCapacity` | number | `0` = unlimited |
-| `status` | enum | `"draft" \| "published" \| "past" \| "cancelled"` |
-| `visibility` | enum? | `"public" \| "members_only"` (optional; missing = public for back-compat) |
-| `coverImage` | `{ path, url }?` | Optional cover image. Same `{path, url}` shape as `ProjectDoc.thumbnail` / `PostDoc.coverImage`. Shown on `/events` cards and at the top of `/events/[slug]`. Files live at `events/{adminUid}/<ts>-<file>` and are best-effort deleted on event delete or cover replacement. Older docs may carry a legacy `coverImagePath: string`; `updateEvent` removes it on next save. |
-| `surveyFields` | `SurveyField[]` | See below |
-| `rsvpCount`, `presenterCount`, `waitlistCount` | number | Denormalized counters, updated in transactions by `submitRsvp` / `cancelRsvp` |
-| `attendanceCount` | number? | Denormalized count of RSVPs with `attendedAt` set. Updated transactionally by the check-in Server Actions. Missing = 0 on legacy docs. |
-| `checkInToken` | string? | 16-char alphanumeric token (confusable-free alphabet) embedded in the QR-code URL. Admin generates/rotates via `generateCheckInToken` on `/admin/events/[id]/checkin`. Missing = token not yet issued. |
-| `checkInEarlyMinutes`, `checkInLateMinutes` | number? | Per-event QR validity buffers in minutes. Missing = defaults from `src/lib/check-in.ts` (currently 4 hours before start, 6 hours after end). Admin edits these from the event edit form. |
-| `createdBy` | string (uid) | |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                                          | Type             | Notes                                                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                                         | string           | URL-safe; auto-generated from title via `slugify()`. Unique across collection.                                                                                                                                                                                                                                                                                               |
+| `title`, `description`                         | string           |                                                                                                                                                                                                                                                                                                                                                                              |
+| `startAt`, `endAt`                             | Timestamp        |                                                                                                                                                                                                                                                                                                                                                                              |
+| `location`                                     | object           | `{ type: "online"\|"offline"\|"hybrid", address?, mapUrl?, meetingUrl? }`                                                                                                                                                                                                                                                                                                    |
+| `capacity`                                     | number           | `0` = unlimited                                                                                                                                                                                                                                                                                                                                                              |
+| `presenterCapacity`                            | number           | `0` = unlimited                                                                                                                                                                                                                                                                                                                                                              |
+| `status`                                       | enum             | `"draft" \| "published" \| "past" \| "cancelled"`                                                                                                                                                                                                                                                                                                                            |
+| `visibility`                                   | enum?            | `"public" \| "members_only"` (optional; missing = public for back-compat)                                                                                                                                                                                                                                                                                                    |
+| `coverImage`                                   | `{ path, url }?` | Optional cover image. Same `{path, url}` shape as `ProjectDoc.thumbnail` / `PostDoc.coverImage`. Shown on `/events` cards and at the top of `/events/[slug]`. Files live at `events/{adminUid}/<ts>-<file>` and are best-effort deleted on event delete or cover replacement. Older docs may carry a legacy `coverImagePath: string`; `updateEvent` removes it on next save. |
+| `surveyFields`                                 | `SurveyField[]`  | See below                                                                                                                                                                                                                                                                                                                                                                    |
+| `rsvpCount`, `presenterCount`, `waitlistCount` | number           | Denormalized counters, updated in transactions by `submitRsvp` / `cancelRsvp`                                                                                                                                                                                                                                                                                                |
+| `attendanceCount`                              | number?          | Denormalized count of RSVPs with `attendedAt` set. Updated transactionally by the check-in Server Actions. Missing = 0 on legacy docs.                                                                                                                                                                                                                                       |
+| `checkInToken`                                 | string?          | 16-char alphanumeric token (confusable-free alphabet) embedded in the QR-code URL. Admin generates/rotates via `generateCheckInToken` on `/admin/events/[id]/checkin`. Missing = token not yet issued.                                                                                                                                                                       |
+| `checkInEarlyMinutes`, `checkInLateMinutes`    | number?          | Per-event QR validity buffers in minutes. Missing = defaults from `src/lib/check-in.ts` (currently 4 hours before start, 6 hours after end). Admin edits these from the event edit form.                                                                                                                                                                                     |
+| `createdBy`                                    | string (uid)     |                                                                                                                                                                                                                                                                                                                                                                              |
+| `createdAt`, `updatedAt`                       | Timestamp        |                                                                                                                                                                                                                                                                                                                                                                              |
 
 **Survey field shape:**
+
 ```ts
 {
   key: string,           // unique within event
@@ -100,6 +101,7 @@ public plus the cumulative attendance count; it does **not** rely on rules.
 ```
 
 **Rules**:
+
 - Public reads if `status in (published, past) AND visibility != "members_only"`
 - Members-only reads if `status in (published, past) AND isSignedIn()`
 - Admins read everything, including drafts
@@ -109,17 +111,17 @@ public plus the cumulative attendance count; it does **not** rely on rules.
 
 One RSVP per user per event. Doc id = user uid.
 
-| Field | Type | Notes |
-|---|---|---|
-| `uid`, `displayName`, `email` | string | Denormalized from auth at write time |
-| `affiliation` | string? | What the user typed in the RSVP form |
-| `role` | enum | `"attendee" \| "presenter"` |
-| `status` | enum | `"confirmed" \| "waitlist" \| "cancelled"` |
-| `surveyResponses` | `Record<string, string \| string[] \| boolean>` | Keyed by survey field `key` |
-| `presentationTitle`, `presentationAbstract` | string? | Free text the presenter typed at signup. Independent of any uploaded presentation doc (see below) |
-| `attendedAt` | Timestamp? | Set when the attendee checks in (QR self check-in, walk-in guest, or admin manual toggle). Missing = not checked in. **Server-managed** — clients cannot set or change this field, even on their own doc. |
-| `isGuest` | boolean? | Legacy marker for older walk-in guest RSVPs. Current QR check-in sends logged-out visitors through Google login and returns them to the check-in URL. **Server-managed**, same as `attendedAt`. |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                                       | Type                                            | Notes                                                                                                                                                                                                     |
+| ------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `uid`, `displayName`, `email`               | string                                          | Denormalized from auth at write time                                                                                                                                                                      |
+| `affiliation`                               | string?                                         | What the user typed in the RSVP form                                                                                                                                                                      |
+| `role`                                      | enum                                            | `"attendee" \| "presenter"`                                                                                                                                                                               |
+| `status`                                    | enum                                            | `"confirmed" \| "waitlist" \| "cancelled"`                                                                                                                                                                |
+| `surveyResponses`                           | `Record<string, string \| string[] \| boolean>` | Keyed by survey field `key`                                                                                                                                                                               |
+| `presentationTitle`, `presentationAbstract` | string?                                         | Free text the presenter typed at signup. Independent of any uploaded presentation doc (see below)                                                                                                         |
+| `attendedAt`                                | Timestamp?                                      | Set when the attendee checks in (QR self check-in, walk-in guest, or admin manual toggle). Missing = not checked in. **Server-managed** — clients cannot set or change this field, even on their own doc. |
+| `isGuest`                                   | boolean?                                        | Legacy marker for older walk-in guest RSVPs. Current QR check-in sends logged-out visitors through Google login and returns them to the check-in URL. **Server-managed**, same as `attendedAt`.           |
+| `createdAt`, `updatedAt`                    | Timestamp                                       |                                                                                                                                                                                                           |
 
 **Rules**: self-read, self-write — but `attendedAt` and `isGuest` are explicitly blocklisted from both create and update (rules use `!('attendedAt' in request.resource.data)` and `.diff(resource.data).affectedKeys().hasAny(['attendedAt', 'isGuest'])`). Only Admin SDK writes (from `selfCheckIn` / `setAttendance` Server Actions) can touch them. Admins can do everything.
 
@@ -129,15 +131,15 @@ One RSVP per user per event. Doc id = user uid.
 
 Optional uploaded slides/talks. **One presenter can have N entries** per event (the doc id is an auto-id, not the uid).
 
-| Field | Type | Notes |
-|---|---|---|
-| `eventId` | string | Redundant with the parent; kept for collection-group queries |
-| `presenterUid`, `presenterName` | string | Owner |
-| `title` | string | Per-presentation; not synced with `RsvpDoc.presentationTitle` |
-| `abstract` | string? | |
-| `filePath`, `fileUrl`, `fileName` | string? | Set when a file was uploaded |
-| `externalSlidesUrl` | string? | URL alternative; can co-exist with file |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                             | Type      | Notes                                                         |
+| --------------------------------- | --------- | ------------------------------------------------------------- |
+| `eventId`                         | string    | Redundant with the parent; kept for collection-group queries  |
+| `presenterUid`, `presenterName`   | string    | Owner                                                         |
+| `title`                           | string    | Per-presentation; not synced with `RsvpDoc.presentationTitle` |
+| `abstract`                        | string?   |                                                               |
+| `filePath`, `fileUrl`, `fileName` | string?   | Set when a file was uploaded                                  |
+| `externalSlidesUrl`               | string?   | URL alternative; can co-exist with file                       |
+| `createdAt`, `updatedAt`          | Timestamp |                                                               |
 
 Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the Server Action), and both can co-exist (e.g. slides PDF + recording link).
 
@@ -145,25 +147,26 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 
 ## `projects/{projectId}` (Showcase)
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Unique |
-| `ownerUid`, `ownerName` | string | |
-| `title`, `description` | string | Fallback / primary localized content, kept for legacy readers |
-| `locales?` | string[] | App locales the project has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
-| `localized?` | object | Per-locale project content, e.g. `{ ja: { title, description }, en: { title, description } }` |
-| `tags` | string[] | Max 10 |
-| `appUrl` | string | Required |
-| `repoUrl`, `demoVideoUrl` | string? | Optional |
-| `thumbnail` | `{ path, url }?` | Optional cover image. Falls back to the first screenshot on the public list when not set. |
-| `screenshots` | `{ path, url }[]` | Up to 8 images shown in the project detail page gallery. |
-| `status` | enum | `"pending" \| "approved" \| "rejected" \| "archived"` |
-| `reviewerUid` | string \| null | Set by admin on decision |
-| `reviewNote` | string? | Visible to owner if rejected |
-| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0 on legacy docs) |
-| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
+| Field                                                  | Type              | Notes                                                                                                     |
+| ------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------------------------------------- |
+| `slug`                                                 | string            | Unique                                                                                                    |
+| `ownerUid`, `ownerName`                                | string            |                                                                                                           |
+| `title`, `description`                                 | string            | Fallback / primary localized content, kept for legacy readers                                             |
+| `locales?`                                             | string[]          | App locales the project has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
+| `localized?`                                           | object            | Per-locale project content, e.g. `{ ja: { title, description }, en: { title, description } }`             |
+| `tags`                                                 | string[]          | Max 10                                                                                                    |
+| `appUrl`                                               | string            | Required                                                                                                  |
+| `repoUrl`, `demoVideoUrl`                              | string?           | Optional                                                                                                  |
+| `thumbnail`                                            | `{ path, url }?`  | Optional cover image. Falls back to the first screenshot on the public list when not set.                 |
+| `screenshots`                                          | `{ path, url }[]` | Up to 8 images shown in the project detail page gallery.                                                  |
+| `status`                                               | enum              | `"pending" \| "approved" \| "rejected" \| "archived"`                                                     |
+| `reviewerUid`                                          | string \| null    | Set by admin on decision                                                                                  |
+| `reviewNote`                                           | string?           | Visible to owner if rejected                                                                              |
+| `likeCount`                                            | number?           | Denormalized from the `likes` subcollection (missing = 0 on legacy docs)                                  |
+| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp         |                                                                                                           |
 
 **Rules**:
+
 - Public read only if `status == "approved"` (so pending/rejected stay private to owner+admin)
 - Owners can create with `status: "pending"`, edit (which flips status back to `pending` for re-review), and delete. `likeCount` is pinned by the rules so a direct client write can't inflate it.
 - Admins approve/reject (sets `status`, `reviewerUid`, `reviewNote`, `reviewedAt`)
@@ -175,17 +178,17 @@ Notification on decision is enqueued via `enqueueProjectDecisionNotification` �
 
 Per-user notification inbox. Currently written when a new comment is posted on a user's content, or when someone replies to one of the user's comments. Email delivery is intentionally deferred for now; the in-app inbox is the source of truth.
 
-| Field | Type | Notes |
-|---|---|---|
-| `recipientUid` | string | User who should see the notification |
-| `type` | enum | Currently `"comment"` |
-| `reason` | enum | `"comment_on_content"` or `"reply_to_comment"` |
-| `actorUid`, `actorName`, `actorPhotoURL` | string / string / string \| null | Comment author snapshot |
-| `parentType`, `parentId`, `parentTitle`, `parentSlug` | string | Target content snapshot for routing/display |
-| `commentId`, `parentCommentId` | string / string \| null | Link target and reply context |
-| `commentPreview` | string | Plain text preview, capped at write time |
-| `readAt` | Timestamp \| null | `null` means unread |
-| `createdAt` | Timestamp | |
+| Field                                                 | Type                             | Notes                                          |
+| ----------------------------------------------------- | -------------------------------- | ---------------------------------------------- |
+| `recipientUid`                                        | string                           | User who should see the notification           |
+| `type`                                                | enum                             | Currently `"comment"`                          |
+| `reason`                                              | enum                             | `"comment_on_content"` or `"reply_to_comment"` |
+| `actorUid`, `actorName`, `actorPhotoURL`              | string / string / string \| null | Comment author snapshot                        |
+| `parentType`, `parentId`, `parentTitle`, `parentSlug` | string                           | Target content snapshot for routing/display    |
+| `commentId`, `parentCommentId`                        | string / string \| null          | Link target and reply context                  |
+| `commentPreview`                                      | string                           | Plain text preview, capped at write time       |
+| `readAt`                                              | Timestamp \| null                | `null` means unread                            |
+| `createdAt`                                           | Timestamp                        |                                                |
 
 **Rules**: recipients can read their own rows and update only `readAt`. Clients cannot create or delete notifications; comment posting goes through the `postComment` Server Action and `enqueueCommentNotifications`.
 
@@ -193,25 +196,26 @@ Per-user notification inbox. Currently written when a new comment is posted on a
 
 Community blog entries. Members can submit posts; admins approve before public release, similar to the Showcase project workflow. Distinct from `guides` — those are admin/editor-curated help articles. Both support comments and likes via the shared subcollections.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Unique URL slug |
-| `title`, `excerpt` | string | Fallback / primary localized content. Excerpt is shown on the list view |
-| `body` | string | Fallback / primary Markdown source, rendered via `MarkdownBody` |
-| `locales?` | string[] | App locales the post has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
-| `localized?` | object | Per-locale post content, e.g. `{ ja: { title, excerpt, body }, en: { title, excerpt, body } }` |
-| `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
-| `tags` | string[] | Up to 8 |
-| `authorUid`, `authorName` | string | Denormalized from auth |
-| `authorPhotoURL` | string \| null | Denormalized from auth (`null` if the user has no Google profile photo) |
-| `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
-| `reviewerUid` | string \| null | Set by admin on decision |
-| `reviewNote` | string? | Visible to author if rejected |
-| `publishedAt` | Timestamp? | Set when status flips to `published` |
-| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0 on legacy docs) |
-| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp | |
+| Field                                                  | Type            | Notes                                                                                                  |
+| ------------------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------ |
+| `slug`                                                 | string          | Unique URL slug                                                                                        |
+| `title`, `excerpt`                                     | string          | Fallback / primary localized content. Excerpt is shown on the list view                                |
+| `body`                                                 | string          | Fallback / primary Markdown source, rendered via `MarkdownBody`                                        |
+| `locales?`                                             | string[]        | App locales the post has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
+| `localized?`                                           | object          | Per-locale post content, e.g. `{ ja: { title, excerpt, body }, en: { title, excerpt, body } }`         |
+| `coverImage`                                           | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape                                                |
+| `tags`                                                 | string[]        | Up to 8                                                                                                |
+| `authorUid`, `authorName`                              | string          | Denormalized from auth                                                                                 |
+| `authorPhotoURL`                                       | string \| null  | Denormalized from auth (`null` if the user has no Google profile photo)                                |
+| `status`                                               | enum            | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"`                                      |
+| `reviewerUid`                                          | string \| null  | Set by admin on decision                                                                               |
+| `reviewNote`                                           | string?         | Visible to author if rejected                                                                          |
+| `publishedAt`                                          | Timestamp?      | Set when status flips to `published`                                                                   |
+| `likeCount`                                            | number?         | Denormalized from the `likes` subcollection (missing = 0 on legacy docs)                               |
+| `submittedAt`, `reviewedAt?`, `createdAt`, `updatedAt` | Timestamp       |                                                                                                        |
 
 **Rules**:
+
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
 - Owner edits can land in `draft` (save without resubmitting) or `pending` (resubmit for review); never directly in published/rejected/archived. `authorUid` and `reviewerUid` are immutable for owners. Admins can change anything
@@ -221,18 +225,21 @@ Community blog entries. Members can submit posts; admins approve before public r
 
 Open-mic question/tip board. Any signed-in member can post; there's **no review queue** (unlike `posts` and `projects`). Admins can flip status to `archived` to hide spam after the fact. Comments + likes live in the same subcollection pattern as `posts`.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Unique URL slug, auto-generated from title |
-| `title` | string | |
-| `body` | string | Markdown source |
-| `tags` | string[] | Up to 8 |
-| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth |
-| `status` | enum | `"published" \| "archived"` |
-| `likeCount` | number? | Denormalized; missing = 0 |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                                       | Type                             | Notes                                                                                                 |
+| ------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `slug`                                      | string                           | Unique URL slug, auto-generated from title                                                            |
+| `title`                                     | string                           | Fallback / primary localized content                                                                  |
+| `body`                                      | string                           | Fallback / primary Markdown source                                                                    |
+| `locales?`                                  | string[]                         | App locales the Q&A has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
+| `localized?`                                | object                           | Per-locale Q&A content, e.g. `{ ja: { title, body }, en: { title, body } }`                           |
+| `tags`                                      | string[]                         | Up to 8                                                                                               |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth                                                                                |
+| `status`                                    | enum                             | `"published" \| "archived"`                                                                           |
+| `likeCount`                                 | number?                          | Denormalized; missing = 0                                                                             |
+| `createdAt`, `updatedAt`                    | Timestamp                        |                                                                                                       |
 
 **Rules**:
+
 - Read: public if `status == "published"`, plus author / admin for archived
 - Create: signed-in user; `authorUid` must match caller; lands directly as `published`
 - Update: author can edit `title` / `body` / `tags`; `authorUid` immutable. Admin can change anything (including `status`).
@@ -244,19 +251,22 @@ UI: `/qa` list, `/qa/[slug]` detail, `/qa/new` + `/qa/[slug]/edit` (signed-in), 
 
 Lightweight multi-select polls. Any signed-in member can create a poll; it's published immediately. Anyone (incl. anonymous visitors) can read published polls and see the results; voting requires sign-in. Option labels are frozen as soon as the first vote lands so existing ballots stay meaningful.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Unique URL slug, auto-generated from title |
-| `title` | string | 2–120 chars |
-| `description` | string | 0–2000 chars; rendered as plain text in current UI |
-| `options` | `PollOption[]` | Each option: `{ id: string, label: string, voteCount: number }`. Frozen once `voterCount > 0`. Up to 8 options. |
-| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth |
-| `status` | enum | `"published" \| "archived"` — lands as `published`; admin-only flip to `archived` (via `setPollStatus`) hides from `/poll` |
-| `voterCount` | number | Distinct-voter count, not total selections. Maintained transactionally with each `castPollVote`. |
-| `likeCount` | number? | Denormalized from the `likes` subcollection (missing = 0) |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                                       | Type                             | Notes                                                                                                                                                                                    |
+| ------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                                      | string                           | Unique URL slug, auto-generated from title                                                                                                                                               |
+| `title`                                     | string                           | Fallback / primary localized content, 2–120 chars                                                                                                                                        |
+| `description`                               | string                           | Fallback / primary localized content, 0–2000 chars; rendered as plain text in current UI                                                                                                 |
+| `options`                                   | `PollOption[]`                   | Fallback / primary option labels. Each option: `{ id: string, label: string, voteCount: number }`. Frozen once `voterCount > 0`. Up to 8 options.                                        |
+| `locales?`                                  | string[]                         | App locales the poll has content for (`"ja"`, `"en"`). Public pages fall back to any available locale.                                                                                   |
+| `localized?`                                | object                           | Per-locale poll content, e.g. `{ ja: { title, description, options: [{ id, label }] }, en: ... }`. Option ids match `options[].id` so ballots and vote counts remain locale-independent. |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | Denormalized from auth                                                                                                                                                                   |
+| `status`                                    | enum                             | `"published" \| "archived"` — lands as `published`; admin-only flip to `archived` (via `setPollStatus`) hides from `/poll`                                                               |
+| `voterCount`                                | number                           | Distinct-voter count, not total selections. Maintained transactionally with each `castPollVote`.                                                                                         |
+| `likeCount`                                 | number?                          | Denormalized from the `likes` subcollection (missing = 0)                                                                                                                                |
+| `createdAt`, `updatedAt`                    | Timestamp                        |                                                                                                                                                                                          |
 
 **Rules**:
+
 - Public reads only when `status == "published"`; archived visible to author + admin
 - Create: signed-in user; `authorUid` must match caller; must start `published` with `voterCount == 0` and every `options[i].voteCount == 0` (the `optionsAllZero` helper in `firestore.rules` unrolls the array check). Timestamps pinned to `request.time`.
 - Update: author can edit only `title` / `description` / `slug` / `updatedAt`. **Cannot change `options`** — option mutations go through Admin SDK-only paths. `authorUid`, `status`, `voterCount` are pinned. Admin can change anything (including `status`).
@@ -267,12 +277,13 @@ Lightweight multi-select polls. Any signed-in member can create a poll; it's pub
 
 One ballot per voter. Doc existence == voted.
 
-| Field | Type | Notes |
-|---|---|---|
-| `optionIds` | string[] | The user's current selections. Empty array = un-vote; `castPollVote` then deletes the doc and decrements `voterCount` |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                    | Type      | Notes                                                                                                                 |
+| ------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------- |
+| `optionIds`              | string[]  | The user's current selections. Empty array = un-vote; `castPollVote` then deletes the doc and decrements `voterCount` |
+| `createdAt`, `updatedAt` | Timestamp |                                                                                                                       |
 
 **Rules**: read self-only (owner or admin); **all writes denied for clients**. Every change flows through `castPollVote` (Admin SDK), which:
+
 1. Computes per-option deltas (added vs. removed)
 2. Updates `options[i].voteCount` for each touched option
 3. Updates `voterCount` (only when the doc is being created or fully cleared)
@@ -283,25 +294,28 @@ One ballot per voter. Doc existence == voted.
 
 Originally admin/editor-only curated reference docs. Now also accepts community submissions on the same moderation shape as `posts`: anyone signed in can write a draft or submit for review; admins approve before publish; first approval auto-promotes the author to `contributor` so their next guide skips the queue.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Unique URL slug |
-| `title` | string | |
-| `body` | string | Markdown |
-| `tags` | string[] | |
-| `status` | enum | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"` |
-| `order` | number | Manual sort key for the `/guide` list; lower = earlier. Admin / editor set this during review; the public submission form hides the knob from non-curators. |
-| `authorUid` | string? | Denormalized author identity for queries like `listMyGuides`. Optional on legacy guides created before the community-submission flow — read paths fall back to `createdBy.uid`. |
-| `authorName`, `authorPhotoURL` | string / string \| null | Denormalized from auth for display. Optional on legacy guides. |
-| `reviewerUid` | string \| null | Set by admin on decision. Null for guides authored directly by admin / editor / contributor (which skip review). |
-| `reviewNote` | string? | Visible to author if rejected. Cleared on subsequent approval. |
-| `publishedAt` | Timestamp? | Set when the guide first transitioned to `published` — same first-publish-detection trick as `posts` so re-publishing an edited guide doesn't overwrite the original date. |
-| `submittedAt`, `reviewedAt?` | Timestamp? | Mirrors `posts`. Set when the author submits for review and when an admin decides. |
-| `likeCount` | number? | Denormalized; missing = 0 on legacy docs |
-| `createdBy`, `updatedBy` | `{ uid, displayName, email }` | Last writer identity (preserved for legacy compat — the new `authorUid` field is the canonical "who owns this"). |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                          | Type                          | Notes                                                                                                                                                                           |
+| ------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `slug`                         | string                        | Unique URL slug                                                                                                                                                                 |
+| `title`                        | string                        | Fallback / primary localized content                                                                                                                                            |
+| `body`                         | string                        | Fallback / primary Markdown source                                                                                                                                              |
+| `locales?`                     | string[]                      | App locales the guide has content for (`"ja"`, `"en"`). Public pages fall back to any available locale.                                                                         |
+| `localized?`                   | object                        | Per-locale guide content, e.g. `{ ja: { title, body }, en: { title, body } }`                                                                                                   |
+| `tags`                         | string[]                      |                                                                                                                                                                                 |
+| `status`                       | enum                          | `"draft" \| "pending" \| "published" \| "rejected" \| "archived"`                                                                                                               |
+| `order`                        | number                        | Manual sort key for the `/guide` list; lower = earlier. Admin / editor set this during review; the public submission form hides the knob from non-curators.                     |
+| `authorUid`                    | string?                       | Denormalized author identity for queries like `listMyGuides`. Optional on legacy guides created before the community-submission flow — read paths fall back to `createdBy.uid`. |
+| `authorName`, `authorPhotoURL` | string / string \| null       | Denormalized from auth for display. Optional on legacy guides.                                                                                                                  |
+| `reviewerUid`                  | string \| null                | Set by admin on decision. Null for guides authored directly by admin / editor / contributor (which skip review).                                                                |
+| `reviewNote`                   | string?                       | Visible to author if rejected. Cleared on subsequent approval.                                                                                                                  |
+| `publishedAt`                  | Timestamp?                    | Set when the guide first transitioned to `published` — same first-publish-detection trick as `posts` so re-publishing an edited guide doesn't overwrite the original date.      |
+| `submittedAt`, `reviewedAt?`   | Timestamp?                    | Mirrors `posts`. Set when the author submits for review and when an admin decides.                                                                                              |
+| `likeCount`                    | number?                       | Denormalized; missing = 0 on legacy docs                                                                                                                                        |
+| `createdBy`, `updatedBy`       | `{ uid, displayName, email }` | Last writer identity (preserved for legacy compat — the new `authorUid` field is the canonical "who owns this").                                                                |
+| `createdAt`, `updatedAt`       | Timestamp                     |                                                                                                                                                                                 |
 
 **Rules** (full block in `firestore.rules`, summarized):
+
 - **Read**: published is public. Drafts / pending / rejected / archived: visible to admin / editor / author.
 - **Create**: admin / editor may land in any status. Contributors may create their own with `draft` / `pending` / `published`. Plain signed-in users may create their own with `draft` / `pending` only — `reviewerUid` must start null so authors can't fake a reviewer.
 - **Update**: admin / editor may change anything. Author may edit their own back to `draft` / `pending` (or `published` if they're a contributor / admin / editor). `authorUid` and `reviewerUid` are pinned for non-admin/editor updates.
@@ -329,18 +343,19 @@ for projects.
 
 ### `comments/{commentId}`
 
-| Field | Type | Notes |
-|---|---|---|
-| `parentType` | `"post" \| "guide" \| "qa" \| "project" \| "poll"` | Denormalized for cross-parent activity feeds |
-| `parentId` | string | |
-| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null | |
-| `body` | string | Capped at 2000 chars in the Server Action (`src/app/actions/comments.ts`) |
-| `parentCommentId` | string \| null | One-level reply (rendered linearly as "Re: @author", not a nested tree) |
-| `likeCount` | number? | Denormalized; updated transactionally in `toggleLike` |
-| `deletedAt` | Timestamp \| null | Set on soft-delete; body cleared at the same time. Admin can hard-delete. |
-| `createdAt`, `updatedAt` | Timestamp | |
+| Field                                       | Type                                               | Notes                                                                     |
+| ------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------- |
+| `parentType`                                | `"post" \| "guide" \| "qa" \| "project" \| "poll"` | Denormalized for cross-parent activity feeds                              |
+| `parentId`                                  | string                                             |                                                                           |
+| `authorUid`, `authorName`, `authorPhotoURL` | string / string / string \| null                   |                                                                           |
+| `body`                                      | string                                             | Capped at 2000 chars in the Server Action (`src/app/actions/comments.ts`) |
+| `parentCommentId`                           | string \| null                                     | One-level reply (rendered linearly as "Re: @author", not a nested tree)   |
+| `likeCount`                                 | number?                                            | Denormalized; updated transactionally in `toggleLike`                     |
+| `deletedAt`                                 | Timestamp \| null                                  | Set on soft-delete; body cleared at the same time. Admin can hard-delete. |
+| `createdAt`, `updatedAt`                    | Timestamp                                          |                                                                           |
 
 **Rules**:
+
 - Read: visible if parent is publicly visible OR caller is the comment author OR admin
 - Create: signed-in user on a publicly visible parent; `authorUid` must match caller
 - Update: author can edit `body`; `authorUid` immutable. Admin can change anything.
@@ -366,13 +381,13 @@ renders fallback content (defined in `SITE_PAGE_DEFAULTS` in
 `src/lib/data/site-pages.ts`) when the doc doesn't exist yet, so a fresh
 deploy is never blank.
 
-| Field | Type | Notes |
-|---|---|---|
-| `slug` | string | Same as the doc id; redundant for clarity |
-| `title` | string | Used as page H1 and `<title>` |
-| `body` | string | Markdown, rendered through the same `MarkdownBody` as blog/guides |
-| `updatedBy` | `{ uid, displayName, email }` | |
-| `updatedAt` | Timestamp | |
+| Field       | Type                          | Notes                                                             |
+| ----------- | ----------------------------- | ----------------------------------------------------------------- |
+| `slug`      | string                        | Same as the doc id; redundant for clarity                         |
+| `title`     | string                        | Used as page H1 and `<title>`                                     |
+| `body`      | string                        | Markdown, rendered through the same `MarkdownBody` as blog/guides |
+| `updatedBy` | `{ uid, displayName, email }` |                                                                   |
+| `updatedAt` | Timestamp                     |                                                                   |
 
 **Rules**: public read; write admin-only.
 
@@ -387,13 +402,13 @@ Written by `src/lib/notifications.ts` via the Admin SDK. The Firebase Trigger Em
 
 The extension writes a `delivery` field back onto each doc after processing (state = `SUCCESS` / `ERROR`, with the Resend message id on success). Inspect `delivery.error` if a notification fails to land.
 
-| Field | Type | Notes |
-|---|---|---|
-| `to`, `cc?`, `bcc?` | string \| string[] | |
-| `message` | `{ subject, text?, html? }` | |
-| `category` | string? | Tag for our own logging |
-| `metadata` | object? | Per-message context |
-| `createdAt` | Date | |
+| Field               | Type                        | Notes                   |
+| ------------------- | --------------------------- | ----------------------- |
+| `to`, `cc?`, `bcc?` | string \| string[]          |                         |
+| `message`           | `{ subject, text?, html? }` |                         |
+| `category`          | string?                     | Tag for our own logging |
+| `metadata`          | object?                     | Per-message context     |
+| `createdAt`         | Date                        |                         |
 
 **Rules**: no client read or write. Server-only.
 
@@ -419,6 +434,7 @@ Polls don't have a storage path — descriptions are plain text in current UI, n
 Tracked in `firestore.indexes.json` (deployed by `.github/workflows/deploy-rules.yml`). Add new indexes there when a query throws the "create index" link — copy the spec from the URL Firestore generates.
 
 Current indexes (snapshot — `firestore.indexes.json` is the source of truth):
+
 - `events`: `status + startAt` (both directions), `status + endAt` (both directions)
 - `projects`: `status + submittedAt DESC`, `ownerUid + updatedAt DESC`, `ownerUid + likeCount DESC`
 - `rsvps` (collection-group): `uid + createdAt DESC`; `rsvps` (collection): `status + createdAt ASC`

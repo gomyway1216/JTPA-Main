@@ -1,7 +1,7 @@
 "use client";
 
 import { unstable_rethrow } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import {
@@ -17,7 +17,14 @@ import {
   inputClass,
   primaryButtonClass,
 } from "@/components/forms/styles";
-import type { PollDoc } from "@/lib/types";
+import {
+  CONTENT_LOCALES,
+  initialContentLocales,
+  normalizeContentLocales,
+  preferredContentLocale,
+  type ContentLocale,
+} from "@/lib/content-localization";
+import type { LocalizedPollContent, PollDoc } from "@/lib/types";
 
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
@@ -27,7 +34,120 @@ interface DraftOption {
   // the action can preserve the voteCount on those rows. New rows leave
   // it undefined and the action mints a fresh id.
   id?: string;
-  label: string;
+  labels: Record<ContentLocale, string>;
+}
+
+type DraftPollContent = Pick<LocalizedPollContent, "title" | "description">;
+
+function initialPollLocales(poll: PollDoc | undefined): ContentLocale[] {
+  if (!poll) return initialContentLocales(undefined);
+  const normalized = normalizeContentLocales(poll.locales);
+  return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
+}
+
+function emptyPollContent(): DraftPollContent {
+  return { title: "", description: "" };
+}
+
+function textValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function hasText(value: unknown): boolean {
+  return textValue(value).trim().length > 0;
+}
+
+function emptyPollContentByLocale(): Record<ContentLocale, DraftPollContent> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, emptyPollContent()]),
+  ) as Record<ContentLocale, DraftPollContent>;
+}
+
+function emptyLabelsByLocale(): Record<ContentLocale, string> {
+  return Object.fromEntries(
+    CONTENT_LOCALES.map((locale) => [locale, ""]),
+  ) as Record<ContentLocale, string>;
+}
+
+function initialPollContentByLocale(
+  poll: PollDoc | undefined,
+): Record<ContentLocale, DraftPollContent> {
+  const next = emptyPollContentByLocale();
+  if (!poll) return next;
+
+  let hasLocalized = false;
+  for (const locale of CONTENT_LOCALES) {
+    const content = poll.localized?.[locale];
+    if (!content) continue;
+    next[locale] = {
+      title: textValue(content.title),
+      description: textValue(content.description),
+    };
+    hasLocalized = true;
+  }
+
+  if (!hasLocalized) {
+    const fallbackLocale = initialPollLocales(poll)[0] ?? CONTENT_LOCALES[0];
+    next[fallbackLocale] = {
+      title: poll.title,
+      description: poll.description,
+    };
+  }
+
+  return next;
+}
+
+function initialPollOptions(poll: PollDoc | undefined): DraftOption[] {
+  if (!poll) {
+    return [
+      { labels: emptyLabelsByLocale() },
+      { labels: emptyLabelsByLocale() },
+    ];
+  }
+
+  const fallbackLocale = initialPollLocales(poll)[0] ?? CONTENT_LOCALES[0];
+  return poll.options.map((option, index) => {
+    const labels = emptyLabelsByLocale();
+    let hasLocalized = false;
+    for (const locale of CONTENT_LOCALES) {
+      const localizedOption =
+        poll.localized?.[locale]?.options?.find(
+          (candidate) => candidate.id === option.id,
+        ) ?? poll.localized?.[locale]?.options?.[index];
+      if (!localizedOption) continue;
+      labels[locale] = textValue(localizedOption.label);
+      hasLocalized = true;
+    }
+    if (!hasLocalized) labels[fallbackLocale] = option.label;
+    return { id: option.id, labels };
+  });
+}
+
+function initialPollActiveLocale(
+  poll: PollDoc | undefined,
+  currentLocale: string,
+): ContentLocale {
+  if (!poll) {
+    return (
+      preferredContentLocale(undefined, currentLocale) ?? CONTENT_LOCALES[0]
+    );
+  }
+  const localizedLocales = CONTENT_LOCALES.filter((locale) => {
+    const content = poll.localized?.[locale];
+    return Boolean(
+      content &&
+      (hasText(content.title) ||
+        hasText(content.description) ||
+        content.options?.some((option) => hasText(option.label))),
+    );
+  });
+  if (localizedLocales.length > 0) {
+    return (
+      preferredContentLocale(localizedLocales, currentLocale) ??
+      localizedLocales[0]
+    );
+  }
+  return initialPollLocales(poll)[0] ?? CONTENT_LOCALES[0];
 }
 
 interface Props {
@@ -41,25 +161,43 @@ interface Props {
 }
 
 export function PollForm({ mode, poll, optionsLocked }: Props) {
+  const locale = useLocale();
   const t = useTranslations("PollForm");
-  const [title, setTitle] = useState(poll?.title ?? "");
-  const [description, setDescription] = useState(poll?.description ?? "");
+  const [activeLocale, setActiveLocale] = useState<ContentLocale>(
+    initialPollActiveLocale(poll, locale),
+  );
+  const [localizedContent, setLocalizedContent] = useState<
+    Record<ContentLocale, DraftPollContent>
+  >(initialPollContentByLocale(poll));
   const [options, setOptions] = useState<DraftOption[]>(
-    poll?.options.map((o) => ({ id: o.id, label: o.label })) ?? [
-      { label: "" },
-      { label: "" },
-    ],
+    initialPollOptions(poll),
   );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const activeContent = localizedContent[activeLocale];
 
   function setOptionLabel(idx: number, label: string) {
-    setOptions((cur) => cur.map((o, i) => (i === idx ? { ...o, label } : o)));
+    setOptions((cur) =>
+      cur.map((o, i) =>
+        i === idx
+          ? { ...o, labels: { ...o.labels, [activeLocale]: label } }
+          : o,
+      ),
+    );
+  }
+
+  function updateActiveContent(patch: Partial<DraftPollContent>) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
   }
 
   function addOption() {
     setOptions((cur) =>
-      cur.length >= MAX_OPTIONS ? cur : [...cur, { label: "" }],
+      cur.length >= MAX_OPTIONS
+        ? cur
+        : [...cur, { labels: emptyLabelsByLocale() }],
     );
   }
 
@@ -72,17 +210,29 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const cleanedOptions = options
-      .map((o) => ({ id: o.id, label: o.label.trim() }))
-      .filter((o) => o.label.length > 0);
-    if (cleanedOptions.length < MIN_OPTIONS) {
+    const completeLocaleCount = CONTENT_LOCALES.filter(
+      (value) =>
+        localizedContent[value].title.trim().length >= 2 &&
+        options.filter((o) => o.labels[value].trim()).length >= MIN_OPTIONS,
+    ).length;
+    if (completeLocaleCount === 0) {
       setError(t("minOptionsError", { count: MIN_OPTIONS }));
       return;
     }
     const payload: PollFormInput = {
-      title: title.trim(),
-      description: description.trim(),
-      options: cleanedOptions,
+      localized: Object.fromEntries(
+        CONTENT_LOCALES.map((value) => [
+          value,
+          {
+            title: localizedContent[value].title,
+            description: localizedContent[value].description,
+            options: options.map((option) => ({
+              id: option.id,
+              label: option.labels[value],
+            })),
+          },
+        ]),
+      ) as PollFormInput["localized"],
     };
     startTransition(async () => {
       try {
@@ -117,39 +267,73 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
     });
   }
 
-  const canSubmit =
-    title.trim().length >= 2 &&
-    options.filter((o) => o.label.trim()).length >= MIN_OPTIONS;
+  const canSubmit = CONTENT_LOCALES.some(
+    (value) =>
+      localizedContent[value].title.trim().length >= 2 &&
+      options.filter((o) => o.labels[value].trim()).length >= MIN_OPTIONS,
+  );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <Field label={t("title")} required htmlFor="poll-title">
-        <input
-          id="poll-title"
-          type="text"
-          required
-          minLength={2}
-          maxLength={120}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t("titlePlaceholder")}
-          className={inputClass}
-        />
-      </Field>
+      <div className="space-y-4">
+        <div
+          role="group"
+          aria-label={t("localization")}
+          className="flex flex-wrap gap-2"
+        >
+          {CONTENT_LOCALES.map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={activeLocale === value}
+              disabled={pending}
+              onClick={() => setActiveLocale(value)}
+              className={`min-h-10 rounded-md border px-3 py-2 text-sm font-medium transition ${
+                activeLocale === value
+                  ? "border-zinc-900 bg-zinc-900 text-white dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900"
+                  : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              }`}
+            >
+              {t(`locales.${value}`)}
+            </button>
+          ))}
+        </div>
 
-      <Field label={t("description")} htmlFor="poll-desc">
+        <Field
+          label={t("title")}
+          required
+          htmlFor={`poll-title-${activeLocale}`}
+        >
+          <input
+            id={`poll-title-${activeLocale}`}
+            type="text"
+            required
+            minLength={2}
+            maxLength={120}
+            value={activeContent.title}
+            onChange={(e) => updateActiveContent({ title: e.target.value })}
+            placeholder={t("titlePlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+      </div>
+
+      <Field label={t("description")} htmlFor={`poll-desc-${activeLocale}`}>
         <textarea
-          id="poll-desc"
+          id={`poll-desc-${activeLocale}`}
           rows={3}
           maxLength={2000}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={activeContent.description}
+          onChange={(e) => updateActiveContent({ description: e.target.value })}
           placeholder={t("descriptionPlaceholder")}
           className={inputClass}
         />
       </Field>
 
-      <Field label={t("options", { min: MIN_OPTIONS, max: MAX_OPTIONS })} required>
+      <Field
+        label={t("options", { min: MIN_OPTIONS, max: MAX_OPTIONS })}
+        required
+      >
         <div className="space-y-2">
           {optionsLocked && (
             // The form re-renders the option inputs disabled so the
@@ -161,11 +345,14 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
             </p>
           )}
           {options.map((opt, idx) => (
-            <div key={opt.id ?? `new-${idx}`} className="flex items-center gap-2">
+            <div
+              key={opt.id ?? `new-${idx}`}
+              className="flex items-center gap-2"
+            >
               <input
                 type="text"
                 maxLength={80}
-                value={opt.label}
+                value={opt.labels[activeLocale]}
                 onChange={(e) => setOptionLabel(idx, e.target.value)}
                 placeholder={t("optionPlaceholder", { number: idx + 1 })}
                 disabled={optionsLocked}
@@ -205,7 +392,11 @@ export function PollForm({ mode, poll, optionsLocked }: Props) {
           disabled={pending || !canSubmit}
           className={primaryButtonClass}
         >
-          {pending ? t("submitting") : mode === "create" ? t("submit") : t("update")}
+          {pending
+            ? t("submitting")
+            : mode === "create"
+              ? t("submit")
+              : t("update")}
         </button>
         {mode === "edit" && (
           <button

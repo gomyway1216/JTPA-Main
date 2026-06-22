@@ -5,10 +5,18 @@ import {
 } from "@/lib/content-localization";
 import type {
   LocalizedContentMap,
+  LocalizedGuideContent,
+  LocalizedPollContent,
+  LocalizedPollOptionContent,
   LocalizedPostContent,
   LocalizedProjectContent,
+  LocalizedQaContent,
+  GuideDoc,
+  PollDoc,
+  PollOption,
   PostDoc,
   ProjectDoc,
+  QaDoc,
 } from "@/lib/types";
 
 function hasText(value: unknown): value is string {
@@ -20,9 +28,9 @@ function isCompletePostContent(
 ): content is LocalizedPostContent {
   return Boolean(
     content &&
-      hasText(content.title) &&
-      hasText(content.excerpt) &&
-      hasText(content.body),
+    hasText(content.title) &&
+    hasText(content.excerpt) &&
+    hasText(content.body),
   );
 }
 
@@ -30,9 +38,30 @@ function isCompleteProjectContent(
   content: LocalizedProjectContent | undefined,
 ): content is LocalizedProjectContent {
   return Boolean(
+    content && hasText(content.title) && hasText(content.description),
+  );
+}
+
+function isCompleteGuideContent(
+  content: LocalizedGuideContent | undefined,
+): content is LocalizedGuideContent {
+  return Boolean(content && hasText(content.title) && hasText(content.body));
+}
+
+function isCompleteQaContent(
+  content: LocalizedQaContent | undefined,
+): content is LocalizedQaContent {
+  return Boolean(content && hasText(content.title) && hasText(content.body));
+}
+
+function isCompletePollContent(
+  content: LocalizedPollContent | undefined,
+): content is LocalizedPollContent {
+  return Boolean(
     content &&
-      hasText(content.title) &&
-      hasText(content.description),
+    hasText(content.title) &&
+    Array.isArray(content.options) &&
+    content.options.filter((option) => hasText(option?.label)).length >= 2,
   );
 }
 
@@ -80,4 +109,79 @@ export function getLocalizedProjectContent(
     { title: project.title, description: project.description },
     isCompleteProjectContent,
   );
+}
+
+export function getLocalizedGuideContent(
+  guide: Pick<GuideDoc, "title" | "body" | "localized">,
+  locale: string | undefined,
+): LocalizedGuideContent {
+  return resolveLocalizedContent(
+    guide.localized,
+    locale,
+    { title: guide.title, body: guide.body },
+    isCompleteGuideContent,
+  );
+}
+
+export function getLocalizedQaContent(
+  qa: Pick<QaDoc, "title" | "body" | "localized">,
+  locale: string | undefined,
+): LocalizedQaContent {
+  return resolveLocalizedContent(
+    qa.localized,
+    locale,
+    { title: qa.title, body: qa.body },
+    isCompleteQaContent,
+  );
+}
+
+function localizedOptionLabel(
+  option: PollOption,
+  index: number,
+  localizedOptions: LocalizedPollOptionContent[] | undefined,
+): string {
+  const byId = localizedOptions?.find(
+    (candidate) => candidate.id === option.id,
+  );
+  if (hasText(byId?.label)) return byId.label;
+
+  const byIndex = localizedOptions?.[index];
+  if (hasText(byIndex?.label)) return byIndex.label;
+
+  return option.label;
+}
+
+function localizePollOptions(
+  options: PollOption[],
+  localizedOptions: LocalizedPollOptionContent[] | undefined,
+): PollOption[] {
+  return options.map((option, index) => ({
+    ...option,
+    label: localizedOptionLabel(option, index, localizedOptions),
+  }));
+}
+
+export function getLocalizedPollContent(
+  poll: Pick<PollDoc, "title" | "description" | "options" | "localized">,
+  locale: string | undefined,
+): LocalizedPollContent & { options: PollOption[] } {
+  const fallback = {
+    title: poll.title,
+    description: poll.description,
+    options: poll.options,
+  };
+  const locales = completeLocales(poll.localized, isCompletePollContent);
+  const preferred = preferredContentLocale(locales, locale);
+  const content = preferred ? poll.localized?.[preferred] : undefined;
+
+  if (!isCompletePollContent(content)) return fallback;
+
+  return {
+    title: content.title,
+    description:
+      typeof content.description === "string"
+        ? content.description
+        : poll.description,
+    options: localizePollOptions(poll.options, content.options),
+  };
 }

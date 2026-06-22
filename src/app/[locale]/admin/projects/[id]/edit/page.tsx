@@ -28,14 +28,9 @@ export default async function AdminEditProjectPage({
   if (!project) notFound();
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-4">
       <h1 className="text-2xl font-bold">{t("project")}</h1>
-      <ProjectForm
-        mode="edit"
-        user={user}
-        project={project}
-        returnTo="admin"
-      />
+      <ProjectForm mode="edit" user={user} project={project} returnTo="admin" />
     </div>
   );
 }

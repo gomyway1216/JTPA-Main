@@ -112,10 +112,7 @@ describe("submitQa — validation", () => {
   });
 
   it("rejects a client-supplied id with characters outside the auto-id shape", async () => {
-    await expectError(
-      submitQa({ ...validInput, id: "qa/../etc" }),
-      "不正なID",
-    );
+    await expectError(submitQa({ ...validInput, id: "qa/../etc" }), "不正なID");
     expect(docCreateMock).not.toHaveBeenCalled();
   });
 });
@@ -133,6 +130,19 @@ describe("submitQa — create", () => {
       authorName: "Alice",
       likeCount: 0,
     });
+  });
+
+  it("stores localized Q&A content on create", async () => {
+    const ja = { title: "質問タイトル", body: "質問本文" };
+    const en = { title: "Question title", body: "Question body" };
+    await expect(submitQa({ localized: { ja, en } })).rejects.toThrow(
+      "__REDIRECT__:/qa",
+    );
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.title).toBe(ja.title);
+    expect(payload.body).toBe(ja.body);
+    expect(payload.locales).toEqual(["ja", "en"]);
+    expect(payload.localized).toEqual({ ja, en });
   });
 
   it("honors a pre-generated client id via create() instead of add()", async () => {

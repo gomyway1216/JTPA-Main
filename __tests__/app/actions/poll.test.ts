@@ -204,6 +204,44 @@ describe("submitPoll — validation + option hygiene", () => {
       likeCount: 0,
     });
   });
+
+  it("stores localized poll content with shared option ids", async () => {
+    const ja = {
+      title: "好きなスタックは？",
+      description: "複数選択できます",
+      options: [{ label: "Next.js" }, { label: "Rails" }],
+    };
+    const en = {
+      title: "Favorite stack?",
+      description: "Choose all that apply",
+      options: [{ label: "Next.js" }, { label: "Ruby on Rails" }],
+    };
+    await expect(submitPoll({ localized: { ja, en } })).rejects.toThrow(
+      "__REDIRECT__:/poll",
+    );
+    const [payload] = addMock.mock.calls[0] as [
+      {
+        title: string;
+        description: string;
+        locales: string[];
+        options: Array<{ id: string; label: string; voteCount: number }>;
+        localized: Record<
+          string,
+          { options: Array<{ id: string; label: string }> }
+        >;
+      },
+    ];
+    expect(payload.title).toBe(ja.title);
+    expect(payload.description).toBe(ja.description);
+    expect(payload.locales).toEqual(["ja", "en"]);
+    expect(payload.localized.ja.options.map((option) => option.id)).toEqual(
+      payload.options.map((option) => option.id),
+    );
+    expect(payload.localized.en.options).toEqual([
+      { id: payload.options[0].id, label: "Next.js" },
+      { id: payload.options[1].id, label: "Ruby on Rails" },
+    ]);
+  });
 });
 
 describe("updateMyPoll — ownership + option freeze", () => {

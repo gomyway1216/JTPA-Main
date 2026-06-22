@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getLocalizedGuideContent,
+  getLocalizedPollContent,
   getLocalizedPostContent,
   getLocalizedProjectContent,
+  getLocalizedQaContent,
 } from "@/lib/localized-content";
 
 describe("localized content helpers", () => {
@@ -88,6 +91,64 @@ describe("localized content helpers", () => {
     ).toEqual({
       title: "Legacy project",
       description: "Legacy description",
+    });
+  });
+
+  it("resolves localized guide and Q&A content", () => {
+    expect(
+      getLocalizedGuideContent(
+        {
+          title: "Legacy guide",
+          body: "Legacy body",
+          localized: {
+            en: { title: "Guide", body: "Body" },
+          },
+        },
+        "en",
+      ),
+    ).toEqual({ title: "Guide", body: "Body" });
+
+    expect(
+      getLocalizedQaContent(
+        {
+          title: "Legacy Q&A",
+          body: "Legacy body",
+          localized: {
+            ja: { title: "質問", body: "本文" },
+          },
+        },
+        "en",
+      ),
+    ).toEqual({ title: "質問", body: "本文" });
+  });
+
+  it("resolves localized poll title, description, and option labels", () => {
+    const poll = {
+      title: "Legacy poll",
+      description: "Legacy description",
+      options: [
+        { id: "a", label: "A", voteCount: 2 },
+        { id: "b", label: "B", voteCount: 1 },
+      ],
+      localized: {
+        en: {
+          title: "Poll",
+          description: "Description",
+          options: [
+            { id: "a", label: "Option A" },
+            { id: "b", label: "Option B" },
+          ],
+        },
+      },
+    };
+
+    expect(getLocalizedPollContent(poll, "en")).toEqual({
+      title: "Poll",
+      description: "Description",
+      options: [
+        { id: "a", label: "Option A", voteCount: 2 },
+        { id: "b", label: "Option B", voteCount: 1 },
+      ],
     });
   });
 });

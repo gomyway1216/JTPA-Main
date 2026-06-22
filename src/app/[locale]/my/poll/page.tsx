@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { listMyPoll } from "@/lib/data/poll";
+import { getLocalizedPollContent } from "@/lib/localized-content";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -49,42 +50,48 @@ export default async function MyPollPage() {
         <p className="text-zinc-500">{t("empty")}</p>
       ) : (
         <ul className="space-y-3">
-          {items.map((p) => (
-            <li
-              key={p.id}
-              className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <Link href={`/poll/${p.slug}`} className="font-semibold hover:underline">
-                  {p.title}
-                </Link>
-                {p.status === "archived" && (
-                  <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
-                    {statusT("archivedDone")}
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-xs text-zinc-500">
-                {common("lastUpdated", {
-                  date: formatDate(p.updatedAt, locale),
-                })}{" "}
-                · {t("voterCount", { count: p.voterCount ?? 0 })}
-              </p>
-              {p.description && (
-                <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-                  {truncate(p.description, 200)}
+          {items.map((p) => {
+            const content = getLocalizedPollContent(p, locale);
+            return (
+              <li
+                key={p.id}
+                className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <Link
+                    href={`/poll/${p.slug}`}
+                    className="font-semibold hover:underline"
+                  >
+                    {content.title}
+                  </Link>
+                  {p.status === "archived" && (
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900 dark:bg-amber-950 dark:text-amber-200">
+                      {statusT("archivedDone")}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-zinc-500">
+                  {common("lastUpdated", {
+                    date: formatDate(p.updatedAt, locale),
+                  })}{" "}
+                  · {t("voterCount", { count: p.voterCount ?? 0 })}
                 </p>
-              )}
-              <div className="mt-2 flex gap-3 text-xs">
-                <Link
-                  href={`/poll/${p.slug}/edit`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {common("edit")}
-                </Link>
-              </div>
-            </li>
-          ))}
+                {content.description && (
+                  <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+                    {truncate(content.description, 200)}
+                  </p>
+                )}
+                <div className="mt-2 flex gap-3 text-xs">
+                  <Link
+                    href={`/poll/${p.slug}/edit`}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {common("edit")}
+                  </Link>
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

@@ -5,11 +5,13 @@ import { revalidatePath, updateTag } from "next/cache";
 import * as z from "zod";
 
 import { findUniqueSlug, parseInput } from "@/lib/actions/shared";
+import { requireAdmin, requireEditor, requireUser } from "@/lib/auth/session";
 import {
-  requireAdmin,
-  requireEditor,
-  requireUser,
-} from "@/lib/auth/session";
+  CONTENT_LOCALES,
+  DEFAULT_CONTENT_LOCALES,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { GUIDES_TAG } from "@/lib/data/cache-tags";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
@@ -23,6 +25,8 @@ import type {
   GuideAuthorRef,
   GuideDoc,
   GuideStatus,
+  LocalizedContentMap,
+  LocalizedGuideContent,
   SessionUser,
 } from "@/lib/types";
 
@@ -49,14 +53,115 @@ const optionalNonEmpty = (schema: z.ZodTypeAny) =>
 // permission gate lives below in `resolveStatus`.
 const StatusInputSchema = z.enum(["draft", "pending", "published"]);
 
-const GuideInputSchema = z.object({
-  title: z.string().min(2).max(200),
-  slug: optionalNonEmpty(z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)),
-  body: z.string().min(1).max(50000),
-  tags: z.array(z.string().min(1).max(40)).max(20).default([]),
-  status: StatusInputSchema,
-  order: z.coerce.number().int().min(0).max(99999).default(100),
+const GuideLocalizedContentInputSchema = z.object({
+  title: z.string().max(200).default(""),
+  body: z.string().max(50000).default(""),
 });
+
+const LocalizedGuideInputSchema = z
+  .object({
+    ja: GuideLocalizedContentInputSchema.optional(),
+    en: GuideLocalizedContentInputSchema.optional(),
+  })
+  .default({});
+
+function hasAnyGuideContent(content: LocalizedGuideContent): boolean {
+  return Boolean(content.title.trim() || content.body.trim());
+}
+
+function validateGuideContent(
+  content: LocalizedGuideContent,
+  ctx: z.RefinementCtx,
+  path: (string | number)[],
+): boolean {
+  let ok = true;
+  if (content.title.trim().length < 2) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "title"],
+      message: "Title must be at least 2 characters.",
+    });
+    ok = false;
+  }
+  if (!content.body.trim()) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...path, "body"],
+      message: "Body is required.",
+    });
+    ok = false;
+  }
+  return ok;
+}
+
+const GuideInputSchema = z
+  .object({
+    title: z.string().max(200).optional(),
+    slug: optionalNonEmpty(
+      z
+        .string()
+        .min(2)
+        .max(80)
+        .regex(/^[a-z0-9-]+$/),
+    ),
+    body: z.string().max(50000).optional(),
+    localized: LocalizedGuideInputSchema,
+    locales: z
+      .array(z.enum(CONTENT_LOCALES))
+      .min(1)
+      .max(CONTENT_LOCALES.length)
+      .optional()
+      .transform((locales) => (locales ? [...new Set(locales)] : undefined)),
+    tags: z.array(z.string().min(1).max(40)).max(20).default([]),
+    status: StatusInputSchema,
+    order: z.coerce.number().int().min(0).max(99999).default(100),
+  })
+  .transform((input, ctx) => {
+    const localized: LocalizedContentMap<LocalizedGuideContent> = {};
+    const locales: ContentLocale[] = [];
+    let sawContent = false;
+
+    for (const locale of CONTENT_LOCALES) {
+      const content = input.localized[locale] ?? { title: "", body: "" };
+      if (!hasAnyGuideContent(content)) continue;
+      sawContent = true;
+      if (!validateGuideContent(content, ctx, ["localized", locale])) continue;
+      localized[locale] = content;
+      locales.push(locale);
+    }
+
+    const legacyContent = {
+      title: input.title ?? "",
+      body: input.body ?? "",
+    };
+    if (locales.length === 0 && hasAnyGuideContent(legacyContent)) {
+      sawContent = true;
+      if (validateGuideContent(legacyContent, ctx, [])) {
+        const legacyLocale =
+          normalizeContentLocales(input.locales)[0] ??
+          DEFAULT_CONTENT_LOCALES[0];
+        localized[legacyLocale] = legacyContent;
+        locales.push(legacyLocale);
+      }
+    }
+
+    if (!sawContent) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["localized"],
+        message: "Enter content for at least one language.",
+      });
+    }
+
+    const primary = localized[locales[0]] ?? { title: "", body: "" };
+    return {
+      ...input,
+      title: primary.title,
+      body: primary.body,
+      locales,
+      localized,
+    };
+  });
 
 export type GuideFormInput = z.input<typeof GuideInputSchema>;
 
@@ -273,6 +378,8 @@ export async function submitGuide(
     slug,
     title: parsed.title,
     body: parsed.body,
+    locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     status: resolvedStatus,
     order: resolvedOrder,
@@ -366,7 +473,8 @@ export async function updateGuide(
   const parsed = pr.data;
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
 
   // Privileged tiers (admin / editor) can edit any guide. Contributors
@@ -425,8 +533,7 @@ export async function updateGuide(
   // First-publish detection — anchored on `publishedAt`, like posts —
   // so re-publishing an edited guide that was already public doesn't
   // overwrite the original publish date.
-  const becomesPublished =
-    requestedStatus === "published" && !cur.publishedAt;
+  const becomesPublished = requestedStatus === "published" && !cur.publishedAt;
   const becomesPending =
     requestedStatus === "pending" && cur.status !== "pending";
 
@@ -434,6 +541,8 @@ export async function updateGuide(
     ...(requestedSlug ? { slug: requestedSlug } : {}),
     title: parsed.title,
     body: parsed.body,
+    locales: parsed.locales,
+    localized: parsed.localized,
     tags: parsed.tags,
     status: requestedStatus,
     order: resolvedOrder,
@@ -475,9 +584,7 @@ export async function updateGuide(
 
 // ---------- delete ----------
 
-export async function deleteGuide(
-  guideId: string,
-): Promise<GuideActionResult> {
+export async function deleteGuide(guideId: string): Promise<GuideActionResult> {
   const user = await requireUser();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
@@ -535,7 +642,8 @@ export async function decideGuide(
   const reviewer = await requireEditor();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
 
   const isFirstPublish = decision === "published" && !cur.publishedAt;
@@ -587,7 +695,8 @@ export async function publishGuide(
   await requireEditor();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
   const isFirstPublish = !cur.publishedAt;
   await ref.update({
@@ -608,7 +717,8 @@ export async function archiveGuide(
   await requireAdmin();
   const ref = adminDb().collection("guides").doc(guideId);
   const snap = await ref.get();
-  if (!snap.exists) return { ok: false, error: await actionError("guideNotFound") };
+  if (!snap.exists)
+    return { ok: false, error: await actionError("guideNotFound") };
   const cur = snap.data() as GuideDoc;
   await ref.update({
     status: "archived" as const,
