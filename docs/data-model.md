@@ -150,7 +150,7 @@ Either `filePath`+`fileUrl` or `externalSlidesUrl` must be set (enforced in the 
 | `slug` | string | Unique |
 | `ownerUid`, `ownerName` | string | |
 | `title`, `description` | string | |
-| `locales?` | string[] | App locales where the project appears (`"ja"`, `"en"`). Legacy docs should be backfilled to both locales. |
+| `locales?` | string[] | App locales the project has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
 | `tags` | string[] | Max 10 |
 | `appUrl` | string | Required |
 | `repoUrl`, `demoVideoUrl` | string? | Optional |
@@ -197,7 +197,7 @@ Community blog entries. Members can submit posts; admins approve before public r
 | `slug` | string | Unique URL slug |
 | `title`, `excerpt` | string | Excerpt shown on the list view |
 | `body` | string | Markdown source, rendered via `MarkdownBody` |
-| `locales?` | string[] | App locales where the post appears (`"ja"`, `"en"`). Legacy docs should be backfilled to both locales. |
+| `locales?` | string[] | App locales the post has content for (`"ja"`, `"en"`). Public pages fall back to any available locale. |
 | `coverImage` | `ProjectAsset?` | Optional `{path, url}` — reuses the project asset shape |
 | `tags` | string[] | Up to 8 |
 | `authorUid`, `authorName` | string | Denormalized from auth |

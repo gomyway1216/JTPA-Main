@@ -119,7 +119,7 @@ describe("listPublishedPosts", () => {
     expect(lastCall.limit).toBe(7);
   });
 
-  it("filters by locale in Firestore", async () => {
+  it("keeps locale-specific callers on the full published list", async () => {
     getResult = {
       docs: [
         snap("en", { slug: "en", title: "EN", locales: ["en"] }),
@@ -128,7 +128,6 @@ describe("listPublishedPosts", () => {
     const posts = await listPublishedPostsForLocale("en", 2);
     expect(lastCall.whereCalls).toEqual([
       ["status", "==", "published"],
-      ["locales", "array-contains", "en"],
     ]);
     expect(lastCall.orderByCalls).toEqual([["publishedAt", "desc"]]);
     expect(lastCall.limit).toBe(2);

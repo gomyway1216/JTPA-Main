@@ -47,7 +47,7 @@ function revalidateLocalizedPath(path: string): void {
 
 // Expire the cross-request data cache for /, /showcase and
 // /showcase/[slug] (see src/lib/data/cached.ts). The collection tag also
-// covers locale-filtered list caches and per-slug detail entries. The
+// covers public list caches and per-slug detail entries. The
 // revalidateLocalizedPath calls in each action remain for client-router
 // refresh semantics.
 function expireProjectCache() {

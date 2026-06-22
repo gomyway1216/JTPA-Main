@@ -1,7 +1,6 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
-import { isContentLocale } from "@/lib/content-localization";
 import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
 import { ProjectDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
@@ -21,14 +20,10 @@ export async function listProjects(opts: {
   limit?: number;
   locale?: string;
 } = {}): Promise<ProjectDoc[]> {
-  const { status = "approved", limit = 50, locale } = opts;
-  let query = adminDb()
+  const { status = "approved", limit = 50 } = opts;
+  const snap = await adminDb()
     .collection("projects")
-    .where("status", "==", status);
-  if (isContentLocale(locale)) {
-    query = query.where("locales", "array-contains", locale);
-  }
-  const snap = await query
+    .where("status", "==", status)
     .orderBy("submittedAt", "desc")
     .limit(limit)
     .get();

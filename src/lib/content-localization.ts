@@ -35,11 +35,16 @@ export function initialContentLocales(
   return [...DEFAULT_CONTENT_LOCALES];
 }
 
-export function contentMatchesLocale(
+export function preferredContentLocale(
   values: readonly unknown[] | undefined,
   locale: string | undefined,
-): boolean {
-  if (values === undefined) return true;
+): ContentLocale | undefined {
+  if (values === undefined) {
+    return isContentLocale(locale) ? locale : DEFAULT_CONTENT_LOCALES[0];
+  }
   const normalized = normalizeContentLocales(values);
-  return isContentLocale(locale) && normalized.includes(locale);
+  if (normalized.length === 0) return undefined;
+  return isContentLocale(locale) && normalized.includes(locale)
+    ? locale
+    : normalized[0];
 }

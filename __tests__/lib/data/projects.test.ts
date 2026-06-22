@@ -54,7 +54,7 @@ describe("listProjects", () => {
     ]);
   });
 
-  it("filters by locale in Firestore", async () => {
+  it("keeps locale-specific callers on the full approved list", async () => {
     mock.setGet({
       docs: [
         snap("p-en", { slug: "en", title: "EN", locales: ["en"] }),
@@ -63,7 +63,6 @@ describe("listProjects", () => {
     const out = await listProjects({ locale: "en", limit: 2 });
     expect(mock.state.whereCalls).toEqual([
       ["status", "==", "approved"],
-      ["locales", "array-contains", "en"],
     ]);
     expect(mock.state.orderByCalls).toEqual([["submittedAt", "desc"]]);
     expect(mock.state.limit).toBe(2);

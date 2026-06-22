@@ -79,8 +79,8 @@ function postReturnPath(returnTo: PostReturnTo, isAdmin: boolean): string {
 // tags), so one call is enough. `updateTag` (vs
 // `revalidateTag(tag, "max")`) blocks the next read until fresh data is
 // fetched, so an author who publishes and lands back on /blog sees their
-// post immediately. Covers locale-filtered list caches and per-slug detail
-// entries at once. The revalidatePath calls in each action remain for
+// post immediately. Covers public list caches and per-slug detail entries
+// at once. The revalidatePath calls in each action remain for
 // client-router refresh semantics.
 function expirePostCache() {
   updateTag(POSTS_TAG);

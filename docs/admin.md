@@ -156,7 +156,7 @@ Authors can edit their own posts from `/my/posts`; non-admin edits can land in e
 
 ## Content locale backfill
 
-Posts and projects use `locales` arrays for public ja/en filtering. After deploying the localization feature, run the one-time backfill so legacy posts/projects continue appearing in both locales and the public list queries can use Firestore's native `array-contains` filter:
+Posts and projects use `locales` arrays to record which languages the content was written for. Public pages still fall back to any available locale, so this is not required for visibility, but running the one-time backfill normalizes legacy posts/projects to `["ja", "en"]` so edit forms and metadata start from the intended default:
 
 ```bash
 NEXT_PUBLIC_FIREBASE_PROJECT_ID=jtpa-main npm run backfill-content-locales -- --dry-run
