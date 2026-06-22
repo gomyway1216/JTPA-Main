@@ -603,8 +603,8 @@
     "rsvpsDescription": "Upcoming and past events",
     "projectsTitle": "My Projects",
     "projectsDescription": "Projects you shared",
-    "postsTitle": "My Articles",
-    "postsDescription": "Articles you posted, including drafts",
+    "postsTitle": "My Posts",
+    "postsDescription": "Articles, know-how, questions, and polls",
     "likesTitle": "Likes Received",
     "likesDescription": "Your comments that received likes",
     "publicProfileTitle": "Public Profile",
@@ -641,8 +641,17 @@
     "title": "My Projects"
   },
   "MyPosts": {
-    "metadataTitle": "My Articles",
-    "title": "My Articles"
+    "metadataTitle": "My Posts",
+    "title": "My Posts",
+    "newArticle": "Write Article",
+    "newGuide": "Add Know-how",
+    "newQa": "Question",
+    "type": {
+      "post": "Article",
+      "guide": "Know-how",
+      "qa": "Question",
+      "poll": "Poll"
+    }
   },
   "MyGuides": {
     "metadataTitle": "My Notes & Know-how",

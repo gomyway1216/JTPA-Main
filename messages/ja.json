@@ -603,8 +603,8 @@
     "rsvpsDescription": "参加予定・過去のイベント",
     "projectsTitle": "自分のプロジェクト",
     "projectsDescription": "共有したプロジェクト",
-    "postsTitle": "自分の記事",
-    "postsDescription": "投稿した記事 (下書き含む)",
+    "postsTitle": "自分の投稿",
+    "postsDescription": "記事・ノウハウ・質問・投票",
     "likesTitle": "もらったいいね",
     "likesDescription": "いいねを受け取った自分のコメント",
     "publicProfileTitle": "公開プロフィール",
@@ -641,8 +641,17 @@
     "title": "自分のプロジェクト"
   },
   "MyPosts": {
-    "metadataTitle": "自分の記事",
-    "title": "自分の記事"
+    "metadataTitle": "自分の投稿",
+    "title": "自分の投稿",
+    "newArticle": "記事を書く",
+    "newGuide": "ノウハウを残す",
+    "newQa": "質問・発見",
+    "type": {
+      "post": "記事",
+      "guide": "ノウハウ",
+      "qa": "質問",
+      "poll": "投票"
+    }
   },
   "MyGuides": {
     "metadataTitle": "自分のメモ・ノウハウ",
