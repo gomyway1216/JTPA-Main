@@ -1,3 +1,4 @@
+import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -63,8 +64,9 @@ export default async function ProjectDetailPage({
 }) {
   const { locale, slug } = await params;
   const userPromise = getSessionUser();
-  const [t, project] = await Promise.all([
+  const [t, common, project] = await Promise.all([
     getTranslations("ShowcaseDetail"),
+    getTranslations("Common"),
     getProjectBySlugCached(slug),
   ]);
   if (!project) notFound();
@@ -96,6 +98,11 @@ export default async function ProjectDetailPage({
     project.ownerUid,
     ...comments.map((c) => c.authorUid),
   ]);
+  const canEdit = !!user && (user.uid === project.ownerUid || user.isAdmin);
+  const editHref =
+    user?.uid === project.ownerUid
+      ? `/my/projects/${project.id}/edit`
+      : `/admin/projects/${project.id}/edit`;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -139,6 +146,14 @@ export default async function ProjectDetailPage({
             user={user}
           />
         </div>
+        {canEdit && (
+          <Link
+            href={editHref}
+            className="inline-flex w-fit rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            {common("edit")}
+          </Link>
+        )}
       </header>
 
       {project.thumbnail && (

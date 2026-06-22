@@ -52,6 +52,7 @@ export default async function BlogPostPage({
     getLocale(),
     getTranslations("BlogDetail"),
   ]);
+  const common = await getTranslations("Common");
   const post = await getPostBySlugCached(slug);
   if (!post || post.status !== "published") {
     notFound();
@@ -88,6 +89,11 @@ export default async function BlogPostPage({
     post.authorUid,
     ...comments.map((c) => c.authorUid),
   ]);
+  const canEdit = !!user && (user.uid === post.authorUid || user.isAdmin);
+  const editHref =
+    user?.uid === post.authorUid
+      ? `/my/posts/${post.id}/edit`
+      : `/admin/posts/${post.id}/edit`;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -144,6 +150,14 @@ export default async function BlogPostPage({
             user={user}
           />
         </div>
+        {canEdit && (
+          <Link
+            href={editHref}
+            className="inline-flex w-fit rounded-md border border-zinc-300 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+          >
+            {common("edit")}
+          </Link>
+        )}
       </header>
 
       {post.coverImage?.url && (

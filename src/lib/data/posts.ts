@@ -5,6 +5,7 @@ import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
 import { PostDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
 import type { PostDoc, PostStatus } from "@/lib/types";
+import { toDate } from "@/lib/utils";
 
 function toDoc(doc: SnapLike): PostDoc {
   const data = fromSnap<Omit<PostDoc, "id">>(doc, PostDocSchema, "posts");
@@ -42,12 +43,22 @@ export async function listPostsByStatus(
 }
 
 export async function listMyPosts(uid: string): Promise<PostDoc[]> {
-  const snap = await adminDb()
-    .collection("posts")
-    .where("authorUid", "==", uid)
-    .orderBy("updatedAt", "desc")
-    .get();
-  return snap.docs.map(toDoc);
+  const query = adminDb().collection("posts").where("authorUid", "==", uid);
+  try {
+    const snap = await query.orderBy("updatedAt", "desc").get();
+    return snap.docs.map(toDoc);
+  } catch (err) {
+    console.warn(
+      "Falling back to in-memory sort for my posts. Check the posts(authorUid, updatedAt) Firestore index.",
+      err,
+    );
+    const snap = await query.get();
+    return snap.docs.map(toDoc).sort((a, b) => {
+      const aTime = toDate(a.updatedAt)?.getTime() ?? 0;
+      const bTime = toDate(b.updatedAt)?.getTime() ?? 0;
+      return bTime - aTime;
+    });
+  }
 }
 
 export async function getPostBySlug(slug: string): Promise<PostDoc | null> {
