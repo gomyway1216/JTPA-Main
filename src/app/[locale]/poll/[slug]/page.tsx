@@ -54,8 +54,8 @@ export default async function PollDetailPage({
     getPollBySlug(slug),
   ]);
   if (!poll) notFound();
-  const isAuthorOrAdmin =
-    !!user && (user.uid === poll.authorUid || user.isAdmin);
+  const isAuthor = !!user && user.uid === poll.authorUid;
+  const isAuthorOrAdmin = isAuthor || !!user?.isAdmin;
   if (poll.status !== "published" && !isAuthorOrAdmin) {
     // Match the Q&A behavior: don't leak whether the slug exists.
     notFound();
@@ -91,11 +91,17 @@ export default async function PollDetailPage({
   const canEdit = isAuthorOrAdmin;
   const initialSelectedIds = myVote?.optionIds ?? [];
   const content = getLocalizedPollContent(poll, locale);
+  const backHref =
+    poll.status === "archived" && isAuthor ? "/my/posts" : "/community";
+  const backLabel =
+    poll.status === "archived" && isAuthor
+      ? common("backToMyPosts")
+      : common("backToCommunity");
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/poll" className="text-xs text-zinc-500 hover:underline">
-        {t("back")}
+      <Link href={backHref} className="text-xs text-zinc-500 hover:underline">
+        {backLabel}
       </Link>
 
       {poll.status === "archived" && (

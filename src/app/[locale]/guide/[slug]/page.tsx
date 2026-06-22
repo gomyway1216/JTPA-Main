@@ -46,9 +46,10 @@ export default async function GuideDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [locale, t] = await Promise.all([
+  const [locale, t, common] = await Promise.all([
     getLocale(),
     getTranslations("GuideDetail"),
+    getTranslations("Common"),
   ]);
   // Session + record load are independent — kick them off together
   // rather than serially. We need the user for the access check below.
@@ -66,12 +67,25 @@ export default async function GuideDetailPage({
   // a non-existent slug — don't leak that the slug exists. Mirrors the
   // /qa/[slug] pattern.
   const ownerUid = guide.authorUid ?? guide.createdBy?.uid;
-  const isAuthorOrCurator =
-    !!user && (user.isAdmin || user.isEditor || user.uid === ownerUid);
+  const isCurator = !!user && (user.isAdmin || user.isEditor);
+  const isAuthor = !!user && user.uid === ownerUid;
+  const isAuthorOrCurator = isCurator || isAuthor;
   if (guide.status !== "published" && !isAuthorOrCurator) {
     notFound();
   }
   const content = getLocalizedGuideContent(guide, locale);
+  const backHref =
+    guide.status !== "published"
+      ? isCurator
+        ? "/admin/guides"
+        : "/my/posts"
+      : "/community";
+  const backLabel =
+    guide.status !== "published"
+      ? isCurator
+        ? common("backToAdminGuides")
+        : common("backToMyPosts")
+      : common("backToCommunity");
 
   const tags = guide.tags ?? [];
   const statusLabel =
@@ -108,8 +122,8 @@ export default async function GuideDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <Link href="/guide" className="text-xs text-zinc-500 hover:underline">
-        {t("back")}
+      <Link href={backHref} className="text-xs text-zinc-500 hover:underline">
+        {backLabel}
       </Link>
 
       {guide.status !== "published" && (

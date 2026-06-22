@@ -4,6 +4,9 @@
     "siteDescription": "JTPA events, member AI projects, and community questions, notes, and know-how.",
     "viewAll": "View all →",
     "edit": "Edit",
+    "backToCommunity": "← Community Posts",
+    "backToMyPosts": "← My Posts",
+    "backToAdminGuides": "← Notes & Know-how admin",
     "coverImageAlt": "Cover image for {title}",
     "thumbnailAlt": "Thumbnail for {title}",
     "location": {
@@ -320,11 +323,9 @@
     "statusNotice": "This project is currently <strong>{status}</strong> and is only visible to the owner and admins."
   },
   "BlogDetail": {
-    "back": "← Articles",
     "coverAlt": "Cover image for {title}"
   },
   "GuideDetail": {
-    "back": "← Notes & Know-how",
     "statusNoticePrefix": "This note is currently",
     "statusNoticeSuffix": "and is only visible to the author, admins, and editors.",
     "lastUpdated": "Last updated: {date}",
@@ -336,13 +337,11 @@
     }
   },
   "QaDetail": {
-    "back": "← Questions",
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."
   },
   "PollDetail": {
-    "back": "← Ask Everyone",
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
     "archivedNoticeSuffix": "by an admin. It is only visible to you."
