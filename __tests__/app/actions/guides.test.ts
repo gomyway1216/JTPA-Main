@@ -236,7 +236,18 @@ describe("submitGuide — validation + status resolution", () => {
     expect(payload.order).toBe(0);
   });
 
-  it("rejects an explicitly-requested slug that is already taken", async () => {
+  it("ignores a non-curator's explicitly-requested slug", async () => {
+    await expect(
+      submitGuide({ ...validInput, slug: "vanity-url" }),
+    ).rejects.toThrow("__REDIRECT__:/my/guides");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.slug).toBe("my-guide");
+  });
+
+  it("rejects a curator's explicitly-requested slug that is already taken", async () => {
+    requireUserMock.mockResolvedValueOnce(
+      sessionUser({ uid: "editor-1", isEditor: true }),
+    );
     slugQueryGetMock.mockResolvedValueOnce({
       empty: false,
       docs: [{ id: "other" }],
@@ -302,7 +313,22 @@ describe("updateGuide — authorization + status clamp", () => {
     expect(patch.order).toBe(42);
   });
 
-  it("rejects a slug change that collides with another guide", async () => {
+  it("ignores a non-curator's slug change", async () => {
+    guideGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ authorUid: "u1", slug: "old-slug", status: "draft" }),
+    });
+    await expect(
+      updateGuide("g1", { ...validInput, slug: "wanted-slug" }),
+    ).resolves.toEqual({ ok: true });
+    const [patch] = guideUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch).not.toHaveProperty("slug");
+  });
+
+  it("rejects a curator slug change that collides with another guide", async () => {
+    requireUserMock.mockResolvedValueOnce(
+      sessionUser({ uid: "editor-1", isEditor: true }),
+    );
     guideGetMock.mockResolvedValueOnce({
       exists: true,
       data: () => ({ authorUid: "u1", slug: "old-slug", status: "draft" }),

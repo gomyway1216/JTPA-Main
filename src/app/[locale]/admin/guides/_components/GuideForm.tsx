@@ -163,15 +163,19 @@ function escapeAlt(s: string): string {
   return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
+interface GuideFormProps {
+  mode: "create" | "edit";
+  user: SessionUser;
+  guide?: GuideDoc;
+  showCurationFields?: boolean;
+}
+
 export function GuideForm({
   mode,
   user,
   guide,
-}: {
-  mode: "create" | "edit";
-  user: SessionUser;
-  guide?: GuideDoc;
-}) {
+  showCurationFields = false,
+}: GuideFormProps) {
   const locale = useLocale();
   const t = useTranslations("GuideForm");
   const actionErrors = useTranslations("ActionErrors");
@@ -191,6 +195,7 @@ export function GuideForm({
   // route access. Used for post-delete redirects — contributors get
   // bounced from the admin layout, so they need to land on /my/guides.
   const hasAdminAccess = user.isAdmin || user.isEditor;
+  const canEditCurationFields = showCurationFields && hasAdminAccess;
 
   const [activeLocale, setActiveLocale] = useState<ContentLocale>(
     initialGuideActiveLocale(guide, locale),
@@ -398,10 +403,9 @@ export function GuideForm({
       try {
         const payload: GuideFormInput = {
           localized: localizedContent,
-          slug: slug || undefined,
           tags: stringToTags(tagsInput),
           status: intent,
-          order,
+          ...(canEditCurationFields ? { slug: slug || undefined, order } : {}),
         };
         const res =
           mode === "create"
@@ -505,16 +509,18 @@ export function GuideForm({
           />
         </Field>
       </div>
-      <Field label={t("slug")} htmlFor="guide-slug">
-        <input
-          id="guide-slug"
-          type="text"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          placeholder={t("slugPlaceholder")}
-          className={inputClass}
-        />
-      </Field>
+      {canEditCurationFields && (
+        <Field label={t("slug")} htmlFor="guide-slug">
+          <input
+            id="guide-slug"
+            type="text"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder={t("slugPlaceholder")}
+            className={inputClass}
+          />
+        </Field>
+      )}
       <Field label={t("tags")} htmlFor="guide-tags">
         <input
           id="guide-tags"
@@ -525,10 +531,9 @@ export function GuideForm({
           className={inputClass}
         />
       </Field>
-      {/* Admin/editor see the order knob; plain contributors don't —
-          admin sets the order during review so community guides slot
-          in without authors stepping on the curated set. */}
-      {(user.isAdmin || user.isEditor) && (
+      {/* Curation controls only appear on the admin guide form. Public
+          authoring routes always use generated slugs and default ordering. */}
+      {canEditCurationFields && (
         <Field label={t("order")} htmlFor="guide-order">
           <input
             id="guide-order"

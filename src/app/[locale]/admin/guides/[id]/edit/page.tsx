@@ -28,7 +28,7 @@ export default async function EditGuidePage({
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{t("editTitle")}</h1>
-      <GuideForm mode="edit" user={user} guide={guide} />
+      <GuideForm mode="edit" user={user} guide={guide} showCurationFields />
     </div>
   );
 }

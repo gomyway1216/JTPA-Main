@@ -22,7 +22,7 @@ export default async function NewGuidePage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">{t("newTitle")}</h1>
-      <GuideForm mode="create" user={user} />
+      <GuideForm mode="create" user={user} showCurationFields />
     </div>
   );
 }
