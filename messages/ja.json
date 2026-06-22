@@ -193,6 +193,7 @@
       "blog": "記事"
     },
     "showing": "表示中: {filtered} / 全 {total} 件",
+    "showingCompact": "{filtered} / {total}",
     "empty": "まだ投稿はありません。",
     "emptyHint": "試したこと、困っていること、小さな発見から書いてみましょう。",
     "noMatches": "このカテゴリにはまだ投稿がありません。",

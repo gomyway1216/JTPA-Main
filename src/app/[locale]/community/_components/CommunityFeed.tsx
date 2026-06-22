@@ -52,12 +52,12 @@ export function CommunityFeed({ items }: { items: CommunityFeedItem[] }) {
   );
 
   return (
-    <section className="space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <section className="space-y-4">
+      <div className="flex flex-col gap-2 border-b border-zinc-200 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800">
         <div
           role="group"
           aria-label={t("filtersLabel")}
-          className="flex w-full gap-1 overflow-x-auto rounded-full border border-zinc-200 bg-zinc-50 p-1 text-sm sm:w-fit dark:border-zinc-800 dark:bg-zinc-900"
+          className="-mx-1 -mb-px flex min-w-0 flex-1 gap-4 overflow-x-auto px-1 text-sm"
         >
           {FILTERS.map((item) => {
             const active = item === filter;
@@ -67,22 +67,28 @@ export function CommunityFeed({ items }: { items: CommunityFeedItem[] }) {
                 type="button"
                 aria-pressed={active}
                 onClick={() => setFilter(item)}
-                className={`shrink-0 rounded-full px-3 py-1.5 font-medium transition ${
+                className={`shrink-0 border-b-2 px-0.5 py-2 font-medium transition ${
                   active
-                    ? "bg-white text-zinc-950 shadow-sm dark:bg-zinc-800 dark:text-white"
-                    : "text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
+                    ? "border-zinc-950 text-zinc-950 dark:border-zinc-100 dark:text-white"
+                    : "border-transparent text-zinc-600 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-white"
                 }`}
               >
                 {t(`filters.${item}`)}
-                <span className="ml-1 text-xs text-zinc-400">
+                <span
+                  className={`ml-1.5 rounded px-1.5 py-0.5 text-[11px] ${
+                    active
+                      ? "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200"
+                      : "bg-zinc-100 text-zinc-500 dark:bg-zinc-900 dark:text-zinc-400"
+                  }`}
+                >
                   {counts[item]}
                 </span>
               </button>
             );
           })}
         </div>
-        <p className="text-sm text-zinc-500">
-          {t("showing", {
+        <p className="shrink-0 pb-2 text-xs text-zinc-500 sm:pb-0">
+          {t("showingCompact", {
             filtered: visibleItems.length,
             total: items.length,
           })}

@@ -78,17 +78,17 @@ export default async function CommunityPage() {
     .slice(0, 80);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 px-4 py-12">
-      <header className="space-y-5">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+    <div className="mx-auto max-w-4xl space-y-5 px-4 py-8">
+      <header className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-end sm:justify-between dark:border-zinc-800">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <h1 className="text-3xl font-semibold tracking-tight">
             {t("title")}
           </h1>
           <p className="max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
             {t("description")}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 flex-wrap gap-1.5">
           <ActionLink
             href={user ? "/qa/new" : loginHref("/qa/new", locale)}
             primary
@@ -119,8 +119,8 @@ function ActionLink({
   children: React.ReactNode;
 }) {
   const className = primary
-    ? "rounded-full bg-zinc-900 px-5 py-2 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
-    : "rounded-full border border-zinc-300/70 px-5 py-2 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800";
+    ? "rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+    : "rounded-md border border-zinc-300/70 px-3 py-1.5 text-sm font-medium hover:bg-zinc-100 dark:border-zinc-700/70 dark:hover:bg-zinc-800";
 
   return (
     <Link href={href} className={className}>
