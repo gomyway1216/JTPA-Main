@@ -93,6 +93,7 @@ import {
   submitProject,
   updateMyProject,
 } from "@/app/actions/projects";
+import { PROJECT_DESCRIPTION_MAX_LENGTH } from "@/lib/project-limits";
 
 async function expectError(
   p: Promise<{ ok: true } | { ok: false; error: string }>,
@@ -147,6 +148,21 @@ describe("submitProject — validation", () => {
     await expectError(
       submitProject({ ...validInput, description: "short" }),
       "入力エラー",
+    );
+    expect(addMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects descriptions longer than the project description limit", async () => {
+    await expectError(
+      submitProject({
+        localized: {
+          ja: {
+            title: "長い説明のプロジェクト",
+            description: "あ".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1),
+          },
+        },
+      }),
+      "20,000文字以内",
     );
     expect(addMock).not.toHaveBeenCalled();
   });
@@ -221,6 +237,26 @@ describe("submitProject — create", () => {
     expect(payload.locales).toEqual(["en"]);
     expect(payload.localized).toEqual({ en });
     expect(payload.title).toBe("English App");
+  });
+
+  it("stores long localized Japanese and English descriptions", async () => {
+    const ja = {
+      title: "長い説明のプロジェクト",
+      description: "日本語の説明文です。".repeat(700),
+    };
+    const en = {
+      title: "Long English App",
+      description: "This is a long English project description. "
+        .repeat(180)
+        .trim(),
+    };
+    await expect(submitProject({ localized: { ja, en } })).rejects.toThrow(
+      "__REDIRECT__:/my/projects",
+    );
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.locales).toEqual(["ja", "en"]);
+    expect(payload.description).toBe(ja.description);
+    expect(payload.localized).toEqual({ ja, en });
   });
 });
 

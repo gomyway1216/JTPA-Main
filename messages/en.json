@@ -427,6 +427,8 @@
     "save": "Save",
     "title": "Title",
     "description": "Description (Markdown supported)",
+    "descriptionCount": "{current} / {max} characters",
+    "descriptionTooLong": "{locale} description must be {max} characters or less. It is currently {current} characters.",
     "descriptionTemplate": "# Title\n\n## Motivation\n\n## What I built\n\n## How I built it\n\n## Insights gained",
     "localization": "Localized content",
     "locales": {
@@ -1590,6 +1592,7 @@
     "projectNotFound": "The project was not found.",
     "projectEditForbidden": "You do not have permission to edit this project.",
     "projectDeleteForbidden": "You do not have permission to delete this project.",
+    "projectDescriptionTooLong": "Project descriptions must be {count} characters or less.",
     "postNotFound": "The article was not found.",
     "postEditForbidden": "You do not have permission to edit this article.",
     "postDeleteForbidden": "You do not have permission to delete this article.",

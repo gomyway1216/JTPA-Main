@@ -26,6 +26,10 @@ import { adminDb } from "@/lib/firebase/admin";
 import { routing } from "@/i18n/routing";
 import { actionError } from "@/lib/i18n/action-errors";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import {
+  PROJECT_DESCRIPTION_MAX_LENGTH,
+  PROJECT_DESCRIPTION_MAX_LENGTH_LABEL,
+} from "@/lib/project-limits";
 import type {
   LocalizedContentMap,
   LocalizedProjectContent,
@@ -45,9 +49,14 @@ const AssetSchema = z.object({
   url: z.string().url(),
 });
 
+const PROJECT_DESCRIPTION_TOO_LONG = "projectDescriptionTooLong";
+
 const ProjectLocalizedContentInputSchema = z.object({
   title: z.string().max(120).default(""),
-  description: z.string().max(5000).default(""),
+  description: z
+    .string()
+    .max(PROJECT_DESCRIPTION_MAX_LENGTH, PROJECT_DESCRIPTION_TOO_LONG)
+    .default(""),
 });
 
 const LocalizedProjectInputSchema = z.object({
@@ -102,7 +111,10 @@ function expireProjectCache() {
 
 const ProjectInputSchema = z.object({
   title: z.string().max(120).optional(),
-  description: z.string().max(5000).optional(),
+  description: z
+    .string()
+    .max(PROJECT_DESCRIPTION_MAX_LENGTH, PROJECT_DESCRIPTION_TOO_LONG)
+    .optional(),
   localized: LocalizedProjectInputSchema,
   locales: z
     .array(z.enum(CONTENT_LOCALES))
@@ -183,6 +195,18 @@ function projectReturnPath(returnTo: ProjectReturnTo, isAdmin: boolean): string 
   return returnTo === "admin" && isAdmin ? "/admin/projects" : "/my/projects";
 }
 
+async function parseProjectInput(
+  input: ProjectFormInput,
+) {
+  return parseInput(ProjectInputSchema, input, (message) =>
+    message === PROJECT_DESCRIPTION_TOO_LONG
+      ? actionError("projectDescriptionTooLong", {
+          count: PROJECT_DESCRIPTION_MAX_LENGTH_LABEL,
+        })
+      : message,
+  );
+}
+
 function diffAssetPaths(
   prev: ProjectAsset[] | undefined,
   next: ProjectAsset[],
@@ -202,7 +226,7 @@ export async function submitProject(
   input: ProjectFormInput,
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = await parseInput(ProjectInputSchema, input);
+  const pr = await parseProjectInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const now = Timestamp.now();
@@ -249,7 +273,7 @@ export async function updateMyProject(
   returnTo: ProjectReturnTo = "my",
 ): Promise<ProjectSaveResult> {
   const user = await requireUser();
-  const pr = await parseInput(ProjectInputSchema, input);
+  const pr = await parseProjectInput(input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
   const ref = adminDb().collection("projects").doc(projectId);

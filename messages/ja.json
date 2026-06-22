@@ -427,6 +427,8 @@
     "save": "保存",
     "title": "タイトル",
     "description": "説明 (Markdown可)",
+    "descriptionCount": "{current} / {max} 文字",
+    "descriptionTooLong": "{locale}の説明文は{max}文字以内にしてください。現在 {current} 文字です。",
     "descriptionTemplate": "# <プロジェクトタイトル>\n\n## 作り始めた動機\n\n## 何を作ったか\n\n## どうやって作ったか\n\n## 作ったことで得られたインサイトなど",
     "localization": "言語別本文",
     "locales": {
@@ -1587,6 +1589,7 @@
     "projectNotFound": "プロジェクトが見つかりません",
     "projectEditForbidden": "このプロジェクトを編集する権限がありません",
     "projectDeleteForbidden": "このプロジェクトを削除する権限がありません",
+    "projectDescriptionTooLong": "プロジェクトの説明文は{count}文字以内にしてください。",
     "postNotFound": "記事が見つかりません",
     "postEditForbidden": "この記事を編集する権限がありません",
     "postDeleteForbidden": "この記事を削除する権限がありません",
