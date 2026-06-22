@@ -93,6 +93,7 @@ import {
   submitProject,
   updateMyProject,
 } from "@/app/actions/projects";
+import { PROJECT_DESCRIPTION_MAX_LENGTH } from "@/lib/project-limits";
 
 async function expectError(
   p: Promise<{ ok: true } | { ok: false; error: string }>,
@@ -151,17 +152,17 @@ describe("submitProject — validation", () => {
     expect(addMock).not.toHaveBeenCalled();
   });
 
-  it("rejects descriptions longer than 100,000 characters", async () => {
+  it("rejects descriptions longer than the project description limit", async () => {
     await expectError(
       submitProject({
         localized: {
           ja: {
             title: "長い説明のプロジェクト",
-            description: "あ".repeat(100_001),
+            description: "あ".repeat(PROJECT_DESCRIPTION_MAX_LENGTH + 1),
           },
         },
       }),
-      "入力エラー",
+      "20,000文字以内",
     );
     expect(addMock).not.toHaveBeenCalled();
   });

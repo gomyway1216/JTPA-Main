@@ -38,6 +38,10 @@ import {
 } from "@/lib/content-localization";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
+import {
+  PROJECT_DESCRIPTION_MAX_LENGTH,
+  PROJECT_DESCRIPTION_MAX_LENGTH_LABEL,
+} from "@/lib/project-limits";
 import type {
   LocalizedProjectContent,
   ProjectAsset,
@@ -204,6 +208,10 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   const editorRef = useRef<RefMDEditor | null>(null);
   const uploadingRef = useRef(false);
   const activeContent = localizedContent[activeLocale];
+  const numberFormat = new Intl.NumberFormat(locale);
+  const activeDescriptionLength = activeContent.description.length;
+  const activeDescriptionOverLimit =
+    activeDescriptionLength > PROJECT_DESCRIPTION_MAX_LENGTH;
 
   function updateActiveContent(patch: Partial<LocalizedProjectContent>) {
     setLocalizedContent((cur) => ({
@@ -418,6 +426,24 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const overLimitLocale = CONTENT_LOCALES.find(
+      (value) =>
+        localizedContent[value].description.length >
+        PROJECT_DESCRIPTION_MAX_LENGTH,
+    );
+    if (overLimitLocale) {
+      setActiveLocale(overLimitLocale);
+      setError(
+        t("descriptionTooLong", {
+          locale: t(`locales.${overLimitLocale}`),
+          max: PROJECT_DESCRIPTION_MAX_LENGTH_LABEL,
+          current: numberFormat.format(
+            localizedContent[overLimitLocale].description.length,
+          ),
+        }),
+      );
+      return;
+    }
     startTransition(async () => {
       try {
         const payload = {
@@ -573,6 +599,18 @@ export function ProjectForm({ mode, user, project, returnTo = "my" }: Props) {
               preview="live"
             />
           </div>
+          <p
+            className={`text-xs ${
+              activeDescriptionOverLimit
+                ? "text-red-600"
+                : "text-zinc-500 dark:text-zinc-400"
+            }`}
+          >
+            {t("descriptionCount", {
+              current: numberFormat.format(activeDescriptionLength),
+              max: PROJECT_DESCRIPTION_MAX_LENGTH_LABEL,
+            })}
+          </p>
         </div>
       </Field>
       </div>
