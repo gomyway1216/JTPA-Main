@@ -13,7 +13,12 @@ import { listPoll } from "@/lib/data/poll";
 import { listPublishedPostsForLocale } from "@/lib/data/posts";
 import { listQa } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedPostContent } from "@/lib/localized-content";
+import {
+  getLocalizedGuideContent,
+  getLocalizedPollContent,
+  getLocalizedPostContent,
+  getLocalizedQaContent,
+} from "@/lib/localized-content";
 import type { GuideDoc, PollDoc, PostDoc, QaDoc, TsLike } from "@/lib/types";
 import { formatDate, stripMarkdown, toDate, truncate } from "@/lib/utils";
 
@@ -131,12 +136,13 @@ function guideItem(
 ): CommunityFeedItem {
   const authorUid = guide.authorUid ?? guide.createdBy.uid;
   const date = guide.publishedAt ?? guide.updatedAt ?? guide.createdAt;
+  const content = getLocalizedGuideContent(guide, locale);
   return baseItem({
     id: guide.id,
     kind: "guide",
     href: `/guide/${guide.slug}`,
-    title: guide.title,
-    excerpt: truncate(stripMarkdown(guide.body), 180),
+    title: content.title,
+    excerpt: truncate(stripMarkdown(content.body), 180),
     tags: guide.tags,
     date,
     locale,
@@ -150,12 +156,13 @@ function qaItem(
   locale: string,
   authorProfiles: Awaited<ReturnType<typeof getPublicProfilesByUids>>,
 ): CommunityFeedItem {
+  const content = getLocalizedQaContent(qa, locale);
   return baseItem({
     id: qa.id,
     kind: "qa",
     href: `/qa/${qa.slug}`,
-    title: qa.title,
-    excerpt: truncate(stripMarkdown(qa.body), 180),
+    title: content.title,
+    excerpt: truncate(stripMarkdown(content.body), 180),
     tags: qa.tags,
     date: qa.createdAt,
     locale,
@@ -169,7 +176,8 @@ function pollItem(
   locale: string,
   authorProfiles: Awaited<ReturnType<typeof getPublicProfilesByUids>>,
 ): CommunityFeedItem {
-  const topOptions = [...poll.options]
+  const content = getLocalizedPollContent(poll, locale);
+  const topOptions = [...content.options]
     .sort((a, b) => (b.voteCount ?? 0) - (a.voteCount ?? 0))
     .slice(0, 2)
     .map((option) => option.label);
@@ -178,8 +186,8 @@ function pollItem(
     id: poll.id,
     kind: "poll",
     href: `/poll/${poll.slug}`,
-    title: poll.title,
-    excerpt: poll.description ? truncate(poll.description, 160) : "",
+    title: content.title,
+    excerpt: content.description ? truncate(content.description, 160) : "",
     tags: topOptions,
     date: poll.createdAt,
     locale,
