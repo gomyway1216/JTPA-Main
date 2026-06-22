@@ -17,7 +17,7 @@ import {
 import { requireAdmin, requireUser } from "@/lib/auth/session";
 import {
   CONTENT_LOCALES,
-  DEFAULT_CONTENT_LOCALE,
+  DEFAULT_CONTENT_LOCALES,
 } from "@/lib/content-localization";
 import { PROJECTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
@@ -61,7 +61,7 @@ const ProjectInputSchema = z.object({
     .array(z.enum(CONTENT_LOCALES))
     .min(1)
     .max(CONTENT_LOCALES.length)
-    .default([DEFAULT_CONTENT_LOCALE])
+    .default([...DEFAULT_CONTENT_LOCALES])
     .transform((locales) => [...new Set(locales)]),
   tags: z.array(z.string().min(1).max(30)).max(10).default([]),
   // appUrl optional: per #38, projects can be CLI tools, local-only

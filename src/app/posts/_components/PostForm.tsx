@@ -72,9 +72,8 @@ function tagsToString(tags: string[]): string {
 
 function initialPostLocales(
   post: PostDoc | undefined,
-  locale: string,
 ): ContentLocale[] {
-  if (!post) return initialContentLocales(undefined, locale);
+  if (!post) return initialContentLocales(undefined);
   const normalized = normalizeContentLocales(post.locales);
   return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
 }
@@ -93,7 +92,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
   const [body, setBody] = useState<string>(post?.body ?? "");
   const [locales, setLocales] = useState<ContentLocale[]>(
-    initialPostLocales(post, locale),
+    initialPostLocales(post),
   );
   const [tagsInput, setTagsInput] = useState(
     tagsToString(post?.tags ?? []),

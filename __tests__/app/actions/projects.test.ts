@@ -185,7 +185,7 @@ describe("submitProject — create", () => {
     expect(payload).toMatchObject({
       slug: "my-app",
       ownerUid: "u1",
-      locales: ["ja"],
+      locales: ["ja", "en"],
       status: "pending",
       reviewerUid: null,
     });
@@ -237,7 +237,7 @@ describe("updateMyProject — authorization + state machine", () => {
     );
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("pending");
-    expect(patch.locales).toEqual(["ja"]);
+    expect(patch.locales).toEqual(["ja", "en"]);
     expect(patch.submittedAt).toEqual({ __fixed: "now" });
     // The legacy field normalizes away on first save (PR #24).
     expect(patch.thumbnailPath).toBe("__field_delete__");

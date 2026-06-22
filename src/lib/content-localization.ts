@@ -3,7 +3,9 @@ import type { AppLocale } from "@/i18n/routing";
 export const CONTENT_LOCALES = ["ja", "en"] as const satisfies readonly AppLocale[];
 export type ContentLocale = (typeof CONTENT_LOCALES)[number];
 
-export const DEFAULT_CONTENT_LOCALE = "ja" satisfies ContentLocale;
+export const DEFAULT_CONTENT_LOCALES = [
+  ...CONTENT_LOCALES,
+] satisfies ContentLocale[];
 
 export function isContentLocale(value: unknown): value is ContentLocale {
   return (
@@ -27,11 +29,10 @@ export function normalizeContentLocales(
 
 export function initialContentLocales(
   values: readonly unknown[] | undefined,
-  fallbackLocale: string,
 ): ContentLocale[] {
   const normalized = normalizeContentLocales(values);
   if (normalized.length > 0) return normalized;
-  return [isContentLocale(fallbackLocale) ? fallbackLocale : DEFAULT_CONTENT_LOCALE];
+  return [...DEFAULT_CONTENT_LOCALES];
 }
 
 export function contentMatchesLocale(

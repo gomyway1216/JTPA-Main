@@ -14,9 +14,8 @@ describe("content localization helpers", () => {
     ]);
   });
 
-  it("defaults new content to the current supported locale", () => {
-    expect(initialContentLocales(undefined, "en")).toEqual(["en"]);
-    expect(initialContentLocales(undefined, "fr")).toEqual(["ja"]);
+  it("defaults new content to all supported locales", () => {
+    expect(initialContentLocales(undefined)).toEqual(["ja", "en"]);
   });
 
   it("treats missing legacy locales as visible everywhere", () => {

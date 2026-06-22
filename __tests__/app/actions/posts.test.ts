@@ -175,7 +175,7 @@ describe("submitPost — create + intent state machine", () => {
     expect(payload).toMatchObject({
       slug: "hello-world",
       title: "Hello World",
-      locales: ["ja"],
+      locales: ["ja", "en"],
       status: "pending",
       authorUid: "u1",
       authorName: "Alice",
@@ -241,7 +241,7 @@ describe("updateMyPost — author intent → status", () => {
     ).rejects.toThrow("__REDIRECT__:/my/posts");
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("pending");
-    expect(patch.locales).toEqual(["ja"]);
+    expect(patch.locales).toEqual(["ja", "en"]);
     expect(patch.submittedAt).toEqual({ __fixed: "now" });
   });
 
