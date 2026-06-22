@@ -21,11 +21,11 @@ describe("content localization helpers", () => {
 
   it("treats missing legacy locales as visible everywhere", () => {
     expect(contentMatchesLocale(undefined, "ja")).toBe(true);
-    expect(contentMatchesLocale([], "en")).toBe(true);
   });
 
   it("matches only selected locales when the field is present", () => {
     expect(contentMatchesLocale(["ja"], "ja")).toBe(true);
     expect(contentMatchesLocale(["ja"], "en")).toBe(false);
+    expect(contentMatchesLocale([], "en")).toBe(false);
   });
 });

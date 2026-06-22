@@ -1,7 +1,7 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
-import { contentMatchesLocale } from "@/lib/content-localization";
+import { isContentLocale } from "@/lib/content-localization";
 import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
 import { ProjectDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
@@ -16,27 +16,23 @@ function toDoc(doc: SnapLike): ProjectDoc {
   return plainify({ ...data, id: doc.id });
 }
 
-function localeFilteredReadLimit(limit: number): number {
-  return Math.min(Math.max(limit * 4, 100), 500);
-}
-
 export async function listProjects(opts: {
   status?: ProjectStatus;
   limit?: number;
   locale?: string;
 } = {}): Promise<ProjectDoc[]> {
   const { status = "approved", limit = 50, locale } = opts;
-  const snap = await adminDb()
+  let query = adminDb()
     .collection("projects")
-    .where("status", "==", status)
+    .where("status", "==", status);
+  if (isContentLocale(locale)) {
+    query = query.where("locales", "array-contains", locale);
+  }
+  const snap = await query
     .orderBy("submittedAt", "desc")
-    .limit(locale ? localeFilteredReadLimit(limit) : limit)
+    .limit(limit)
     .get();
-  const projects = snap.docs.map(toDoc);
-  if (!locale) return projects;
-  return projects
-    .filter((project) => contentMatchesLocale(project.locales, locale))
-    .slice(0, limit);
+  return snap.docs.map(toDoc);
 }
 
 export async function listMyProjects(uid: string): Promise<ProjectDoc[]> {

@@ -54,22 +54,20 @@ describe("listProjects", () => {
     ]);
   });
 
-  it("filters by locale while keeping legacy docs visible", async () => {
+  it("filters by locale in Firestore", async () => {
     mock.setGet({
       docs: [
-        snap("p-ja", { slug: "ja", title: "JA", locales: ["ja"] }),
         snap("p-en", { slug: "en", title: "EN", locales: ["en"] }),
-        snap("p-old", { slug: "old", title: "Old" }),
       ],
     });
     const out = await listProjects({ locale: "en", limit: 2 });
-    expect(mock.state.whereCalls).toEqual([["status", "==", "approved"]]);
-    expect(mock.state.orderByCalls).toEqual([["submittedAt", "desc"]]);
-    expect(mock.state.limit).toBe(100);
-    expect(out).toEqual([
-      { id: "p-en", slug: "en", title: "EN", locales: ["en"] },
-      { id: "p-old", slug: "old", title: "Old" },
+    expect(mock.state.whereCalls).toEqual([
+      ["status", "==", "approved"],
+      ["locales", "array-contains", "en"],
     ]);
+    expect(mock.state.orderByCalls).toEqual([["submittedAt", "desc"]]);
+    expect(mock.state.limit).toBe(2);
+    expect(out).toEqual([{ id: "p-en", slug: "en", title: "EN", locales: ["en"] }]);
   });
 });
 

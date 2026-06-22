@@ -16,6 +16,7 @@
     "set-editor": "node scripts/set-editor.mjs",
     "set-contributor": "node scripts/set-contributor.mjs",
     "sync-role-badges": "node scripts/sync-role-badges.mjs",
+    "backfill-content-locales": "node scripts/backfill-content-locales.mjs",
     "seed-guides": "node scripts/seed-guides.mjs"
   },
   "dependencies": {

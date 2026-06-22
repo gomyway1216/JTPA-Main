@@ -119,22 +119,20 @@ describe("listPublishedPosts", () => {
     expect(lastCall.limit).toBe(7);
   });
 
-  it("filters by locale while keeping legacy docs visible", async () => {
+  it("filters by locale in Firestore", async () => {
     getResult = {
       docs: [
-        snap("ja", { slug: "ja", title: "JA", locales: ["ja"] }),
         snap("en", { slug: "en", title: "EN", locales: ["en"] }),
-        snap("legacy", { slug: "legacy", title: "Legacy" }),
       ],
     };
     const posts = await listPublishedPostsForLocale("en", 2);
-    expect(lastCall.whereCalls).toEqual([["status", "==", "published"]]);
-    expect(lastCall.orderByCalls).toEqual([["publishedAt", "desc"]]);
-    expect(lastCall.limit).toBe(100);
-    expect(posts).toEqual([
-      { id: "en", slug: "en", title: "EN", locales: ["en"] },
-      { id: "legacy", slug: "legacy", title: "Legacy" },
+    expect(lastCall.whereCalls).toEqual([
+      ["status", "==", "published"],
+      ["locales", "array-contains", "en"],
     ]);
+    expect(lastCall.orderByCalls).toEqual([["publishedAt", "desc"]]);
+    expect(lastCall.limit).toBe(2);
+    expect(posts).toEqual([{ id: "en", slug: "en", title: "EN", locales: ["en"] }]);
   });
 });
 

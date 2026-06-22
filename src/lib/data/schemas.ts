@@ -2,6 +2,8 @@ import "server-only";
 
 import * as z from "zod";
 
+import { CONTENT_LOCALES } from "@/lib/content-localization";
+
 // Lenient runtime mirrors of the Firestore doc shapes in src/lib/types.ts,
 // consumed by `fromSnap` (src/lib/data/from-snap.ts) at the read boundary.
 // Validation is warn-only, so these schemas are deliberately permissive:
@@ -28,7 +30,7 @@ const ProjectAssetSchema = z.looseObject({
   url: z.string().optional(),
 });
 
-const ContentLocalesSchema = z.array(z.enum(["ja", "en"]));
+const ContentLocalesSchema = z.array(z.enum(CONTENT_LOCALES));
 
 // ---------- users ----------
 const UserLinksSchema = z.looseObject({

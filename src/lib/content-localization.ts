@@ -38,7 +38,7 @@ export function contentMatchesLocale(
   values: readonly unknown[] | undefined,
   locale: string | undefined,
 ): boolean {
+  if (values === undefined) return true;
   const normalized = normalizeContentLocales(values);
-  if (normalized.length === 0 || !isContentLocale(locale)) return true;
-  return normalized.includes(locale);
+  return isContentLocale(locale) && normalized.includes(locale);
 }

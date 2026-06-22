@@ -1,7 +1,7 @@
 import "server-only";
 
 import { adminDb } from "@/lib/firebase/admin";
-import { contentMatchesLocale } from "@/lib/content-localization";
+import { isContentLocale } from "@/lib/content-localization";
 import { fromSnap, type SnapLike } from "@/lib/data/from-snap";
 import { PostDocSchema } from "@/lib/data/schemas";
 import { plainify } from "@/lib/data/serialize";
@@ -10,10 +10,6 @@ import type { PostDoc, PostStatus } from "@/lib/types";
 function toDoc(doc: SnapLike): PostDoc {
   const data = fromSnap<Omit<PostDoc, "id">>(doc, PostDocSchema, "posts");
   return plainify({ ...data, id: doc.id });
-}
-
-function localeFilteredReadLimit(limit: number): number {
-  return Math.min(Math.max(limit * 4, 100), 500);
 }
 
 export async function listPublishedPosts(limit = 50): Promise<PostDoc[]> {
@@ -30,16 +26,15 @@ export async function listPublishedPostsForLocale(
   locale: string,
   limit = 50,
 ): Promise<PostDoc[]> {
+  if (!isContentLocale(locale)) return listPublishedPosts(limit);
   const snap = await adminDb()
     .collection("posts")
     .where("status", "==", "published")
+    .where("locales", "array-contains", locale)
     .orderBy("publishedAt", "desc")
-    .limit(localeFilteredReadLimit(limit))
+    .limit(limit)
     .get();
-  return snap.docs
-    .map(toDoc)
-    .filter((post) => contentMatchesLocale(post.locales, locale))
-    .slice(0, limit);
+  return snap.docs.map(toDoc);
 }
 
 export async function listPostsByStatus(

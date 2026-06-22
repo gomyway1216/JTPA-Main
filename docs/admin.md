@@ -154,6 +154,17 @@ If a contributor abuses the trust, demote them at `/admin/users` → **contribut
 
 Authors can edit their own posts from `/my/posts`; non-admin edits can land in either `draft` (save without resubmitting) or `pending` (resubmit for review). Admins can also edit any post via the same form (handy for typo fixes).
 
+## Content locale backfill
+
+Posts and projects use `locales` arrays for public ja/en filtering. After deploying the localization feature, run the one-time backfill so legacy posts/projects continue appearing in both locales and the public list queries can use Firestore's native `array-contains` filter:
+
+```bash
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=jtpa-main npm run backfill-content-locales -- --dry-run
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=jtpa-main npm run backfill-content-locales
+```
+
+The script is idempotent. Existing locale selections are preserved; missing, empty, or invalid locale arrays are normalized to `["ja", "en"]`.
+
 ## Event check-in (day-of)
 
 The check-in flow lets attendees mark themselves "attended" by scanning a QR code at the door — no admin desk work required for the common case, with a manual fallback for edge cases.
