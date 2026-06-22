@@ -15,6 +15,10 @@ import {
   parseInput,
 } from "@/lib/actions/shared";
 import { requireAdmin, requireUser } from "@/lib/auth/session";
+import {
+  CONTENT_LOCALES,
+  DEFAULT_CONTENT_LOCALE,
+} from "@/lib/content-localization";
 import { PROJECTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { routing } from "@/i18n/routing";
@@ -43,8 +47,7 @@ function revalidateLocalizedPath(path: string): void {
 
 // Expire the cross-request data cache for /, /showcase and
 // /showcase/[slug] (see src/lib/data/cached.ts). The collection tag also
-// covers the per-slug detail entries, and the cached data is
-// locale-independent so one call hits both locales. The
+// covers locale-filtered list caches and per-slug detail entries. The
 // revalidateLocalizedPath calls in each action remain for client-router
 // refresh semantics.
 function expireProjectCache() {
@@ -54,6 +57,12 @@ function expireProjectCache() {
 const ProjectInputSchema = z.object({
   title: z.string().min(2).max(120),
   description: z.string().min(10).max(5000),
+  locales: z
+    .array(z.enum(CONTENT_LOCALES))
+    .min(1)
+    .max(CONTENT_LOCALES.length)
+    .default([DEFAULT_CONTENT_LOCALE])
+    .transform((locales) => [...new Set(locales)]),
   tags: z.array(z.string().min(1).max(30)).max(10).default([]),
   // appUrl optional: per #38, projects can be CLI tools, local-only
   // experiments, hardware demos, etc. — not every project has a public
@@ -111,6 +120,7 @@ export async function submitProject(
     ownerName: user.displayName,
     title: parsed.title,
     description: parsed.description,
+    locales: parsed.locales,
     tags: parsed.tags,
     appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",
@@ -177,6 +187,7 @@ export async function updateMyProject(
   await ref.update({
     title: parsed.title,
     description: parsed.description,
+    locales: parsed.locales,
     tags: parsed.tags,
     appUrl: parsed.appUrl || "",
     repoUrl: parsed.repoUrl || "",

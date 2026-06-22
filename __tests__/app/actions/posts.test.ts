@@ -175,6 +175,7 @@ describe("submitPost — create + intent state machine", () => {
     expect(payload).toMatchObject({
       slug: "hello-world",
       title: "Hello World",
+      locales: ["ja"],
       status: "pending",
       authorUid: "u1",
       authorName: "Alice",
@@ -193,6 +194,14 @@ describe("submitPost — create + intent state machine", () => {
     const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
     expect(payload.status).toBe("draft");
     expect(adminNewPostMock).not.toHaveBeenCalled();
+  });
+
+  it("stores the selected locales on create", async () => {
+    await expect(
+      submitPost({ ...validInput, locales: ["en"] }),
+    ).rejects.toThrow("__REDIRECT__:/my/posts");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.locales).toEqual(["en"]);
   });
 
   it("retries the slug with a numeric suffix when the base slug is taken", async () => {
@@ -232,6 +241,7 @@ describe("updateMyPost — author intent → status", () => {
     ).rejects.toThrow("__REDIRECT__:/my/posts");
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("pending");
+    expect(patch.locales).toEqual(["ja"]);
     expect(patch.submittedAt).toEqual({ __fixed: "now" });
   });
 
@@ -269,6 +279,18 @@ describe("updateMyPost — author intent → status", () => {
     ).rejects.toThrow("__REDIRECT__:/admin/posts");
     const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
     expect(patch.status).toBe("published");
+  });
+
+  it("updates the selected locales", async () => {
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({ authorUid: "u1", slug: "s", status: "draft" }),
+    });
+    await expect(
+      updateMyPost("p1", { ...validInput, locales: ["ja", "en"] }),
+    ).rejects.toThrow("__REDIRECT__");
+    const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch.locales).toEqual(["ja", "en"]);
   });
 
   it("deletes the orphaned old cover image from Storage after a replace", async () => {

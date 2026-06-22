@@ -29,6 +29,12 @@ import {
   secondaryButtonClass,
 } from "@/components/forms/styles";
 import { localizedPath } from "@/i18n/paths";
+import {
+  CONTENT_LOCALES,
+  initialContentLocales,
+  normalizeContentLocales,
+  type ContentLocale,
+} from "@/lib/content-localization";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type { PostDoc, ProjectAsset, SessionUser } from "@/lib/types";
@@ -64,6 +70,15 @@ function tagsToString(tags: string[]): string {
   return tags.join(", ");
 }
 
+function initialPostLocales(
+  post: PostDoc | undefined,
+  locale: string,
+): ContentLocale[] {
+  if (!post) return initialContentLocales(undefined, locale);
+  const normalized = normalizeContentLocales(post.locales);
+  return normalized.length > 0 ? normalized : [...CONTENT_LOCALES];
+}
+
 interface Props {
   mode: "create" | "edit";
   user: SessionUser;
@@ -77,6 +92,9 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
   const [title, setTitle] = useState(post?.title ?? "");
   const [excerpt, setExcerpt] = useState(post?.excerpt ?? "");
   const [body, setBody] = useState<string>(post?.body ?? "");
+  const [locales, setLocales] = useState<ContentLocale[]>(
+    initialPostLocales(post, locale),
+  );
   const [tagsInput, setTagsInput] = useState(
     tagsToString(post?.tags ?? []),
   );
@@ -153,6 +171,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
           title,
           excerpt,
           body,
+          locales,
           tags: stringToTags(tagsInput),
           coverImage,
           intent,
@@ -173,6 +192,16 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
         unstable_rethrow(err);
         setError(err instanceof Error ? err.message : t("saveFailed"));
       }
+    });
+  }
+
+  function toggleLocale(value: ContentLocale) {
+    setLocales((cur) => {
+      if (cur.includes(value)) {
+        return cur.length === 1 ? cur : cur.filter((locale) => locale !== value);
+      }
+      const next = new Set([...cur, value]);
+      return CONTENT_LOCALES.filter((locale) => next.has(locale));
     });
   }
 
@@ -245,6 +274,26 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
             height={500}
             preview="live"
           />
+        </div>
+      </Field>
+
+      <Field label={t("localization")} required>
+        <div className="flex flex-wrap gap-2">
+          {CONTENT_LOCALES.map((value) => (
+            <label
+              key={value}
+              className="inline-flex min-h-10 items-center gap-2 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+            >
+              <input
+                type="checkbox"
+                checked={locales.includes(value)}
+                disabled={pending || uploading}
+                onChange={() => toggleLocale(value)}
+                className="h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700"
+              />
+              <span>{t(`locales.${value}`)}</span>
+            </label>
+          ))}
         </div>
       </Field>
 

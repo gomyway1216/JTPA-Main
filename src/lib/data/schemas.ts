@@ -28,6 +28,8 @@ const ProjectAssetSchema = z.looseObject({
   url: z.string().optional(),
 });
 
+const ContentLocalesSchema = z.array(z.enum(["ja", "en"]));
+
 // ---------- users ----------
 const UserLinksSchema = z.looseObject({
   portfolio: z.string().optional(),
@@ -108,6 +110,7 @@ export const ProjectDocSchema = z.looseObject({
   ownerName: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
+  locales: ContentLocalesSchema.optional(),
   tags: z.array(z.string()).optional(),
   appUrl: z.string().optional(),
   repoUrl: z.string().optional(),
@@ -130,6 +133,7 @@ export const PostDocSchema = z.looseObject({
   title: z.string().optional(),
   excerpt: z.string().optional(),
   body: z.string().optional(),
+  locales: ContentLocalesSchema.optional(),
   coverImage: ProjectAssetSchema.optional(),
   tags: z.array(z.string()).optional(),
   authorUid: z.string().optional(),

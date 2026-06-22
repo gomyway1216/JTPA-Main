@@ -9,7 +9,7 @@ import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import {
-  listApprovedProjectsCached,
+  listApprovedProjectsForLocaleCached,
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
@@ -27,7 +27,7 @@ export default async function HomePage() {
   const common = await getTranslations("Common");
   const [events, projects, user] = await Promise.all([
     listUpcomingEventsCached(3).catch(() => []),
-    listApprovedProjectsCached(6).catch(() => []),
+    listApprovedProjectsForLocaleCached(locale, 6).catch(() => []),
     getSessionUser(),
   ]);
   const ownerProfiles = await getPublicProfilesByUids(

@@ -20,9 +20,9 @@ import "server-only";
  *   (like toggles bumping `likeCount`) invalidate just that entity so
  *   the list caches — the expensive multi-doc queries — survive.
  *
- * The cached data is locale-independent (Firestore content is shared by
- * both locales), so one tag invalidation covers /ja/... and /en/...
- * simultaneously — no per-locale path enumeration needed.
+ * Locale-filtered public caches still share the same collection tags, so one
+ * tag invalidation covers /ja/... and /en/... simultaneously — no per-locale
+ * path enumeration needed.
  */
 export const POSTS_TAG = "posts";
 export const GUIDES_TAG = "guides";

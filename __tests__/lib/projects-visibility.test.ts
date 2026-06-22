@@ -18,6 +18,23 @@ describe("canViewProjectDetail", () => {
     ).toBe(true);
   });
 
+  it("hides approved projects from unmatched public locales", () => {
+    expect(
+      canViewProjectDetail(
+        { ...project("approved"), locales: ["ja"] },
+        null,
+        "en",
+      ),
+    ).toBe(false);
+    expect(
+      canViewProjectDetail(
+        { ...project("approved"), locales: ["ja"] },
+        null,
+        "ja",
+      ),
+    ).toBe(true);
+  });
+
   it("allows admins to preview non-public projects", () => {
     for (const status of ["pending", "rejected", "archived"] as const) {
       expect(

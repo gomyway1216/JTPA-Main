@@ -1,12 +1,12 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 
 import { FadeUp } from "@/components/ui/FadeUp";
 import { interactiveCardClass } from "@/components/ui/surface";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
-import { listApprovedProjectsCached } from "@/lib/data/cached";
+import { listApprovedProjectsForLocaleCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { stripMarkdown } from "@/lib/utils";
 
@@ -20,9 +20,12 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ShowcasePage() {
+  const locale = await getLocale();
   const t = await getTranslations("ShowcasePage");
   const common = await getTranslations("Common");
-  const projects = await listApprovedProjectsCached(100).catch(() => []);
+  const projects = await listApprovedProjectsForLocaleCached(locale, 100).catch(
+    () => [],
+  );
   // Batched profile lookup for every project owner shown in the grid;
   // missing entries fall back to "@unknown" so a deleted-owner project
   // still renders.

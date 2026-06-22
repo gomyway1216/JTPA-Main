@@ -89,6 +89,7 @@ import {
   listMyPosts,
   listPostsByStatus,
   listPublishedPosts,
+  listPublishedPostsForLocale,
 } from "@/lib/data/posts";
 
 function snap(id: string, data: object) {
@@ -116,6 +117,24 @@ describe("listPublishedPosts", () => {
   it("respects a custom limit", async () => {
     await listPublishedPosts(7);
     expect(lastCall.limit).toBe(7);
+  });
+
+  it("filters by locale while keeping legacy docs visible", async () => {
+    getResult = {
+      docs: [
+        snap("ja", { slug: "ja", title: "JA", locales: ["ja"] }),
+        snap("en", { slug: "en", title: "EN", locales: ["en"] }),
+        snap("legacy", { slug: "legacy", title: "Legacy" }),
+      ],
+    };
+    const posts = await listPublishedPostsForLocale("en", 2);
+    expect(lastCall.whereCalls).toEqual([["status", "==", "published"]]);
+    expect(lastCall.orderByCalls).toEqual([["publishedAt", "desc"]]);
+    expect(lastCall.limit).toBe(100);
+    expect(posts).toEqual([
+      { id: "en", slug: "en", title: "EN", locales: ["en"] },
+      { id: "legacy", slug: "legacy", title: "Legacy" },
+    ]);
   });
 });
 

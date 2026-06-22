@@ -7,6 +7,7 @@ import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
+import { contentMatchesLocale } from "@/lib/content-localization";
 import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
@@ -28,11 +29,17 @@ function loadProjectComments(projectId: string) {
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const project = await getProjectBySlugCached(slug).catch(() => null);
-  if (!project || project.status !== "approved") return {};
+  if (
+    !project ||
+    project.status !== "approved" ||
+    !contentMatchesLocale(project.locales, locale)
+  ) {
+    return {};
+  }
   const description = truncate(stripMarkdown(project.description), 160);
   const images = project.thumbnail ? [project.thumbnail.url] : undefined;
   return {
@@ -55,9 +62,9 @@ export async function generateMetadata({
 export default async function ProjectDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const userPromise = getSessionUser();
   const [t, project] = await Promise.all([
     getTranslations("ShowcaseDetail"),
@@ -70,7 +77,7 @@ export default async function ProjectDetailPage({
     ? null
     : loadProjectComments(project.id);
   const user = await userPromise;
-  if (!canViewProjectDetail(project, user)) notFound();
+  if (!canViewProjectDetail(project, user, locale)) notFound();
 
   const statusT = isPrivatePreview ? await getTranslations("Status") : null;
   const commentsPage = await (

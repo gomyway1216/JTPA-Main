@@ -53,6 +53,24 @@ describe("listProjects", () => {
       { id: "p2", slug: "b", title: "B" },
     ]);
   });
+
+  it("filters by locale while keeping legacy docs visible", async () => {
+    mock.setGet({
+      docs: [
+        snap("p-ja", { slug: "ja", title: "JA", locales: ["ja"] }),
+        snap("p-en", { slug: "en", title: "EN", locales: ["en"] }),
+        snap("p-old", { slug: "old", title: "Old" }),
+      ],
+    });
+    const out = await listProjects({ locale: "en", limit: 2 });
+    expect(mock.state.whereCalls).toEqual([["status", "==", "approved"]]);
+    expect(mock.state.orderByCalls).toEqual([["submittedAt", "desc"]]);
+    expect(mock.state.limit).toBe(100);
+    expect(out).toEqual([
+      { id: "p-en", slug: "en", title: "EN", locales: ["en"] },
+      { id: "p-old", slug: "old", title: "Old" },
+    ]);
+  });
 });
 
 describe("listMyProjects", () => {
