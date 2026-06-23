@@ -22,6 +22,7 @@ import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import {
   DEFAULT_EVENT_TIME_ZONE,
   dateTimeLocalToDate,
+  eventTimeZone,
   isValidTimeZone,
 } from "@/lib/time-zones";
 import { slugify } from "@/lib/utils";
@@ -359,7 +360,7 @@ export async function cloneEvent(
     description: src.description,
     startAt: newStart,
     endAt: newEnd,
-    timeZone: src.timeZone ?? DEFAULT_EVENT_TIME_ZONE,
+    timeZone: eventTimeZone(src),
     location: src.location,
     capacity: src.capacity ?? 0,
     presenterCapacity: src.presenterCapacity ?? 0,

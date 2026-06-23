@@ -551,4 +551,26 @@ describe("cloneEvent", () => {
     expect(end.__fromMillis - start.__fromMillis).toBe(NINETY_MIN);
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/events");
   });
+
+  it("normalizes an invalid source timezone when cloning", async () => {
+    const ts = (ms: number) => ({ toMillis: () => ms });
+    docGetMock.mockResolvedValueOnce({
+      exists: true,
+      data: () => ({
+        slug: "bad-zone-event",
+        title: "Bad Zone Event",
+        description: "the original",
+        startAt: ts(1_000_000),
+        endAt: ts(1_000_000 + 60 * 60 * 1000),
+        timeZone: "Mars/Olympus_Mons",
+        location: { type: "offline" },
+      }),
+    });
+    slugQueryGetMock.mockResolvedValueOnce({ empty: true, docs: [] });
+
+    await expect(cloneEvent("src-event")).rejects.toThrow("__REDIRECT__");
+
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.timeZone).toBe("America/Los_Angeles");
+  });
 });

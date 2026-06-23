@@ -17,6 +17,7 @@ const DATE_TIME_LOCAL_RE =
 
 const zonedPartsFormatterCache = new Map<string, Intl.DateTimeFormat>();
 const timeZoneNameFormatterCache = new Map<string, Intl.DateTimeFormat>();
+const timeZoneValidityCache = new Map<string, boolean>();
 
 function partsFormatter(timeZone: string): Intl.DateTimeFormat {
   let formatter = zonedPartsFormatterCache.get(timeZone);
@@ -46,10 +47,14 @@ function formatterCacheKey(
 }
 
 export function isValidTimeZone(timeZone: string): boolean {
+  const cached = timeZoneValidityCache.get(timeZone);
+  if (cached !== undefined) return cached;
   try {
     new Intl.DateTimeFormat("en-US", { timeZone }).format(new Date(0));
+    timeZoneValidityCache.set(timeZone, true);
     return true;
   } catch {
+    timeZoneValidityCache.set(timeZone, false);
     return false;
   }
 }

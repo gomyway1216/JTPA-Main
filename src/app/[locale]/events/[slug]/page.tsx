@@ -22,7 +22,9 @@ import {
 } from "@/lib/time-zones";
 import type { EventDoc } from "@/lib/types";
 import {
+  formatDate,
   formatDateTime,
+  formatTime,
   isEventEnded,
   stripMarkdown,
   toDate,
@@ -154,28 +156,37 @@ export default async function EventDetailPage({
   );
   const subImages = validProjectAssets(event.subImages);
   const timeZone = eventTimeZone(event);
-  const eventZoneName = formatTimeZoneName(event.startAt, locale, timeZone);
+  const eventStartZoneName = formatTimeZoneName(event.startAt, locale, timeZone);
+  const eventEndZoneName = formatTimeZoneName(event.endAt, locale, timeZone);
   const eventStart = formatDateTime(event.startAt, locale, timeZone);
   const eventEnd = formatDateTime(event.endAt, locale, timeZone);
-  const eventStartWithZone = eventZoneName
-    ? `${eventStart} (${eventZoneName})`
+  const eventStartWithZone = eventStartZoneName
+    ? `${eventStart} (${eventStartZoneName})`
     : eventStart;
-  const eventEndWithZone = eventZoneName
-    ? `${eventEnd} (${eventZoneName})`
+  const eventEndWithZone = eventEndZoneName
+    ? `${eventEnd} (${eventEndZoneName})`
     : eventEnd;
   const japanZoneName = formatTimeZoneName(
     event.startAt,
     locale,
     JAPAN_TIME_ZONE,
   );
+  const japanStartDay = formatDate(event.startAt, locale, JAPAN_TIME_ZONE);
+  const japanEndDay = formatDate(event.endAt, locale, JAPAN_TIME_ZONE);
   const japanTime =
     timeZone === JAPAN_TIME_ZONE
       ? ""
-      : `${formatDateTime(event.startAt, locale, JAPAN_TIME_ZONE)} - ${formatDateTime(
-          event.endAt,
-          locale,
-          JAPAN_TIME_ZONE,
-        )}${japanZoneName ? ` (${japanZoneName})` : ""}`;
+      : japanStartDay && japanStartDay === japanEndDay
+        ? `${japanStartDay} ${formatTime(
+            event.startAt,
+            locale,
+            JAPAN_TIME_ZONE,
+          )} - ${formatTime(event.endAt, locale, JAPAN_TIME_ZONE)}${japanZoneName ? ` (${japanZoneName})` : ""}`
+        : `${formatDateTime(event.startAt, locale, JAPAN_TIME_ZONE)} - ${formatDateTime(
+            event.endAt,
+            locale,
+            JAPAN_TIME_ZONE,
+          )}${japanZoneName ? ` (${japanZoneName})` : ""}`;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
