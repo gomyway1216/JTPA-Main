@@ -29,16 +29,20 @@ export function toDate(value: TsLike | undefined | null): Date | null {
 const dateFormatterCache = new Map<string, Intl.DateTimeFormat>();
 const timeFormatterCache = new Map<string, Intl.DateTimeFormat>();
 
-function formatterCacheKey(locale: Intl.LocalesArgument): string {
-  return Array.isArray(locale)
+function formatterCacheKey(
+  locale: Intl.LocalesArgument,
+  timeZone?: string,
+): string {
+  const localeKey = Array.isArray(locale)
     ? locale.join(",")
     : typeof locale === "string"
       ? locale
       : "ja-JP";
+  return `${localeKey}|${timeZone ?? ""}`;
 }
 
-function dateFormatter(locale: Intl.LocalesArgument) {
-  const key = formatterCacheKey(locale);
+function dateFormatter(locale: Intl.LocalesArgument, timeZone?: string) {
+  const key = formatterCacheKey(locale, timeZone);
   let formatter = dateFormatterCache.get(key);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(locale, {
@@ -46,20 +50,22 @@ function dateFormatter(locale: Intl.LocalesArgument) {
       month: "long",
       day: "numeric",
       weekday: "short",
+      ...(timeZone ? { timeZone } : {}),
     });
     dateFormatterCache.set(key, formatter);
   }
   return formatter;
 }
 
-function timeFormatter(locale: Intl.LocalesArgument) {
-  const key = formatterCacheKey(locale);
+function timeFormatter(locale: Intl.LocalesArgument, timeZone?: string) {
+  const key = formatterCacheKey(locale, timeZone);
   let formatter = timeFormatterCache.get(key);
   if (!formatter) {
     formatter = new Intl.DateTimeFormat(locale, {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
+      ...(timeZone ? { timeZone } : {}),
     });
     timeFormatterCache.set(key, formatter);
   }
@@ -69,27 +75,30 @@ function timeFormatter(locale: Intl.LocalesArgument) {
 export function formatDate(
   value: TsLike | undefined | null,
   locale: Intl.LocalesArgument = "ja-JP",
+  timeZone?: string,
 ): string {
   const d = toDate(value);
-  return d ? dateFormatter(locale).format(d) : "";
+  return d ? dateFormatter(locale, timeZone).format(d) : "";
 }
 
 export function formatDateTime(
   value: TsLike | undefined | null,
   locale: Intl.LocalesArgument = "ja-JP",
+  timeZone?: string,
 ): string {
   const d = toDate(value);
   return d
-    ? `${dateFormatter(locale).format(d)} ${timeFormatter(locale).format(d)}`
+    ? `${dateFormatter(locale, timeZone).format(d)} ${timeFormatter(locale, timeZone).format(d)}`
     : "";
 }
 
 export function formatTime(
   value: TsLike | undefined | null,
   locale: Intl.LocalesArgument = "ja-JP",
+  timeZone?: string,
 ): string {
   const d = toDate(value);
-  return d ? timeFormatter(locale).format(d) : "";
+  return d ? timeFormatter(locale, timeZone).format(d) : "";
 }
 
 export function slugify(input: string, fallbackPrefix = "event"): string {

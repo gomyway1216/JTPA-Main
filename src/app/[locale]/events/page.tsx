@@ -10,6 +10,7 @@ import {
   listPastEventsCached,
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
+import { eventTimeZone } from "@/lib/time-zones";
 import type { EventDoc } from "@/lib/types";
 import { formatDateTime } from "@/lib/utils";
 
@@ -71,7 +72,7 @@ export default async function EventsPage() {
                   <div className="flex flex-1 flex-col gap-2 p-5 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs uppercase tracking-wide text-zinc-500">
-                        {formatDateTime(e.startAt, locale)}
+                        {formatDateTime(e.startAt, locale, eventTimeZone(e))}
                       </p>
                       <h2 className="mt-1 text-lg font-semibold">{e.title}</h2>
                       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
@@ -110,7 +111,7 @@ export default async function EventsPage() {
                 >
                   <span className="font-medium">{e.title}</span>
                   <span className="text-xs text-zinc-500">
-                    {formatDateTime(e.startAt, locale)}
+                    {formatDateTime(e.startAt, locale, eventTimeZone(e))}
                   </span>
                 </Link>
               </li>

@@ -59,8 +59,8 @@ describe("toDate", () => {
 
 describe("formatDate / formatDateTime / formatTime", () => {
   // vitest.config.mts pins TZ=Asia/Tokyo, so the ja-JP formatters in
-  // src/lib/utils.ts produce deterministic JST clock values. 05:30 UTC →
-  // 14:30 JST on 2025-03-15 (a Saturday).
+  // src/lib/utils.ts produce deterministic values when no explicit
+  // timeZone is passed. 05:30 UTC -> 14:30 JST on 2025-03-15 (a Saturday).
   const d = new Date("2025-03-15T05:30:00Z");
 
   it("formatDate returns empty string for missing input", () => {
@@ -91,6 +91,18 @@ describe("formatDate / formatDateTime / formatTime", () => {
     const result = formatDateTime(d);
     expect(result).toContain("2025年3月15日");
     expect(result.endsWith(" 14:30")).toBe(true);
+  });
+
+  it("renders explicit time zones independently of the process TZ", () => {
+    const value = new Date("2026-06-25T00:30:00.000Z");
+    expect(formatDateTime(value, "ja-JP", "America/Los_Angeles")).toContain(
+      "2026年6月24日",
+    );
+    expect(formatTime(value, "ja-JP", "America/Los_Angeles")).toBe("17:30");
+    expect(formatDateTime(value, "ja-JP", "Asia/Tokyo")).toContain(
+      "2026年6月25日",
+    );
+    expect(formatTime(value, "ja-JP", "Asia/Tokyo")).toBe("09:30");
   });
 });
 

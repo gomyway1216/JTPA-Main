@@ -196,6 +196,20 @@ describe("createEvent — auth + validation", () => {
     expect(whereMock).toHaveBeenCalledWith("slug", "==", "taken-slug");
     expect(addMock).not.toHaveBeenCalled();
   });
+
+  it("rejects an invalid local date-time range before touching Firestore", async () => {
+    await expectError(
+      createEvent(
+        eventInput({
+          startAt: "2026-06-24T20:00",
+          endAt: "2026-06-24T17:30",
+        }),
+      ),
+      "開始・終了日時",
+    );
+    expect(whereMock).not.toHaveBeenCalled();
+    expect(addMock).not.toHaveBeenCalled();
+  });
 });
 
 describe("createEvent — happy path", () => {
@@ -216,6 +230,7 @@ describe("createEvent — happy path", () => {
       presenterCapacity: 5,
       // Optional knobs get explicit defaults so the doc shape is stable.
       visibility: "public",
+      timeZone: "America/Los_Angeles",
       checkInEarlyMinutes: DEFAULT_CHECKIN_EARLY_MINUTES,
       checkInLateMinutes: DEFAULT_CHECKIN_LATE_MINUTES,
       subImages: [],
@@ -228,6 +243,48 @@ describe("createEvent — happy path", () => {
     // Cache busts land BEFORE the redirect throws.
     expect(revalidatePathMock).toHaveBeenCalledWith("/events");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/events");
+  });
+
+  it("stores datetime-local input as an instant in the selected event time zone", async () => {
+    await expect(
+      createEvent(
+        eventInput({
+          timeZone: "America/Los_Angeles",
+          startAt: "2026-06-24T17:30",
+          endAt: "2026-06-24T20:00",
+        }),
+      ),
+    ).rejects.toThrow("__REDIRECT__");
+
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.timeZone).toBe("America/Los_Angeles");
+    expect(payload.startAt).toEqual({
+      __fromDate: "2026-06-25T00:30:00.000Z",
+    });
+    expect(payload.endAt).toEqual({
+      __fromDate: "2026-06-25T03:00:00.000Z",
+    });
+  });
+
+  it("does not treat Central Time input as the same instant as Pacific Time", async () => {
+    await expect(
+      createEvent(
+        eventInput({
+          timeZone: "America/Chicago",
+          startAt: "2026-06-24T17:30",
+          endAt: "2026-06-24T20:00",
+        }),
+      ),
+    ).rejects.toThrow("__REDIRECT__");
+
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.timeZone).toBe("America/Chicago");
+    expect(payload.startAt).toEqual({
+      __fromDate: "2026-06-24T22:30:00.000Z",
+    });
+    expect(payload.endAt).toEqual({
+      __fromDate: "2026-06-25T01:00:00.000Z",
+    });
   });
 
   it("slugifies the title when slug is blank and keeps blank URLs as empty strings", async () => {
@@ -307,6 +364,7 @@ describe("updateEvent", () => {
     expect(patch).not.toHaveProperty("slug");
     expect(patch).toMatchObject({
       status: "cancelled",
+      timeZone: "America/Los_Angeles",
       checkInEarlyMinutes: 30,
       // No cover in the input → clear it, and always drop the legacy
       // coverImagePath field so old docs normalize on first edit.
@@ -447,6 +505,7 @@ describe("cloneEvent", () => {
         description: "the original",
         startAt: ts(1_000_000),
         endAt: ts(1_000_000 + NINETY_MIN),
+        timeZone: "America/Chicago",
         location: { type: "offline", address: "San Jose" },
         capacity: 30,
         presenterCapacity: 4,
@@ -474,6 +533,7 @@ describe("cloneEvent", () => {
       capacity: 30,
       presenterCapacity: 4,
       visibility: "members_only",
+      timeZone: "America/Chicago",
       surveyFields: [{ key: "q1" }],
       createdBy: "admin-1",
       // …and all live counters reset (rsvps/presentations subcollections

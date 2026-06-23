@@ -43,7 +43,11 @@ import type {
   SessionUser,
   SurveyField,
 } from "@/lib/types";
-import { toDate } from "@/lib/utils";
+import {
+  EVENT_TIME_ZONE_OPTIONS,
+  dateToDateTimeLocal,
+  eventTimeZone,
+} from "@/lib/time-zones";
 
 // Matches the events/{eventId}/{**} storage rule (admin write, image only,
 // 10MB cap). Cover images get a slightly larger budget than project /
@@ -56,12 +60,6 @@ const ALLOWED_MIME = [
   "image/gif",
 ] as const;
 const ACCEPT = ALLOWED_MIME.join(",");
-
-function toLocalInput(d: Date | null): string {
-  if (!d) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function minutesToHoursInput(
   minutes: number | undefined,
@@ -88,11 +86,17 @@ export function EventForm({
   user: SessionUser;
   event?: EventDoc;
 }) {
+  const initialTimeZone = eventTimeZone(event);
   const [title, setTitle] = useState(event?.title ?? "");
   const [slug, setSlug] = useState(event?.slug ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
-  const [startAt, setStartAt] = useState(toLocalInput(toDate(event?.startAt)));
-  const [endAt, setEndAt] = useState(toLocalInput(toDate(event?.endAt)));
+  const [timeZone, setTimeZone] = useState(initialTimeZone);
+  const [startAt, setStartAt] = useState(
+    dateToDateTimeLocal(event?.startAt, initialTimeZone),
+  );
+  const [endAt, setEndAt] = useState(
+    dateToDateTimeLocal(event?.endAt, initialTimeZone),
+  );
   const [locationType, setLocationType] = useState<EventFormInput["locationType"]>(
     event?.location.type ?? "offline",
   );
@@ -276,6 +280,7 @@ export function EventForm({
           description,
           startAt,
           endAt,
+          timeZone,
           locationType,
           address,
           mapUrl,
@@ -412,6 +417,21 @@ export function EventForm({
           onChange={(e) => setDescription(e.target.value)}
           className={inputClass}
         />
+      </Field>
+      <Field label={t("timeZone")} required htmlFor="event-time-zone">
+        <select
+          id="event-time-zone"
+          required
+          value={timeZone}
+          onChange={(e) => setTimeZone(e.target.value)}
+          className={inputClass}
+        >
+          {EVENT_TIME_ZONE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {t(`timeZoneOption.${option.labelKey}`)}
+            </option>
+          ))}
+        </select>
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t("startAt")} required htmlFor="event-start">

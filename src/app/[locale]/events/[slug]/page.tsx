@@ -15,6 +15,11 @@ import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
 import { siteBaseUrl } from "@/lib/site";
+import {
+  JAPAN_TIME_ZONE,
+  eventTimeZone,
+  formatTimeZoneName,
+} from "@/lib/time-zones";
 import type { EventDoc } from "@/lib/types";
 import {
   formatDateTime,
@@ -148,6 +153,29 @@ export default async function EventDetailPage({
     presentations.map((p) => p.presenterUid),
   );
   const subImages = validProjectAssets(event.subImages);
+  const timeZone = eventTimeZone(event);
+  const eventZoneName = formatTimeZoneName(event.startAt, locale, timeZone);
+  const eventStart = formatDateTime(event.startAt, locale, timeZone);
+  const eventEnd = formatDateTime(event.endAt, locale, timeZone);
+  const eventStartWithZone = eventZoneName
+    ? `${eventStart} (${eventZoneName})`
+    : eventStart;
+  const eventEndWithZone = eventZoneName
+    ? `${eventEnd} (${eventZoneName})`
+    : eventEnd;
+  const japanZoneName = formatTimeZoneName(
+    event.startAt,
+    locale,
+    JAPAN_TIME_ZONE,
+  );
+  const japanTime =
+    timeZone === JAPAN_TIME_ZONE
+      ? ""
+      : `${formatDateTime(event.startAt, locale, JAPAN_TIME_ZONE)} - ${formatDateTime(
+          event.endAt,
+          locale,
+          JAPAN_TIME_ZONE,
+        )}${japanZoneName ? ` (${japanZoneName})` : ""}`;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -175,7 +203,7 @@ export default async function EventDetailPage({
 
       <header className="space-y-3">
         <p className="text-sm text-zinc-500">
-          {formatDateTime(event.startAt, locale)}
+          {eventStartWithZone}
         </p>
         <h1 className="text-3xl font-bold tracking-tight">
           {event.title}
@@ -190,14 +218,22 @@ export default async function EventDetailPage({
             <dt className="font-medium text-zinc-800 dark:text-zinc-200">
               {t("start")}
             </dt>
-            <dd>{formatDateTime(event.startAt, locale)}</dd>
+            <dd>{eventStartWithZone}</dd>
           </div>
           <div>
             <dt className="font-medium text-zinc-800 dark:text-zinc-200">
               {t("end")}
             </dt>
-            <dd>{formatDateTime(event.endAt, locale)}</dd>
+            <dd>{eventEndWithZone}</dd>
           </div>
+          {japanTime && (
+            <div>
+              <dt className="font-medium text-zinc-800 dark:text-zinc-200">
+                {t("japanTime")}
+              </dt>
+              <dd>{japanTime}</dd>
+            </div>
+          )}
           <div>
             <dt className="font-medium text-zinc-800 dark:text-zinc-200">
               {t("format")}

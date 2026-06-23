@@ -6,6 +6,7 @@ import { getEventById, listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
 
@@ -101,7 +102,8 @@ export default async function AdminAttendeesPage({
           )}
           {selectableEvents.map((e) => {
             const start =
-              formatDateTime(e.startAt, locale) || common("notAvailable");
+              formatDateTime(e.startAt, locale, eventTimeZone(e)) ||
+              common("notAvailable");
 
             return (
               <option key={e.id} value={e.id}>

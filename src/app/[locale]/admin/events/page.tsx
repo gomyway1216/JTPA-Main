@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { listEventsForAdmin } from "@/lib/data/events";
 import { safeLoad } from "@/lib/data/safe-load";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,8 @@ export default async function AdminEventsPage() {
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {events.map((e) => {
               const start =
-                formatDateTime(e.startAt, locale) || common("notAvailable");
+                formatDateTime(e.startAt, locale, eventTimeZone(e)) ||
+                common("notAvailable");
               const status =
                 (e as Partial<typeof e>).status ?? common("unknown");
 

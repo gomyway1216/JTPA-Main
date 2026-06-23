@@ -129,6 +129,10 @@ export interface EventDoc {
   description: string;
   startAt: TsLike;
   endAt: TsLike;
+  // IANA time zone used to interpret admin-entered local date/time fields
+  // and to render the event's venue time. Missing legacy docs default to
+  // America/Los_Angeles via src/lib/time-zones.ts.
+  timeZone?: string;
   location: {
     type: LocationType;
     address?: string;
