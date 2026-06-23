@@ -16,15 +16,12 @@ import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
 import { siteBaseUrl } from "@/lib/site";
 import {
-  JAPAN_TIME_ZONE,
   eventTimeZone,
   formatTimeZoneName,
 } from "@/lib/time-zones";
 import type { EventDoc } from "@/lib/types";
 import {
-  formatDate,
   formatDateTime,
-  formatTime,
   isEventEnded,
   stripMarkdown,
   toDate,
@@ -166,27 +163,6 @@ export default async function EventDetailPage({
   const eventEndWithZone = eventEndZoneName
     ? `${eventEnd} (${eventEndZoneName})`
     : eventEnd;
-  const japanZoneName = formatTimeZoneName(
-    event.startAt,
-    locale,
-    JAPAN_TIME_ZONE,
-  );
-  const japanStartDay = formatDate(event.startAt, locale, JAPAN_TIME_ZONE);
-  const japanEndDay = formatDate(event.endAt, locale, JAPAN_TIME_ZONE);
-  const japanTime =
-    timeZone === JAPAN_TIME_ZONE
-      ? ""
-      : japanStartDay && japanStartDay === japanEndDay
-        ? `${japanStartDay} ${formatTime(
-            event.startAt,
-            locale,
-            JAPAN_TIME_ZONE,
-          )} - ${formatTime(event.endAt, locale, JAPAN_TIME_ZONE)}${japanZoneName ? ` (${japanZoneName})` : ""}`
-        : `${formatDateTime(event.startAt, locale, JAPAN_TIME_ZONE)} - ${formatDateTime(
-            event.endAt,
-            locale,
-            JAPAN_TIME_ZONE,
-          )}${japanZoneName ? ` (${japanZoneName})` : ""}`;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -237,14 +213,6 @@ export default async function EventDetailPage({
             </dt>
             <dd>{eventEndWithZone}</dd>
           </div>
-          {japanTime && (
-            <div>
-              <dt className="font-medium text-zinc-800 dark:text-zinc-200">
-                {t("japanTime")}
-              </dt>
-              <dd>{japanTime}</dd>
-            </div>
-          )}
           <div>
             <dt className="font-medium text-zinc-800 dark:text-zinc-200">
               {t("format")}
