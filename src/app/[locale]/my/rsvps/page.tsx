@@ -7,6 +7,7 @@ import { loginPath } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import { getEventById } from "@/lib/data/events";
 import { listMyRsvps } from "@/lib/data/rsvps";
+import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime, isEventEnded } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,11 @@ export default async function MyRsvpsPage() {
                       {event.title}
                     </span>
                     <span className="mt-1 block text-xs text-zinc-500">
-                      {formatDateTime(event.startAt, locale)}
+                      {formatDateTime(
+                        event.startAt,
+                        locale,
+                        eventTimeZone(event),
+                      )}
                     </span>
                   </Link>
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">

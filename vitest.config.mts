@@ -22,10 +22,9 @@ export default defineConfig({
     // excluded from plain `npm test` and run via `npm run test:rules`
     // (vitest.rules.config.mts) instead.
     exclude: [...configDefaults.exclude, "__tests__/rules/**"],
-    // Pin TZ so the ja-JP date/time formatters in src/lib/utils.ts produce
-    // identical strings across local machines and CI. The app is JST-only
-    // (Asia/Tokyo) and the formatters render JST regardless of host TZ, so
-    // tests assert against JST clock values.
+    // Pin TZ so legacy date/time formatter calls without an explicit
+    // timeZone produce identical strings across local machines and CI.
+    // Event-specific rendering passes an IANA timeZone explicitly.
     env: {
       TZ: "Asia/Tokyo",
     },

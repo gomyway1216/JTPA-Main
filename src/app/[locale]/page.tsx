@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedProjectContent } from "@/lib/localized-content";
+import { eventTimeZone } from "@/lib/time-zones";
 import type { LocationType } from "@/lib/types";
 import { formatDateTime, stripMarkdown } from "@/lib/utils";
 
@@ -219,7 +220,7 @@ export default async function HomePage() {
                   <div className="flex flex-1 flex-col p-5">
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs uppercase tracking-wide text-zinc-500">
-                        {formatDateTime(e.startAt, locale)}
+                        {formatDateTime(e.startAt, locale, eventTimeZone(e))}
                       </p>
                       <LocationPill
                         type={e.location?.type}

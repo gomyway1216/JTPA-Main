@@ -124,6 +124,7 @@ export const EventDocSchema = z.looseObject({
   description: z.string().optional(),
   startAt: TsLikeSchema,
   endAt: TsLikeSchema,
+  timeZone: z.string().optional(),
   location: z
     .looseObject({
       type: z.enum(["online", "offline", "hybrid"]).optional(),

@@ -14,6 +14,7 @@ import {
 } from "@/lib/check-in";
 import { getEventById } from "@/lib/data/events";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export default async function AdminCheckInPage({
   const { id } = await params;
   const event = await getEventById(id);
   if (!event) notFound();
-  const eventDate = formatDateTime(event.startAt, locale);
+  const eventDate = formatDateTime(event.startAt, locale, eventTimeZone(event));
   const { earlyMinutes, lateMinutes } = checkInWindowSettings(event);
 
   // The public origin is required to build the absolute QR URL since the

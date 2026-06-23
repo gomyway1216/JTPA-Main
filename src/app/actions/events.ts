@@ -19,6 +19,12 @@ import {
   MAX_CHECKIN_WINDOW_MINUTES,
 } from "@/lib/check-in";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
+import {
+  DEFAULT_EVENT_TIME_ZONE,
+  dateTimeLocalToDate,
+  eventTimeZone,
+  isValidTimeZone,
+} from "@/lib/time-zones";
 import { slugify } from "@/lib/utils";
 import type { EventDoc } from "@/lib/types";
 
@@ -42,6 +48,15 @@ const CheckInWindowMinutesSchema = z.coerce
   .min(0)
   .max(MAX_CHECKIN_WINDOW_MINUTES);
 
+const TimeZoneSchema = z.preprocess(
+  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+  z
+    .string()
+    .trim()
+    .refine(isValidTimeZone, "Invalid time zone")
+    .default(DEFAULT_EVENT_TIME_ZONE),
+);
+
 // Pre-process empty strings on optional URL/slug fields into `undefined` so the
 // validator doesn't reject a blank form field as a length/regex violation.
 const optionalNonEmpty = (schema: z.ZodTypeAny) =>
@@ -53,6 +68,7 @@ const EventInputSchema = z.object({
   description: z.string().min(1).max(20000),
   startAt: z.string().min(1),
   endAt: z.string().min(1),
+  timeZone: TimeZoneSchema,
   locationType: z.enum(["online", "offline", "hybrid"]),
   address: z.string().optional(),
   mapUrl: optionalNonEmpty(z.string().url()),
@@ -85,6 +101,23 @@ function eventImagePaths(
   ]);
 }
 
+type EventDateTimeParseResult =
+  | { ok: true; startAt: Date; endAt: Date }
+  | { ok: false; error: string };
+
+async function parseEventDateTimes(parsed: {
+  startAt: string;
+  endAt: string;
+  timeZone: string;
+}): Promise<EventDateTimeParseResult> {
+  const startAt = dateTimeLocalToDate(parsed.startAt, parsed.timeZone);
+  const endAt = dateTimeLocalToDate(parsed.endAt, parsed.timeZone);
+  if (!startAt || !endAt || endAt.getTime() <= startAt.getTime()) {
+    return { ok: false, error: await actionError("invalidEventDateTime") };
+  }
+  return { ok: true, startAt, endAt };
+}
+
 // createEvent / cloneEvent redirect on success (so they only ever *return*
 // on failure); updateEvent returns { ok: true }. Returning the error rather
 // than throwing it is what lets the real message reach the admin — Next
@@ -99,6 +132,8 @@ export async function createEvent(
   const pr = await parseInput(EventInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
+  const dateTimes = await parseEventDateTimes(parsed);
+  if (!dateTimes.ok) return dateTimes;
 
   const requestedSlug = parsed.slug as string | undefined;
   const slug = requestedSlug || slugify(parsed.title);
@@ -117,8 +152,9 @@ export async function createEvent(
     slug,
     title: parsed.title,
     description: parsed.description,
-    startAt: Timestamp.fromDate(new Date(parsed.startAt)),
-    endAt: Timestamp.fromDate(new Date(parsed.endAt)),
+    startAt: Timestamp.fromDate(dateTimes.startAt),
+    endAt: Timestamp.fromDate(dateTimes.endAt),
+    timeZone: parsed.timeZone,
     location: {
       type: parsed.locationType,
       address: parsed.address ?? "",
@@ -159,6 +195,8 @@ export async function updateEvent(
   const pr = await parseInput(EventInputSchema, input);
   if (!pr.ok) return pr;
   const parsed = pr.data;
+  const dateTimes = await parseEventDateTimes(parsed);
+  if (!dateTimes.ok) return dateTimes;
   const ref = adminDb().collection("events").doc(eventId);
   const snap = await ref.get();
   // If the event was deleted out from under the editor, `ref.update` would
@@ -203,8 +241,9 @@ export async function updateEvent(
     ...(requestedSlug ? { slug: requestedSlug } : {}),
     title: parsed.title,
     description: parsed.description,
-    startAt: Timestamp.fromDate(new Date(parsed.startAt)),
-    endAt: Timestamp.fromDate(new Date(parsed.endAt)),
+    startAt: Timestamp.fromDate(dateTimes.startAt),
+    endAt: Timestamp.fromDate(dateTimes.endAt),
+    timeZone: parsed.timeZone,
     location: {
       type: parsed.locationType,
       address: parsed.address ?? "",
@@ -281,6 +320,7 @@ export async function cloneEvent(
     description: string;
     startAt: Timestamp;
     endAt: Timestamp;
+    timeZone?: string;
     location: {
       type: "online" | "offline" | "hybrid";
       address?: string;
@@ -320,6 +360,7 @@ export async function cloneEvent(
     description: src.description,
     startAt: newStart,
     endAt: newEnd,
+    timeZone: eventTimeZone(src),
     location: src.location,
     capacity: src.capacity ?? 0,
     presenterCapacity: src.presenterCapacity ?? 0,

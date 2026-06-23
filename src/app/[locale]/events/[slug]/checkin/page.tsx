@@ -8,6 +8,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { checkInWindowState } from "@/lib/check-in";
 import { getEventBySlug } from "@/lib/data/events";
 import { getMyRsvp } from "@/lib/data/rsvps";
+import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function CheckInPage({
 
   const user = await getSessionUser();
   const myRsvp = user ? await getMyRsvp(event.id, user.uid) : null;
+  const timeZone = eventTimeZone(event);
 
   // Token + window are validated server-side here for UX (so a stale/expired
   // QR shows a clear message rather than letting the user fill out a form
@@ -55,7 +57,9 @@ export default async function CheckInPage({
       <ErrorShell title={t("tooEarlyTitle")} eventsLabel={t("events")}>
         <p>{t("tooEarlyDescription")}</p>
         <p className="mt-2 text-zinc-500">
-          {t("start", { date: formatDateTime(event.startAt, locale) })}
+          {t("start", {
+            date: formatDateTime(event.startAt, locale, timeZone),
+          })}
         </p>
       </ErrorShell>
     );
@@ -73,7 +77,7 @@ export default async function CheckInPage({
       <header className="space-y-1 text-center">
         <h1 className="text-2xl font-bold">{event.title}</h1>
         <p className="text-sm text-zinc-500">
-          {formatDateTime(event.startAt, locale)}
+          {formatDateTime(event.startAt, locale, timeZone)}
         </p>
       </header>
       <CheckInClient
