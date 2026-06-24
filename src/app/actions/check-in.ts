@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash } from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, updateTag } from "next/cache";
 
@@ -8,7 +9,7 @@ import { requireAdmin, requireUser } from "@/lib/auth/session";
 import { checkInWindowState, generateCheckInTokenString } from "@/lib/check-in";
 import { EVENTS_TAG } from "@/lib/data/cache-tags";
 import { plainify } from "@/lib/data/serialize";
-import { adminDb } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 import type { EventDoc, RsvpDoc } from "@/lib/types";
 
 export type CheckInError =
@@ -85,10 +86,123 @@ export interface CheckInResult {
   alreadyCheckedIn: boolean;
 }
 
+export type AddAdminAttendeeError =
+  | "INVALID_INPUT"
+  | "USER_NOT_FOUND"
+  | "EVENT_NOT_FOUND"
+  | "UNKNOWN";
+
+export type AddAdminAttendeeInput =
+  | {
+      eventId: string;
+      kind: "user";
+      uid: string;
+    }
+  | {
+      eventId: string;
+      kind: "guest";
+      displayName: string;
+      email?: string;
+      affiliation?: string;
+    };
+
+export type AddAdminAttendeeResult =
+  | { ok: true; rsvp: RsvpDoc; alreadyAttended: boolean }
+  | { ok: false; error: AddAdminAttendeeError };
+
+export type AdminAttendeeUserOption = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+};
+
 function normalizeAttendanceCount(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
     : 0;
+}
+
+function cleanText(value: unknown, maxLength: number): string {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function guestRsvpId({
+  email,
+  displayName,
+  affiliation,
+}: {
+  email: string;
+  displayName: string;
+  affiliation: string;
+}): string {
+  const key = email
+    ? `email:${email.toLowerCase()}`
+    : `name:${displayName.toLowerCase()}|affiliation:${affiliation.toLowerCase()}`;
+  const hash = createHash("sha256")
+    .update(key)
+    .digest("hex")
+    .slice(0, 32);
+  return `guest_${hash}`;
+}
+
+function userMatchesQuery(user: AdminAttendeeUserOption, query: string): boolean {
+  return (
+    (user.email ?? "").toLowerCase().includes(query) ||
+    (user.displayName ?? "").toLowerCase().includes(query)
+  );
+}
+
+export async function searchAdminAttendeeUsers(
+  query: string,
+): Promise<AdminAttendeeUserOption[]> {
+  await requireAdmin();
+  const q = cleanText(query, 120).toLowerCase();
+  if (q.length < 2) return [];
+
+  const users = new Map<string, AdminAttendeeUserOption>();
+  if (q.includes("@")) {
+    try {
+      const exact = await adminAuth().getUserByEmail(q);
+      users.set(exact.uid, {
+        uid: exact.uid,
+        email: exact.email ?? null,
+        displayName: exact.displayName ?? null,
+      });
+    } catch (err) {
+      if (
+        !(
+          typeof err === "object" &&
+          err !== null &&
+          "code" in err &&
+          (err as { code?: unknown }).code === "auth/user-not-found"
+        )
+      ) {
+        throw err;
+      }
+    }
+  }
+
+  const pageSize = 1000;
+  const resultLimit = 40;
+  let pageToken: string | undefined;
+  do {
+    const page = await adminAuth().listUsers(pageSize, pageToken);
+    for (const user of page.users) {
+      const option = {
+        uid: user.uid,
+        email: user.email ?? null,
+        displayName: user.displayName ?? null,
+      };
+      if (userMatchesQuery(option, q)) {
+        users.set(user.uid, option);
+        if (users.size >= resultLimit) break;
+      }
+    }
+    pageToken = page.pageToken;
+  } while (pageToken && users.size < resultLimit);
+
+  return Array.from(users.values()).slice(0, resultLimit);
 }
 
 // Signed-in user (Google account) self-check-in. Creates a walk-in RSVP if
@@ -226,4 +340,166 @@ export async function setAttendance(
   revalidatePath(`/admin/attendees`);
   revalidatePath("/admin/users");
   revalidatePath(`/u/${rsvpUid}`);
+}
+
+// Admin-only historical/manual attendee creation. This is for cases where
+// someone attended without using the website: admins can attach attendance to
+// an existing site user, or create a guest attendee row when no account exists.
+export async function addAdminAttendee(
+  input: AddAdminAttendeeInput,
+): Promise<AddAdminAttendeeResult> {
+  await requireAdmin();
+  const eventId = cleanText(input.eventId, 200);
+  if (!eventId) return { ok: false, error: "INVALID_INPUT" };
+
+  let attendee:
+    | {
+        rsvpUid: string;
+        displayName: string;
+        email: string;
+        affiliation: string;
+        isGuest: false;
+      }
+    | {
+        rsvpUid: string;
+        displayName: string;
+        email: string;
+        affiliation: string;
+        isGuest: true;
+      };
+
+  if (input.kind === "user") {
+    const uid = cleanText(input.uid, 200);
+    if (!uid) return { ok: false, error: "INVALID_INPUT" };
+    try {
+      const user = await adminAuth().getUser(uid);
+      const email = user.email ?? "";
+      attendee = {
+        rsvpUid: uid,
+        displayName: user.displayName || email || "User",
+        email,
+        affiliation: "",
+        isGuest: false,
+      };
+    } catch (err) {
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err &&
+        (err as { code?: unknown }).code === "auth/user-not-found"
+      ) {
+        return { ok: false, error: "USER_NOT_FOUND" };
+      }
+      throw err;
+    }
+  } else if (input.kind === "guest") {
+    const displayName = cleanText(input.displayName, 120);
+    const email = cleanText(input.email, 320).toLowerCase();
+    const affiliation = cleanText(input.affiliation, 200);
+    if (!displayName) return { ok: false, error: "INVALID_INPUT" };
+    attendee = {
+      rsvpUid: guestRsvpId({ email, displayName, affiliation }),
+      displayName,
+      email,
+      affiliation,
+      isGuest: true,
+    };
+  } else {
+    return { ok: false, error: "INVALID_INPUT" };
+  }
+
+  const result = await adminDb().runTransaction(async (tx) => {
+    const eventRef = adminDb().collection("events").doc(eventId);
+    const eventSnap = await tx.get(eventRef);
+    if (!eventSnap.exists) {
+      return { ok: false as const, error: "EVENT_NOT_FOUND" as const };
+    }
+
+    const event = eventSnap.data() as EventDoc;
+    const rsvpRef = eventRef.collection("rsvps").doc(attendee.rsvpUid);
+    const rsvpSnap = await tx.get(rsvpRef);
+    const prior = rsvpSnap.exists ? (rsvpSnap.data() as RsvpDoc) : null;
+    const alreadyAttended = !!prior?.attendedAt;
+    const wasCountedAsRsvp =
+      prior && (prior.status === "confirmed" || prior.status === "waitlist");
+    const now = Timestamp.now();
+
+    const userRef = attendee.isGuest
+      ? null
+      : adminDb().collection("users").doc(attendee.rsvpUid);
+    const userSnap =
+      userRef && !alreadyAttended ? await tx.get(userRef) : null;
+
+    const doc: RsvpDoc = {
+      uid: attendee.rsvpUid,
+      displayName: prior?.displayName || attendee.displayName,
+      email: prior?.email || attendee.email,
+      affiliation: prior?.affiliation || attendee.affiliation,
+      role: prior?.role ?? "attendee",
+      status: "confirmed",
+      surveyResponses: prior?.surveyResponses ?? {},
+      presentationTitle: prior?.presentationTitle,
+      presentationAbstract: prior?.presentationAbstract,
+      attendedAt: prior?.attendedAt ?? now,
+      ...(attendee.isGuest ? { isGuest: true } : {}),
+      createdAt: prior?.createdAt ?? now,
+      updatedAt: now,
+    };
+    tx.set(rsvpRef, doc);
+
+    const eventPatch: Record<string, FirebaseFirestore.FieldValue | Date> = {};
+    if (!wasCountedAsRsvp) {
+      eventPatch.rsvpCount = FieldValue.increment(1);
+    } else if (prior?.status === "waitlist") {
+      eventPatch.rsvpCount = FieldValue.increment(1);
+      eventPatch.waitlistCount = FieldValue.increment(-1);
+    }
+
+    const newIsConfirmedPresenter = doc.role === "presenter";
+    const priorWasConfirmedPresenter =
+      prior?.status === "confirmed" && prior.role === "presenter";
+    if (newIsConfirmedPresenter && !priorWasConfirmedPresenter) {
+      eventPatch.presenterCount = FieldValue.increment(1);
+    }
+    if (!alreadyAttended) {
+      eventPatch.attendanceCount = FieldValue.increment(1);
+    }
+    if (Object.keys(eventPatch).length > 0) {
+      eventPatch.updatedAt = now.toDate();
+      tx.update(eventRef, eventPatch);
+    }
+
+    if (userRef && userSnap?.exists && !alreadyAttended) {
+      tx.update(userRef, {
+        eventAttendanceCount:
+          normalizeAttendanceCount(userSnap.get("eventAttendanceCount")) + 1,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      ok: true as const,
+      rsvp: doc,
+      alreadyAttended,
+      eventSlug: event.slug,
+    };
+  });
+
+  if (!result.ok) return result;
+
+  updateTag(EVENTS_TAG);
+  revalidateLocalizedPath("/events");
+  revalidateLocalizedPath(`/events/${result.eventSlug}`);
+  revalidateLocalizedPath("/admin/attendees");
+  revalidateLocalizedPath("/admin/users");
+  if (!result.rsvp.isGuest) {
+    revalidateLocalizedPath("/my");
+    revalidateLocalizedPath("/my/rsvps");
+    revalidateLocalizedPath(`/u/${result.rsvp.uid}`);
+  }
+  return {
+    ok: true,
+    rsvp: plainify(result.rsvp),
+    alreadyAttended: result.alreadyAttended,
+  };
 }

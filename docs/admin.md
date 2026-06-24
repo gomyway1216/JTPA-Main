@@ -176,8 +176,8 @@ The check-in flow lets attendees mark themselves "attended" by scanning a QR cod
    - **Already signed in, no RSVP yet**: same Server Action also creates a confirmed RSVP transparently before stamping `attendedAt`.
    - **Not signed in**: the page links to `/login?redirect=...`. After Google login, the user returns to the same QR URL and sees the check-in button.
 4. **Token validity window**: by default, 4 hours before `startAt` to 6 hours after `endAt`. Admins can override those buffers per event from the event edit form. Outside that window the page rejects the token with a clear error so a leaked QR can't be replayed weeks later.
-5. **Manual toggle**: `/admin/attendees?eventId=<id>` shows the attendee list with a control per RSVP — flip it to set/clear `attendedAt` directly. Useful when someone forgets to scan or when reversing a mistake.
-6. **Counters**: `events/{id}.attendanceCount` and `users/{uid}.eventAttendanceCount` are maintained transactionally by QR check-in and manual toggles. The user count appears on `/my`, `/u/[uid]`, and `/admin/users`; admins can correct the cumulative count directly from `/admin/users` for historical cleanup.
+5. **Manual admin updates**: `/admin/attendees?eventId=<id>` shows the attendee list with a control per RSVP — flip it to set/clear `attendedAt` directly. The same page can add an attended row for an existing site user, or add a guest row for a historical/offline attendee who has no account.
+6. **Counters**: `events/{id}.attendanceCount` and `users/{uid}.eventAttendanceCount` are maintained transactionally by QR check-in, manual toggles, and admin-added existing-user attendees. Guest rows update only the event counters. The user count appears on `/my`, `/u/[uid]`, and `/admin/users`; admins can correct the cumulative count directly from `/admin/users` for historical cleanup.
 
 If a token is leaked or accidentally shared early, click **再発行** — the old token instantly stops working (event doc only holds one token at a time).
 

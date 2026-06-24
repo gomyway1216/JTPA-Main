@@ -63,7 +63,7 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, set QR check-in window, define survey fields |
 | Project admin | `/admin/projects` | admin | Approve / reject pending submissions; edit, archive / republish, or delete projects from any status |
 | Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status |
-| Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list; manually toggle attendance per RSVP |
+| Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list; manually toggle attendance per RSVP; add attended rows for existing users or guests |
 | Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view / print / screen-display QR, show RSVP / attendance totals |
 | Guides | `/admin/guides` | admin + editor | Review queue for pending community guides (approve auto-promotes the author to `contributor`); plus create / edit / publish / delete any guide |
 | About | `/admin/about` | admin | Edit `sitePages/about` |

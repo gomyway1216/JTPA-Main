@@ -9,6 +9,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireUserMock = vi.fn();
 const requireAdminMock = vi.fn();
+const getUserMock = vi.fn();
+const getUserByEmailMock = vi.fn();
+const listUsersMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
 const eventGetMock = vi.fn(); // direct (non-tx) read in generateCheckInToken
@@ -22,7 +25,7 @@ const runTransactionMock = vi.fn(
     cb({ get: txGetMock, set: txSetMock, update: txUpdateMock }),
 );
 
-const rsvpRef = { __kind: "rsvp" };
+const rsvpRef: { __kind: "rsvp"; __id?: string } = { __kind: "rsvp" };
 const userRef = { __kind: "user" };
 const eventRef = {
   __kind: "event",
@@ -30,7 +33,12 @@ const eventRef = {
   update: (...args: unknown[]) => eventUpdateMock(...args),
   collection: (name: string) => {
     if (name !== "rsvps") throw new Error(`unexpected subcollection: ${name}`);
-    return { doc: () => rsvpRef };
+    return {
+      doc: (id?: string) => {
+        rsvpRef.__id = id;
+        return rsvpRef;
+      },
+    };
   },
 };
 
@@ -65,6 +73,11 @@ vi.mock("firebase-admin/firestore", () => ({
 }));
 
 vi.mock("@/lib/firebase/admin", () => ({
+  adminAuth: () => ({
+    getUser: (...args: unknown[]) => getUserMock(...args),
+    getUserByEmail: (...args: unknown[]) => getUserByEmailMock(...args),
+    listUsers: (...args: unknown[]) => listUsersMock(...args),
+  }),
   adminDb: () => ({
     collection: (name: string) => {
       if (name === "events") return { doc: () => eventRef };
@@ -77,7 +90,9 @@ vi.mock("@/lib/firebase/admin", () => ({
 }));
 
 import {
+  addAdminAttendee,
   generateCheckInToken,
+  searchAdminAttendeeUsers,
   selfCheckIn,
   setAttendance,
 } from "@/app/actions/check-in";
@@ -132,7 +147,17 @@ beforeEach(() => {
     email: "admin@x",
     isAdmin: true,
   });
+  getUserMock.mockReset().mockResolvedValue({
+    uid: "u2",
+    displayName: "Bob",
+    email: "bob@x",
+  });
+  getUserByEmailMock.mockReset().mockRejectedValue({
+    code: "auth/user-not-found",
+  });
+  listUsersMock.mockReset().mockResolvedValue({ users: [], pageToken: undefined });
   revalidatePathMock.mockReset();
+  rsvpRef.__id = undefined;
   eventGetMock.mockReset();
   eventUpdateMock.mockReset().mockResolvedValue(undefined);
   txSetMock.mockReset();
@@ -432,5 +457,204 @@ describe("setAttendance (admin manual toggle)", () => {
     expect(updateTo("event")).toMatchObject({
       attendanceCount: { __inc: 1 },
     });
+  });
+});
+
+describe("addAdminAttendee", () => {
+  it("searches admin attendee user options without Firestore attendance reads", async () => {
+    listUsersMock.mockResolvedValueOnce({
+      users: [
+        { uid: "no-email", email: undefined, displayName: "No Email" },
+        { uid: "u2", email: "bob@x", displayName: "Bob" },
+      ],
+      pageToken: undefined,
+    });
+
+    const res = await searchAdminAttendeeUsers("bob");
+
+    expect(res).toEqual([
+      { uid: "u2", email: "bob@x", displayName: "Bob" },
+    ]);
+    expect(listUsersMock).toHaveBeenCalledWith(1000, undefined);
+  });
+
+  it("adds an existing site user as attended and bumps user lifetime attendance", async () => {
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "user",
+      uid: "u2",
+    });
+
+    expect(getUserMock).toHaveBeenCalledWith("u2");
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: false,
+      rsvp: {
+        uid: "u2",
+        displayName: "Bob",
+        email: "bob@x",
+        role: "attendee",
+        status: "confirmed",
+        attendedAt: { __fixed: "now" },
+      },
+    });
+    expect(txSetMock).toHaveBeenCalledWith(rsvpRef, expect.anything());
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      attendanceCount: { __inc: 1 },
+    });
+    expect(updateTo("user")).toMatchObject({ eventAttendanceCount: 4 });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/attendees");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/u/u2");
+  });
+
+  it("adds a guest attendee without touching users", async () => {
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "guest",
+      displayName: "Guest Person",
+      email: "GUEST@X",
+      affiliation: "Visitor Org",
+    });
+
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: false,
+      rsvp: {
+        displayName: "Guest Person",
+        email: "guest@x",
+        affiliation: "Visitor Org",
+        isGuest: true,
+        status: "confirmed",
+        attendedAt: { __fixed: "now" },
+      },
+    });
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      attendanceCount: { __inc: 1 },
+    });
+    expect(updateTo("user")).toBeUndefined();
+    expect(txGetKinds()).not.toContain("user");
+  });
+
+  it("uses a stable guest RSVP id when email is blank", async () => {
+    const input = {
+      eventId: "e1",
+      kind: "guest" as const,
+      displayName: "Guest Person",
+      affiliation: "Visitor Org",
+    };
+    await addAdminAttendee(input);
+    const firstId = rsvpRef.__id;
+    const firstEventUpdateCount = txUpdateMock.mock.calls.filter(
+      ([ref]) => (ref as { __kind?: string }).__kind === "event",
+    ).length;
+
+    rsvpSnap = snap({
+      uid: firstId,
+      status: "confirmed",
+      role: "attendee",
+      displayName: "Guest Person",
+      email: "",
+      affiliation: "Visitor Org",
+      surveyResponses: {},
+      attendedAt: { __fixed: "earlier" },
+      createdAt: { __fixed: "created" },
+      isGuest: true,
+    });
+    await addAdminAttendee(input);
+
+    expect(rsvpRef.__id).toBe(firstId);
+    expect(
+      txUpdateMock.mock.calls.filter(
+        ([ref]) => (ref as { __kind?: string }).__kind === "event",
+      ),
+    ).toHaveLength(firstEventUpdateCount);
+  });
+
+  it("does not double-count someone who is already attended", async () => {
+    rsvpSnap = snap({
+      uid: "u2",
+      status: "confirmed",
+      role: "attendee",
+      displayName: "Prior Bob",
+      email: "prior@x",
+      surveyResponses: {},
+      attendedAt: { __fixed: "earlier" },
+      createdAt: { __fixed: "created" },
+    });
+
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "user",
+      uid: "u2",
+    });
+
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: true,
+      rsvp: {
+        displayName: "Prior Bob",
+        email: "prior@x",
+        attendedAt: { __fixed: "earlier" },
+      },
+    });
+    expect(updateTo("event")).toBeUndefined();
+    expect(updateTo("user")).toBeUndefined();
+  });
+
+  it("clears a stale guest marker when adding an existing user", async () => {
+    rsvpSnap = snap({
+      uid: "u2",
+      status: "confirmed",
+      role: "attendee",
+      displayName: "Prior Bob",
+      email: "prior@x",
+      surveyResponses: {},
+      createdAt: { __fixed: "created" },
+      isGuest: true,
+    });
+
+    await addAdminAttendee({
+      eventId: "e1",
+      kind: "user",
+      uid: "u2",
+    });
+
+    const [, doc] = txSetMock.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(doc).not.toHaveProperty("isGuest");
+    expect(updateTo("user")).toMatchObject({ eventAttendanceCount: 4 });
+  });
+
+  it("fills a blank prior affiliation from a guest add", async () => {
+    rsvpSnap = snap({
+      uid: "guest",
+      status: "confirmed",
+      role: "attendee",
+      displayName: "Guest Person",
+      email: "guest@x",
+      affiliation: "",
+      surveyResponses: {},
+      createdAt: { __fixed: "created" },
+      isGuest: true,
+    });
+
+    await addAdminAttendee({
+      eventId: "e1",
+      kind: "guest",
+      displayName: "Guest Person",
+      email: "guest@x",
+      affiliation: "Visitor Org",
+    });
+
+    const [, doc] = txSetMock.mock.calls[0] as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(doc.affiliation).toBe("Visitor Org");
   });
 });
