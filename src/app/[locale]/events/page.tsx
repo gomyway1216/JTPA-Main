@@ -44,7 +44,11 @@ export default async function EventsPage() {
   const upcoming = upcomingRaw.filter(visibleTo(signedIn));
   const past = pastRaw.filter(visibleTo(signedIn));
 
-  const renderEventCard = (e: EventDoc, i: number) => (
+  const renderEventCard = (
+    e: EventDoc,
+    i: number,
+    Heading: "h2" | "h3" = "h2",
+  ) => (
     <FadeUp key={e.id} as="li" delay={i} className="block">
       <Link
         href={`/events/${e.slug}`}
@@ -66,7 +70,7 @@ export default async function EventsPage() {
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               {formatDateTime(e.startAt, locale, eventTimeZone(e))}
             </p>
-            <h2 className="mt-1 text-lg font-semibold">{e.title}</h2>
+            <Heading className="mt-1 text-lg font-semibold">{e.title}</Heading>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {e.location.type === "online"
                 ? common("location.online")
@@ -94,7 +98,7 @@ export default async function EventsPage() {
           <p className="text-zinc-500">{t("noUpcoming")}</p>
         ) : (
           <ul className="space-y-4">
-            {upcoming.map(renderEventCard)}
+            {upcoming.map((e, i) => renderEventCard(e, i, "h2"))}
           </ul>
         )}
       </section>
@@ -105,7 +109,7 @@ export default async function EventsPage() {
           <p className="text-zinc-500 text-sm">{t("noPast")}</p>
         ) : (
           <ul className="space-y-4">
-            {past.map(renderEventCard)}
+            {past.map((e, i) => renderEventCard(e, i, "h3"))}
           </ul>
         )}
       </section>
