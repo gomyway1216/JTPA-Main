@@ -1,11 +1,14 @@
-import type { NextConfig } from "next";
-import createNextIntlPlugin from "next-intl/plugin";
+// @ts-check
+
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- Next config stays CommonJS so Firebase App Hosting can wrap it safely.
+const createNextIntlPlugin = require("next-intl/plugin");
 
 const firebaseProjectId =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "jtpa-main";
 const firebaseHostingOrigin = `https://${firebaseProjectId}.firebaseapp.com`;
 
-const nextConfig: NextConfig = {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
   async rewrites() {
     return {
       beforeFiles: [
@@ -28,7 +31,7 @@ const nextConfig: NextConfig = {
   },
   images: {
     // With the Firebase emulators on, uploaded assets resolve to a
-    // local-only host (e.g. http://localhost:9199 — see
+    // local-only host (e.g. http://localhost:9199 - see
     // `publicDownloadUrl()` in src/lib/firebase/uploads.ts), which the
     // image optimizer refuses to fetch. Serve images as-is in that mode;
     // production keeps full optimization.
@@ -56,4 +59,4 @@ const nextConfig: NextConfig = {
 
 const withNextIntl = createNextIntlPlugin();
 
-export default withNextIntl(nextConfig);
+module.exports = withNextIntl(nextConfig);
