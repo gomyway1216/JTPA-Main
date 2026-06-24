@@ -1,6 +1,6 @@
 "use server";
 
-import { createHash, randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { revalidatePath, updateTag } from "next/cache";
 
@@ -110,6 +110,12 @@ export type AddAdminAttendeeResult =
   | { ok: true; rsvp: RsvpDoc; alreadyAttended: boolean }
   | { ok: false; error: AddAdminAttendeeError };
 
+export type AdminAttendeeUserOption = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+};
+
 function normalizeAttendanceCount(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? Math.trunc(value)
@@ -121,13 +127,82 @@ function cleanText(value: unknown, maxLength: number): string {
   return value.trim().slice(0, maxLength);
 }
 
-function guestRsvpId(email: string): string {
-  if (!email) return `guest_${randomUUID()}`;
+function guestRsvpId({
+  email,
+  displayName,
+  affiliation,
+}: {
+  email: string;
+  displayName: string;
+  affiliation: string;
+}): string {
+  const key = email
+    ? `email:${email.toLowerCase()}`
+    : `name:${displayName.toLowerCase()}|affiliation:${affiliation.toLowerCase()}`;
   const hash = createHash("sha256")
-    .update(email.toLowerCase())
+    .update(key)
     .digest("hex")
     .slice(0, 32);
   return `guest_${hash}`;
+}
+
+function userMatchesQuery(user: AdminAttendeeUserOption, query: string): boolean {
+  return (
+    (user.email ?? "").toLowerCase().includes(query) ||
+    (user.displayName ?? "").toLowerCase().includes(query)
+  );
+}
+
+export async function searchAdminAttendeeUsers(
+  query: string,
+): Promise<AdminAttendeeUserOption[]> {
+  await requireAdmin();
+  const q = cleanText(query, 120).toLowerCase();
+  if (q.length < 2) return [];
+
+  const users = new Map<string, AdminAttendeeUserOption>();
+  if (q.includes("@")) {
+    try {
+      const exact = await adminAuth().getUserByEmail(q);
+      users.set(exact.uid, {
+        uid: exact.uid,
+        email: exact.email ?? null,
+        displayName: exact.displayName ?? null,
+      });
+    } catch (err) {
+      if (
+        !(
+          typeof err === "object" &&
+          err !== null &&
+          "code" in err &&
+          (err as { code?: unknown }).code === "auth/user-not-found"
+        )
+      ) {
+        throw err;
+      }
+    }
+  }
+
+  const pageSize = 1000;
+  const resultLimit = 40;
+  let pageToken: string | undefined;
+  do {
+    const page = await adminAuth().listUsers(pageSize, pageToken);
+    for (const user of page.users) {
+      const option = {
+        uid: user.uid,
+        email: user.email ?? null,
+        displayName: user.displayName ?? null,
+      };
+      if (userMatchesQuery(option, q)) {
+        users.set(user.uid, option);
+        if (users.size >= resultLimit) break;
+      }
+    }
+    pageToken = page.pageToken;
+  } while (pageToken && users.size < resultLimit);
+
+  return Array.from(users.values()).slice(0, resultLimit);
 }
 
 // Signed-in user (Google account) self-check-in. Creates a walk-in RSVP if
@@ -323,7 +398,7 @@ export async function addAdminAttendee(
     const affiliation = cleanText(input.affiliation, 200);
     if (!displayName) return { ok: false, error: "INVALID_INPUT" };
     attendee = {
-      rsvpUid: guestRsvpId(email),
+      rsvpUid: guestRsvpId({ email, displayName, affiliation }),
       displayName,
       email,
       affiliation,
@@ -359,14 +434,14 @@ export async function addAdminAttendee(
       uid: attendee.rsvpUid,
       displayName: prior?.displayName || attendee.displayName,
       email: prior?.email || attendee.email,
-      affiliation: prior?.affiliation ?? attendee.affiliation,
+      affiliation: prior?.affiliation || attendee.affiliation,
       role: prior?.role ?? "attendee",
       status: "confirmed",
       surveyResponses: prior?.surveyResponses ?? {},
       presentationTitle: prior?.presentationTitle,
       presentationAbstract: prior?.presentationAbstract,
       attendedAt: prior?.attendedAt ?? now,
-      isGuest: attendee.isGuest ? true : prior?.isGuest,
+      ...(attendee.isGuest ? { isGuest: true } : {}),
       createdAt: prior?.createdAt ?? now,
       updatedAt: now,
     };

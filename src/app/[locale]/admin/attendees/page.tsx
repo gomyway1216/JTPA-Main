@@ -5,7 +5,6 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getEventById, listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
-import { listAllUsersForAdmin } from "@/lib/data/users-admin";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
@@ -80,22 +79,11 @@ export default async function AdminAttendeesPage({
   const rsvpsRes = selectedId
     ? await safeLoad("RSVPs", () => listRsvps(selectedId))
     : null;
-  const usersRes = selectedId
-    ? await safeLoad("users", () => listAllUsersForAdmin())
-    : null;
   const rsvps = rsvpsRes?.ok ? rsvpsRes.data : [];
-  const userOptions = usersRes?.ok
-    ? usersRes.data.users.map((u) => ({
-        uid: u.uid,
-        email: u.email,
-        displayName: u.displayName,
-      }))
-    : [];
   const loadFailed =
     !eventsRes.ok ||
     selectedEventRes?.ok === false ||
-    rsvpsRes?.ok === false ||
-    usersRes?.ok === false;
+    rsvpsRes?.ok === false;
 
   return (
     <div className="space-y-6">
@@ -143,9 +131,7 @@ export default async function AdminAttendeesPage({
         />
       )}
 
-      {selectedId && (
-        <AdminAddAttendeeForm eventId={selectedId} users={userOptions} />
-      )}
+      {selectedId && <AdminAddAttendeeForm eventId={selectedId} />}
 
       {rsvps.length === 0 ? (
         <p className="text-sm text-zinc-500">{t("empty")}</p>

@@ -2,58 +2,84 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { FormEvent, useMemo, useState, useTransition } from "react";
+import { FormEvent, useEffect, useState, useTransition } from "react";
 
 import {
   addAdminAttendee,
+  searchAdminAttendeeUsers,
+  type AdminAttendeeUserOption,
   type AddAdminAttendeeError,
 } from "@/app/actions/check-in";
 
-type UserOption = {
-  uid: string;
-  email: string;
-  displayName: string | null;
-};
-
 export function AdminAddAttendeeForm({
   eventId,
-  users,
 }: {
   eventId: string;
-  users: UserOption[];
 }) {
   const t = useTranslations("Admin.attendees");
   const router = useRouter();
   const [mode, setMode] = useState<"user" | "guest">("user");
   const [query, setQuery] = useState("");
+  const [users, setUsers] = useState<AdminAttendeeUserOption[]>([]);
+  const [selectedUser, setSelectedUser] =
+    useState<AdminAttendeeUserOption | null>(null);
   const [selectedUid, setSelectedUid] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestEmail, setGuestEmail] = useState("");
   const [guestAffiliation, setGuestAffiliation] = useState("");
   const [error, setError] = useState<AddAdminAttendeeError | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState(false);
+  const [searchPending, startSearchTransition] = useTransition();
   const [pending, startTransition] = useTransition();
 
-  const filteredUsers = useMemo(() => {
+  useEffect(() => {
     const q = query.trim().toLowerCase();
-    const filtered = q
-      ? users.filter(
-          (u) =>
-            u.email.toLowerCase().includes(q) ||
-            (u.displayName ?? "").toLowerCase().includes(q),
-        )
-      : users;
-    return filtered.slice(0, 40);
-  }, [users, query]);
+    if (q.length < 2) {
+      return;
+    }
 
-  const selectedUser = users.find((u) => u.uid === selectedUid);
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      startSearchTransition(async () => {
+        try {
+          const result = await searchAdminAttendeeUsers(q);
+          if (cancelled) return;
+          setUsers(result);
+        } catch {
+          if (cancelled) return;
+          setSearchError(true);
+          setUsers([]);
+        }
+      });
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [query]);
+
   const optionUsers =
-    selectedUser && !filteredUsers.some((u) => u.uid === selectedUser.uid)
-      ? [selectedUser, ...filteredUsers]
-      : filteredUsers;
+    selectedUser && !users.some((u) => u.uid === selectedUser.uid)
+      ? [selectedUser, ...users]
+      : users;
 
   const canSubmit =
     mode === "user" ? !!selectedUid : guestName.trim().length > 0;
+
+  function selectUser(uid: string) {
+    setSelectedUid(uid);
+    setSelectedUser(optionUsers.find((u) => u.uid === uid) ?? null);
+  }
+
+  function userSelectPlaceholder(): string {
+    if (query.trim().length < 2) return t("userSearchTooShort");
+    if (searchPending) return t("userSearchLoading");
+    if (searchError) return t("userSearchFailed");
+    if (users.length === 0) return t("noUserMatches");
+    return t("userSelectPlaceholder");
+  }
 
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -84,6 +110,12 @@ export function AdminAddAttendeeForm({
         setNotice(
           res.alreadyAttended ? t("addAlreadyAttended") : t("addSuccess"),
         );
+        if (mode === "user") {
+          setSelectedUid("");
+          setSelectedUser(null);
+          setQuery("");
+          setUsers([]);
+        }
         if (mode === "guest") {
           setGuestName("");
           setGuestEmail("");
@@ -145,7 +177,16 @@ export function AdminAddAttendeeForm({
               <input
                 type="search"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => {
+                  const nextQuery = e.target.value;
+                  setQuery(nextQuery);
+                  setSelectedUid("");
+                  setSelectedUser(null);
+                  setSearchError(false);
+                  if (nextQuery.trim().length < 2) {
+                    setUsers([]);
+                  }
+                }}
                 placeholder={t("userSearchPlaceholder")}
                 className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               />
@@ -156,20 +197,11 @@ export function AdminAddAttendeeForm({
               </span>
               <select
                 value={selectedUid}
-                onChange={(e) => setSelectedUid(e.target.value)}
-                disabled={users.length === 0}
+                onChange={(e) => selectUser(e.target.value)}
+                disabled={optionUsers.length === 0}
                 className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
               >
-                <option value="">
-                  {users.length === 0
-                    ? t("noUserOptions")
-                    : t("userSelectPlaceholder")}
-                </option>
-                {optionUsers.length === 0 && users.length > 0 ? (
-                  <option value="" disabled>
-                    {t("noUserMatches")}
-                  </option>
-                ) : null}
+                <option value="">{userSelectPlaceholder()}</option>
                 {optionUsers.map((u) => (
                   <option key={u.uid} value={u.uid}>
                     {(u.displayName || t("userNameFallback")) +
