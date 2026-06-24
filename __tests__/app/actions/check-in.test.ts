@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requireUserMock = vi.fn();
 const requireAdminMock = vi.fn();
+const getUserMock = vi.fn();
 const revalidatePathMock = vi.fn();
 
 const eventGetMock = vi.fn(); // direct (non-tx) read in generateCheckInToken
@@ -65,6 +66,9 @@ vi.mock("firebase-admin/firestore", () => ({
 }));
 
 vi.mock("@/lib/firebase/admin", () => ({
+  adminAuth: () => ({
+    getUser: (...args: unknown[]) => getUserMock(...args),
+  }),
   adminDb: () => ({
     collection: (name: string) => {
       if (name === "events") return { doc: () => eventRef };
@@ -77,6 +81,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 }));
 
 import {
+  addAdminAttendee,
   generateCheckInToken,
   selfCheckIn,
   setAttendance,
@@ -131,6 +136,11 @@ beforeEach(() => {
     displayName: "Admin",
     email: "admin@x",
     isAdmin: true,
+  });
+  getUserMock.mockReset().mockResolvedValue({
+    uid: "u2",
+    displayName: "Bob",
+    email: "bob@x",
   });
   revalidatePathMock.mockReset();
   eventGetMock.mockReset();
@@ -432,5 +442,98 @@ describe("setAttendance (admin manual toggle)", () => {
     expect(updateTo("event")).toMatchObject({
       attendanceCount: { __inc: 1 },
     });
+  });
+});
+
+describe("addAdminAttendee", () => {
+  it("adds an existing site user as attended and bumps user lifetime attendance", async () => {
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "user",
+      uid: "u2",
+    });
+
+    expect(getUserMock).toHaveBeenCalledWith("u2");
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: false,
+      rsvp: {
+        uid: "u2",
+        displayName: "Bob",
+        email: "bob@x",
+        role: "attendee",
+        status: "confirmed",
+        attendedAt: { __fixed: "now" },
+      },
+    });
+    expect(txSetMock).toHaveBeenCalledWith(rsvpRef, expect.anything());
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      attendanceCount: { __inc: 1 },
+    });
+    expect(updateTo("user")).toMatchObject({ eventAttendanceCount: 4 });
+    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/attendees");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/u/u2");
+  });
+
+  it("adds a guest attendee without touching users", async () => {
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "guest",
+      displayName: "Guest Person",
+      email: "GUEST@X",
+      affiliation: "Visitor Org",
+    });
+
+    expect(getUserMock).not.toHaveBeenCalled();
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: false,
+      rsvp: {
+        displayName: "Guest Person",
+        email: "guest@x",
+        affiliation: "Visitor Org",
+        isGuest: true,
+        status: "confirmed",
+        attendedAt: { __fixed: "now" },
+      },
+    });
+    expect(updateTo("event")).toMatchObject({
+      rsvpCount: { __inc: 1 },
+      attendanceCount: { __inc: 1 },
+    });
+    expect(updateTo("user")).toBeUndefined();
+    expect(txGetKinds()).not.toContain("user");
+  });
+
+  it("does not double-count someone who is already attended", async () => {
+    rsvpSnap = snap({
+      uid: "u2",
+      status: "confirmed",
+      role: "attendee",
+      displayName: "Prior Bob",
+      email: "prior@x",
+      surveyResponses: {},
+      attendedAt: { __fixed: "earlier" },
+      createdAt: { __fixed: "created" },
+    });
+
+    const res = await addAdminAttendee({
+      eventId: "e1",
+      kind: "user",
+      uid: "u2",
+    });
+
+    expect(res).toMatchObject({
+      ok: true,
+      alreadyAttended: true,
+      rsvp: {
+        displayName: "Prior Bob",
+        email: "prior@x",
+        attendedAt: { __fixed: "earlier" },
+      },
+    });
+    expect(updateTo("event")).toBeUndefined();
+    expect(updateTo("user")).toBeUndefined();
   });
 });

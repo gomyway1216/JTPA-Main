@@ -186,9 +186,10 @@ export interface RsvpDoc {
   presentationAbstract?: string;
   // Set when the attendee checks in at the venue. Missing = not checked in.
   attendedAt?: TsLike;
-  // Legacy marker for older walk-in guest RSVPs that were not backed by a
-  // Google account / `users/{uid}` profile. Current QR check-in sends
-  // logged-out visitors through Google login before attendance is recorded.
+  // Marker for attendee rows that are not backed by a Google account /
+  // `users/{uid}` profile. Admins can create these for historical/offline
+  // attendees; current QR check-in sends logged-out visitors through Google
+  // login before attendance is recorded.
   isGuest?: boolean;
   createdAt: TsLike;
   updatedAt: TsLike;

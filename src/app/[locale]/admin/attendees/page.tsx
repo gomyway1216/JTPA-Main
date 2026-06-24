@@ -5,11 +5,13 @@ import { getSessionUser } from "@/lib/auth/session";
 import { getEventById, listEventsForAdmin } from "@/lib/data/events";
 import { listRsvps } from "@/lib/data/rsvps";
 import { safeLoad } from "@/lib/data/safe-load";
+import { listAllUsersForAdmin } from "@/lib/data/users-admin";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 import { eventTimeZone } from "@/lib/time-zones";
 import { formatDateTime } from "@/lib/utils";
 import type { RsvpDoc, SurveyField } from "@/lib/types";
 
+import { AdminAddAttendeeForm } from "./_components/AdminAddAttendeeForm";
 import { AttendanceToggle } from "./_components/AttendanceToggle";
 import { AttendeeExportBar } from "./_components/AttendeeExportBar";
 import { RsvpStatusSelect } from "./_components/RsvpStatusSelect";
@@ -78,9 +80,22 @@ export default async function AdminAttendeesPage({
   const rsvpsRes = selectedId
     ? await safeLoad("RSVPs", () => listRsvps(selectedId))
     : null;
+  const usersRes = selectedId
+    ? await safeLoad("users", () => listAllUsersForAdmin())
+    : null;
   const rsvps = rsvpsRes?.ok ? rsvpsRes.data : [];
+  const userOptions = usersRes?.ok
+    ? usersRes.data.users.map((u) => ({
+        uid: u.uid,
+        email: u.email,
+        displayName: u.displayName,
+      }))
+    : [];
   const loadFailed =
-    !eventsRes.ok || selectedEventRes?.ok === false || rsvpsRes?.ok === false;
+    !eventsRes.ok ||
+    selectedEventRes?.ok === false ||
+    rsvpsRes?.ok === false ||
+    usersRes?.ok === false;
 
   return (
     <div className="space-y-6">
@@ -128,6 +143,10 @@ export default async function AdminAttendeesPage({
         />
       )}
 
+      {selectedId && (
+        <AdminAddAttendeeForm eventId={selectedId} users={userOptions} />
+      )}
+
       {rsvps.length === 0 ? (
         <p className="text-sm text-zinc-500">{t("empty")}</p>
       ) : (
@@ -161,7 +180,7 @@ export default async function AdminAttendeesPage({
                     )}
                   </td>
                   <td className="py-2 text-zinc-500">{r.affiliation || "—"}</td>
-                  <td className="py-2 text-zinc-500">{r.email}</td>
+                  <td className="py-2 text-zinc-500">{r.email || "—"}</td>
                   <td className="py-2">
                     {r.role === "presenter" ? t("role.presenter") : t("role.attendee")}
                   </td>
