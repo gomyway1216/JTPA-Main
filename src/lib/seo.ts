@@ -11,15 +11,15 @@ export function localizedAlternates(
   const languages = Object.fromEntries(
     routing.locales.map((candidate) => [
       candidate,
-      localizedPath(path, candidate),
+      absoluteLocalizedUrl(path, candidate),
     ]),
   );
 
   return {
-    canonical: localizedPath(path, locale),
+    canonical: absoluteLocalizedUrl(path, locale),
     languages: {
       ...languages,
-      "x-default": localizedPath(path, routing.defaultLocale),
+      "x-default": absoluteLocalizedUrl(path, routing.defaultLocale),
     },
   };
 }

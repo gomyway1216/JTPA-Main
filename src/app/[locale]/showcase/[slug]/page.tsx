@@ -90,6 +90,8 @@ export default async function ProjectDetailPage({
     project.repoUrl,
     project.demoVideoUrl,
   ].filter((url): url is string => Boolean(url));
+  const dateCreated = project.createdAt ? toDate(project.createdAt) : null;
+  const dateModified = project.updatedAt ? toDate(project.updatedAt) : null;
   const projectJsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": project.appUrl ? "SoftwareApplication" : "CreativeWork",
@@ -103,8 +105,8 @@ export default async function ProjectDetailPage({
     },
     ...(project.thumbnail ? { image: project.thumbnail.url } : {}),
     ...(project.tags.length > 0 ? { keywords: project.tags.join(", ") } : {}),
-    ...(project.createdAt ? { dateCreated: toDate(project.createdAt)?.toISOString() } : {}),
-    ...(project.updatedAt ? { dateModified: toDate(project.updatedAt)?.toISOString() } : {}),
+    ...(dateCreated ? { dateCreated: dateCreated.toISOString() } : {}),
+    ...(dateModified ? { dateModified: dateModified.toISOString() } : {}),
     ...(project.repoUrl ? { codeRepository: project.repoUrl } : {}),
     ...(sameAs.length > 0 ? { sameAs } : {}),
     ...(project.appUrl
