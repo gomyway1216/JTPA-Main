@@ -9,15 +9,38 @@ import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { listApprovedProjectsForLocaleCached } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedProjectContent } from "@/lib/localized-content";
+import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 import { stripMarkdown } from "@/lib/utils";
 
 // Per-request render (session-reading layout); the approved-project list
 // is served from the shared data cache (src/lib/data/cached.ts).
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("ShowcasePage");
-  return { title: t("metadataTitle") };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "ShowcasePage" });
+  const title = t("metadataTitle");
+  const description = t("metadataDescription");
+
+  return {
+    title,
+    description,
+    alternates: localizedAlternates("/showcase", locale),
+    openGraph: {
+      title,
+      description,
+      url: absoluteLocalizedUrl("/showcase", locale),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 export default async function ShowcasePage() {

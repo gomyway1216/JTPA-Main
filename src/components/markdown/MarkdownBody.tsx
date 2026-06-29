@@ -8,16 +8,16 @@ import remarkGfm from "remark-gfm";
 
 type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
-// Demote each Markdown heading by one level so author-controlled content
-// can't introduce a second `<h1>` (the page wrapper already provides one).
-// `#` becomes `<h2>`, `######` becomes `<h6>` (one level past 6 stays 6).
-function demoteHeading(level: 1 | 2 | 3 | 4 | 5 | 6): HeadingTag {
-  const next = Math.min(level + 1, 6) as 2 | 3 | 4 | 5 | 6;
+// Keep author-controlled content from introducing a second `<h1>` while
+// preserving normal section hierarchy. `#` and `##` both render as `<h2>`;
+// deeper headings keep their level.
+function normalizeHeading(level: 1 | 2 | 3 | 4 | 5 | 6): HeadingTag {
+  const next = Math.max(level, 2) as 2 | 3 | 4 | 5 | 6;
   return `h${next}` as HeadingTag;
 }
 
 function renderHeading(level: 1 | 2 | 3 | 4 | 5 | 6) {
-  const Tag = demoteHeading(level);
+  const Tag = normalizeHeading(level);
   return function HeadingComponent({
     children,
     ...rest
@@ -32,8 +32,8 @@ function renderHeading(level: 1 | 2 | 3 | 4 | 5 | 6) {
  * - GFM extensions (tables, strikethrough, task lists, autolinks)
  * - Syntax highlighting via highlight.js
  * - External links open in a new tab
- * - Heading levels are demoted by one so author content can never produce
- *   a second `<h1>` (the page already provides the title heading)
+ * - Heading levels are normalized so author content can never produce a
+ *   second `<h1>` (the page already provides the title heading)
  */
 export function MarkdownBody({ source }: { source: string }) {
   return (
