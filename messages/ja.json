@@ -1,7 +1,7 @@
 {
   "Common": {
-    "siteTitle": "JTPA — Japanese Technology Professionals Association",
-    "siteDescription": "JTPAのイベント、メンバーのAIプロジェクト、みんなの質問・メモ・ノウハウ。",
+    "siteTitle": "ベイエリアAI勉強会 | JTPA",
+    "siteDescription": "Bay Areaの日本語AIコミュニティ。イベント、メンバーのAIプロジェクト、質問、メモ、ノウハウを共有します。",
     "viewAll": "すべて見る →",
     "edit": "編集",
     "backToCommunity": "← みんなの投稿",
@@ -67,6 +67,8 @@
     "logout": "ログアウト"
   },
   "Home": {
+    "metadataTitle": "ベイエリアAI勉強会 | Bay Areaの日本語AIコミュニティ",
+    "metadataDescription": "Bay Areaの日本語・日本人テックプロフェッショナルが、AIの学び、実践、プロジェクト、質問を持ち寄るコミュニティです。",
     "siteName": "JTPA",
     "eyebrow": "Bay Area の AI コミュニティ",
     "headlinePrefix": "の試行錯誤を、",
@@ -156,7 +158,8 @@
     "capacityUnknown": "—"
   },
   "ShowcasePage": {
-    "metadataTitle": "プロジェクト",
+    "metadataTitle": "AIプロジェクト | ベイエリアAI勉強会",
+    "metadataDescription": "ベイエリアAI勉強会メンバーが作っているAIプロジェクト、試作品、途中経過を紹介します。",
     "title": "プロジェクト",
     "description": "みんなが作っているAIプロジェクト。完成品だけでなく試作や途中経過も歓迎です。",
     "submit": "プロジェクトを共有",

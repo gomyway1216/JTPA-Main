@@ -1,7 +1,7 @@
 {
   "Common": {
-    "siteTitle": "JTPA — Japanese Technology Professionals Association",
-    "siteDescription": "JTPA events, member AI projects, and community questions, notes, and know-how.",
+    "siteTitle": "Bay Area AI Study Group | JTPA",
+    "siteDescription": "A Bay Area AI community for Japanese technology professionals, with events, member AI projects, questions, notes, and know-how.",
     "viewAll": "View all →",
     "edit": "Edit",
     "backToCommunity": "← Community Posts",
@@ -67,6 +67,8 @@
     "logout": "Log out"
   },
   "Home": {
+    "metadataTitle": "Bay Area AI Study Group | Japanese AI Community in the Bay Area",
+    "metadataDescription": "A Bay Area community where Japanese technology professionals share AI learning, projects, questions, notes, and practical experiments.",
     "siteName": "JTPA",
     "eyebrow": "Bay Area AI community",
     "headlinePrefix": " ideas",
@@ -156,7 +158,8 @@
     "capacityUnknown": "—"
   },
   "ShowcasePage": {
-    "metadataTitle": "Projects",
+    "metadataTitle": "AI Projects | Bay Area AI Study Group",
+    "metadataDescription": "AI projects, prototypes, and work in progress from members of the Bay Area AI Study Group.",
     "title": "Projects",
     "description": "AI projects JTPA members are building. Finished work, prototypes, and work in progress are all welcome.",
     "submit": "Share a project",

@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import Image from "next/image";
 
@@ -14,6 +15,7 @@ import {
 } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedProjectContent } from "@/lib/localized-content";
+import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 import { eventTimeZone } from "@/lib/time-zones";
 import type { LocationType } from "@/lib/types";
 import { formatDateTime, stripMarkdown } from "@/lib/utils";
@@ -22,6 +24,34 @@ import { formatDateTime, stripMarkdown } from "@/lib/utils";
 // cookie for the header), but the Firestore reads below are served from
 // the shared data cache — see src/lib/data/cached.ts for windows/tags.
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "Home" });
+  const title = t("metadataTitle");
+  const description = t("metadataDescription");
+
+  return {
+    title,
+    description,
+    alternates: localizedAlternates("/", locale),
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url: absoluteLocalizedUrl("/", locale),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
 
 export default async function HomePage() {
   const locale = await getLocale();

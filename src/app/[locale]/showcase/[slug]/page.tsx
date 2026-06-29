@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { getProjectBySlugCached } from "@/lib/data/cached";
@@ -14,7 +15,8 @@ import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedProjectContent } from "@/lib/localized-content";
 import { canViewProjectDetail } from "@/lib/projects-visibility";
-import { stripMarkdown, truncate } from "@/lib/utils";
+import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
+import { stripMarkdown, toDate, truncate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
 // project document is served from the shared data cache.
@@ -40,12 +42,15 @@ export async function generateMetadata({
   const content = getLocalizedProjectContent(project, locale);
   const description = truncate(stripMarkdown(content.description), 160);
   const images = project.thumbnail ? [project.thumbnail.url] : undefined;
+  const canonicalPath = `/showcase/${project.slug}`;
   return {
     title: content.title,
     description,
+    alternates: localizedAlternates(canonicalPath, locale),
     openGraph: {
       title: content.title,
       description,
+      url: absoluteLocalizedUrl(canonicalPath, locale),
       images,
     },
     twitter: {
@@ -78,6 +83,44 @@ export default async function ProjectDetailPage({
   const user = await userPromise;
   if (!canViewProjectDetail(project, user, locale)) notFound();
   const content = getLocalizedProjectContent(project, locale);
+  const pageUrl = absoluteLocalizedUrl(`/showcase/${project.slug}`, locale);
+  const plainDescription = truncate(stripMarkdown(content.description), 300);
+  const sameAs = [
+    project.appUrl,
+    project.repoUrl,
+    project.demoVideoUrl,
+  ].filter((url): url is string => Boolean(url));
+  const dateCreated = project.createdAt ? toDate(project.createdAt) : null;
+  const dateModified = project.updatedAt ? toDate(project.updatedAt) : null;
+  const projectJsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": project.appUrl ? "SoftwareApplication" : "CreativeWork",
+    "@id": `${pageUrl}#showcase-project`,
+    name: content.title,
+    description: plainDescription,
+    url: pageUrl,
+    author: {
+      "@type": "Person",
+      name: project.ownerName,
+    },
+    ...(project.thumbnail ? { image: project.thumbnail.url } : {}),
+    ...(project.tags.length > 0 ? { keywords: project.tags.join(", ") } : {}),
+    ...(dateCreated ? { dateCreated: dateCreated.toISOString() } : {}),
+    ...(dateModified ? { dateModified: dateModified.toISOString() } : {}),
+    ...(project.repoUrl ? { codeRepository: project.repoUrl } : {}),
+    ...(sameAs.length > 0 ? { sameAs } : {}),
+    ...(project.appUrl
+      ? {
+          applicationCategory: "AIApplication",
+          operatingSystem: "Web",
+        }
+      : {}),
+    isPartOf: {
+      "@type": "WebSite",
+      name: "Bay Area AI Study Group",
+      url: absoluteLocalizedUrl("/", locale),
+    },
+  };
 
   const statusT = isPrivatePreview ? await getTranslations("Status") : null;
   const commentsPage = await (
@@ -106,6 +149,7 @@ export default async function ProjectDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
+      <JsonLd data={projectJsonLd} />
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{content.title}</h1>
         {isPrivatePreview && (
