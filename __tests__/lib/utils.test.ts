@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   classNames,
@@ -141,13 +141,12 @@ describe("slugify", () => {
 describe("isEventEnded", () => {
   const FIXED_NOW = new Date("2025-06-01T00:00:00Z").getTime();
 
-  beforeAll(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(FIXED_NOW));
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(FIXED_NOW);
   });
 
-  afterAll(() => {
-    vi.useRealTimers();
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("returns true when status is 'past'", () => {

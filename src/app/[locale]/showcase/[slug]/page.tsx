@@ -15,7 +15,11 @@ import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedProjectContent } from "@/lib/localized-content";
 import { canViewProjectDetail } from "@/lib/projects-visibility";
-import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
+import {
+  absoluteLocalizedUrl,
+  authorPersonJsonLd,
+  localizedAlternates,
+} from "@/lib/seo";
 import { stripMarkdown, toDate, truncate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
@@ -99,10 +103,6 @@ export default async function ProjectDetailPage({
     name: content.title,
     description: plainDescription,
     url: pageUrl,
-    author: {
-      "@type": "Person",
-      name: project.ownerName,
-    },
     ...(project.thumbnail ? { image: project.thumbnail.url } : {}),
     ...(project.tags.length > 0 ? { keywords: project.tags.join(", ") } : {}),
     ...(dateCreated ? { dateCreated: dateCreated.toISOString() } : {}),
@@ -141,6 +141,7 @@ export default async function ProjectDetailPage({
     project.ownerUid,
     ...comments.map((c) => c.authorUid),
   ]);
+  const ownerProfile = profilesByUid.get(project.ownerUid) ?? null;
   const canEdit = !!user && (user.uid === project.ownerUid || user.isAdmin);
   const editHref =
     user?.uid === project.ownerUid
@@ -149,7 +150,17 @@ export default async function ProjectDetailPage({
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
-      <JsonLd data={projectJsonLd} />
+      <JsonLd
+        data={{
+          ...projectJsonLd,
+          author: authorPersonJsonLd({
+            uid: project.ownerUid,
+            locale,
+            fallbackName: project.ownerName,
+            profile: ownerProfile,
+          }),
+        }}
+      />
       <header className="space-y-2">
         <h1 className="text-3xl font-bold">{content.title}</h1>
         {isPrivatePreview && (
@@ -163,7 +174,7 @@ export default async function ProjectDetailPage({
         <p className="flex items-center gap-1.5 text-sm text-zinc-500">
           <span>{t("author")}</span>
           <AuthorBadge
-            profile={profilesByUid.get(project.ownerUid) ?? null}
+            profile={ownerProfile}
             size="md"
           />
         </p>

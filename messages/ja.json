@@ -52,7 +52,8 @@
     "events": "イベント",
     "showcase": "みんなのプロジェクト",
     "community": "みんなの投稿",
-    "help": "ヘルプ・使い方"
+    "help": "ヘルプ・使い方",
+    "maintainerText": "JTPA代表・サイト運営: <name>Yudai Yaguchi</name>"
   },
   "Theme": {
     "toggle": "テーマを切り替える",
@@ -553,17 +554,21 @@
   },
   "AboutPage": {
     "maintainer": "メンテナー",
-    "maintainerText": "サイトの開発・運用は<name>Yudai Yaguchi</name>がお手伝いしています。",
+    "maintainerText": "サイトの運営・開発は、JTPA代表の<name>Yudai Yaguchi</name>が担当しています。",
     "feedbackPrefix": "質問・不具合報告・改善案などは",
     "feedbackLink": "ヘルプの「要望・不具合報告」",
     "feedbackSuffix": "からお気軽にどうぞ。",
     "sourceCode": "ソースコード:",
     "defaultTitle": "ベイエリアAI勉強会とは",
+    "metadataDescription": "ベイエリアAI勉強会の概要、活動内容、JTPA代表・サイト運営の Yudai Yaguchi について。",
     "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーが作ったプロジェクトの共有などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクト・プロジェクトの共有\n"
   },
   "PublicProfile": {
     "notFoundTitle": "ユーザーが見つかりません",
     "metadataTitle": "@{username} のプロフィール",
+    "maintainerMetadataTitle": "Yudai Yaguchi | JTPA代表・ベイエリアAI勉強会サイト運営",
+    "maintainerMetadataDescription": "Yudai Yaguchi はJTPA代表として、ベイエリアAI勉強会サイトの運営・開発を担当しています。",
+    "maintainerRole": "JTPA代表として、ベイエリアAI勉強会サイトの運営・開発を担当しています。",
     "avatarAlt": "@{username} のアイコン",
     "eventAttendanceCount": "イベント参加回数",
     "eventAttendanceCountValue": "{count}回",
@@ -778,6 +783,7 @@
   },
   "HelpPage": {
     "metadataTitle": "ヘルプ・使い方",
+    "metadataDescription": "JTPAサイトの使い方、投稿、イベント参加、フィードバック、エンジニアリングや一般的な相談先をまとめています。",
     "title": "ヘルプ・使い方",
     "intro": "JTPAサイトの機能と使い方をまとめました。質問があれば<qaLink>質問・相談に投稿</qaLink>してください。",
     "toc": "目次",
@@ -1003,7 +1009,8 @@
         ],
         "items": [
           "必要に応じて運営から確認できるよう、送信にはログインが必要です。",
-          "他の人にも役立つ使い方の質問は<qaLink>質問・相談に投稿</qaLink>してください。"
+          "他の人にも役立つ使い方の質問は<qaLink>質問・相談に投稿</qaLink>してください。",
+          "サイトの使い方ではなく、エンジニアリングや一般的な相談・質問は、JTPA代表・サイト運営の<yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>へご連絡ください。"
         ]
       }
     }

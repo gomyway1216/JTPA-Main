@@ -52,7 +52,8 @@
     "events": "Events",
     "showcase": "Projects",
     "community": "Community Posts",
-    "help": "Help"
+    "help": "Help",
+    "maintainerText": "JTPA representative and site operator: <name>Yudai Yaguchi</name>"
   },
   "Theme": {
     "toggle": "Change theme",
@@ -553,17 +554,21 @@
   },
   "AboutPage": {
     "maintainer": "Maintainer",
-    "maintainerText": "Site development and operations are supported by <name>Yudai Yaguchi</name>.",
+    "maintainerText": "Site operations and development are led by <name>Yudai Yaguchi</name>, JTPA representative.",
     "feedbackPrefix": "Questions, bug reports, and improvement ideas are welcome through",
     "feedbackLink": "Help > Feedback",
     "feedbackSuffix": ".",
     "sourceCode": "Source code:",
     "defaultTitle": "About JTPA",
+    "metadataDescription": "About the Bay Area AI Study Group, what the community does, and JTPA representative and site operator Yudai Yaguchi.",
     "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and project sharing by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Sharing AI products and projects built by members\n"
   },
   "PublicProfile": {
     "notFoundTitle": "User not found",
     "metadataTitle": "@{username}'s profile",
+    "maintainerMetadataTitle": "Yudai Yaguchi | JTPA Representative and Bay Area AI Study Group Site Operator",
+    "maintainerMetadataDescription": "Yudai Yaguchi operates and develops the Bay Area AI Study Group website as a JTPA representative.",
+    "maintainerRole": "JTPA representative and operator of the Bay Area AI Study Group website.",
     "avatarAlt": "Icon for @{username}",
     "eventAttendanceCount": "Event attendance",
     "eventAttendanceCountValue": "{count, plural, =0 {0 events} =1 {# event} other {# events}}",
@@ -778,6 +783,7 @@
   },
   "HelpPage": {
     "metadataTitle": "Help",
+    "metadataDescription": "Help for using the JTPA site, posting, joining events, sending feedback, and contacting Yudai Yaguchi for engineering or general questions.",
     "title": "Help",
     "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Questions</qaLink>.",
     "toc": "Contents",
@@ -1006,7 +1012,8 @@
         ],
         "items": [
           "Login is required so the team can follow up when needed.",
-          "For usage questions that may help others, <qaLink>post in Questions</qaLink> instead."
+          "For usage questions that may help others, <qaLink>post in Questions</qaLink> instead.",
+          "For engineering or general questions rather than site usage, contact <yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>, JTPA representative and site operator, on LinkedIn."
         ]
       }
     }

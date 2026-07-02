@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // createEvent / updateEvent / deleteEvent / cloneEvent are admin-only and
 // validate input via Zod before any Firestore work. The interesting rules
@@ -156,10 +156,6 @@ beforeEach(() => {
   docUpdateMock.mockReset().mockResolvedValue(undefined);
   docDeleteMock.mockReset().mockResolvedValue(undefined);
   storageDeleteMock.mockReset().mockResolvedValue(undefined);
-});
-
-afterEach(() => {
-  vi.useRealTimers();
 });
 
 describe("createEvent — auth + validation", () => {
@@ -493,63 +489,65 @@ describe("cloneEvent", () => {
   });
 
   it("copies content, resets live state, and dodges the slug collision", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-06-09T00:00:00Z"));
+    const fixedNow = new Date("2026-06-09T00:00:00Z").getTime();
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNow);
     const ts = (ms: number) => ({ toMillis: () => ms });
     const NINETY_MIN = 90 * 60 * 1000;
-    docGetMock.mockResolvedValueOnce({
-      exists: true,
-      data: () => ({
-        slug: "jtpa-salon-32",
-        title: "JTPA Salon 32",
+    try {
+      docGetMock.mockResolvedValueOnce({
+        exists: true,
+        data: () => ({
+          slug: "jtpa-salon-32",
+          title: "JTPA Salon 32",
+          description: "the original",
+          startAt: ts(1_000_000),
+          endAt: ts(1_000_000 + NINETY_MIN),
+          timeZone: "America/Chicago",
+          location: { type: "offline", address: "San Jose" },
+          capacity: 30,
+          presenterCapacity: 4,
+          visibility: "members_only",
+          surveyFields: [{ key: "q1" }],
+        }),
+      });
+      // findFreeSlug: the source's own slug is taken, "-1" is free.
+      slugQueryGetMock
+        .mockResolvedValueOnce({ empty: false, docs: [{ id: "src-event" }] })
+        .mockResolvedValueOnce({ empty: true, docs: [] });
+
+      await expect(cloneEvent("src-event")).rejects.toThrow(
+        "__REDIRECT__:/admin/events/new-event-1/edit",
+      );
+
+      const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+      expect(payload).toMatchObject({
+        slug: "jtpa-salon-32-1",
+        // Copy is visibly labelled and parked as a draft…
+        title: "JTPA Salon 32 (コピー)",
+        status: "draft",
+        // …with the source's settings carried over…
         description: "the original",
-        startAt: ts(1_000_000),
-        endAt: ts(1_000_000 + NINETY_MIN),
-        timeZone: "America/Chicago",
-        location: { type: "offline", address: "San Jose" },
         capacity: 30,
         presenterCapacity: 4,
         visibility: "members_only",
+        timeZone: "America/Chicago",
         surveyFields: [{ key: "q1" }],
-      }),
-    });
-    // findFreeSlug: the source's own slug is taken, "-1" is free.
-    slugQueryGetMock
-      .mockResolvedValueOnce({ empty: false, docs: [{ id: "src-event" }] })
-      .mockResolvedValueOnce({ empty: true, docs: [] });
-
-    await expect(cloneEvent("src-event")).rejects.toThrow(
-      "__REDIRECT__:/admin/events/new-event-1/edit",
-    );
-
-    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
-    expect(payload).toMatchObject({
-      slug: "jtpa-salon-32-1",
-      // Copy is visibly labelled and parked as a draft…
-      title: "JTPA Salon 32 (コピー)",
-      status: "draft",
-      // …with the source's settings carried over…
-      description: "the original",
-      capacity: 30,
-      presenterCapacity: 4,
-      visibility: "members_only",
-      timeZone: "America/Chicago",
-      surveyFields: [{ key: "q1" }],
-      createdBy: "admin-1",
-      // …and all live counters reset (rsvps/presentations subcollections
-      // belong to the original; the clone starts fresh).
-      rsvpCount: 0,
-      presenterCount: 0,
-      waitlistCount: 0,
-    });
-    // Shifted a week ahead, original 90-min duration preserved.
-    const start = payload.startAt as { __fromMillis: number };
-    const end = payload.endAt as { __fromMillis: number };
-    expect(start.__fromMillis).toBe(
-      new Date("2026-06-09T00:00:00Z").getTime() + 7 * 24 * 60 * 60 * 1000,
-    );
-    expect(end.__fromMillis - start.__fromMillis).toBe(NINETY_MIN);
-    expect(revalidatePathMock).toHaveBeenCalledWith("/admin/events");
+        createdBy: "admin-1",
+        // …and all live counters reset (rsvps/presentations subcollections
+        // belong to the original; the clone starts fresh).
+        rsvpCount: 0,
+        presenterCount: 0,
+        waitlistCount: 0,
+      });
+      // Shifted a week ahead, original 90-min duration preserved.
+      const start = payload.startAt as { __fromMillis: number };
+      const end = payload.endAt as { __fromMillis: number };
+      expect(start.__fromMillis).toBe(fixedNow + 7 * 24 * 60 * 60 * 1000);
+      expect(end.__fromMillis - start.__fromMillis).toBe(NINETY_MIN);
+      expect(revalidatePathMock).toHaveBeenCalledWith("/admin/events");
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 
   it("normalizes an invalid source timezone when cloning", async () => {
