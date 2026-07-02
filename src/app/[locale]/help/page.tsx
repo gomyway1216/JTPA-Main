@@ -4,6 +4,8 @@ import { getTranslations } from "next-intl/server";
 import { FeedbackForm } from "@/app/[locale]/help/_components/FeedbackForm";
 import Link from "@/i18n/navigation";
 import { getSessionUser } from "@/lib/auth/session";
+import { MAINTAINER_LINKS } from "@/lib/maintainer";
+import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 
 type HelpStep = {
   title: string;
@@ -59,6 +61,21 @@ function richLink(href: string) {
   };
 }
 
+function externalRichLink(href: string) {
+  return function ExternalRichLink(chunks: React.ReactNode) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer noopener"
+        className={linkClassName}
+      >
+        {chunks}
+      </a>
+    );
+  };
+}
+
 const richTextComponents = {
   strong: (chunks: React.ReactNode) => (
     <strong className="font-semibold text-zinc-900 dark:text-zinc-100">
@@ -81,15 +98,37 @@ const richTextComponents = {
   qaLink: richLink("/qa/new"),
   qaListLink: richLink("/qa"),
   showcaseLink: richLink("/showcase"),
+  yudaiLinkedInLink: externalRichLink(MAINTAINER_LINKS.linkedin),
 };
 
 function richText(t: HelpTranslations, key: string) {
   return t.rich(key, richTextComponents);
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("HelpPage");
-  return { title: t("metadataTitle") };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "HelpPage" });
+  const title = t("metadataTitle");
+  const description = t("metadataDescription");
+  return {
+    title,
+    description,
+    alternates: localizedAlternates("/help", locale),
+    openGraph: {
+      title,
+      description,
+      url: absoluteLocalizedUrl("/help", locale),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
 // `force-dynamic` so the FeedbackForm at the bottom can read the current

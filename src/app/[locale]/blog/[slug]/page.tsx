@@ -14,6 +14,7 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedPostContent } from "@/lib/localized-content";
+import { authorPersonJsonLd } from "@/lib/seo";
 import { formatDate, toDate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
@@ -94,6 +95,7 @@ export default async function BlogPostPage({
     user?.uid === post.authorUid
       ? `/my/posts/${post.id}/edit`
       : `/admin/posts/${post.id}/edit`;
+  const authorProfile = profilesByUid.get(post.authorUid) ?? null;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -107,7 +109,12 @@ export default async function BlogPostPage({
           headline: content.title,
           description: content.excerpt,
           datePublished: toDate(post.publishedAt)?.toISOString(),
-          author: { "@type": "Person", name: post.authorName },
+          author: authorPersonJsonLd({
+            uid: post.authorUid,
+            locale,
+            fallbackName: post.authorName,
+            profile: authorProfile,
+          }),
           image: post.coverImage ? [post.coverImage.url] : undefined,
         }}
       />
@@ -120,7 +127,7 @@ export default async function BlogPostPage({
         <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
         <p className="flex flex-wrap items-center gap-x-1.5 text-sm text-zinc-500">
           <AuthorBadge
-            profile={profilesByUid.get(post.authorUid) ?? null}
+            profile={authorProfile}
             size="md"
           />
           {post.publishedAt && (

@@ -6,6 +6,7 @@ import { listEvents } from "@/lib/data/events";
 import { listGuides } from "@/lib/data/guides";
 import { listPublishedPosts } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
+import { MAINTAINER_PROFILE_PATH } from "@/lib/maintainer";
 import { siteBaseUrl } from "@/lib/site";
 import type { TsLike } from "@/lib/types";
 import { toDate } from "@/lib/utils";
@@ -32,6 +33,7 @@ const STATIC_PATHS = [
   "/poll",
   "/community",
   "/help",
+  MAINTAINER_PROFILE_PATH,
 ];
 
 // One sitemap entry per locale for `path` (localePrefix is "always", so

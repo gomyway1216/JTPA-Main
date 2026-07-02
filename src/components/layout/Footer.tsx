@@ -1,4 +1,5 @@
 import Link from "@/i18n/navigation";
+import { MAINTAINER_NAME, MAINTAINER_PROFILE_PATH } from "@/lib/maintainer";
 import { getTranslations } from "next-intl/server";
 
 const FOOTER_LINKS = [
@@ -14,7 +15,22 @@ export async function Footer() {
   return (
     <footer className="border-t border-zinc-200 bg-white py-6 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400 print:hidden">
       <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 sm:flex-row sm:items-center sm:justify-between">
-        <p>© {new Date().getFullYear()} JTPA</p>
+        <p className="flex flex-wrap gap-x-2 gap-y-1">
+          <span>© {new Date().getFullYear()} JTPA</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {t.rich("maintainerText", {
+              name: (chunks) => (
+                <Link
+                  href={MAINTAINER_PROFILE_PATH}
+                  className="hover:underline"
+                >
+                  {chunks || MAINTAINER_NAME}
+                </Link>
+              ),
+            })}
+          </span>
+        </p>
         <nav className="flex flex-wrap gap-4 text-xs">
           {FOOTER_LINKS.map((link) => (
             <Link key={link.href} href={link.href} className="hover:underline">

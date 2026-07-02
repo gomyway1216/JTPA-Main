@@ -3,24 +3,54 @@ import Link from "@/i18n/navigation";
 import { getTranslations } from "next-intl/server";
 
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { getSitePageCached } from "@/lib/data/cached";
+import {
+  MAINTAINER_NAME,
+  MAINTAINER_PROFILE_PATH,
+  MAINTAINER_SOURCE_CODE_URL,
+} from "@/lib/maintainer";
+import {
+  aboutPageJsonLd,
+  absoluteLocalizedUrl,
+  localizedAlternates,
+} from "@/lib/seo";
 
-// Yudai's JTPA uid. Hardcoded because the maintainer attribution is
-// a specific, stable individual — using an env var or DB lookup would
-// be overhead for a one-name credit that effectively never changes.
-// If maintainership ever transfers, update this constant (and remove
-// the comment).
-const MAINTAINER_UID = "FQe7JWGETbTm9w9sAZgacemC1aC3";
-
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
   const [page, t] = await Promise.all([
     getSitePageCached("about"),
-    getTranslations("AboutPage"),
+    getTranslations({ locale, namespace: "AboutPage" }),
   ]);
-  return { title: page?.title || t("defaultTitle") };
+  const title = page?.title || t("defaultTitle");
+  const description = t("metadataDescription");
+  return {
+    title,
+    description,
+    alternates: localizedAlternates("/about", locale),
+    openGraph: {
+      title,
+      description,
+      url: absoluteLocalizedUrl("/about", locale),
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
 }
 
-export default async function AboutPage() {
+export default async function AboutPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
   const t = await getTranslations("AboutPage");
   // Served from the shared data cache; the admin save action invalidates
   // the `site-pages` tag so edits appear immediately on this instance and
@@ -28,8 +58,16 @@ export default async function AboutPage() {
   const page = await getSitePageCached("about");
   const title = page?.title || t("defaultTitle");
   const body = page?.body || t("defaultBody");
+  const description = t("metadataDescription");
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 space-y-6">
+      <JsonLd
+        data={aboutPageJsonLd({
+          locale,
+          title,
+          description,
+        })}
+      />
       <h1 className="text-3xl font-bold">{title}</h1>
       <MarkdownBody source={body} />
       {/*
@@ -39,10 +77,8 @@ export default async function AboutPage() {
         forgets to copy this footer over — and so the link can be a
         styled anchor (the MarkdownBody renderer escapes raw HTML).
 
-        The name links to the maintainer's public JTPA profile
-        (/u/[uid]) — that page in turn exposes whatever external links
-        the user has chosen to publish (portfolio, GitHub, …) via
-        /my/profile, so we don't hardcode meetyudai.com here.
+        The name links to the maintainer's canonical public profile, which
+        also carries the Person/ProfilePage structured data used by crawlers.
       */}
       <section className="border-t border-zinc-200 pt-6 text-sm dark:border-zinc-800">
         <h2 className="mb-2 font-semibold text-zinc-700 dark:text-zinc-300">
@@ -52,10 +88,10 @@ export default async function AboutPage() {
           {t.rich("maintainerText", {
             name: (chunks) => (
               <Link
-                href={`/u/${MAINTAINER_UID}`}
+                href={MAINTAINER_PROFILE_PATH}
                 className="text-blue-600 hover:underline"
               >
-                {chunks}
+                {chunks || MAINTAINER_NAME}
               </Link>
             ),
           })}
@@ -86,7 +122,7 @@ export default async function AboutPage() {
         <p className="mt-2 text-xs text-zinc-500">
           {t("sourceCode")}{" "}
           <a
-            href="https://github.com/gomyway1216/JTPA-Main"
+            href={MAINTAINER_SOURCE_CODE_URL}
             target="_blank"
             rel="noreferrer noopener"
             className="hover:underline"

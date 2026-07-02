@@ -8,11 +8,13 @@ import "../globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { routing } from "@/i18n/routing";
 import { getSessionUser } from "@/lib/auth/session";
 import { countUnreadNotifications } from "@/lib/data/notifications";
 import { getMyAvatarUrl } from "@/lib/data/users";
+import { siteIdentityJsonLd } from "@/lib/seo";
 import { siteBaseUrl } from "@/lib/site";
 
 const geistSans = Geist({
@@ -57,7 +59,15 @@ export default async function RootLayout({
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
-  const messages = await getMessages();
+  const [messages, commonT] = await Promise.all([
+    getMessages(),
+    getTranslations({ locale, namespace: "Common" }),
+  ]);
+  const siteJsonLd = siteIdentityJsonLd({
+    locale,
+    title: commonT("siteTitle"),
+    description: commonT("siteDescription"),
+  });
 
   const sessionUser = await getSessionUser();
   const [avatarUrl, unreadNotificationCount] = sessionUser
@@ -123,6 +133,7 @@ export default async function RootLayout({
         className="min-h-full flex flex-col bg-background text-zinc-900 dark:text-zinc-100"
         suppressHydrationWarning
       >
+        <JsonLd data={siteJsonLd} />
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <AuthProvider initialUser={user}>
