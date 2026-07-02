@@ -783,7 +783,7 @@
   },
   "HelpPage": {
     "metadataTitle": "ヘルプ・使い方",
-    "metadataDescription": "JTPAサイトの使い方、投稿、イベント参加、フィードバック、エンジニアリング相談先をまとめています。",
+    "metadataDescription": "JTPAサイトの使い方、投稿、イベント参加、フィードバック、エンジニアリングや一般的な相談先をまとめています。",
     "title": "ヘルプ・使い方",
     "intro": "JTPAサイトの機能と使い方をまとめました。質問があれば<qaLink>質問・相談に投稿</qaLink>してください。",
     "toc": "目次",
@@ -1010,7 +1010,7 @@
         "items": [
           "必要に応じて運営から確認できるよう、送信にはログインが必要です。",
           "他の人にも役立つ使い方の質問は<qaLink>質問・相談に投稿</qaLink>してください。",
-          "サイトの使い方ではなく、エンジニアリングに関する個人的な相談・質問は、JTPA代表・サイト運営の<yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>へご連絡ください。"
+          "サイトの使い方ではなく、エンジニアリングや一般的な相談・質問は、JTPA代表・サイト運営の<yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>へご連絡ください。"
         ]
       }
     }

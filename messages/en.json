@@ -783,7 +783,7 @@
   },
   "HelpPage": {
     "metadataTitle": "Help",
-    "metadataDescription": "Help for using the JTPA site, posting, joining events, sending feedback, and contacting Yudai Yaguchi for personal engineering questions.",
+    "metadataDescription": "Help for using the JTPA site, posting, joining events, sending feedback, and contacting Yudai Yaguchi for engineering or general questions.",
     "title": "Help",
     "intro": "A guide to JTPA site features. If you have a question, <qaLink>post it in Questions</qaLink>.",
     "toc": "Contents",
@@ -1013,7 +1013,7 @@
         "items": [
           "Login is required so the team can follow up when needed.",
           "For usage questions that may help others, <qaLink>post in Questions</qaLink> instead.",
-          "For personal engineering questions rather than site usage, contact <yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>, JTPA representative and site operator, on LinkedIn."
+          "For engineering or general questions rather than site usage, contact <yudaiLinkedInLink>Yudai Yaguchi</yudaiLinkedInLink>, JTPA representative and site operator, on LinkedIn."
         ]
       }
     }
