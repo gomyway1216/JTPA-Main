@@ -13,7 +13,7 @@ import {
   isMaintainerUid,
   MAINTAINER_NAME,
   MAINTAINER_PROFILE_PATH,
-  maintainerLinksWithFallback,
+  maintainerLinksWithPinnedUrls,
   resolvePublicProfileUid,
 } from "@/lib/maintainer";
 import {
@@ -84,7 +84,7 @@ export default async function PublicProfilePage({
     ? MAINTAINER_NAME
     : profile.fullName || `@${profile.username}`;
   const links = isMaintainer
-    ? maintainerLinksWithFallback(profile.links)
+    ? maintainerLinksWithPinnedUrls(profile.links)
     : profile.links;
 
   // Published contribution tallies, computed at read time via `count()`

@@ -36,7 +36,7 @@ export function publicProfilePathForUid(uid: string): string {
   return isMaintainerUid(uid) ? MAINTAINER_PROFILE_PATH : `/u/${uid}`;
 }
 
-export function maintainerLinksWithFallback(links: UserLinks = {}): UserLinks {
+export function maintainerLinksWithPinnedUrls(links: UserLinks = {}): UserLinks {
   return {
     ...links,
     ...MAINTAINER_LINKS,

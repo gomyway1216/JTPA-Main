@@ -115,6 +115,7 @@ describe("authorPersonJsonLd", () => {
         profile: profile(),
       }),
     ).toMatchObject({
+      "@id": "https://example.test/en/u/user-1#person",
       name: "Alice Example",
       url: "https://example.test/en/u/user-1",
     });

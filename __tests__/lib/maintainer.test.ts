@@ -7,7 +7,7 @@ import {
   MAINTAINER_PROFILE_PATH,
   MAINTAINER_PROFILE_SLUG,
   MAINTAINER_UID,
-  maintainerLinksWithFallback,
+  maintainerLinksWithPinnedUrls,
   publicProfilePathForUid,
   resolvePublicProfileUid,
 } from "@/lib/maintainer";
@@ -35,8 +35,8 @@ describe("maintainer identity helpers", () => {
   });
 
   it("pins maintainer links over incomplete profile links", () => {
-    expect(maintainerLinksWithFallback({ github: "https://old.example" })).toEqual(
-      MAINTAINER_LINKS,
-    );
+    expect(
+      maintainerLinksWithPinnedUrls({ github: "https://old.example" }),
+    ).toEqual(MAINTAINER_LINKS);
   });
 });

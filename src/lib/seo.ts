@@ -220,6 +220,8 @@ export function authorPersonJsonLd({
 }): Record<string, unknown> {
   const path = publicProfilePathForUid(uid);
   const isYudai = path === MAINTAINER_PROFILE_PATH;
+  const pageUrl = absoluteLocalizedUrl(path, locale);
+  const personId = isYudai ? maintainerPersonId() : `${pageUrl}#person`;
   const links = isYudai ? MAINTAINER_LINKS : (profile?.links ?? {});
   const sameAs = uniqueUrls([
     ...(isYudai ? MAINTAINER_SAME_AS : []),
@@ -228,11 +230,11 @@ export function authorPersonJsonLd({
 
   return {
     "@type": "Person",
-    ...(isYudai ? { "@id": maintainerPersonId() } : {}),
+    "@id": personId,
     name: isYudai
       ? MAINTAINER_NAME
       : profile?.fullName || fallbackName || `@${profile?.username ?? uid}`,
-    url: absoluteLocalizedUrl(path, locale),
+    url: pageUrl,
     ...(sameAs.length > 0 ? { sameAs } : {}),
   };
 }
