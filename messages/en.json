@@ -1077,6 +1077,7 @@
       "about": "About JTPA",
       "users": "Users",
       "errors": "Error logs",
+      "audit": "Audit logs",
       "help": "Help"
     },
     "common": {
@@ -1442,6 +1443,12 @@
       "empty": "No error logs yet.",
       "noMessage": "(no message)",
       "stackTrace": "Stack trace"
+    },
+    "audit": {
+      "metadataTitle": "Audit logs",
+      "title": "Audit logs",
+      "description": "Records destructive actions such as article deletes and denied attempts. Latest {count} entries.",
+      "empty": "No audit logs yet."
     },
     "help": {
       "metadataTitle": "Admin help",

@@ -361,8 +361,7 @@ service cloud.firestore {
           && request.resource.data.status in ['draft', 'pending']
         );
 
-      allow delete: if isAdmin()
-        || (isSignedIn() && resource.data.authorUid == request.auth.uid);
+      allow delete: if isAdmin();
 
       // Per-post likes are read-only for clients. All toggles flow
       // through the `toggleLikeRecord` Server Action (Admin SDK) so the
@@ -687,6 +686,15 @@ service cloud.firestore {
     // Only admins (server) can enqueue mail directly. Server Actions use Admin SDK.
     match /mail/{mailId} {
       allow read, write: if false;
+    }
+
+    // ----- auditLogs (server-only operation audit trail) -----
+    // Written by Server Actions via Admin SDK. Entries may include actor
+    // emails and deleted target snapshots, so only admins may read and no
+    // client may write.
+    match /auditLogs/{logId} {
+      allow read, list: if isAdmin();
+      allow write: if false;
     }
 
     // ----- errorLogs (server-only error tracking) -----

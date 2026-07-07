@@ -721,6 +721,20 @@ describe("posts", () => {
       updateDoc(doc(admin(), "posts/mine"), { status: "published" }),
     );
   });
+
+  it("only admin can delete posts", async () => {
+    await seed({
+      "posts/mine": {
+        authorUid: ALICE,
+        title: "Mine",
+        status: "draft",
+        reviewerUid: null,
+      },
+    });
+    await assertFails(deleteDoc(doc(alice(), "posts/mine")));
+    await assertFails(deleteDoc(doc(bob(), "posts/mine")));
+    await assertSucceeds(deleteDoc(doc(admin(), "posts/mine")));
+  });
 });
 
 describe("qa", () => {
@@ -778,6 +792,33 @@ describe("qa", () => {
     );
     await assertFails(updateDoc(doc(alice(), "qa/q1"), { likeCount: 5 }));
     await assertFails(updateDoc(doc(alice(), "qa/q1"), { status: "archived" }));
+  });
+});
+
+describe("auditLogs", () => {
+  const log = {
+    action: "post.delete",
+    result: "success",
+    actorUid: ADMIN,
+    actorEmail: "admin@example.com",
+    actorName: "Admin",
+    actorIsAdmin: true,
+    targetType: "post",
+    targetId: "p1",
+    targetSlug: "hello",
+    targetTitle: "Hello",
+    targetStatus: "published",
+    targetOwnerUid: ALICE,
+    targetOwnerName: "Alice",
+    metadata: {},
+    createdAt: serverTimestamp(),
+  };
+
+  it("is admin-readable but client-write locked", async () => {
+    await seed({ "auditLogs/log1": log });
+    await assertSucceeds(getDoc(doc(admin(), "auditLogs/log1")));
+    await assertFails(getDoc(doc(alice(), "auditLogs/log1")));
+    await assertFails(setDoc(doc(admin(), "auditLogs/log2"), log));
   });
 });
 

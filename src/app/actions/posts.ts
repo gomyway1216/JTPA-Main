@@ -21,6 +21,7 @@ import {
   normalizeContentLocales,
   type ContentLocale,
 } from "@/lib/content-localization";
+import { buildAuditLogData, recordAuditLog } from "@/lib/data/audit-logs";
 import { POSTS_TAG } from "@/lib/data/cache-tags";
 import { adminDb } from "@/lib/firebase/admin";
 import { actionError } from "@/lib/i18n/action-errors";
@@ -308,23 +309,59 @@ export async function updateMyPost(
   return redirectToLocalizedPath(postReturnPath(returnTo, user.isAdmin));
 }
 
-// ---------- delete (owner) ----------
+// ---------- delete (admin-only) ----------
 
-export async function deleteMyPost(postId: string): Promise<PostSaveResult> {
+export async function deletePost(postId: string): Promise<PostSaveResult> {
   const user = await requireUser();
-  const ref = adminDb().collection("posts").doc(postId);
-  const snap = await ref.get();
-  // Already gone — nothing to do, treat as success so the UI navigates away.
-  if (!snap.exists) return { ok: true };
-  const cur = snap.data() as PostDoc;
-  if (cur.authorUid !== user.uid && !user.isAdmin) {
+  if (!user.isAdmin) {
+    await recordAuditLog({
+      action: "post.delete",
+      result: "denied",
+      actor: user,
+      target: { type: "post", id: postId },
+      metadata: { reason: "admin_required" },
+    });
     return { ok: false, error: await actionError("postDeleteForbidden") };
   }
+
+  const db = adminDb();
+  const ref = db.collection("posts").doc(postId);
+  const snap = await ref.get();
+  // Already gone — nothing to do, treat as success so the UI navigates away.
+  if (!snap.exists) {
+    await recordAuditLog({
+      action: "post.delete",
+      result: "not_found",
+      actor: user,
+      target: { type: "post", id: postId },
+    });
+    return { ok: true };
+  }
+  const cur = snap.data() as PostDoc;
 
   const paths: string[] = [];
   if (cur.coverImage) paths.push(cur.coverImage.path);
 
-  await ref.delete();
+  const batch = db.batch();
+  batch.delete(ref);
+  batch.set(
+    db.collection("auditLogs").doc(),
+    buildAuditLogData({
+      action: "post.delete",
+      result: "success",
+      actor: user,
+      target: {
+        type: "post",
+        id: postId,
+        slug: cur.slug,
+        title: cur.title,
+        status: cur.status,
+        ownerUid: cur.authorUid,
+        ownerName: cur.authorName,
+      },
+    }),
+  );
+  await batch.commit();
   if (paths.length > 0) await deleteStoragePaths(paths);
 
   expirePostCache();
@@ -473,7 +510,7 @@ export async function decidePost(
 
 // Not wired into the UI yet — kept ready for the published-list archive
 // button (planned follow-up) so older posts can be retired without losing
-// the doc (vs deleteMyPost which removes it entirely).
+// the doc (vs deletePost which removes it entirely).
 export async function archivePost(postId: string): Promise<PostSaveResult> {
   await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);

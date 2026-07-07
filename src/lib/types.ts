@@ -645,3 +645,30 @@ export interface ErrorLogDoc {
   runtime: string;
   createdAt: TsLike;
 }
+
+// ---------- audit logs ----------
+// Application-level audit trail for high-impact admin actions and denied
+// destructive attempts. Written server-side only; admins view it at
+// /admin/audit. Keep fields denormalized so a deleted target can still be
+// understood after the original document is gone.
+export type AuditLogAction = "post.delete";
+export type AuditLogResult = "success" | "denied" | "not_found";
+
+export interface AuditLogDoc {
+  id: string;
+  action: AuditLogAction;
+  result: AuditLogResult;
+  actorUid: string;
+  actorName: string | null;
+  actorEmail: string | null;
+  actorIsAdmin: boolean;
+  targetType: "post";
+  targetId: string;
+  targetSlug: string | null;
+  targetTitle: string | null;
+  targetStatus: PostStatus | null;
+  targetOwnerUid: string | null;
+  targetOwnerName: string | null;
+  metadata?: Record<string, string | number | boolean | null>;
+  createdAt: TsLike;
+}
