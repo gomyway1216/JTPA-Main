@@ -84,7 +84,7 @@ const EventInputSchema = z.object({
   coverImage: AssetSchema.optional(),
   subImages: z.array(AssetSchema).default([]),
   reportPostSlug: optionalNonEmpty(
-    z.string().trim().min(2).max(80).regex(/^[a-z0-9-]+$/),
+    z.string().trim().min(2).max(80).regex(/^[a-z0-9_-]+$/),
   ),
   surveyFields: z.array(SurveyFieldSchema).default([]),
 });
