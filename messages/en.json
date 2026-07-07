@@ -156,7 +156,9 @@
     "noPast": "No past events yet.",
     "venue": "Venue available",
     "rsvpCount": "{count} / {capacity} going",
-    "capacityUnknown": "—"
+    "capacityUnknown": "—",
+    "reportCta": "Event report",
+    "openEvent": "Open details for {title}"
   },
   "ShowcasePage": {
     "metadataTitle": "AI Projects | Bay Area AI Study Group",
