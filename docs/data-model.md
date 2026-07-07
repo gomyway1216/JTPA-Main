@@ -33,6 +33,7 @@ polls/{pollId}
 sitePages/{slug}      ← admin-edited static-ish content (currently just `about`)
 notifications/{autoId} ← per-user comment/reply inbox (writes only via Admin SDK)
 mail/{autoId}         ← Trigger Email extension (writes only via Admin SDK)
+auditLogs/{autoId}    ← server-written destructive-operation audit trail
 ```
 
 Comments and likes use the same shape across all five "content parent" types
@@ -220,7 +221,26 @@ Community blog entries. Members can submit posts; admins approve before public r
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
 - Owner edits can land in `draft` (save without resubmitting) or `pending` (resubmit for review); never directly in published/rejected/archived. `authorUid` and `reviewerUid` are immutable for owners. Admins can change anything
+- Deletes are admin-only. `deleteMyPost` records Server Action delete success / denied / already-missing results to `auditLogs`; the successful delete and audit write happen in one Firestore batch.
 - `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below
+
+## `auditLogs/{autoId}` (Admin operation audit trail)
+
+Written by Server Actions via Admin SDK and viewed at `/admin/audit`.
+Entries are append-only from the client perspective and denormalize the actor
+and target snapshot so a deleted target can still be identified.
+
+| Field                                                     | Type      | Notes                                            |
+| --------------------------------------------------------- | --------- | ------------------------------------------------ |
+| `action`                                                  | string    | Currently `"post.delete"`                       |
+| `result`                                                  | string    | `"success"`, `"denied"`, or `"not_found"`       |
+| `actorUid`, `actorName`, `actorEmail`, `actorIsAdmin`     | mixed     | Session snapshot of the caller                  |
+| `targetType`, `targetId`, `targetSlug`, `targetTitle`     | mixed     | Deleted / attempted target snapshot             |
+| `targetStatus`, `targetOwnerUid`, `targetOwnerName`       | mixed     | Present when the post existed at delete time    |
+| `metadata`                                                | object    | Small structured details, e.g. denial reason    |
+| `createdAt`                                               | Timestamp | Server timestamp                                |
+
+**Rules**: admin read; no client write. Server writes bypass rules through Admin SDK.
 
 ## `qa/{qaId}` (Community Q&A)
 

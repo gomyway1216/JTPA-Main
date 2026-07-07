@@ -1074,6 +1074,7 @@
       "about": "ベイエリアAI勉強会とは",
       "users": "ユーザー",
       "errors": "エラーログ",
+      "audit": "監査ログ",
       "help": "ヘルプ"
     },
     "common": {
@@ -1439,6 +1440,12 @@
       "empty": "エラーログはまだありません。",
       "noMessage": "(メッセージなし)",
       "stackTrace": "スタックトレース"
+    },
+    "audit": {
+      "metadataTitle": "監査ログ",
+      "title": "監査ログ",
+      "description": "記事削除などの破壊的操作と拒否された操作の記録です。最新 {count} 件。",
+      "empty": "監査ログはまだありません。"
     },
     "help": {
       "metadataTitle": "管理者ヘルプ",

@@ -22,6 +22,10 @@ const docGetMock = vi.fn();
 const docUpdateMock = vi.fn();
 const docDeleteMock = vi.fn();
 const userGetMock = vi.fn();
+const auditAddMock = vi.fn();
+const batchDeleteMock = vi.fn();
+const batchSetMock = vi.fn();
+const batchCommitMock = vi.fn();
 const storageFileDeleteMock = vi.fn();
 const adminNewPostMock = vi.fn();
 const decisionMock = vi.fn();
@@ -79,10 +83,24 @@ vi.mock("@/lib/firebase/admin", () => {
   function usersCollection() {
     return { doc: () => ({ get: () => userGetMock() }) };
   }
+  function auditLogsCollection() {
+    return {
+      add: (...args: unknown[]) => auditAddMock(...args),
+      doc: () => ({ path: "auditLogs/generated" }),
+    };
+  }
   return {
     adminDb: () => ({
-      collection: (name: string) =>
-        name === "posts" ? postsCollection() : usersCollection(),
+      collection: (name: string) => {
+        if (name === "posts") return postsCollection();
+        if (name === "auditLogs") return auditLogsCollection();
+        return usersCollection();
+      },
+      batch: () => ({
+        delete: (...args: unknown[]) => batchDeleteMock(...args),
+        set: (...args: unknown[]) => batchSetMock(...args),
+        commit: () => batchCommitMock(),
+      }),
     }),
     adminStorage: () => ({
       bucket: () => ({
@@ -144,6 +162,8 @@ beforeEach(() => {
   addMock.mockResolvedValue({ id: "new-post-id" });
   docUpdateMock.mockResolvedValue(undefined);
   docDeleteMock.mockResolvedValue(undefined);
+  auditAddMock.mockResolvedValue({ id: "audit-1" });
+  batchCommitMock.mockResolvedValue(undefined);
   storageFileDeleteMock.mockResolvedValue(undefined);
   adminNewPostMock.mockResolvedValue(undefined);
   decisionMock.mockResolvedValue(undefined);
@@ -344,33 +364,89 @@ describe("updateMyPost — author intent → status", () => {
 });
 
 describe("deleteMyPost", () => {
-  it("treats an already-missing doc as success (idempotent)", async () => {
+  it("refuses even the owning author and records a denied audit log", async () => {
+    await expectError(deleteMyPost("p1"), "削除する権限");
+    expect(docGetMock).not.toHaveBeenCalled();
+    expect(docDeleteMock).not.toHaveBeenCalled();
+    expect(auditAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "post.delete",
+        result: "denied",
+        actorUid: "u1",
+        actorIsAdmin: false,
+        targetType: "post",
+        targetId: "p1",
+        metadata: { reason: "admin_required" },
+      }),
+    );
+  });
+
+  it("admin treats an already-missing doc as success and records it", async () => {
+    requireUserMock.mockResolvedValueOnce({
+      uid: "admin-1",
+      displayName: "Admin",
+      photoURL: null,
+      email: "admin@x",
+      isAdmin: true,
+      isEditor: false,
+      isContributor: false,
+    });
     docGetMock.mockResolvedValueOnce({ exists: false });
     await expect(deleteMyPost("p1")).resolves.toEqual({ ok: true });
     expect(docDeleteMock).not.toHaveBeenCalled();
+    expect(auditAddMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "post.delete",
+        result: "not_found",
+        actorUid: "admin-1",
+        actorIsAdmin: true,
+        targetId: "p1",
+      }),
+    );
   });
 
-  it("refuses a non-owner non-admin delete", async () => {
-    docGetMock.mockResolvedValueOnce({
-      exists: true,
-      data: () => ({ authorUid: "someone-else", slug: "s", status: "draft" }),
+  it("admin deletes the doc, records an audit log, sweeps the cover image, and revalidates the detail route", async () => {
+    requireUserMock.mockResolvedValueOnce({
+      uid: "admin-1",
+      displayName: "Admin",
+      photoURL: null,
+      email: "admin@x",
+      isAdmin: true,
+      isEditor: false,
+      isContributor: false,
     });
-    await expectError(deleteMyPost("p1"), "削除する権限");
-    expect(docDeleteMock).not.toHaveBeenCalled();
-  });
-
-  it("deletes the doc, sweeps the cover image, and revalidates the detail route", async () => {
     docGetMock.mockResolvedValueOnce({
       exists: true,
       data: () => ({
         authorUid: "u1",
+        authorName: "Alice",
+        title: "Hello",
         slug: "hello",
         status: "published",
         coverImage: { path: "posts/p1/cover.png", url: "https://x/c.png" },
       }),
     });
     await expect(deleteMyPost("p1")).resolves.toEqual({ ok: true });
-    expect(docDeleteMock).toHaveBeenCalledTimes(1);
+    expect(docDeleteMock).not.toHaveBeenCalled();
+    expect(auditAddMock).not.toHaveBeenCalled();
+    expect(batchDeleteMock).toHaveBeenCalledTimes(1);
+    expect(batchSetMock).toHaveBeenCalledWith(
+      { path: "auditLogs/generated" },
+      expect.objectContaining({
+        action: "post.delete",
+        result: "success",
+        actorUid: "admin-1",
+        actorIsAdmin: true,
+        targetType: "post",
+        targetId: "p1",
+        targetSlug: "hello",
+        targetTitle: "Hello",
+        targetStatus: "published",
+        targetOwnerUid: "u1",
+        targetOwnerName: "Alice",
+      }),
+    );
+    expect(batchCommitMock).toHaveBeenCalledTimes(1);
     expect(storageFileDeleteMock).toHaveBeenCalledWith("posts/p1/cover.png");
     // The now-gone detail route must not keep serving a cached 200.
     expect(revalidatePathMock).toHaveBeenCalledWith("/blog/hello");

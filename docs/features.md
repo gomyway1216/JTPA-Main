@@ -38,7 +38,7 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 | Submit project | `/projects/new` | Creates `projects/{id}` with `status: pending` |
 | Manage own projects | `/my/projects`, `/my/projects/[id]/edit` | Editing flips status back to `pending` for re-review |
 | Submit blog post | `/blog/new` | Creates `posts/{id}` with `status: draft` or `pending`; Markdown body supports image file select / drag-drop / paste uploads |
-| Manage own posts | `/my/posts`, `/my/posts/[id]/edit` | Save as draft or resubmit for review |
+| Manage own posts | `/my/posts`, `/my/posts/[id]/edit` | Save as draft or resubmit for review; deletion is admin-only |
 | Post Q&A | `/qa/new` | Lands directly as `published` (no review) |
 | Manage own Q&A | `/my/qa`, `/qa/[slug]/edit` | |
 | Submit guide | `/guide/new` | Creates `guides/{id}` with status `pending` for plain users (admin review queue); `published` directly for admin / editor / `contributor` |
@@ -62,12 +62,13 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Create event | `/admin/events/new` | admin | |
 | Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, set QR check-in window, link a standalone report article, define survey fields |
 | Project admin | `/admin/projects` | admin | Approve / reject pending submissions; edit, archive / republish, or delete projects from any status |
-| Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status |
+| Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status; deletes write an audit log |
 | Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list; manually toggle attendance per RSVP; add attended rows for existing users or guests |
 | Event check-in | `/admin/events/[id]/checkin` | admin | Generate/rotate check-in token, view / print / screen-display QR, show RSVP / attendance totals |
 | Guides | `/admin/guides` | admin + editor | Review queue for pending community guides (approve auto-promotes the author to `contributor`); plus create / edit / publish / delete any guide |
 | About | `/admin/about` | admin | Edit `sitePages/about` |
 | Users / roles | `/admin/users` | admin | Grant or revoke `admin` / `editor` claims, edit cumulative event attendance counts; opt-in-only email CSV export |
+| Audit logs | `/admin/audit` | admin | View destructive operation audit entries, currently blog post delete success / denied / missing-doc records |
 | Admin help | `/admin/help` | admin + editor | In-app operations guide, linked from `/admin` sidebar |
 | Poll archive | (no dedicated UI) | admin | `setPollStatus` Server Action flips a poll to `archived` to hide from `/poll` |
 
@@ -79,6 +80,7 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | `src/lib/comments-parent.ts` | Maps `parentType` → Firestore collection name, public URL prefix, and "is this parent publicly visible?" check |
 | `src/lib/check-in.ts` | Check-in token generation (16 chars from a confusable-free alphabet), validity window (4h before / 6h after the event), QR-payload URL builder |
 | `src/lib/data/serialize.ts` | `plainify()` — converts Admin SDK Timestamps to plain objects so Server → Client component handoff doesn't throw |
+| `src/lib/data/audit-logs.ts` | Server-only audit-log writer / reader for high-impact operations such as blog post deletion |
 | `src/lib/notifications.ts` | Enqueues docs into `mail/{autoId}` for the Trigger Email extension (Resend SMTP, sending from `JTPA <noreply@bayarea-ai.com>`). `resolveAdminRecipients()` merges the `ADMIN_NOTIFICATION_EMAILS` env var with every admin / editor user from Firebase Auth, cached 5 min. |
 | `src/lib/rsvp-counters.ts` | Pure-function RSVP counter math, unit-tested separately from `cancelRsvp` |
 | `src/components/markdown/MarkdownBody.tsx` | Shared Markdown renderer (GFM, syntax highlighting, heading demotion, external links open in new tab) |

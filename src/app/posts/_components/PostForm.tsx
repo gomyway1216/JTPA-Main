@@ -613,7 +613,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
                   ? t("save")
                   : t("updateForReview")}
         </button>
-        {mode === "edit" && (
+        {mode === "edit" && user.isAdmin && (
           <button
             type="button"
             disabled={pending}
