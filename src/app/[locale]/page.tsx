@@ -412,7 +412,8 @@ export default async function HomePage() {
                 : null;
               const isReport = Boolean(reportPost);
               const title = reportContent?.title ?? event.title;
-              const description = reportContent?.excerpt ?? event.description;
+              const description =
+                reportContent?.excerpt ?? stripMarkdown(event.description);
               const image = reportPost?.coverImage ?? event.coverImage;
               const href = reportPost
                 ? `/blog/${reportPost.slug}`
