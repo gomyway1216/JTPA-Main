@@ -156,7 +156,9 @@
     "noPast": "過去のイベントはまだありません。",
     "venue": "会場あり",
     "rsvpCount": "{count} / {capacity} 参加予定",
-    "capacityUnknown": "—"
+    "capacityUnknown": "—",
+    "reportCta": "開催報告",
+    "openEvent": "{title} の詳細を開く"
   },
   "ShowcasePage": {
     "metadataTitle": "AIプロジェクト | ベイエリアAI勉強会",

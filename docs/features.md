@@ -8,7 +8,7 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 |---|---|---|---|
 | Home | `/` | `events` (next 3) + `projects` (latest 6 approved) | Server Component, `force-dynamic` |
 | About | `/about` | `sitePages/about` (falls back to hardcoded defaults) | Admin-editable Markdown |
-| Event list | `/events` | `events` where `status in (published, past)` and not members-only | Hides `members_only` from anonymous visitors |
+| Event list | `/events` | `events` where `status in (published, past)` and not members-only; optional `posts` report lookup | Hides `members_only` from anonymous visitors; cards show a report button when `reportPostSlug` points at a published article |
 | Event detail | `/events/[slug]` | `events`, optional `posts` report, `events/{id}/presentations` | Past events hide RSVP form; if `reportPostSlug` points at a published article, the page links to that standalone report |
 | Showcase list | `/showcase` | `projects` where `status == approved` | Thumbnail fallback to first screenshot |
 | Showcase detail | `/showcase/[slug]` | `projects`, `comments`, `likes` | Comments visible to all; only signed-in can post |
