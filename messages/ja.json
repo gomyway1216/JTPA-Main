@@ -95,7 +95,13 @@
     "noProjects": "掲載中のプロジェクトはまだありません。",
     "submitProjectPrefix": "作っている AI プロジェクトがあれば",
     "submitProjectLink": "投稿",
-    "submitProjectSuffix": "してみませんか？"
+    "submitProjectSuffix": "してみませんか？",
+    "recentReports": "最近の開催報告・過去イベント",
+    "recentReportsDescription": "参加前後に雰囲気が分かるよう、直近の開催報告や終了したイベントをまとめています。",
+    "recentReportBadge": "開催報告",
+    "recentPastEventBadge": "過去イベント",
+    "noRecentReports": "最近の開催報告・過去イベントはまだありません。",
+    "noRecentReportsHint": "イベント開催後にこちらへ表示されます。"
   },
   "NotFound": {
     "title": "ページが見つかりません — JTPA",
@@ -158,7 +164,9 @@
     "rsvpCount": "{count} / {capacity} 参加予定",
     "capacityUnknown": "—",
     "reportCta": "開催報告",
-    "openEvent": "{title} の詳細を開く"
+    "openEvent": "{title} の詳細を開く",
+    "reportBadge": "開催報告",
+    "readReport": "開催報告を読む"
   },
   "ShowcasePage": {
     "metadataTitle": "AIプロジェクト | ベイエリアAI勉強会",
@@ -399,6 +407,12 @@
   "PostForm": {
     "imageTooLarge": "画像サイズは 5MB 以下にしてください",
     "imageType": "PNG / JPEG / WebP / GIF のいずれかを選択してください",
+    "uploadImage": "画像を本文に挿入",
+    "imageHint": "ドラッグ&ドロップ / ペーストも可 (PNG / JPEG / WebP / GIF、5MB以下)",
+    "waitForUpload": "前のアップロードが完了するまでお待ちください",
+    "uploadingCount": "{count} 件アップロード中...",
+    "uploadedCount": "{count} 件アップロードしました",
+    "imageUploadFailed": "画像のアップロードに失敗しました",
     "uploadFailed": "アップロード失敗",
     "saveFailed": "保存に失敗しました",
     "save": "保存",

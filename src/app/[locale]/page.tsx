@@ -11,13 +11,19 @@ import { loginHref } from "@/i18n/paths";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   listApprovedProjectsForLocaleCached,
+  listPastEventsCached,
   listUpcomingEventsCached,
 } from "@/lib/data/cached";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedProjectContent } from "@/lib/localized-content";
+import { publishedReportPostsBySlug } from "@/lib/event-report-posts";
+import { reportPostForEvent } from "@/lib/event-report-utils";
+import {
+  getLocalizedPostContent,
+  getLocalizedProjectContent,
+} from "@/lib/localized-content";
 import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 import { eventTimeZone } from "@/lib/time-zones";
-import type { LocationType } from "@/lib/types";
+import type { EventDoc, LocationType } from "@/lib/types";
 import { formatDateTime, stripMarkdown } from "@/lib/utils";
 
 // The route still renders per request (the root layout reads the session
@@ -53,18 +59,34 @@ export async function generateMetadata({
   };
 }
 
+function visibleTo(signedIn: boolean) {
+  return (event: EventDoc) =>
+    signedIn || event.visibility !== "members_only";
+}
+
 export default async function HomePage() {
   const locale = await getLocale();
   const t = await getTranslations("Home");
   const common = await getTranslations("Common");
-  const [events, projects, user] = await Promise.all([
-    listUpcomingEventsCached(3).catch(() => []),
+  const [upcomingRaw, pastRaw, projects, user] = await Promise.all([
+    listUpcomingEventsCached(6).catch(() => []),
+    listPastEventsCached(6).catch(() => []),
     listApprovedProjectsForLocaleCached(locale, 6).catch(() => []),
     getSessionUser(),
   ]);
-  const ownerProfiles = await getPublicProfilesByUids(
-    projects.map((p) => p.ownerUid),
-  ).catch(() => new Map());
+  const signedIn = !!user;
+  const events = upcomingRaw.filter(visibleTo(signedIn)).slice(0, 3);
+  const recentPastEvents = pastRaw.filter(visibleTo(signedIn)).slice(0, 3);
+  const [ownerProfiles, reportPostBySlug] = await Promise.all([
+    getPublicProfilesByUids(projects.map((p) => p.ownerUid)).catch(
+      () => new Map(),
+    ),
+    publishedReportPostsBySlug(recentPastEvents).catch(() => new Map()),
+  ]);
+  const recentPastItems = recentPastEvents.map((event) => ({
+    event,
+    reportPost: reportPostForEvent(reportPostBySlug, event),
+  }));
   const profileSetupHref = loginHref("/my/profile", locale);
 
   return (
@@ -351,6 +373,98 @@ export default async function HomePage() {
                           ))}
                         </div>
                       )}
+                    </div>
+                  </Link>
+                </FadeUp>
+              );
+            })}
+          </ul>
+        )}
+      </FadeUp>
+
+      <FadeUp as="section" className="space-y-6">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+          <div>
+            <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+              {t("recentReports")}
+            </h2>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              {t("recentReportsDescription")}
+            </p>
+          </div>
+          <Link
+            href="/events"
+            className="shrink-0 text-sm font-medium text-accent hover:underline"
+          >
+            {common("viewAll")}
+          </Link>
+        </div>
+        {recentPastItems.length === 0 ? (
+          <EmptyState
+            message={t("noRecentReports")}
+            hint={t("noRecentReportsHint")}
+          />
+        ) : (
+          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {recentPastItems.map(({ event, reportPost }, i) => {
+              const reportContent = reportPost
+                ? getLocalizedPostContent(reportPost, locale)
+                : null;
+              const isReport = Boolean(reportPost);
+              const title = reportContent?.title ?? event.title;
+              const description = reportContent?.excerpt ?? event.description;
+              const image = reportPost?.coverImage ?? event.coverImage;
+              const href = reportPost
+                ? `/blog/${reportPost.slug}`
+                : `/events/${event.slug}`;
+              return (
+                <FadeUp
+                  key={`${isReport ? "report" : "event"}-${event.id}`}
+                  as="li"
+                  delay={i}
+                  className="flex"
+                >
+                  <Link
+                    href={href}
+                    className={`${interactiveCardClass} flex h-full w-full flex-col overflow-hidden`}
+                  >
+                    {image?.url && (
+                      <Image
+                        src={image.url}
+                        alt={common("coverImageAlt", { title })}
+                        width={1600}
+                        height={900}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="aspect-[16/9] w-full object-cover"
+                      />
+                    )}
+                    <div className="flex flex-1 flex-col p-5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={
+                            isReport
+                              ? "rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:bg-indigo-900 dark:text-indigo-200"
+                              : "rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                          }
+                        >
+                          {isReport
+                            ? t("recentReportBadge")
+                            : t("recentPastEventBadge")}
+                        </span>
+                        <p className="text-xs uppercase tracking-wide text-zinc-500">
+                          {formatDateTime(
+                            event.startAt,
+                            locale,
+                            eventTimeZone(event),
+                          )}
+                        </p>
+                      </div>
+                      <h3 className="mt-2 line-clamp-2 text-lg font-semibold">
+                        {title}
+                      </h3>
+                      <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
+                        {description}
+                      </p>
                     </div>
                   </Link>
                 </FadeUp>
