@@ -133,6 +133,9 @@ export function EventForm({
   const [subImages, setSubImages] = useState<ProjectAsset[]>(
     initialSubImages,
   );
+  const [reportPostSlug, setReportPostSlug] = useState(
+    event?.reportPostSlug ?? "",
+  );
   const savedImagePathsRef = useRef(
     projectAssetPathSet([event?.coverImage, ...initialSubImages]),
   );
@@ -299,6 +302,7 @@ export function EventForm({
           ),
           coverImage,
           subImages,
+          reportPostSlug: reportPostSlug.trim() || undefined,
           surveyFields: fields,
         };
         const res =
@@ -595,6 +599,20 @@ export function EventForm({
           <option value="public">{t("visibilityOption.public")}</option>
           <option value="members_only">{t("visibilityOption.members_only")}</option>
         </select>
+      </Field>
+      <Field
+        label={t("reportPostSlug")}
+        htmlFor="event-report-post-slug"
+        hint={t("reportPostSlugHint")}
+      >
+        <input
+          id="event-report-post-slug"
+          type="text"
+          value={reportPostSlug}
+          onChange={(e) => setReportPostSlug(e.target.value)}
+          placeholder={t("reportPostSlugPlaceholder")}
+          className={inputClass}
+        />
       </Field>
 
       <Field label={t("cover")}>

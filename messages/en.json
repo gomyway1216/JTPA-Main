@@ -257,6 +257,7 @@
     "capacityUnknown": "—",
     "cancelledNotice": "This event has been cancelled.",
     "endedNotice": "This event has ended.",
+    "reportLabel": "Event report",
     "loginRequired": "Log in to register for this event."
   },
   "Rsvp": {
@@ -1268,6 +1269,9 @@
         "public": "Public (viewable without login)",
         "members_only": "Members only (login required)"
       },
+      "reportPostSlug": "Report article slug",
+      "reportPostSlugPlaceholder": "e.g. ai-study-2-report",
+      "reportPostSlugHint": "Create the report as a standalone article, then enter only the slug at the end of its URL. Unpublished articles are not shown publicly.",
       "cover": "Cover image (optional, 10MB max, PNG/JPEG/WebP/GIF)",
       "coverPreviewAlt": "Cover image preview for {title}",
       "coverFallbackTitle": "event",
@@ -1613,6 +1617,7 @@
     "presentationNotFound": "Presentation material was not found.",
     "presentationForbidden": "You do not have permission to edit this presentation material.",
     "slugTaken": "Slug \"{slug}\" is already in use.",
+    "reportPostNotFound": "Report article slug \"{slug}\" was not found.",
     "eventNotFoundDeleted": "The event was not found. It may have been deleted.",
     "invalidEventDateTime": "The start/end date-time and time zone combination is invalid.",
     "eventCancelledRsvp": "This event has been cancelled, so registration is closed.",
