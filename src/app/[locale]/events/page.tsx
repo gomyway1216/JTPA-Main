@@ -83,7 +83,7 @@ export default async function EventsPage() {
     return (
       <FadeUp key={e.id} as="li" delay={i} className="block">
         <article
-          className={`${interactiveCardClass} relative flex flex-col gap-0 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 sm:flex-row`}
+          className={`${interactiveCardClass} relative flex flex-col gap-0 overflow-hidden sm:flex-row`}
         >
           {e.coverImage?.url && (
             // Full-width strip on phones, fixed 192px rail from sm:.
@@ -130,7 +130,7 @@ export default async function EventsPage() {
           <Link
             href={`/events/${e.slug}`}
             aria-label={t("openEvent", { title: e.title })}
-            className="absolute inset-0 z-10 rounded-[inherit] focus:outline-none"
+            className="absolute inset-0 z-10 rounded-[inherit] focus:outline-none focus:ring-2 focus:ring-indigo-500"
           >
             <span className="sr-only">{t("openEvent", { title: e.title })}</span>
           </Link>
