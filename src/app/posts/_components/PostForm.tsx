@@ -296,12 +296,13 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     const cursorEnd = textarea?.selectionEnd ?? null;
 
     try {
-      const inserts: string[] = [];
-      for (const file of files) {
-        const asset = await uploadOne(file, () => undefined);
-        const altRaw = file.name.replace(/\.[^.]+$/, "");
-        inserts.push(`\n![${escapeAlt(altRaw)}](${asset.url})\n`);
-      }
+      const inserts = await Promise.all(
+        files.map(async (file) => {
+          const asset = await uploadOne(file, () => undefined);
+          const altRaw = file.name.replace(/\.[^.]+$/, "");
+          return `\n![${escapeAlt(altRaw)}](${asset.url})\n`;
+        }),
+      );
       const block = inserts.join("");
 
       if (textarea && cursorStart !== null && cursorEnd !== null) {
