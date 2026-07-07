@@ -17,11 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AdminAuditPage() {
   const user = await getSessionUser();
   if (!user?.isAdmin) return redirectToLocalizedPath("/admin/guides");
-  const [locale, t] = await Promise.all([
+  const [locale, t, logs] = await Promise.all([
     getLocale(),
     getTranslations("Admin.audit"),
+    listAuditLogs(),
   ]);
-  const logs = await listAuditLogs();
 
   return (
     <div className="space-y-4">
