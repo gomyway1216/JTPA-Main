@@ -15,7 +15,7 @@ import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
 import {
-  deleteMyPost,
+  deletePost,
   submitPost,
   updateMyPost,
   type PostFormInput,
@@ -401,7 +401,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     setError(null);
     startTransition(async () => {
       try {
-        const res = await deleteMyPost(post.id);
+        const res = await deletePost(post.id);
         if (!res.ok) {
           // Surface the real reason (e.g. permission) instead of the masked
           // generic Server Action crash; navigate away only on success.

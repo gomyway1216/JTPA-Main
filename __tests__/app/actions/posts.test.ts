@@ -113,7 +113,7 @@ vi.mock("@/lib/firebase/admin", () => {
 import {
   archivePost,
   decidePost,
-  deleteMyPost,
+  deletePost,
   publishPost,
   submitPost,
   updateMyPost,
@@ -363,9 +363,9 @@ describe("updateMyPost — author intent → status", () => {
   });
 });
 
-describe("deleteMyPost", () => {
+describe("deletePost", () => {
   it("refuses even the owning author and records a denied audit log", async () => {
-    await expectError(deleteMyPost("p1"), "削除する権限");
+    await expectError(deletePost("p1"), "削除する権限");
     expect(docGetMock).not.toHaveBeenCalled();
     expect(docDeleteMock).not.toHaveBeenCalled();
     expect(auditAddMock).toHaveBeenCalledWith(
@@ -392,7 +392,7 @@ describe("deleteMyPost", () => {
       isContributor: false,
     });
     docGetMock.mockResolvedValueOnce({ exists: false });
-    await expect(deleteMyPost("p1")).resolves.toEqual({ ok: true });
+    await expect(deletePost("p1")).resolves.toEqual({ ok: true });
     expect(docDeleteMock).not.toHaveBeenCalled();
     expect(auditAddMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -426,7 +426,7 @@ describe("deleteMyPost", () => {
         coverImage: { path: "posts/p1/cover.png", url: "https://x/c.png" },
       }),
     });
-    await expect(deleteMyPost("p1")).resolves.toEqual({ ok: true });
+    await expect(deletePost("p1")).resolves.toEqual({ ok: true });
     expect(docDeleteMock).not.toHaveBeenCalled();
     expect(auditAddMock).not.toHaveBeenCalled();
     expect(batchDeleteMock).toHaveBeenCalledTimes(1);

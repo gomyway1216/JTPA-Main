@@ -221,7 +221,7 @@ Community blog entries. Members can submit posts; admins approve before public r
 - Public reads only when `status == "published"` (drafts/pending/rejected stay visible to the author + admins)
 - Authors create with `status in ("draft", "pending")`; admins approve to flip to `published`
 - Owner edits can land in `draft` (save without resubmitting) or `pending` (resubmit for review); never directly in published/rejected/archived. `authorUid` and `reviewerUid` are immutable for owners. Admins can change anything
-- Deletes are admin-only. `deleteMyPost` records Server Action delete success / denied / already-missing results to `auditLogs`; the successful delete and audit write happen in one Firestore batch.
+- Deletes are admin-only. `deletePost` records Server Action delete success / denied / already-missing results to `auditLogs`; the successful delete and audit write happen in one Firestore batch.
 - `comments/{commentId}` and `likes/{uid}` subcollections follow the shared pattern below
 
 ## `auditLogs/{autoId}` (Admin operation audit trail)

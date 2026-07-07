@@ -11,7 +11,7 @@ type AuditTarget = {
   id: string;
   slug?: string | null;
   title?: string | null;
-  status?: string | null;
+  status?: AuditLogDoc["targetStatus"];
   ownerUid?: string | null;
   ownerName?: string | null;
 };

@@ -666,7 +666,7 @@ export interface AuditLogDoc {
   targetId: string;
   targetSlug: string | null;
   targetTitle: string | null;
-  targetStatus: string | null;
+  targetStatus: PostStatus | null;
   targetOwnerUid: string | null;
   targetOwnerName: string | null;
   metadata?: Record<string, string | number | boolean | null>;

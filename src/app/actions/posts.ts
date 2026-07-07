@@ -311,7 +311,7 @@ export async function updateMyPost(
 
 // ---------- delete (admin-only) ----------
 
-export async function deleteMyPost(postId: string): Promise<PostSaveResult> {
+export async function deletePost(postId: string): Promise<PostSaveResult> {
   const user = await requireUser();
   if (!user.isAdmin) {
     await recordAuditLog({
@@ -510,7 +510,7 @@ export async function decidePost(
 
 // Not wired into the UI yet — kept ready for the published-list archive
 // button (planned follow-up) so older posts can be retired without losing
-// the doc (vs deleteMyPost which removes it entirely).
+// the doc (vs deletePost which removes it entirely).
 export async function archivePost(postId: string): Promise<PostSaveResult> {
   await requireAdmin();
   const ref = adminDb().collection("posts").doc(postId);
