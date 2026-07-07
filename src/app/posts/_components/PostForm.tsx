@@ -8,8 +8,9 @@ import {
   uploadBytesResumable,
 } from "firebase/storage";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
+import type { RefMDEditor } from "@uiw/react-md-editor";
 import "@uiw/react-md-editor/markdown-editor.css";
 import "@uiw/react-markdown-preview/markdown.css";
 
@@ -27,6 +28,7 @@ import {
   inputClass,
   primaryButtonClass,
   secondaryButtonClass,
+  secondaryButtonClassSm,
 } from "@/components/forms/styles";
 import { localizedPath } from "@/i18n/paths";
 import {
@@ -74,6 +76,15 @@ function stringToTags(s: string): string[] {
 
 function tagsToString(tags: string[]): string {
   return tags.join(", ");
+}
+
+function pickImageFiles(files: FileList | File[]): File[] {
+  const allow = ALLOWED_MIME as readonly string[];
+  return Array.from(files).filter((file) => allow.includes(file.type));
+}
+
+function escapeAlt(s: string): string {
+  return s.replace(/\\/g, "\\\\").replace(/]/g, "\\]");
 }
 
 function initialPostLocales(
@@ -179,14 +190,33 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     post?.coverImage,
   );
   const [coverProgress, setCoverProgress] = useState<number | null>(null);
+  const [bodyUploading, setBodyUploading] = useState(false);
+  const [bodyUploadInfo, setBodyUploadInfo] = useState<string | null>(null);
+  const [isDraggingBodyImage, setIsDraggingBodyImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const activeContent = localizedContent[activeLocale];
+  const bodyFileInputRef = useRef<HTMLInputElement | null>(null);
+  const editorRef = useRef<RefMDEditor | null>(null);
+  const bodyUploadingRef = useRef(false);
 
   function updateActiveContent(patch: Partial<LocalizedPostContent>) {
     setLocalizedContent((cur) => ({
       ...cur,
       [activeLocale]: { ...cur[activeLocale], ...patch },
+    }));
+  }
+
+  function updateBodyForLocale(
+    contentLocale: ContentLocale,
+    updater: (prev: string) => string,
+  ) {
+    setLocalizedContent((cur) => ({
+      ...cur,
+      [contentLocale]: {
+        ...cur[contentLocale],
+        body: updater(cur[contentLocale].body),
+      },
     }));
   }
 
@@ -248,6 +278,94 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     }
   }
 
+  async function uploadBodyImages(files: File[]) {
+    if (files.length === 0) return;
+    if (bodyUploadingRef.current) {
+      setError(t("waitForUpload"));
+      return;
+    }
+
+    const uploadLocale = activeLocale;
+    bodyUploadingRef.current = true;
+    setBodyUploading(true);
+    setBodyUploadInfo(t("uploadingCount", { count: files.length }));
+    setError(null);
+
+    const textarea = editorRef.current?.textarea ?? null;
+    const cursorStart = textarea?.selectionStart ?? null;
+    const cursorEnd = textarea?.selectionEnd ?? null;
+
+    try {
+      const inserts = await Promise.all(
+        files.map(async (file) => {
+          const asset = await uploadOne(file, () => undefined);
+          const altRaw = file.name.replace(/\.[^.]+$/, "");
+          return `\n![${escapeAlt(altRaw)}](${asset.url})\n`;
+        }),
+      );
+      const block = inserts.join("");
+
+      if (textarea && cursorStart !== null && cursorEnd !== null) {
+        updateBodyForLocale(uploadLocale, (prev) => {
+          const start = Math.min(cursorStart, prev.length);
+          const end = Math.min(cursorEnd, prev.length);
+          return prev.slice(0, start) + block + prev.slice(end);
+        });
+        requestAnimationFrame(() => {
+          textarea.focus();
+          const safeStart = Math.min(cursorStart, textarea.value.length);
+          const pos = safeStart + block.length;
+          textarea.setSelectionRange(pos, pos);
+        });
+      } else {
+        updateBodyForLocale(
+          uploadLocale,
+          (prev) => (prev.endsWith("\n") ? prev : `${prev}\n\n`) + block,
+        );
+      }
+
+      setBodyUploadInfo(t("uploadedCount", { count: files.length }));
+      setTimeout(() => setBodyUploadInfo(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("imageUploadFailed"));
+      setBodyUploadInfo(null);
+    } finally {
+      bodyUploadingRef.current = false;
+      setBodyUploading(false);
+    }
+  }
+
+  function handleBodyImagePick(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    uploadBodyImages(pickImageFiles(files));
+    e.target.value = "";
+  }
+
+  function handleBodyDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDraggingBodyImage(false);
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    uploadBodyImages(pickImageFiles(files));
+  }
+
+  function handleBodyPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (const item of Array.from(items)) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    const images = pickImageFiles(files);
+    if (images.length === 0) return;
+    e.preventDefault();
+    uploadBodyImages(images);
+  }
+
   function submit(intent: "draft" | "pending") {
     setError(null);
     startTransition(async () => {
@@ -298,7 +416,7 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
     });
   }
 
-  const uploading = coverProgress !== null;
+  const uploading = coverProgress !== null || bodyUploading;
 
   return (
     <form
@@ -365,8 +483,48 @@ export function PostForm({ mode, user, post, returnTo = "my" }: Props) {
         </Field>
 
         <Field label={t("body")} required>
-          <div data-color-mode={colorMode}>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={pending || uploading}
+              onClick={() => bodyFileInputRef.current?.click()}
+              className={secondaryButtonClassSm}
+            >
+              {t("uploadImage")}
+            </button>
+            <input
+              ref={bodyFileInputRef}
+              type="file"
+              accept={ACCEPT}
+              multiple
+              hidden
+              disabled={pending || uploading}
+              onChange={handleBodyImagePick}
+            />
+            <span className="text-xs text-zinc-500">
+              {t("imageHint")}
+            </span>
+          </div>
+          {bodyUploadInfo && (
+            <p className="mb-2 text-xs text-zinc-500">{bodyUploadInfo}</p>
+          )}
+          <div
+            data-color-mode={colorMode}
+            onDragOver={(e) => {
+              e.preventDefault();
+              if (!isDraggingBodyImage) setIsDraggingBodyImage(true);
+            }}
+            onDragLeave={() => setIsDraggingBodyImage(false)}
+            onDrop={handleBodyDrop}
+            onPaste={handleBodyPaste}
+            className={
+              isDraggingBodyImage
+                ? "rounded outline-2 outline-dashed outline-indigo-400"
+                : undefined
+            }
+          >
             <MDEditor
+              ref={editorRef}
               value={activeContent.body}
               onChange={(v) => updateActiveContent({ body: v ?? "" })}
               height={500}

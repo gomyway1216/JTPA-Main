@@ -6,9 +6,9 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 
 | Feature | URL | Backing data | Notes |
 |---|---|---|---|
-| Home | `/` | `events` (next 3) + `projects` (latest 6 approved) | Server Component, `force-dynamic` |
+| Home | `/` | `events` (next 3 + recent past 3), optional `posts` report lookup, `projects` (latest 6 approved) | Server Component, `force-dynamic`; bottom section surfaces recent event reports / past events |
 | About | `/about` | `sitePages/about` (falls back to hardcoded defaults) | Admin-editable Markdown |
-| Event list | `/events` | `events` where `status in (published, past)` and not members-only; optional `posts` report lookup | Hides `members_only` from anonymous visitors; cards show a report button when `reportPostSlug` points at a published article |
+| Event list | `/events` | `events` where `status in (published, past)` and not members-only; optional `posts` report lookup | Hides `members_only` from anonymous visitors; cards show a report button and past events also get a standalone report card when `reportPostSlug` points at a published article |
 | Event detail | `/events/[slug]` | `events`, optional `posts` report, `events/{id}/presentations` | Past events hide RSVP form; if `reportPostSlug` points at a published article, the page links to that standalone report |
 | Showcase list | `/showcase` | `projects` where `status == approved` | Thumbnail fallback to first screenshot |
 | Showcase detail | `/showcase/[slug]` | `projects`, `comments`, `likes` | Comments visible to all; only signed-in can post |
@@ -37,7 +37,7 @@ Routes under `/login`, `/my/*`, `/projects/new`, `/blog/new`, `/qa/new`. Redirec
 | Presentation upload | `/events/[slug]` (presenter section) | Direct browser → Firebase Storage upload, then Server Action records `presentations/{autoId}` metadata |
 | Submit project | `/projects/new` | Creates `projects/{id}` with `status: pending` |
 | Manage own projects | `/my/projects`, `/my/projects/[id]/edit` | Editing flips status back to `pending` for re-review |
-| Submit blog post | `/blog/new` | Creates `posts/{id}` with `status: draft` or `pending` |
+| Submit blog post | `/blog/new` | Creates `posts/{id}` with `status: draft` or `pending`; Markdown body supports image file select / drag-drop / paste uploads |
 | Manage own posts | `/my/posts`, `/my/posts/[id]/edit` | Save as draft or resubmit for review |
 | Post Q&A | `/qa/new` | Lands directly as `published` (no review) |
 | Manage own Q&A | `/my/qa`, `/qa/[slug]/edit` | |

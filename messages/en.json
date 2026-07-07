@@ -95,7 +95,13 @@
     "noProjects": "No projects are listed yet.",
     "submitProjectPrefix": "Building an AI project?",
     "submitProjectLink": "Share it",
-    "submitProjectSuffix": "with the community."
+    "submitProjectSuffix": "with the community.",
+    "recentReports": "Recent Reports and Past Events",
+    "recentReportsDescription": "See recent event reports and completed events to get a feel for the community before or after joining.",
+    "recentReportBadge": "Event report",
+    "recentPastEventBadge": "Past event",
+    "noRecentReports": "No recent reports or past events yet.",
+    "noRecentReportsHint": "Completed events will appear here after they happen."
   },
   "NotFound": {
     "title": "Page not found — JTPA",
@@ -158,7 +164,9 @@
     "rsvpCount": "{count} / {capacity} going",
     "capacityUnknown": "—",
     "reportCta": "Event report",
-    "openEvent": "Open details for {title}"
+    "openEvent": "Open details for {title}",
+    "reportBadge": "Event report",
+    "readReport": "Read report"
   },
   "ShowcasePage": {
     "metadataTitle": "AI Projects | Bay Area AI Study Group",
@@ -399,6 +407,12 @@
   "PostForm": {
     "imageTooLarge": "Image size must be 5MB or less",
     "imageType": "Choose PNG, JPEG, WebP, or GIF",
+    "uploadImage": "Insert image into body",
+    "imageHint": "Drag & drop / paste supported (PNG / JPEG / WebP / GIF, 5MB or less)",
+    "waitForUpload": "Please wait for the previous upload to finish",
+    "uploadingCount": "Uploading {count} file(s)...",
+    "uploadedCount": "Uploaded {count} file(s)",
+    "imageUploadFailed": "Failed to upload image",
     "uploadFailed": "Upload failed",
     "saveFailed": "Failed to save",
     "save": "Save",
