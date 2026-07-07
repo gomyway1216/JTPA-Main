@@ -149,6 +149,10 @@ export interface EventDoc {
   coverImage?: ProjectAsset;
   // Additional images shown on the event detail page.
   subImages?: ProjectAsset[];
+  // Optional slug of a standalone blog post used as the event report.
+  // The event detail page links to `/blog/{reportPostSlug}` only when the
+  // referenced post is published.
+  reportPostSlug?: string;
   surveyFields: SurveyField[];
   rsvpCount: number;
   presenterCount: number;

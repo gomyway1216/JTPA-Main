@@ -73,7 +73,7 @@ If both sources are empty, the notification is silently dropped (no half-formed 
 | `/admin` | Overview cards | admin |
 | `/admin/events` | Event list (with chips for メンバー限定, status badges, RSVP counts) | admin |
 | `/admin/events/new` | Create event | admin |
-| `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, define survey fields) | admin |
+| `/admin/events/[id]/edit` | Edit event (also where you publish, set members-only visibility, link a report article, define survey fields) | admin |
 | `/admin/events/[id]/checkin` | Generate / rotate the check-in token, render the QR code for the door kiosk, and show RSVP / attendance totals | admin |
 | `/admin/projects` | Pending / approved project list, with approve/reject actions | admin |
 | `/admin/posts` | Blog post review queue (pending) + published / drafts / rejected sections, with approve/reject actions inline | admin |
@@ -105,6 +105,7 @@ Same credentials story as the role scripts (ADC or `FIREBASE_SERVICE_ACCOUNT`). 
 5. Users **RSVP** at `/events/[slug]` — name auto-filled from Google account, all survey responses captured.
 6. **Presenters upload slides** below the RSVP form (own folder under `presentations/{eventId}/{uid}/...`).
 7. After the event ends, the public site automatically treats it as past (RSVP form hidden, listed under 過去のイベント). Admins can also explicitly flip status to `過去 (past)` to remove the literal "published" chip from `/admin/events`.
+8. For an after-event report, create a normal article under `/blog` / `/admin/posts`, publish it, then set the event's `開催報告記事のスラッグ` to that article slug. The event remains the event record; the report remains a standalone post linked from the event page.
 
 ### Cloning an event
 

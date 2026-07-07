@@ -9,7 +9,7 @@ Every user-visible feature in the app, the URLs that surface it, the data it rea
 | Home | `/` | `events` (next 3) + `projects` (latest 6 approved) | Server Component, `force-dynamic` |
 | About | `/about` | `sitePages/about` (falls back to hardcoded defaults) | Admin-editable Markdown |
 | Event list | `/events` | `events` where `status in (published, past)` and not members-only | Hides `members_only` from anonymous visitors |
-| Event detail | `/events/[slug]` | `events`, `events/{id}/presentations` | Past events hide RSVP form |
+| Event detail | `/events/[slug]` | `events`, optional `posts` report, `events/{id}/presentations` | Past events hide RSVP form; if `reportPostSlug` points at a published article, the page links to that standalone report |
 | Showcase list | `/showcase` | `projects` where `status == approved` | Thumbnail fallback to first screenshot |
 | Showcase detail | `/showcase/[slug]` | `projects`, `comments`, `likes` | Comments visible to all; only signed-in can post |
 | Blog list | `/blog` | `posts` where `status == published` | |
@@ -60,7 +60,7 @@ Gated by `requireAdmin()` / `requireEditor()` / `requireContributor()` in every 
 | Dashboard | `/admin` | admin | Pending projects + posts + upcoming events |
 | Events list | `/admin/events` | admin | All statuses, with 複製 (clone) action per row |
 | Create event | `/admin/events/new` | admin | |
-| Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, set QR check-in window, define survey fields |
+| Edit event | `/admin/events/[id]/edit` | admin | Publish, set visibility, set QR check-in window, link a standalone report article, define survey fields |
 | Project admin | `/admin/projects` | admin | Approve / reject pending submissions; edit, archive / republish, or delete projects from any status |
 | Post admin | `/admin/posts` | admin | Approve / reject pending blog posts; edit, archive / republish, or delete posts from any status |
 | Attendee export / attendance edit | `/admin/attendees?eventId=...` | admin | Email-copy or CSV download with survey responses; opt-in-only email recipients list; manually toggle attendance per RSVP; add attended rows for existing users or guests |

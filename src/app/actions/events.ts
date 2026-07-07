@@ -83,6 +83,9 @@ const EventInputSchema = z.object({
   checkInLateMinutes: CheckInWindowMinutesSchema.optional(),
   coverImage: AssetSchema.optional(),
   subImages: z.array(AssetSchema).default([]),
+  reportPostSlug: optionalNonEmpty(
+    z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
+  ),
   surveyFields: z.array(SurveyFieldSchema).default([]),
 });
 
@@ -118,6 +121,22 @@ async function parseEventDateTimes(parsed: {
   return { ok: true, startAt, endAt };
 }
 
+async function validateReportPostSlug(
+  slug: string | undefined,
+): Promise<EventSaveResult> {
+  if (!slug) return { ok: true };
+  const snap = await adminDb()
+    .collection("posts")
+    .where("slug", "==", slug)
+    .limit(1)
+    .get();
+  if (!snap.empty) return { ok: true };
+  return {
+    ok: false,
+    error: await actionError("reportPostNotFound", { slug }),
+  };
+}
+
 // createEvent / cloneEvent redirect on success (so they only ever *return*
 // on failure); updateEvent returns { ok: true }. Returning the error rather
 // than throwing it is what lets the real message reach the admin — Next
@@ -136,6 +155,7 @@ export async function createEvent(
   if (!dateTimes.ok) return dateTimes;
 
   const requestedSlug = parsed.slug as string | undefined;
+  const reportPostSlug = parsed.reportPostSlug as string | undefined;
   const slug = requestedSlug || slugify(parsed.title);
   // Ensure slug uniqueness
   const existing = await adminDb()
@@ -146,6 +166,8 @@ export async function createEvent(
   if (!existing.empty) {
     return { ok: false, error: await actionError("slugTaken", { slug }) };
   }
+  const reportPostResult = await validateReportPostSlug(reportPostSlug);
+  if (!reportPostResult.ok) return reportPostResult;
 
   const now = Timestamp.now();
   const ref = await adminDb().collection("events").add({
@@ -171,6 +193,7 @@ export async function createEvent(
       parsed.checkInLateMinutes ?? DEFAULT_CHECKIN_LATE_MINUTES,
     coverImage: parsed.coverImage,
     subImages: parsed.subImages,
+    reportPostSlug,
     surveyFields: parsed.surveyFields,
     rsvpCount: 0,
     presenterCount: 0,
@@ -211,6 +234,7 @@ export async function updateEvent(
   const cur = snap.data() as EventDoc;
 
   const requestedSlug = parsed.slug as string | undefined;
+  const reportPostSlug = parsed.reportPostSlug as string | undefined;
   if (requestedSlug) {
     const conflict = await adminDb()
       .collection("events")
@@ -224,6 +248,8 @@ export async function updateEvent(
       };
     }
   }
+  const reportPostResult = await validateReportPostSlug(reportPostSlug);
+  if (!reportPostResult.ok) return reportPostResult;
 
   // Capture previous event image paths so we can sweep only the removed
   // Storage objects after the Firestore write succeeds. Order matters:
@@ -263,6 +289,7 @@ export async function updateEvent(
     // Drop the legacy `coverImagePath` field so existing docs normalize
     // to the new shape on first edit (same pattern as PR #24).
     coverImagePath: FieldValue.delete(),
+    reportPostSlug: reportPostSlug ?? FieldValue.delete(),
     surveyFields: parsed.surveyFields,
     updatedAt: FieldValue.serverTimestamp(),
   });

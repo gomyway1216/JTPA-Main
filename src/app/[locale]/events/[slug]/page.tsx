@@ -10,10 +10,12 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { localizedPath, loginHref, loginPath } from "@/i18n/paths";
 import { validProjectAssets } from "@/lib/assets";
 import { getSessionUser } from "@/lib/auth/session";
+import { getPostBySlugCached } from "@/lib/data/cached";
 import { getEventBySlug } from "@/lib/data/events";
 import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
+import { getLocalizedPostContent } from "@/lib/localized-content";
 import { siteBaseUrl } from "@/lib/site";
 import {
   eventTimeZone,
@@ -141,10 +143,13 @@ export default async function EventDetailPage({
   // field on first-time RSVP — once the user has an existing RSVP doc,
   // RsvpSection prefers that value (it's the most recent confirmation
   // of what they want associated with this specific event).
-  const [myRsvp, presentations, profile] = await Promise.all([
+  const [myRsvp, presentations, profile, reportPost] = await Promise.all([
     user ? getMyRsvp(event.id, user.uid) : Promise.resolve(null),
     listPresentations(event.id).catch(() => []),
     user ? getMyProfile(user.uid).catch(() => null) : Promise.resolve(null),
+    event.reportPostSlug
+      ? getPostBySlugCached(event.reportPostSlug).catch(() => null)
+      : Promise.resolve(null),
   ]);
   // Batched public-profile read for every presenter on the agenda so
   // PresentationSection can render @usernames without per-row fetches.
@@ -163,6 +168,11 @@ export default async function EventDetailPage({
   const eventEndWithZone = eventEndZoneName
     ? `${eventEnd} (${eventEndZoneName})`
     : eventEnd;
+  const publishedReportPost =
+    reportPost?.status === "published" ? reportPost : null;
+  const reportPostContent = publishedReportPost
+    ? getLocalizedPostContent(publishedReportPost, locale)
+    : null;
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
@@ -263,6 +273,20 @@ export default async function EventDetailPage({
       <section>
         <MarkdownBody source={event.description} />
       </section>
+
+      {publishedReportPost && reportPostContent && (
+        <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="text-xs font-medium uppercase text-zinc-500">
+            {t("reportLabel")}
+          </p>
+          <Link
+            href={`/blog/${publishedReportPost.slug}`}
+            className="mt-1 inline-flex text-sm font-medium text-blue-600 hover:underline dark:text-blue-400"
+          >
+            {reportPostContent.title}
+          </Link>
+        </section>
+      )}
 
       {subImages.length > 0 && (
         <section

@@ -18,6 +18,7 @@ const redirectToLocalizedPathMock = vi.fn((path: string) => {
 const whereMock = vi.fn();
 const limitMock = vi.fn();
 const slugQueryGetMock = vi.fn();
+const postSlugQueryGetMock = vi.fn();
 const addMock = vi.fn();
 const docGetMock = vi.fn();
 const docUpdateMock = vi.fn();
@@ -54,10 +55,9 @@ vi.mock("firebase-admin/firestore", () => ({
 }));
 
 vi.mock("@/lib/firebase/admin", () => {
-  // The actions only walk the `events` collection: slug-uniqueness
-  // queries (.where().limit().get()), .add() for create/clone, and
-  // .doc(id).{get,update,delete} for the single-event paths.
-  function makeSlugQuery() {
+  // Event actions mostly walk the `events` collection. A report article
+  // slug also probes `posts` by slug so admins can't save a broken link.
+  function makeSlugQuery(getMock = slugQueryGetMock) {
     const q = {
       where: (...args: unknown[]) => {
         whereMock(...args);
@@ -67,29 +67,37 @@ vi.mock("@/lib/firebase/admin", () => {
         limitMock(n);
         return q;
       },
-      get: () => slugQueryGetMock(),
+      get: () => getMock(),
     };
     return q;
   }
   return {
     adminDb: () => ({
       collection: (name: string) => {
-        if (name !== "events") {
-          throw new Error(`unexpected collection: ${name}`);
+        if (name === "posts") {
+          return {
+            where: (...args: unknown[]) => {
+              whereMock(...args);
+              return makeSlugQuery(postSlugQueryGetMock);
+            },
+          };
         }
-        return {
-          where: (...args: unknown[]) => {
-            whereMock(...args);
-            return makeSlugQuery();
-          },
-          add: (...args: unknown[]) => addMock(...args),
-          doc: (id: string) => ({
-            id,
-            get: () => docGetMock(),
-            update: (...args: unknown[]) => docUpdateMock(...args),
-            delete: () => docDeleteMock(),
-          }),
-        };
+        if (name === "events") {
+          return {
+            where: (...args: unknown[]) => {
+              whereMock(...args);
+              return makeSlugQuery();
+            },
+            add: (...args: unknown[]) => addMock(...args),
+            doc: (id: string) => ({
+              id,
+              get: () => docGetMock(),
+              update: (...args: unknown[]) => docUpdateMock(...args),
+              delete: () => docDeleteMock(),
+            }),
+          };
+        }
+        throw new Error(`unexpected collection: ${name}`);
       },
     }),
     adminStorage: () => ({
@@ -151,6 +159,10 @@ beforeEach(() => {
   limitMock.mockReset();
   // Default: every requested slug is free.
   slugQueryGetMock.mockReset().mockResolvedValue({ empty: true, docs: [] });
+  postSlugQueryGetMock.mockReset().mockResolvedValue({
+    empty: false,
+    docs: [{ id: "post-1" }],
+  });
   addMock.mockReset().mockResolvedValue({ id: "new-event-1" });
   docGetMock.mockReset();
   docUpdateMock.mockReset().mockResolvedValue(undefined);
@@ -190,6 +202,16 @@ describe("createEvent — auth + validation", () => {
       "taken-slug",
     );
     expect(whereMock).toHaveBeenCalledWith("slug", "==", "taken-slug");
+    expect(addMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown report article slug without writing", async () => {
+    postSlugQueryGetMock.mockResolvedValueOnce({ empty: true, docs: [] });
+    await expectError(
+      createEvent(eventInput({ reportPostSlug: "missing-report" })),
+      "missing-report",
+    );
+    expect(whereMock).toHaveBeenCalledWith("slug", "==", "missing-report");
     expect(addMock).not.toHaveBeenCalled();
   });
 
@@ -260,6 +282,16 @@ describe("createEvent — happy path", () => {
     expect(payload.endAt).toEqual({
       __fromDate: "2026-06-25T03:00:00.000Z",
     });
+  });
+
+  it("stores a report article slug when the referenced post exists", async () => {
+    await expect(
+      createEvent(eventInput({ reportPostSlug: "ai-study-2-report" })),
+    ).rejects.toThrow("__REDIRECT__");
+
+    expect(whereMock).toHaveBeenCalledWith("slug", "==", "ai-study-2-report");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.reportPostSlug).toBe("ai-study-2-report");
   });
 
   it("does not treat Central Time input as the same instant as Pacific Time", async () => {
@@ -366,6 +398,7 @@ describe("updateEvent", () => {
       // coverImagePath field so old docs normalize on first edit.
       coverImage: "__delete__",
       coverImagePath: "__delete__",
+      reportPostSlug: "__delete__",
       updatedAt: "__server_ts__",
     });
     expect(revalidatePathMock).toHaveBeenCalledWith("/events");
@@ -434,6 +467,18 @@ describe("updateEvent", () => {
     expect(docUpdateMock.mock.invocationCallOrder[0]).toBeLessThan(
       storageDeleteMock.mock.invocationCallOrder[0],
     );
+  });
+
+  it("updates the report article slug when the referenced post exists", async () => {
+    docGetMock.mockResolvedValueOnce({ exists: true, data: () => ({}) });
+    const res = await updateEvent(
+      "e1",
+      eventInput({ reportPostSlug: "ai-study-2-report" }),
+    );
+    expect(res).toEqual({ ok: true });
+    expect(whereMock).toHaveBeenCalledWith("slug", "==", "ai-study-2-report");
+    const [patch] = docUpdateMock.mock.calls[0] as [Record<string, unknown>];
+    expect(patch.reportPostSlug).toBe("ai-study-2-report");
   });
 });
 

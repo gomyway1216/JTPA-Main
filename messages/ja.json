@@ -257,6 +257,7 @@
     "capacityUnknown": "—",
     "cancelledNotice": "このイベントは中止されました。",
     "endedNotice": "このイベントは終了しました。",
+    "reportLabel": "開催報告",
     "loginRequired": "参加登録にはログインが必要です。"
   },
   "Rsvp": {
@@ -1265,6 +1266,9 @@
         "public": "全員 (ログインなしでも閲覧可)",
         "members_only": "メンバー限定 (要ログイン)"
       },
+      "reportPostSlug": "開催報告記事のスラッグ",
+      "reportPostSlugPlaceholder": "例: ai-study-2-report",
+      "reportPostSlugHint": "記事を独立した投稿として作成し、そのURL末尾のスラッグだけを入力してください。未公開の記事は公開ページには表示されません。",
       "cover": "カバー画像 (任意・10MBまで・PNG/JPEG/WebP/GIF)",
       "coverPreviewAlt": "{title} のカバー画像プレビュー",
       "coverFallbackTitle": "イベント",
@@ -1610,6 +1614,7 @@
     "presentationNotFound": "発表資料が見つかりません",
     "presentationForbidden": "この発表資料を編集する権限がありません",
     "slugTaken": "スラッグ \"{slug}\" は既に使用されています",
+    "reportPostNotFound": "開催報告記事のスラッグ \"{slug}\" が見つかりません。",
     "eventNotFoundDeleted": "イベントが見つかりません。削除された可能性があります。",
     "invalidEventDateTime": "開始・終了日時とタイムゾーンの組み合わせが不正です。",
     "eventCancelledRsvp": "このイベントは中止されたため、参加登録できません。",
