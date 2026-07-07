@@ -294,6 +294,16 @@ describe("createEvent — happy path", () => {
     expect(payload.reportPostSlug).toBe("ai-study-2-report");
   });
 
+  it("trims a report article slug before validation and persistence", async () => {
+    await expect(
+      createEvent(eventInput({ reportPostSlug: "  ai-study-2-report  " })),
+    ).rejects.toThrow("__REDIRECT__");
+
+    expect(whereMock).toHaveBeenCalledWith("slug", "==", "ai-study-2-report");
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.reportPostSlug).toBe("ai-study-2-report");
+  });
+
   it("does not treat Central Time input as the same instant as Pacific Time", async () => {
     await expect(
       createEvent(

@@ -302,7 +302,7 @@ export function EventForm({
           ),
           coverImage,
           subImages,
-          reportPostSlug: reportPostSlug || undefined,
+          reportPostSlug: reportPostSlug.trim() || undefined,
           surveyFields: fields,
         };
         const res =
