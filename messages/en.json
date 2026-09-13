@@ -54,7 +54,9 @@
     "community": "Community Posts",
     "mailingList": "Email updates",
     "help": "Help",
-    "maintainerText": "JTPA representative and site operator: <name>Yudai Yaguchi</name>"
+    "maintainerText": "JTPA representative and site operator: <name>Yudai Yaguchi</name>",
+    "supportedBy": "This community is supported by",
+    "jtpaEvents": "See more JTPA events"
   },
   "MailingList": {
     "metadataTitle": "Email updates",

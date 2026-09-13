@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { siteBaseUrl } from "@/lib/site";
+import { JTPA_EVENTS_URL, JTPA_SITE_URL, siteBaseUrl } from "@/lib/site";
 
 const ORIGINAL_ENV = process.env;
 
@@ -69,5 +69,12 @@ describe("siteBaseUrl", () => {
   it("falls back to the production domain on an unparseable URL", () => {
     process.env.NEXT_PUBLIC_SITE_URL = "http://%";
     expect(siteBaseUrl()).toBe("https://bayarea-ai.com");
+  });
+});
+
+describe("JTPA cross-links", () => {
+  it("uses the official JTPA site and event archive", () => {
+    expect(JTPA_SITE_URL).toBe("https://jtpa.org/");
+    expect(JTPA_EVENTS_URL).toBe("https://jtpa.org/category/event");
   });
 });
