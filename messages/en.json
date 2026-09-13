@@ -1311,7 +1311,10 @@
         "all": "Everyone",
         "presenter": "Presenters only"
       },
-      "optionsPlaceholder": "Options (comma-separated)",
+      "optionsLabel": "Options",
+      "optionPlaceholder": "Option {number}",
+      "addOption": "+ Add option",
+      "removeOption": "Remove option {number}",
       "maxSelections": "Maximum selections",
       "maxSelectionsPlaceholder": "Maximum selections (blank means unlimited)",
       "required": "Required",

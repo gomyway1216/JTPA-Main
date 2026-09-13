@@ -9,6 +9,33 @@ export type SurveyValidationMessages = {
   invalidSelectionLimit(index: number): string;
 };
 
+export function normalizeSurveyFieldsForSubmit(
+  fields: SurveyField[],
+): SurveyField[] {
+  return fields.map((field) => {
+    if (field.type !== "select" && field.type !== "multiselect") {
+      return {
+        key: field.key,
+        label: field.label,
+        type: field.type,
+        required: field.required,
+        audience: field.audience,
+      };
+    }
+
+    const normalized = {
+      ...field,
+      options: (field.options ?? [])
+        .map((option) => option.trim())
+        .filter(Boolean),
+    };
+    if (field.type === "select") {
+      delete normalized.maxSelections;
+    }
+    return normalized;
+  });
+}
+
 // Client-side guard for an event's questionnaire (survey) fields.
 //
 // The server's Zod schema requires a non-empty `key` and `label` on every

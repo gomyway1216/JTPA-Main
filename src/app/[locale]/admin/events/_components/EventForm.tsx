@@ -34,7 +34,10 @@ import {
   DEFAULT_CHECKIN_LATE_MINUTES,
   MAX_CHECKIN_WINDOW_MINUTES,
 } from "@/lib/check-in";
-import { validateSurveyFields } from "@/lib/event-survey";
+import {
+  normalizeSurveyFieldsForSubmit,
+  validateSurveyFields,
+} from "@/lib/event-survey";
 import { clientStorage } from "@/lib/firebase/client";
 import { publicDownloadUrl } from "@/lib/firebase/uploads";
 import type {
@@ -307,7 +310,7 @@ export function EventForm({
           coverImage,
           subImages,
           reportPostSlug: reportPostSlug.trim() || undefined,
-          surveyFields: fields,
+          surveyFields: normalizeSurveyFieldsForSubmit(fields),
         };
         const res =
           mode === "create"
@@ -388,6 +391,46 @@ export function EventForm({
 
   function updateField(i: number, patch: Partial<SurveyField>) {
     setFields((cur) => cur.map((f, idx) => (idx === i ? { ...f, ...patch } : f)));
+  }
+
+  function addFieldOption(fieldIndex: number) {
+    setFields((cur) =>
+      cur.map((field, index) =>
+        index === fieldIndex
+          ? { ...field, options: [...(field.options ?? []), ""] }
+          : field,
+      ),
+    );
+  }
+
+  function updateFieldOption(
+    fieldIndex: number,
+    optionIndex: number,
+    value: string,
+  ) {
+    setFields((cur) =>
+      cur.map((field, index) => {
+        if (index !== fieldIndex) return field;
+        const options = [...(field.options ?? [])];
+        options[optionIndex] = value;
+        return { ...field, options };
+      }),
+    );
+  }
+
+  function removeFieldOption(fieldIndex: number, optionIndex: number) {
+    setFields((cur) =>
+      cur.map((field, index) =>
+        index === fieldIndex
+          ? {
+              ...field,
+              options: (field.options ?? []).filter(
+                (_, index) => index !== optionIndex,
+              ),
+            }
+          : field,
+      ),
+    );
   }
 
   function removeField(i: number) {
@@ -750,11 +793,16 @@ export function EventForm({
                   />
                   <select
                     value={f.type}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const type = e.target.value as SurveyField["type"];
                       updateField(i, {
-                        type: e.target.value as SurveyField["type"],
-                      })
-                    }
+                        type,
+                        ...((type === "select" || type === "multiselect") &&
+                        !f.options?.length
+                          ? { options: [""] }
+                          : {}),
+                      });
+                    }}
                     className={inputClass}
                   >
                     <option value="text">{t("fieldType.text")}</option>
@@ -779,42 +827,69 @@ export function EventForm({
                   </select>
                 </div>
                 {(f.type === "select" || f.type === "multiselect") && (
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <input
-                      type="text"
-                      placeholder={t("optionsPlaceholder")}
-                      value={f.options?.join(", ") ?? ""}
-                      onChange={(e) =>
-                        updateField(i, {
-                          options: Array.from(
-                            new Set(
-                              e.target.value
-                                .split(",")
-                                .map((s) => s.trim())
-                                .filter(Boolean),
-                            ),
-                          ),
-                        })
-                      }
-                      className={inputClass}
-                    />
+                  <div className="mt-3 space-y-3">
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        {t("optionsLabel")}
+                      </p>
+                      {(f.options ?? []).map((option, optionIndex) => (
+                        <div key={optionIndex} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            placeholder={t("optionPlaceholder", {
+                              number: optionIndex + 1,
+                            })}
+                            value={option}
+                            onChange={(e) =>
+                              updateFieldOption(i, optionIndex, e.target.value)
+                            }
+                            className={inputClass}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeFieldOption(i, optionIndex)}
+                            aria-label={t("removeOption", {
+                              number: optionIndex + 1,
+                            })}
+                            title={t("removeOption", {
+                              number: optionIndex + 1,
+                            })}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-zinc-300 text-lg text-red-600 hover:bg-red-50 dark:border-zinc-700 dark:hover:bg-red-950/30"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addFieldOption(i)}
+                        className="rounded border border-zinc-300 px-2 py-1 text-xs dark:border-zinc-700"
+                      >
+                        {t("addOption")}
+                      </button>
+                    </div>
                     {f.type === "multiselect" && (
-                      <input
-                        type="number"
-                        min={1}
-                        max={f.options?.length || undefined}
-                        placeholder={t("maxSelectionsPlaceholder")}
-                        aria-label={t("maxSelections")}
-                        value={f.maxSelections ?? ""}
-                        onChange={(e) =>
-                          updateField(i, {
-                            maxSelections: e.target.value
-                              ? Number(e.target.value)
-                              : undefined,
-                          })
-                        }
-                        className={inputClass}
-                      />
+                      <label className="block max-w-sm text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        {t("maxSelections")}
+                        <input
+                          type="number"
+                          min={1}
+                          max={
+                            f.options?.filter((option) => option.trim()).length ||
+                            undefined
+                          }
+                          placeholder={t("maxSelectionsPlaceholder")}
+                          value={f.maxSelections ?? ""}
+                          onChange={(e) =>
+                            updateField(i, {
+                              maxSelections: e.target.value
+                                ? Number(e.target.value)
+                                : undefined,
+                            })
+                          }
+                          className={`${inputClass} mt-1`}
+                        />
+                      </label>
                     )}
                   </div>
                 )}
