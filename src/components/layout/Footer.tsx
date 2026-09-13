@@ -6,6 +6,7 @@ const FOOTER_LINKS = [
   { href: "/events", key: "events" },
   { href: "/showcase", key: "showcase" },
   { href: "/community", key: "community" },
+  { href: "/mailing-list", key: "mailingList" },
   { href: "/help", key: "help" },
 ] as const;
 

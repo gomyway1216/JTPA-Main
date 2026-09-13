@@ -106,6 +106,17 @@ export interface UsernameReservationDoc {
   createdAt: TsLike;
 }
 
+// ---------- mailing list ----------
+export interface MailingListSubscriber {
+  id: string;
+  email: string;
+  locale: "ja" | "en";
+  source: "public" | "admin";
+  consentVersion: number;
+  subscribedAt: TsLike;
+  updatedAt: TsLike;
+}
+
 // ---------- events ----------
 export type EventStatus = "draft" | "published" | "past" | "cancelled";
 export type LocationType = "online" | "offline" | "hybrid";

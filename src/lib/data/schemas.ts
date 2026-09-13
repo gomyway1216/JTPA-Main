@@ -108,6 +108,16 @@ export const UserProfileSchema = z.looseObject({
   updatedAt: TsLikeSchema,
 });
 
+// ---------- mailing list ----------
+export const MailingListSubscriberSchema = z.looseObject({
+  email: z.string().optional(),
+  locale: z.enum(["ja", "en"]).optional(),
+  source: z.enum(["public", "admin"]).optional(),
+  consentVersion: z.number().optional(),
+  subscribedAt: TsLikeSchema,
+  updatedAt: TsLikeSchema,
+});
+
 // ---------- events ----------
 const SurveyFieldSchema = z.looseObject({
   key: z.string().optional(),

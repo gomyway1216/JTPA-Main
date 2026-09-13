@@ -52,8 +52,27 @@
     "events": "Events",
     "showcase": "Projects",
     "community": "Community Posts",
+    "mailingList": "Email updates",
     "help": "Help",
     "maintainerText": "JTPA representative and site operator: <name>Yudai Yaguchi</name>"
+  },
+  "MailingList": {
+    "metadataTitle": "Email updates",
+    "metadataDescription": "Get Bay Area AI Study Group event announcements and community updates by email.",
+    "eyebrow": "Bay Area AI Study Group",
+    "title": "Get updates by email",
+    "description": "Receive upcoming event dates, topics, registration details, and important community updates. No account is required.",
+    "whatYouReceive": "What you will receive",
+    "eventUpdates": "Upcoming event dates, topics, and registration details",
+    "communityUpdates": "Event reports and important community announcements",
+    "emailLabel": "Email address",
+    "emailPlaceholder": "you@example.com",
+    "consent": "I agree to receive the email updates described above.",
+    "submit": "Subscribe",
+    "submitting": "Subscribing...",
+    "success": "You are subscribed. You will receive the next update.",
+    "submitError": "Could not subscribe. Please try again later.",
+    "privacyNote": "We only use your email address to send these updates. To unsubscribe, contact us through the <helpLink>help form</helpLink>."
   },
   "Theme": {
     "toggle": "Change theme",
@@ -1083,6 +1102,7 @@
       "feedback": "Feedback",
       "about": "About JTPA",
       "users": "Users",
+      "mailingList": "Mailing list",
       "errors": "Error logs",
       "audit": "Audit logs",
       "help": "Help"
@@ -1449,6 +1469,36 @@
       "exportTitle": "Bulk email export:",
       "exportCount": "{recipients} opted in / {total} users",
       "exportHelp": "Users who opted out of email notifications in their profile are excluded. Import this list into your external email delivery tool."
+    },
+    "mailingList": {
+      "metadataTitle": "Mailing list management",
+      "title": "Mailing list management",
+      "description": "Manage {count} email addresses collected from the public subscription page.",
+      "addEmail": "Add an email address",
+      "emailPlaceholder": "you@example.com",
+      "language": "Delivery language",
+      "add": "Add",
+      "added": "Email address added",
+      "deleted": "Email address removed",
+      "saveFailed": "Could not add the email address",
+      "deleteFailed": "Could not remove the email address",
+      "deleteConfirm": "Remove {email} from the mailing list?",
+      "searchAria": "Search the mailing list by email address",
+      "searchPlaceholder": "Filter by email address",
+      "visibleCount": "Showing {visible} of {total}",
+      "empty": "No matching email addresses.",
+      "columns": {
+        "email": "Email",
+        "language": "Language",
+        "source": "Source",
+        "subscribedAt": "Subscribed",
+        "actions": "Actions"
+      },
+      "source": {
+        "public": "Public page",
+        "admin": "Admin"
+      },
+      "deliveryNote": "This page manages subscribers and exports recipients. Use BCC or an external email service with unsubscribe support for bulk delivery."
     },
     "errors": {
       "title": "Error logs",
