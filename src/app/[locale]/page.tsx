@@ -297,6 +297,31 @@ export default async function HomePage() {
         )}
       </FadeUp>
 
+      <FadeUp
+        as="section"
+        className="border-y border-zinc-200 py-8 sm:py-10 dark:border-zinc-800"
+      >
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="max-w-2xl">
+            <p className="text-xs font-medium uppercase text-blue-700 dark:text-blue-300">
+              {t("mailingListEyebrow")}
+            </p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-tight">
+              {t("mailingListTitle")}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-400">
+              {t("mailingListDescription")}
+            </p>
+          </div>
+          <Link
+            href="/mailing-list"
+            className="inline-flex shrink-0 items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-zinc-300"
+          >
+            {t("mailingListCta")}
+          </Link>
+        </div>
+      </FadeUp>
+
       <FadeUp as="section" className="space-y-6">
         {/* Same stack-on-mobile rationale as the events head
             above. */}
