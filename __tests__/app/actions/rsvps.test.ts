@@ -327,6 +327,44 @@ describe("submitRsvp — server-side input validation", () => {
     expect(txSetMock).not.toHaveBeenCalled();
   });
 
+  it("accepts valid multiselect answers and rejects answers over the limit", async () => {
+    eventSnap = snap(
+      eventData({
+        surveyFields: [
+          {
+            key: "topics",
+            label: "Topics",
+            type: "multiselect",
+            required: true,
+            options: ["work", "coding", "agents"],
+            maxSelections: 2,
+            audience: "all",
+          },
+        ],
+      }),
+    );
+
+    await expectError(
+      submitRsvp(
+        rsvpInput({
+          surveyResponses: { topics: ["work", "coding", "agents"] },
+        }),
+      ),
+      "topics",
+    );
+    expect(txSetMock).not.toHaveBeenCalled();
+
+    const res = await submitRsvp(
+      rsvpInput({ surveyResponses: { topics: ["work", "agents"] } }),
+    );
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.rsvp.surveyResponses).toEqual({
+        topics: ["work", "agents"],
+      });
+    }
+  });
+
   it("rejects an answer to a field the event doesn't define", async () => {
     // The default event defines only `q1`; a stray `q2` can't be legit.
     await expectError(

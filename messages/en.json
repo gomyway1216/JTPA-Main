@@ -288,6 +288,8 @@
     "presentationTitle": "Presentation title",
     "presentationAbstract": "Abstract",
     "choose": "Choose...",
+    "chooseAny": "Select all that apply",
+    "chooseUpTo": "Select up to {count}",
     "submit": "Register",
     "update": "Update registration",
     "submitting": "Sending...",
@@ -1302,13 +1304,16 @@
         "text": "Text",
         "textarea": "Multiline",
         "select": "Select",
-        "checkbox": "Checkbox"
+        "multiselect": "Multiple select (checklist)",
+        "checkbox": "Confirmation checkbox"
       },
       "audience": {
         "all": "Everyone",
         "presenter": "Presenters only"
       },
       "optionsPlaceholder": "Options (comma-separated)",
+      "maxSelections": "Maximum selections",
+      "maxSelectionsPlaceholder": "Maximum selections (blank means unlimited)",
       "required": "Required",
       "deleteEvent": "Delete event",
       "deleteConfirm": "Delete this event?"
@@ -1651,6 +1656,7 @@
     "rsvpSurveyRequired": "Survey field \"{key}\" is required.",
     "rsvpSurveyInvalidOption": "Survey field \"{key}\" has an invalid option.",
     "rsvpSurveyInvalidValue": "Survey field \"{key}\" has an invalid value.",
+    "rsvpSurveySelectionLimit": "Survey field \"{key}\" allows up to {max} selections.",
     "rsvpSurveyTooLong": "Survey field \"{key}\" must be {max} characters or less.",
     "rsvpSurveyUnknownKey": "An unknown survey field \"{key}\" was included.",
     "cloneSourceEventNotFound": "The source event to clone was not found.",
@@ -1722,6 +1728,8 @@
     "surveyDuplicateKey": "Survey item {index}: key \"{key}\" is duplicated. Choose another key.",
     "surveyMissingLabel": "Survey item {index}: enter a display label.",
     "surveyMissingOption": "Survey item {index}: enter at least one option.",
+    "surveyDuplicateOption": "Survey item {index}: duplicate options are not allowed.",
+    "surveyInvalidSelectionLimit": "Survey item {index}: maximum selections must be at least 1 and no greater than the number of options.",
     "guideImageMissingId": "Could not determine the note ID.",
     "qaImageMissingId": "Could not determine the question ID.",
     "userMissingId": "Could not determine the user ID.",

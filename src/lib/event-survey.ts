@@ -5,6 +5,8 @@ export type SurveyValidationMessages = {
   duplicateKey(index: number, key: string): string;
   missingLabel(index: number): string;
   missingOption(index: number): string;
+  duplicateOption(index: number): string;
+  invalidSelectionLimit(index: number): string;
 };
 
 // Client-side guard for an event's questionnaire (survey) fields.
@@ -47,10 +49,21 @@ export function validateSurveyFields(
     if (!f.label.trim()) {
       return messages.missingLabel(n);
     }
-    // A `select` with no real choices renders as an empty dropdown and is
-    // never answerable — require at least one non-blank option.
-    if (f.type === "select" && !f.options?.some((o) => o.trim())) {
-      return messages.missingOption(n);
+    // Choice fields with no real choices are never answerable.
+    const isChoiceField = f.type === "select" || f.type === "multiselect";
+    const options = (f.options ?? []).map((o) => o.trim()).filter(Boolean);
+    if (isChoiceField && options.length === 0) return messages.missingOption(n);
+    if (isChoiceField && new Set(options).size !== options.length) {
+      return messages.duplicateOption(n);
+    }
+    if (
+      f.type === "multiselect" &&
+      f.maxSelections !== undefined &&
+      (!Number.isInteger(f.maxSelections) ||
+        f.maxSelections < 1 ||
+        f.maxSelections > options.length)
+    ) {
+      return messages.invalidSelectionLimit(n);
     }
   }
   return null;
@@ -78,6 +91,10 @@ export type SurveyResponseError =
   | { code: "option"; key: string }
   // A checkbox answer was something other than "true"/"false".
   | { code: "checkbox"; key: string }
+  // A field received the wrong value shape (for example, an array for text).
+  | { code: "value"; key: string }
+  // A multi-select answer exceeded the field's configured limit.
+  | { code: "selectionLimit"; key: string; max: number }
   // An answer exceeded MAX_SURVEY_ANSWER_LENGTH.
   | { code: "tooLong"; key: string }
   // A response key did not match any field for the active audience.
@@ -104,7 +121,8 @@ function fieldsForRole(
 // Rules:
 //  - required field for the active audience → must be present & non-blank
 //    (a checkbox counts as "answered" only when "true");
-//  - select answer (when non-blank) → must be one of the field's options;
+//  - select/multiselect answers → must use only the field's options;
+//  - multiselect answer → must be an array within the configured limit;
 //  - checkbox answer (when present) → must be exactly "true" or "false";
 //  - any answer → at most MAX_SURVEY_ANSWER_LENGTH characters;
 //  - any response key with no matching field for the active audience →
@@ -112,7 +130,7 @@ function fieldsForRole(
 //    smuggled in by an attendee).
 export function validateSurveyResponses(
   fields: SurveyField[],
-  responses: Record<string, string>,
+  responses: Record<string, unknown>,
   role: "attendee" | "presenter",
 ): SurveyResponseError | null {
   const applicable = fieldsForRole(fields, role);
@@ -128,6 +146,49 @@ export function validateSurveyResponses(
 
   for (const field of applicable) {
     const raw = responses[field.key];
+
+    if (field.type === "multiselect") {
+      if (raw !== undefined && !Array.isArray(raw)) {
+        return { code: "value", key: field.key };
+      }
+      if ((raw ?? []).some((value) => typeof value !== "string")) {
+        return { code: "value", key: field.key };
+      }
+      const values = (raw as string[] | undefined ?? []).map((value) =>
+        value.trim(),
+      );
+      if (
+        values.some((value) => !value) ||
+        new Set(values).size !== values.length
+      ) {
+        return { code: "value", key: field.key };
+      }
+      if (values.join("").length > MAX_SURVEY_ANSWER_LENGTH) {
+        return { code: "tooLong", key: field.key };
+      }
+      const allowed = new Set((field.options ?? []).map((o) => o.trim()));
+      if (values.some((value) => !allowed.has(value))) {
+        return { code: "option", key: field.key };
+      }
+      if (
+        field.maxSelections !== undefined &&
+        values.length > field.maxSelections
+      ) {
+        return {
+          code: "selectionLimit",
+          key: field.key,
+          max: field.maxSelections,
+        };
+      }
+      if (field.required && values.length === 0) {
+        return { code: "required", key: field.key };
+      }
+      continue;
+    }
+
+    if (Array.isArray(raw) || (raw !== undefined && typeof raw !== "string")) {
+      return { code: "value", key: field.key };
+    }
     const value = typeof raw === "string" ? raw.trim() : "";
 
     if (value.length > MAX_SURVEY_ANSWER_LENGTH) {
@@ -161,4 +222,29 @@ export function validateSurveyResponses(
   }
 
   return null;
+}
+
+// Prepare client-held answers for submission after an event's survey fields
+// may have changed. Removed multiselect options are dropped so an attendee can
+// still update an existing RSVP, and fields outside the active role are omitted.
+export function normalizeSurveyResponsesForSubmit(
+  fields: SurveyField[],
+  responses: Record<string, string | string[]>,
+  role: "attendee" | "presenter",
+): Record<string, string | string[]> {
+  const normalized: Record<string, string | string[]> = {};
+  for (const field of fieldsForRole(fields, role)) {
+    const value = responses[field.key];
+    if (value === undefined) continue;
+    if (field.type === "multiselect") {
+      if (!Array.isArray(value)) continue;
+      const allowed = new Set(field.options ?? []);
+      normalized[field.key] = Array.from(
+        new Set(value.filter((option) => allowed.has(option))),
+      );
+      continue;
+    }
+    if (typeof value === "string") normalized[field.key] = value;
+  }
+  return normalized;
 }

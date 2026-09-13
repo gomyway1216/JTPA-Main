@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_SURVEY_ANSWER_LENGTH,
+  normalizeSurveyResponsesForSubmit,
   validateSurveyFields,
   validateSurveyResponses,
 } from "@/lib/event-survey";
@@ -16,6 +17,10 @@ const messages = {
     `アンケート項目${index}: 表示ラベルを入力してください`,
   missingOption: (index: number) =>
     `アンケート項目${index}: 選択肢を1つ以上入力してください`,
+  duplicateOption: (index: number) =>
+    `アンケート項目${index}: 選択肢が重複しています`,
+  invalidSelectionLimit: (index: number) =>
+    `アンケート項目${index}: 最大選択数が不正です`,
 };
 
 function field(partial: Partial<SurveyField>): SurveyField {
@@ -44,6 +49,13 @@ describe("validateSurveyFields", () => {
             label: "参加形態",
             type: "select",
             options: ["現地", "オンライン"],
+          }),
+          field({
+            key: "q3",
+            label: "興味のあるテーマ",
+            type: "multiselect",
+            options: ["業務", "コーディング", "エージェント"],
+            maxSelections: 2,
           }),
         ],
         messages,
@@ -96,6 +108,33 @@ describe("validateSurveyFields", () => {
     ).toBeNull();
   });
 
+  it("requires options and a valid limit for multiselect fields", () => {
+    expect(
+      validateSurveyFields(
+        [field({ type: "multiselect", options: undefined })],
+        messages,
+      ),
+    ).toMatch(/選択肢/);
+    expect(
+      validateSurveyFields(
+        [
+          field({
+            type: "multiselect",
+            options: ["a", "b"],
+            maxSelections: 3,
+          }),
+        ],
+        messages,
+      ),
+    ).toMatch(/最大選択数/);
+    expect(
+      validateSurveyFields(
+        [field({ type: "multiselect", options: ["a", "a"] })],
+        messages,
+      ),
+    ).toMatch(/重複/);
+  });
+
   it("reports the first offending item with its 1-based number", () => {
     const msg = validateSurveyFields(
       [
@@ -138,11 +177,25 @@ describe("validateSurveyResponses", () => {
         options: ["online", "offline"],
       }),
       field({ key: "agree", label: "Agree", type: "checkbox", required: true }),
+      field({
+        key: "topics",
+        label: "Topics",
+        type: "multiselect",
+        required: true,
+        options: ["work", "coding", "agents"],
+        maxSelections: 2,
+      }),
       field({ key: "note", label: "Note", type: "textarea" }),
     ];
     const ok = validateSurveyResponses(
       fields,
-      { name: "Alice", mode: "online", agree: "true", note: "" },
+      {
+        name: "Alice",
+        mode: "online",
+        agree: "true",
+        topics: ["work", "agents"],
+        note: "",
+      },
       "attendee",
     );
     expect(ok).toBeNull();
@@ -202,6 +255,68 @@ describe("validateSurveyResponses", () => {
     ];
     expect(validateSurveyResponses(fields, { mode: "" }, "attendee")).toBeNull();
     expect(validateSurveyResponses(fields, {}, "attendee")).toBeNull();
+  });
+
+  it("validates multiselect options, shape, required state, and limit", () => {
+    const fields = [
+      field({
+        key: "topics",
+        type: "multiselect",
+        required: true,
+        options: ["work", "coding", "agents"],
+        maxSelections: 2,
+      }),
+    ];
+    expect(validateSurveyResponses(fields, {}, "attendee")).toEqual({
+      code: "required",
+      key: "topics",
+    });
+    expect(
+      validateSurveyResponses(fields, { topics: "work" }, "attendee"),
+    ).toEqual({ code: "value", key: "topics" });
+    expect(
+      validateSurveyResponses(fields, { topics: [null] }, "attendee"),
+    ).toEqual({ code: "value", key: "topics" });
+    expect(
+      validateSurveyResponses(fields, { topics: ["unknown"] }, "attendee"),
+    ).toEqual({ code: "option", key: "topics" });
+    expect(
+      validateSurveyResponses(
+        fields,
+        { topics: ["work", "coding", "agents"] },
+        "attendee",
+      ),
+    ).toEqual({ code: "selectionLimit", key: "topics", max: 2 });
+    expect(
+      validateSurveyResponses(
+        fields,
+        { topics: ["work", "agents"] },
+        "attendee",
+      ),
+    ).toBeNull();
+  });
+
+  it("removes stale multiselect choices before resubmitting an RSVP", () => {
+    const fields = [
+      field({
+        key: "topics",
+        type: "multiselect",
+        options: ["work", "agents"],
+      }),
+      field({ key: "note", type: "text" }),
+      field({ key: "presenter", type: "text", audience: "presenter" }),
+    ];
+    expect(
+      normalizeSurveyResponsesForSubmit(
+        fields,
+        {
+          topics: ["work", "removed", "work"],
+          note: "hello",
+          presenter: "hidden",
+        },
+        "attendee",
+      ),
+    ).toEqual({ topics: ["work"], note: "hello" });
   });
 
   it("rejects an answer longer than the cap", () => {

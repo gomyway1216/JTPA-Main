@@ -116,9 +116,10 @@ export type EventVisibility = "public" | "members_only";
 export interface SurveyField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "checkbox";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox";
   required: boolean;
   options?: string[];
+  maxSelections?: number;
   audience: "all" | "presenter";
 }
 
