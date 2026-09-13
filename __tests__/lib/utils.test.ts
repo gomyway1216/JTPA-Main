@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   classNames,
+  eventCardSummary,
   formatDate,
   formatDateTime,
   formatTime,
@@ -218,12 +219,38 @@ describe("stripMarkdown", () => {
     expect(stripMarkdown("# Title\n## Sub\nbody")).toBe("Title Sub body");
   });
 
+  it("strips blockquote and list markers", () => {
+    expect(stripMarkdown("> Note\n- First\n1. Second")).toBe(
+      "Note First Second",
+    );
+  });
+
   it("strips emphasis markers (* _ ~)", () => {
     expect(stripMarkdown("*bold* _em_ ~strike~")).toBe("bold em strike");
   });
 
   it("collapses whitespace and trims", () => {
     expect(stripMarkdown("  hello   world  ")).toBe("hello world");
+  });
+});
+
+describe("eventCardSummary", () => {
+  it("prefers the dedicated trimmed summary", () => {
+    expect(
+      eventCardSummary({
+        summary: "  **A focused event summary.**  ",
+        description: "## Long description",
+      }),
+    ).toBe("A focused event summary.");
+  });
+
+  it("falls back to a Markdown-free, bounded description excerpt", () => {
+    const result = eventCardSummary(
+      { description: "## Topic\n- " + "詳しい説明".repeat(30) },
+      30,
+    );
+    expect(result).not.toMatch(/[#*-]/);
+    expect([...result].length).toBeLessThanOrEqual(30);
   });
 });
 

@@ -138,6 +138,9 @@ export interface EventDoc {
   id: string;
   slug: string;
   title: string;
+  // Optional plain-text copy for event cards. Older events fall back to a
+  // Markdown-stripped excerpt of description.
+  summary?: string;
   description: string;
   startAt: TsLike;
   endAt: TsLike;

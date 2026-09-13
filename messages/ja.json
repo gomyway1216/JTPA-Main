@@ -1276,6 +1276,9 @@
       "title": "タイトル",
       "slug": "スラッグ (URL)",
       "slugPlaceholder": "自動生成 (英小文字/数字/ハイフン)",
+      "summary": "一覧表示用の短い要約 (任意・最大300字)",
+      "summaryPlaceholder": "イベントの内容や魅力を2〜3文で入力してください",
+      "summaryCount": "{current} / 300 文字",
       "description": "説明",
       "timeZone": "タイムゾーン",
       "timeZoneOption": {

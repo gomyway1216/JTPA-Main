@@ -1,4 +1,4 @@
-import type { TsLike } from "@/lib/types";
+import type { EventDoc, TsLike } from "@/lib/types";
 
 export function toDate(value: TsLike | undefined | null): Date | null {
   if (!value) return null;
@@ -151,9 +151,19 @@ export function stripMarkdown(body: string): string {
     .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
     .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1")
     .replace(/^#+\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/^\s*(?:[-+*]|\d+[.)])\s+/gm, "")
     .replace(/[*_~]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function eventCardSummary(
+  event: Pick<EventDoc, "summary" | "description">,
+  max = 240,
+): string {
+  const authoredSummary = event.summary?.trim();
+  return truncate(stripMarkdown(authoredSummary || event.description), max);
 }
 
 // Truncate to AT MOST `max` characters, using a Unicode ellipsis when

@@ -1279,6 +1279,9 @@
       "title": "Title",
       "slug": "Slug (URL)",
       "slugPlaceholder": "Auto-generated (lowercase letters, numbers, hyphens)",
+      "summary": "Short list summary (optional, max 300 characters)",
+      "summaryPlaceholder": "Describe the event and its appeal in two or three sentences",
+      "summaryCount": "{current} / 300 characters",
       "description": "Description",
       "timeZone": "Time zone",
       "timeZoneOption": {
