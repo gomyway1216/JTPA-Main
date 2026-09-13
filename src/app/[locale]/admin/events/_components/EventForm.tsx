@@ -92,6 +92,7 @@ export function EventForm({
   const initialTimeZone = eventTimeZone(event);
   const [title, setTitle] = useState(event?.title ?? "");
   const [slug, setSlug] = useState(event?.slug ?? "");
+  const [summary, setSummary] = useState(event?.summary ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
   const [timeZone, setTimeZone] = useState(initialTimeZone);
   const [startAt, setStartAt] = useState(
@@ -287,6 +288,7 @@ export function EventForm({
         const payload: EventFormInput = {
           title,
           slug: slug || undefined,
+          summary,
           description,
           startAt,
           endAt,
@@ -458,6 +460,20 @@ export function EventForm({
           placeholder={t("slugPlaceholder")}
           className={inputClass}
         />
+      </Field>
+      <Field label={t("summary")} htmlFor="event-summary">
+        <textarea
+          id="event-summary"
+          rows={3}
+          maxLength={300}
+          value={summary}
+          onChange={(e) => setSummary(e.target.value)}
+          placeholder={t("summaryPlaceholder")}
+          className={inputClass}
+        />
+        <p className="mt-1 text-xs text-zinc-500">
+          {t("summaryCount", { current: summary.length })}
+        </p>
       </Field>
       <Field label={t("description")} required htmlFor="event-description">
         <textarea

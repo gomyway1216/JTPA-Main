@@ -123,11 +123,12 @@ export default async function EventDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const [locale, t, common, auth] = await Promise.all([
+  const [locale, t, common, auth, rsvpT] = await Promise.all([
     getLocale(),
     getTranslations("EventDetail"),
     getTranslations("Common"),
     getTranslations("Auth"),
+    getTranslations("Rsvp"),
   ]);
   const event = await getEventBySlug(slug);
   if (!event) notFound();
@@ -170,6 +171,8 @@ export default async function EventDetailPage({
     : eventEnd;
   const publishedReportPost =
     reportPost?.status === "published" ? reportPost : null;
+  const eventEnded = isEventEnded(event);
+  const hasActiveRsvp = !!myRsvp && myRsvp.status !== "cancelled";
   const reportPostContent = publishedReportPost
     ? getLocalizedPostContent(publishedReportPost, locale)
     : null;
@@ -265,6 +268,34 @@ export default async function EventDetailPage({
         </dl>
       </header>
 
+      {!eventEnded && (
+        <section className="flex flex-col gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900">
+          <div>
+            <h2 className="text-lg font-semibold">{rsvpT("title")}</h2>
+            {!user && (
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                {t("loginRequired")}
+              </p>
+            )}
+          </div>
+          {user ? (
+            <a
+              href="#event-registration"
+              className="inline-flex shrink-0 items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              {hasActiveRsvp ? rsvpT("update") : rsvpT("submit")}
+            </a>
+          ) : (
+            <Link
+              href={loginHref(`/events/${event.slug}`, locale)}
+              className="inline-flex shrink-0 items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200"
+            >
+              {auth("googleLogin")}
+            </Link>
+          )}
+        </section>
+      )}
+
       {/* Markdown description — same renderer as Guides (issue #101), so an
           event body gets GFM tables/lists, syntax highlighting, heading
           demotion, and external links opening in a new tab, all styled by
@@ -309,7 +340,8 @@ export default async function EventDetailPage({
 
       <hr className="border-zinc-200 dark:border-zinc-800" />
 
-      {isEventEnded(event) ? (
+      <div id="event-registration" className="scroll-mt-24">
+      {eventEnded ? (
         // Past events show a static notice instead of the RSVP form. The
         // presentation list below is intentionally still rendered — slides
         // remain useful after the fact.
@@ -343,8 +375,9 @@ export default async function EventDetailPage({
           </Link>
         </div>
       )}
+      </div>
 
-      {(!user || isEventEnded(event)) && (
+      {(!user || eventEnded) && (
         <PresentationSection
           eventId={event.id}
           eventSlug={event.slug}

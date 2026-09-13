@@ -89,6 +89,7 @@ const optionalNonEmpty = (schema: z.ZodTypeAny) =>
 const EventInputSchema = z.object({
   title: z.string().min(2).max(200),
   slug: optionalNonEmpty(z.string().min(2).max(80).regex(/^[a-z0-9-]+$/)),
+  summary: z.string().trim().max(300).optional(),
   description: z.string().min(1).max(20000),
   startAt: z.string().min(1),
   endAt: z.string().min(1),
@@ -197,6 +198,7 @@ export async function createEvent(
   const ref = await adminDb().collection("events").add({
     slug,
     title: parsed.title,
+    summary: parsed.summary ?? "",
     description: parsed.description,
     startAt: Timestamp.fromDate(dateTimes.startAt),
     endAt: Timestamp.fromDate(dateTimes.endAt),
@@ -290,6 +292,7 @@ export async function updateEvent(
   await ref.update({
     ...(requestedSlug ? { slug: requestedSlug } : {}),
     title: parsed.title,
+    summary: parsed.summary ?? "",
     description: parsed.description,
     startAt: Timestamp.fromDate(dateTimes.startAt),
     endAt: Timestamp.fromDate(dateTimes.endAt),
@@ -368,6 +371,7 @@ export async function cloneEvent(
   const src = srcSnap.data() as {
     slug?: string;
     title: string;
+    summary?: string;
     description: string;
     startAt: Timestamp;
     endAt: Timestamp;
@@ -408,6 +412,7 @@ export async function cloneEvent(
   const newRef = await adminDb().collection("events").add({
     slug,
     title: `${src.title} ${defaultActionError("copySuffix")}`,
+    summary: src.summary ?? "",
     description: src.description,
     startAt: newStart,
     endAt: newEnd,

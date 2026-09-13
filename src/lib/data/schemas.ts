@@ -134,6 +134,7 @@ const SurveyFieldSchema = z.looseObject({
 export const EventDocSchema = z.looseObject({
   slug: z.string().optional(),
   title: z.string().optional(),
+  summary: z.string().optional(),
   description: z.string().optional(),
   startAt: TsLikeSchema,
   endAt: TsLikeSchema,

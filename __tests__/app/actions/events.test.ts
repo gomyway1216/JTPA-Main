@@ -192,6 +192,14 @@ describe("createEvent — auth + validation", () => {
     );
   });
 
+  it("rejects a card summary longer than 300 characters", async () => {
+    await expectError(
+      createEvent(eventInput({ summary: "x".repeat(301) })),
+      "入力エラー",
+    );
+    expect(addMock).not.toHaveBeenCalled();
+  });
+
   it("surfaces a slug collision as an error result", async () => {
     slugQueryGetMock.mockResolvedValueOnce({
       empty: false,
@@ -243,6 +251,7 @@ describe("createEvent — happy path", () => {
     expect(payload).toMatchObject({
       slug: "my-event",
       title: "JTPA Salon 32",
+      summary: "",
       status: "published",
       capacity: 50,
       presenterCapacity: 5,
@@ -261,6 +270,15 @@ describe("createEvent — happy path", () => {
     // Cache busts land BEFORE the redirect throws.
     expect(revalidatePathMock).toHaveBeenCalledWith("/events");
     expect(revalidatePathMock).toHaveBeenCalledWith("/admin/events");
+  });
+
+  it("stores the optional card summary", async () => {
+    await expect(
+      createEvent(eventInput({ summary: "A short event summary" })),
+    ).rejects.toThrow("__REDIRECT__");
+
+    const [payload] = addMock.mock.calls[0] as [Record<string, unknown>];
+    expect(payload.summary).toBe("A short event summary");
   });
 
   it("stores datetime-local input as an instant in the selected event time zone", async () => {
@@ -564,6 +582,7 @@ describe("cloneEvent", () => {
         data: () => ({
           slug: "jtpa-salon-32",
           title: "JTPA Salon 32",
+          summary: "A short summary",
           description: "the original",
           startAt: ts(1_000_000),
           endAt: ts(1_000_000 + NINETY_MIN),
@@ -589,6 +608,7 @@ describe("cloneEvent", () => {
         slug: "jtpa-salon-32-1",
         // Copy is visibly labelled and parked as a draft…
         title: "JTPA Salon 32 (コピー)",
+        summary: "A short summary",
         status: "draft",
         // …with the source's settings carried over…
         description: "the original",

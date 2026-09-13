@@ -24,7 +24,7 @@ import {
 import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 import { eventTimeZone } from "@/lib/time-zones";
 import type { EventDoc, LocationType } from "@/lib/types";
-import { formatDateTime, stripMarkdown } from "@/lib/utils";
+import { eventCardSummary, formatDateTime, stripMarkdown } from "@/lib/utils";
 
 // The route still renders per request (the root layout reads the session
 // cookie for the header), but the Firestore reads below are served from
@@ -287,7 +287,7 @@ export default async function HomePage() {
                       {e.title}
                     </h3>
                     <p className="mt-2 line-clamp-3 text-sm text-zinc-600 dark:text-zinc-400">
-                      {e.description}
+                      {eventCardSummary(e)}
                     </p>
                   </div>
                 </Link>
@@ -438,7 +438,7 @@ export default async function HomePage() {
               const isReport = Boolean(reportPost);
               const title = reportContent?.title ?? event.title;
               const description =
-                reportContent?.excerpt ?? stripMarkdown(event.description);
+                reportContent?.excerpt ?? eventCardSummary(event);
               const image = reportPost?.coverImage ?? event.coverImage;
               const href = reportPost
                 ? `/blog/${reportPost.slug}`
