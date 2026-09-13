@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_SURVEY_ANSWER_LENGTH,
+  normalizeSurveyFieldsForSubmit,
   normalizeSurveyResponsesForSubmit,
   validateSurveyFields,
   validateSurveyResponses,
@@ -158,6 +159,38 @@ describe("validateSurveyFields", () => {
     );
     expect(msg).toContain("アンケート項目2");
     expect(msg).toContain("重複");
+  });
+});
+
+describe("normalizeSurveyFieldsForSubmit", () => {
+  it("removes unfinished option rows and trims saved choices", () => {
+    expect(
+      normalizeSurveyFieldsForSubmit([
+        field({
+          type: "multiselect",
+          options: [" 仕事 ", "", "  ", "日常生活"],
+          maxSelections: 2,
+        }),
+      ]),
+    ).toEqual([
+      field({
+        type: "multiselect",
+        options: ["仕事", "日常生活"],
+        maxSelections: 2,
+      }),
+    ]);
+  });
+
+  it("removes stale choice-only settings after changing field type", () => {
+    expect(
+      normalizeSurveyFieldsForSubmit([
+        field({
+          type: "text",
+          options: ["old option"],
+          maxSelections: 1,
+        }),
+      ]),
+    ).toEqual([field({ type: "text" })]);
   });
 });
 

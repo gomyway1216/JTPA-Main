@@ -1308,7 +1308,10 @@
         "all": "全員",
         "presenter": "発表者のみ"
       },
-      "optionsPlaceholder": "選択肢 (カンマ区切り)",
+      "optionsLabel": "選択肢",
+      "optionPlaceholder": "選択肢 {number}",
+      "addOption": "+ 選択肢を追加",
+      "removeOption": "選択肢 {number}を削除",
       "maxSelections": "最大選択数",
       "maxSelectionsPlaceholder": "最大選択数（未入力は制限なし）",
       "required": "必須",
