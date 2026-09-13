@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  campaignUrl,
   emailShareUrl,
+  eventPromotionLinks,
   facebookShareUrl,
   googleCalendarUrl,
 } from "@/lib/event-links";
@@ -65,5 +67,36 @@ describe("event share links", () => {
     );
     expect(value).toContain("subject=Bay+Area+AI+Study+Group");
     expect(value).toContain("https%3A%2F%2Fbayarea-ai.com%2Fja%2Fevents%2Fai5");
+  });
+});
+
+describe("campaign links", () => {
+  it("adds consistent UTM parameters without changing the destination", () => {
+    const value = campaignUrl("https://bayarea-ai.com/ja/events/ai5", {
+      source: "jtpa",
+      medium: "referral",
+      name: "event_ai5",
+    });
+    const url = new URL(value);
+    expect(url.origin + url.pathname).toBe(
+      "https://bayarea-ai.com/ja/events/ai5",
+    );
+    expect(url.searchParams.get("utm_source")).toBe("jtpa");
+    expect(url.searchParams.get("utm_medium")).toBe("referral");
+    expect(url.searchParams.get("utm_campaign")).toBe("event_ai5");
+  });
+
+  it("builds channel-specific links for an event", () => {
+    const links = eventPromotionLinks(
+      "https://bayarea-ai.com/ja/events/ai5",
+      "ai5",
+    );
+    expect(new URL(links.facebook).searchParams.get("utm_source")).toBe(
+      "facebook",
+    );
+    expect(new URL(links.jtpa).searchParams.get("utm_source")).toBe("jtpa");
+    expect(new URL(links.mailingList).searchParams.get("utm_source")).toBe(
+      "mailing_list",
+    );
   });
 });

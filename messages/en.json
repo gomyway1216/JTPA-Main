@@ -1281,7 +1281,16 @@
         "rsvp": "RSVP"
       },
       "newTitle": "New event",
-      "editTitle": "Edit event"
+      "editTitle": "Edit event",
+      "promotionLinks": {
+        "title": "Campaign links",
+        "description": "Copy the link for each publishing channel. Every link opens the same event page while GA4 records its source.",
+        "facebook": "Facebook",
+        "jtpa": "JTPA website",
+        "mailingList": "Email campaign",
+        "copy": "Copy",
+        "copied": "Copied"
+      }
     },
     "eventForm": {
       "title": "Title",

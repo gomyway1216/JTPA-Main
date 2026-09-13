@@ -44,6 +44,20 @@ Three sources, in order of precedence at runtime:
 | App Hosting Console UI → Environment variables | `NEXT_PUBLIC_FIREBASE_*`, `ADMIN_NOTIFICATION_EMAILS` (optional fallback — see [admin.md](admin.md#notification-recipients-who-gets-the-admin-emails); admin / editor users from Auth are always auto-included), [`NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`](#next_server_actions_encryption_key) | Not in git |
 | Google Secret Manager (`secret:` ref in `apphosting.yaml`) | True secrets — currently NONE used by app code | Not in git, IAM-gated |
 
+### Google Analytics 4
+
+`NEXT_PUBLIC_GA_MEASUREMENT_ID` enables GA4 page-view and campaign attribution.
+The production web stream ID is public and configured in `apphosting.yaml`; leave
+the variable blank in `.env.local` to disable analytics during local development.
+
+Event promotion links are generated on `/admin/events/[id]/edit` with consistent
+`utm_source`, `utm_medium`, and `utm_campaign` values for Facebook, jtpa.org, and
+the mailing list. GA4 reports these under **Reports → Acquisition → Traffic
+acquisition**. A new successful RSVP also sends `rsvp_complete` with only the
+event slug, participation role, and confirmed/waitlist status. It never sends a
+name, email address, affiliation, or survey response. Mark `rsvp_complete` as a
+key event in GA4 Admin to report registration conversions by campaign.
+
 ### `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`
 
 Stabilizes the encryption Next.js uses for Server Action references so a form opened on one revision still POSTs cleanly after a deploy. Without it Next.js generates a random key per build, which causes "Server Action … was not found on the server" the next time anyone submits a form they had open across a deploy (see issue #95 for the original report).

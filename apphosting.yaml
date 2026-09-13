@@ -19,6 +19,11 @@ runConfig:
   memoryMiB: 512
 
 env:
+  - variable: NEXT_PUBLIC_GA_MEASUREMENT_ID
+    value: G-WRFT30WQMY
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: SESSION_COOKIE_SECRET
     secret: SESSION_COOKIE_SECRET
     availability:

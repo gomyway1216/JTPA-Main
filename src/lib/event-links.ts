@@ -6,6 +6,47 @@ type ShareableEvent = Pick<
   "title" | "summary" | "description" | "startAt" | "endAt" | "location"
 >;
 
+export type EventPromotionLinks = {
+  facebook: string;
+  jtpa: string;
+  mailingList: string;
+};
+
+export function campaignUrl(
+  destination: string,
+  campaign: { source: string; medium: string; name: string },
+): string {
+  const url = new URL(destination);
+  url.searchParams.set("utm_source", campaign.source);
+  url.searchParams.set("utm_medium", campaign.medium);
+  url.searchParams.set("utm_campaign", campaign.name);
+  return url.toString();
+}
+
+export function eventPromotionLinks(
+  eventUrl: string,
+  eventSlug: string,
+): EventPromotionLinks {
+  const name = `event_${eventSlug}`;
+  return {
+    facebook: campaignUrl(eventUrl, {
+      source: "facebook",
+      medium: "social",
+      name,
+    }),
+    jtpa: campaignUrl(eventUrl, {
+      source: "jtpa",
+      medium: "referral",
+      name,
+    }),
+    mailingList: campaignUrl(eventUrl, {
+      source: "mailing_list",
+      medium: "email",
+      name,
+    }),
+  };
+}
+
 function googleCalendarDate(date: Date): string {
   return date
     .toISOString()
