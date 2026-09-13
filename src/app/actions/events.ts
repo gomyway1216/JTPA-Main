@@ -28,15 +28,38 @@ import {
 import { slugify } from "@/lib/utils";
 import type { EventDoc } from "@/lib/types";
 
-const SurveyFieldSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
-  type: z.enum(["text", "textarea", "select", "multiselect", "checkbox"]),
-  required: z.boolean(),
-  options: z.array(z.string()).optional(),
-  maxSelections: z.number().int().min(1).optional(),
-  audience: z.enum(["all", "presenter"]),
-});
+const SurveyFieldSchema = z
+  .object({
+    key: z.string().min(1),
+    label: z.string().min(1),
+    type: z.enum(["text", "textarea", "select", "multiselect", "checkbox"]),
+    required: z.boolean(),
+    options: z.array(z.string()).optional(),
+    maxSelections: z.number().int().min(1).optional(),
+    audience: z.enum(["all", "presenter"]),
+  })
+  .superRefine((field, ctx) => {
+    if (field.type !== "select" && field.type !== "multiselect") return;
+    const options = (field.options ?? []).map((o) => o.trim()).filter(Boolean);
+    if (options.length === 0 || new Set(options).size !== options.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["options"],
+        message: "Choice fields require unique, non-empty options",
+      });
+    }
+    if (
+      field.type === "multiselect" &&
+      field.maxSelections !== undefined &&
+      field.maxSelections > options.length
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["maxSelections"],
+        message: "Maximum selections cannot exceed the number of options",
+      });
+    }
+  });
 
 const AssetSchema = z.object({
   path: z.string().min(1),

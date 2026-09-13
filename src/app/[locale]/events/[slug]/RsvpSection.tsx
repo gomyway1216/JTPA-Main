@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
+import { normalizeSurveyResponsesForSubmit } from "@/lib/event-survey";
 import type { EventDoc, RsvpDoc, SessionUser } from "@/lib/types";
 
 type EditableSurveyResponse = string | string[];
@@ -79,7 +80,11 @@ export function RsvpSection({
           eventId: event.id,
           role,
           affiliation,
-          surveyResponses: responses,
+          surveyResponses: normalizeSurveyResponsesForSubmit(
+            event.surveyFields,
+            responses,
+            role,
+          ),
           presentationTitle: role === "presenter" ? presentationTitle : undefined,
           presentationAbstract:
             role === "presenter" ? presentationAbstract : undefined,
@@ -272,7 +277,10 @@ function SurveyInput({
 }) {
   const t = useTranslations("Rsvp");
   if (field.type === "multiselect") {
-    const selected = Array.isArray(value) ? value : [];
+    const allowed = new Set(field.options ?? []);
+    const selected = Array.isArray(value)
+      ? value.filter((option) => allowed.has(option))
+      : [];
     const atLimit =
       field.maxSelections !== undefined &&
       selected.length >= field.maxSelections;

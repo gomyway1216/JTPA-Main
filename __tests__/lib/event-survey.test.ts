@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   MAX_SURVEY_ANSWER_LENGTH,
+  normalizeSurveyResponsesForSubmit,
   validateSurveyFields,
   validateSurveyResponses,
 } from "@/lib/event-survey";
@@ -16,6 +17,8 @@ const messages = {
     `アンケート項目${index}: 表示ラベルを入力してください`,
   missingOption: (index: number) =>
     `アンケート項目${index}: 選択肢を1つ以上入力してください`,
+  duplicateOption: (index: number) =>
+    `アンケート項目${index}: 選択肢が重複しています`,
   invalidSelectionLimit: (index: number) =>
     `アンケート項目${index}: 最大選択数が不正です`,
 };
@@ -124,6 +127,12 @@ describe("validateSurveyFields", () => {
         messages,
       ),
     ).toMatch(/最大選択数/);
+    expect(
+      validateSurveyFields(
+        [field({ type: "multiselect", options: ["a", "a"] })],
+        messages,
+      ),
+    ).toMatch(/重複/);
   });
 
   it("reports the first offending item with its 1-based number", () => {
@@ -266,6 +275,9 @@ describe("validateSurveyResponses", () => {
       validateSurveyResponses(fields, { topics: "work" }, "attendee"),
     ).toEqual({ code: "value", key: "topics" });
     expect(
+      validateSurveyResponses(fields, { topics: [null] }, "attendee"),
+    ).toEqual({ code: "value", key: "topics" });
+    expect(
       validateSurveyResponses(fields, { topics: ["unknown"] }, "attendee"),
     ).toEqual({ code: "option", key: "topics" });
     expect(
@@ -282,6 +294,29 @@ describe("validateSurveyResponses", () => {
         "attendee",
       ),
     ).toBeNull();
+  });
+
+  it("removes stale multiselect choices before resubmitting an RSVP", () => {
+    const fields = [
+      field({
+        key: "topics",
+        type: "multiselect",
+        options: ["work", "agents"],
+      }),
+      field({ key: "note", type: "text" }),
+      field({ key: "presenter", type: "text", audience: "presenter" }),
+    ];
+    expect(
+      normalizeSurveyResponsesForSubmit(
+        fields,
+        {
+          topics: ["work", "removed", "work"],
+          note: "hello",
+          presenter: "hidden",
+        },
+        "attendee",
+      ),
+    ).toEqual({ topics: ["work"], note: "hello" });
   });
 
   it("rejects an answer longer than the cap", () => {

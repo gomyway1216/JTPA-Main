@@ -1728,6 +1728,7 @@
     "surveyDuplicateKey": "Survey item {index}: key \"{key}\" is duplicated. Choose another key.",
     "surveyMissingLabel": "Survey item {index}: enter a display label.",
     "surveyMissingOption": "Survey item {index}: enter at least one option.",
+    "surveyDuplicateOption": "Survey item {index}: duplicate options are not allowed.",
     "surveyInvalidSelectionLimit": "Survey item {index}: maximum selections must be at least 1 and no greater than the number of options.",
     "guideImageMissingId": "Could not determine the note ID.",
     "qaImageMissingId": "Could not determine the question ID.",

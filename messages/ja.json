@@ -1725,6 +1725,7 @@
     "surveyDuplicateKey": "アンケート項目{index}: key「{key}」が重複しています。別の key を指定してください",
     "surveyMissingLabel": "アンケート項目{index}: 表示ラベルを入力してください",
     "surveyMissingOption": "アンケート項目{index}: 選択肢を1つ以上入力してください",
+    "surveyDuplicateOption": "アンケート項目{index}: 同じ選択肢を重複して入力できません",
     "surveyInvalidSelectionLimit": "アンケート項目{index}: 最大選択数は1以上かつ選択肢の数以下にしてください",
     "guideImageMissingId": "メモ・ノウハウIDが取得できませんでした",
     "qaImageMissingId": "質問IDが取得できませんでした",

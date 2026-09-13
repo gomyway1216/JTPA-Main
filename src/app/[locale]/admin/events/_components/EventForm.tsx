@@ -270,6 +270,8 @@ export function EventForm({
         actionErrors("surveyDuplicateKey", { index, key }),
       missingLabel: (index) => actionErrors("surveyMissingLabel", { index }),
       missingOption: (index) => actionErrors("surveyMissingOption", { index }),
+      duplicateOption: (index) =>
+        actionErrors("surveyDuplicateOption", { index }),
       invalidSelectionLimit: (index) =>
         actionErrors("surveyInvalidSelectionLimit", { index }),
     });
@@ -784,10 +786,14 @@ export function EventForm({
                       value={f.options?.join(", ") ?? ""}
                       onChange={(e) =>
                         updateField(i, {
-                          options: e.target.value
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean),
+                          options: Array.from(
+                            new Set(
+                              e.target.value
+                                .split(",")
+                                .map((s) => s.trim())
+                                .filter(Boolean),
+                            ),
+                          ),
                         })
                       }
                       className={inputClass}
