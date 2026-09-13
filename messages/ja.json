@@ -291,7 +291,13 @@
     "cancelledNotice": "このイベントは中止されました。",
     "endedNotice": "このイベントは終了しました。",
     "reportLabel": "開催報告",
-    "loginRequired": "参加登録にはログインが必要です。"
+    "loginRequired": "参加登録にはログインが必要です。",
+    "eventActionsTitle": "予定に追加・共有",
+    "addToGoogleCalendar": "Googleカレンダーに追加",
+    "shareOnFacebook": "Facebookで共有",
+    "shareByEmail": "メールで共有",
+    "copyEventLink": "リンクをコピー",
+    "linkCopied": "コピーしました"
   },
   "Rsvp": {
     "title": "参加登録",

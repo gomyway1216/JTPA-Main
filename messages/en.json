@@ -291,7 +291,13 @@
     "cancelledNotice": "This event has been cancelled.",
     "endedNotice": "This event has ended.",
     "reportLabel": "Event report",
-    "loginRequired": "Log in to register for this event."
+    "loginRequired": "Log in to register for this event.",
+    "eventActionsTitle": "Add or share",
+    "addToGoogleCalendar": "Add to Google Calendar",
+    "shareOnFacebook": "Share on Facebook",
+    "shareByEmail": "Share by email",
+    "copyEventLink": "Copy link",
+    "linkCopied": "Copied"
   },
   "Rsvp": {
     "title": "Registration",
