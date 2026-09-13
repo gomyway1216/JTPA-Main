@@ -4,6 +4,9 @@
 // docs/deployment.md) instead of "".
 const FALLBACK_SITE_URL = "https://bayarea-ai.com";
 
+export const JTPA_SITE_URL = "https://jtpa.org/";
+export const JTPA_EVENTS_URL = "https://jtpa.org/category/event";
+
 // Loopback hosts default to http:// when the configured value omits a
 // scheme; every other host defaults to https://.
 const LOOPBACK_HOST = /^(?:localhost|127\.0\.0\.1)(?:[:/]|$)/i;

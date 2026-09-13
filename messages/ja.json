@@ -54,7 +54,9 @@
     "community": "みんなの投稿",
     "mailingList": "メール配信登録",
     "help": "ヘルプ・使い方",
-    "maintainerText": "JTPA代表・サイト運営: <name>Yudai Yaguchi</name>"
+    "maintainerText": "JTPA代表・サイト運営: <name>Yudai Yaguchi</name>",
+    "supportedBy": "このコミュニティはJTPAの支援を受けて運営しています。Supported by",
+    "jtpaEvents": "JTPAのイベントも見る"
   },
   "MailingList": {
     "metadataTitle": "メール配信登録",
