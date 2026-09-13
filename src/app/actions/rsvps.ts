@@ -36,7 +36,13 @@ async function surveyResponseError(
     case "option":
       return actionError("rsvpSurveyInvalidOption", { key: failure.key });
     case "checkbox":
+    case "value":
       return actionError("rsvpSurveyInvalidValue", { key: failure.key });
+    case "selectionLimit":
+      return actionError("rsvpSurveySelectionLimit", {
+        key: failure.key,
+        max: failure.max,
+      });
     case "tooLong":
       return actionError("rsvpSurveyTooLong", {
         key: failure.key,
@@ -51,7 +57,7 @@ interface SubmitRsvpInput {
   eventId: string;
   role: "attendee" | "presenter";
   affiliation?: string;
-  surveyResponses: Record<string, string>;
+  surveyResponses: Record<string, string | string[]>;
   presentationTitle?: string;
   presentationAbstract?: string;
 }

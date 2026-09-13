@@ -112,9 +112,12 @@ export const UserProfileSchema = z.looseObject({
 const SurveyFieldSchema = z.looseObject({
   key: z.string().optional(),
   label: z.string().optional(),
-  type: z.enum(["text", "textarea", "select", "checkbox"]).optional(),
+  type: z
+    .enum(["text", "textarea", "select", "multiselect", "checkbox"])
+    .optional(),
   required: z.boolean().optional(),
   options: z.array(z.string()).optional(),
+  maxSelections: z.number().int().min(1).optional(),
   audience: z.enum(["all", "presenter"]).optional(),
 });
 

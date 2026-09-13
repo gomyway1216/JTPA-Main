@@ -92,6 +92,25 @@ describe("buildAttendeeCsv", () => {
     expect(lines[1]).toContain("one two three");
   });
 
+  it("exports multiselect answers as a pipe-separated value", () => {
+    const fields: SurveyField[] = [
+      {
+        key: "topics",
+        label: "Topics",
+        type: "multiselect",
+        required: false,
+        options: ["work", "coding", "agents"],
+        maxSelections: 2,
+        audience: "all",
+      },
+    ];
+    const csv = buildAttendeeCsv(
+      [rsvp({ surveyResponses: { topics: ["work", "agents"] } })],
+      fields,
+    );
+    expect(csv).toContain("work|agents");
+  });
+
   it("still RFC-4180 quotes commas after the newline collapse", () => {
     const csv = buildAttendeeCsv(
       [rsvp({ affiliation: "Acme, Inc.", presentationAbstract: "a\nb" })],

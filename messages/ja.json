@@ -288,6 +288,8 @@
     "presentationTitle": "発表タイトル",
     "presentationAbstract": "概要",
     "choose": "選択してください",
+    "chooseAny": "当てはまるものを選択してください",
+    "chooseUpTo": "最大{count}つまで選択できます",
     "submit": "登録する",
     "update": "登録内容を更新",
     "submitting": "送信中...",
@@ -1299,13 +1301,16 @@
         "text": "テキスト",
         "textarea": "複数行",
         "select": "選択肢",
-        "checkbox": "チェックボックス"
+        "multiselect": "複数選択（チェックリスト）",
+        "checkbox": "確認チェック"
       },
       "audience": {
         "all": "全員",
         "presenter": "発表者のみ"
       },
       "optionsPlaceholder": "選択肢 (カンマ区切り)",
+      "maxSelections": "最大選択数",
+      "maxSelectionsPlaceholder": "最大選択数（未入力は制限なし）",
       "required": "必須",
       "deleteEvent": "イベントを削除",
       "deleteConfirm": "このイベントを削除しますか？"
@@ -1648,6 +1653,7 @@
     "rsvpSurveyRequired": "アンケート「{key}」は必須です。",
     "rsvpSurveyInvalidOption": "アンケート「{key}」に不正な選択肢が指定されています。",
     "rsvpSurveyInvalidValue": "アンケート「{key}」の値が不正です。",
+    "rsvpSurveySelectionLimit": "アンケート「{key}」は{max}つまで選択できます。",
     "rsvpSurveyTooLong": "アンケート「{key}」は{max}文字以内で入力してください。",
     "rsvpSurveyUnknownKey": "不明なアンケート項目「{key}」が含まれています。",
     "cloneSourceEventNotFound": "複製元のイベントが見つかりません",
@@ -1719,6 +1725,7 @@
     "surveyDuplicateKey": "アンケート項目{index}: key「{key}」が重複しています。別の key を指定してください",
     "surveyMissingLabel": "アンケート項目{index}: 表示ラベルを入力してください",
     "surveyMissingOption": "アンケート項目{index}: 選択肢を1つ以上入力してください",
+    "surveyInvalidSelectionLimit": "アンケート項目{index}: 最大選択数は1以上かつ選択肢の数以下にしてください",
     "guideImageMissingId": "メモ・ノウハウIDが取得できませんでした",
     "qaImageMissingId": "質問IDが取得できませんでした",
     "userMissingId": "ユーザーIDが取得できませんでした",

@@ -6,6 +6,8 @@ import { useState, useTransition } from "react";
 import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
 import type { EventDoc, RsvpDoc, SessionUser } from "@/lib/types";
 
+type EditableSurveyResponse = string | string[];
+
 export function RsvpSection({
   event,
   initialRsvp,
@@ -28,7 +30,9 @@ export function RsvpSection({
   const [role, setRole] = useState<"attendee" | "presenter">(
     initialRsvp?.role ?? "attendee",
   );
-  const [responses, setResponses] = useState<Record<string, string>>(
+  const [responses, setResponses] = useState<
+    Record<string, EditableSurveyResponse>
+  >(
     () => mapInitial(initialRsvp),
   );
   const [presentationTitle, setPresentationTitle] = useState(
@@ -263,24 +267,69 @@ function SurveyInput({
   onChange,
 }: {
   field: import("@/lib/types").SurveyField;
-  value: string;
-  onChange: (v: string) => void;
+  value: EditableSurveyResponse;
+  onChange: (v: EditableSurveyResponse) => void;
 }) {
   const t = useTranslations("Rsvp");
+  if (field.type === "multiselect") {
+    const selected = Array.isArray(value) ? value : [];
+    const atLimit =
+      field.maxSelections !== undefined &&
+      selected.length >= field.maxSelections;
+
+    return (
+      <fieldset>
+        <legend className="text-sm font-medium">
+          {field.label}
+          {field.required && <span className="text-red-600"> *</span>}
+        </legend>
+        <p className="mt-1 text-xs text-zinc-500">
+          {field.maxSelections === undefined
+            ? t("chooseAny")
+            : t("chooseUpTo", { count: field.maxSelections })}
+        </p>
+        <div className="mt-2 space-y-2">
+          {field.options?.map((option) => {
+            const checked = selected.includes(option);
+            return (
+              <label key={option} className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  disabled={!checked && atLimit}
+                  onChange={(e) =>
+                    onChange(
+                      e.target.checked
+                        ? [...selected, option]
+                        : selected.filter((item) => item !== option),
+                    )
+                  }
+                  className="mt-0.5"
+                />
+                <span>{option}</span>
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
+    );
+  }
+
+  const stringValue = Array.isArray(value) ? "" : value;
   return (
     <Field label={field.label} required={field.required}>
       {field.type === "textarea" ? (
         <textarea
           required={field.required}
           rows={3}
-          value={value}
+          value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
       ) : field.type === "select" ? (
         <select
           required={field.required}
-          value={value}
+          value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         >
@@ -295,7 +344,7 @@ function SurveyInput({
         <label className="inline-flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={value === "true"}
+            checked={stringValue === "true"}
             onChange={(e) => onChange(e.target.checked ? "true" : "false")}
           />
           {field.label}
@@ -304,7 +353,7 @@ function SurveyInput({
         <input
           type="text"
           required={field.required}
-          value={value}
+          value={stringValue}
           onChange={(e) => onChange(e.target.value)}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
         />
@@ -313,11 +362,13 @@ function SurveyInput({
   );
 }
 
-function mapInitial(rsvp: RsvpDoc | null): Record<string, string> {
+function mapInitial(
+  rsvp: RsvpDoc | null,
+): Record<string, EditableSurveyResponse> {
   if (!rsvp) return {};
-  const out: Record<string, string> = {};
+  const out: Record<string, EditableSurveyResponse> = {};
   for (const [k, v] of Object.entries(rsvp.surveyResponses ?? {})) {
-    out[k] = typeof v === "boolean" ? String(v) : Array.isArray(v) ? v.join(",") : v;
+    out[k] = typeof v === "boolean" ? String(v) : v;
   }
   return out;
 }

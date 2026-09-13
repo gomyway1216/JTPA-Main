@@ -270,6 +270,8 @@ export function EventForm({
         actionErrors("surveyDuplicateKey", { index, key }),
       missingLabel: (index) => actionErrors("surveyMissingLabel", { index }),
       missingOption: (index) => actionErrors("surveyMissingOption", { index }),
+      invalidSelectionLimit: (index) =>
+        actionErrors("surveyInvalidSelectionLimit", { index }),
     });
     if (surveyError) {
       setError(surveyError);
@@ -756,6 +758,9 @@ export function EventForm({
                     <option value="text">{t("fieldType.text")}</option>
                     <option value="textarea">{t("fieldType.textarea")}</option>
                     <option value="select">{t("fieldType.select")}</option>
+                    <option value="multiselect">
+                      {t("fieldType.multiselect")}
+                    </option>
                     <option value="checkbox">{t("fieldType.checkbox")}</option>
                   </select>
                   <select
@@ -771,21 +776,41 @@ export function EventForm({
                     <option value="presenter">{t("audience.presenter")}</option>
                   </select>
                 </div>
-                {f.type === "select" && (
-                  <input
-                    type="text"
-                    placeholder={t("optionsPlaceholder")}
-                    value={f.options?.join(", ") ?? ""}
-                    onChange={(e) =>
-                      updateField(i, {
-                        options: e.target.value
-                          .split(",")
-                          .map((s) => s.trim())
-                          .filter(Boolean),
-                      })
-                    }
-                    className={`${inputClass} mt-2`}
-                  />
+                {(f.type === "select" || f.type === "multiselect") && (
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    <input
+                      type="text"
+                      placeholder={t("optionsPlaceholder")}
+                      value={f.options?.join(", ") ?? ""}
+                      onChange={(e) =>
+                        updateField(i, {
+                          options: e.target.value
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean),
+                        })
+                      }
+                      className={inputClass}
+                    />
+                    {f.type === "multiselect" && (
+                      <input
+                        type="number"
+                        min={1}
+                        max={f.options?.length || undefined}
+                        placeholder={t("maxSelectionsPlaceholder")}
+                        aria-label={t("maxSelections")}
+                        value={f.maxSelections ?? ""}
+                        onChange={(e) =>
+                          updateField(i, {
+                            maxSelections: e.target.value
+                              ? Number(e.target.value)
+                              : undefined,
+                          })
+                        }
+                        className={inputClass}
+                      />
+                    )}
+                  </div>
                 )}
                 <div className="mt-2 flex items-center justify-between">
                   <label className="text-sm">

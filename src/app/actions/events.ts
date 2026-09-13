@@ -31,9 +31,10 @@ import type { EventDoc } from "@/lib/types";
 const SurveyFieldSchema = z.object({
   key: z.string().min(1),
   label: z.string().min(1),
-  type: z.enum(["text", "textarea", "select", "checkbox"]),
+  type: z.enum(["text", "textarea", "select", "multiselect", "checkbox"]),
   required: z.boolean(),
   options: z.array(z.string()).optional(),
+  maxSelections: z.number().int().min(1).optional(),
   audience: z.enum(["all", "presenter"]),
 });
 
