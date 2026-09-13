@@ -1,13 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
 import { normalizeSurveyResponsesForSubmit } from "@/lib/event-survey";
 import type { EventDoc, RsvpDoc, SessionUser } from "@/lib/types";
 
 type EditableSurveyResponse = string | string[];
+type SuccessKind = "registered" | "updated" | "waitlisted";
 
 export function RsvpSection({
   event,
@@ -50,6 +51,7 @@ export function RsvpSection({
     initialRsvp ? (initialRsvp.affiliation ?? "") : profileAffiliation,
   );
   const [error, setError] = useState<string | null>(null);
+  const [successKind, setSuccessKind] = useState<SuccessKind | null>(null);
   const [pending, startTransition] = useTransition();
 
   const presenterFields = event.surveyFields.filter(
@@ -74,6 +76,7 @@ export function RsvpSection({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const isUpdating = !!rsvp && rsvp.status !== "cancelled";
     startTransition(async () => {
       try {
         const result = await submitRsvp({
@@ -92,6 +95,13 @@ export function RsvpSection({
         if (result.ok) {
           setRsvp(result.rsvp);
           onRsvpChange?.(result.rsvp);
+          setSuccessKind(
+            result.rsvp.status === "waitlist"
+              ? "waitlisted"
+              : isUpdating
+                ? "updated"
+                : "registered",
+          );
         } else {
           setError(result.error);
         }
@@ -120,16 +130,17 @@ export function RsvpSection({
   }
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-      <h2 className="text-xl font-semibold mb-4">{t("title")}</h2>
+    <>
+      <section className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-xl font-semibold">{t("title")}</h2>
 
-      {statusMessage && (
-        <div className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
-          {statusMessage}
-        </div>
-      )}
+        {statusMessage && (
+          <div className="mb-4 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100">
+            {statusMessage}
+          </div>
+        )}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="text-sm font-medium">{t("roleLabel")}</label>
           <div className="mt-1 flex gap-3">
@@ -241,8 +252,70 @@ export function RsvpSection({
             </button>
           )}
         </div>
-      </form>
-    </section>
+        </form>
+      </section>
+      {successKind && (
+        <RsvpSuccessDialog
+          kind={successKind}
+          onClose={() => setSuccessKind(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function RsvpSuccessDialog({
+  kind,
+  onClose,
+}: {
+  kind: SuccessKind;
+  onClose: () => void;
+}) {
+  const t = useTranslations("Rsvp");
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    dialog.showModal();
+    return () => dialog.close();
+  }, []);
+
+  const title =
+    kind === "waitlisted"
+      ? t("waitlistComplete")
+      : kind === "updated"
+        ? t("updateComplete")
+        : t("registrationComplete");
+
+  return (
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      aria-labelledby="rsvp-success-title"
+      aria-describedby="rsvp-success-description"
+      className="m-auto w-[min(92vw,28rem)] rounded-lg border border-zinc-200 bg-white p-6 text-zinc-950 shadow-xl backdrop:bg-black/40 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+    >
+      <h2 id="rsvp-success-title" className="text-xl font-semibold">
+        {title}
+      </h2>
+      <p
+        id="rsvp-success-description"
+        className="mt-2 text-sm text-zinc-600 dark:text-zinc-300"
+      >
+        {t("successHint")}
+      </p>
+      <div className="mt-5 flex justify-end">
+        <button
+          type="button"
+          autoFocus
+          onClick={() => dialogRef.current?.close()}
+          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900"
+        >
+          {t("closeDialog")}
+        </button>
+      </div>
+    </dialog>
   );
 }
 
