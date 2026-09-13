@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { cancelRsvp, submitRsvp } from "@/app/actions/rsvps";
+import { trackRsvpComplete } from "@/lib/analytics";
 import { normalizeSurveyResponsesForSubmit } from "@/lib/event-survey";
 import type { EventDoc, RsvpDoc, SessionUser } from "@/lib/types";
 
@@ -93,6 +94,13 @@ export function RsvpSection({
             role === "presenter" ? presentationAbstract : undefined,
         });
         if (result.ok) {
+          if (!isUpdating && result.rsvp.status !== "cancelled") {
+            trackRsvpComplete({
+              eventSlug: event.slug,
+              role: result.rsvp.role,
+              status: result.rsvp.status,
+            });
+          }
           setRsvp(result.rsvp);
           onRsvpChange?.(result.rsvp);
           setSuccessKind(

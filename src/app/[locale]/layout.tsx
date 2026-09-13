@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -7,6 +8,7 @@ import "../globals.css";
 
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
@@ -16,6 +18,10 @@ import { countUnreadNotifications } from "@/lib/data/notifications";
 import { getMyAvatarUrl } from "@/lib/data/users";
 import { siteIdentityJsonLd } from "@/lib/seo";
 import { siteBaseUrl } from "@/lib/site";
+import {
+  analyticsMeasurementId,
+  googleAnalyticsInitScript,
+} from "@/lib/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -68,6 +74,7 @@ export default async function RootLayout({
     title: commonT("siteTitle"),
     description: commonT("siteDescription"),
   });
+  const measurementId = analyticsMeasurementId();
 
   const sessionUser = await getSessionUser();
   const [avatarUrl, unreadNotificationCount] = sessionUser
@@ -122,6 +129,15 @@ export default async function RootLayout({
             __html: `(function(){try{var m=localStorage.getItem('jtpa-theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(m==='dark'||(m!=='light'&&d))document.documentElement.classList.add('dark')}catch(e){}})()`,
           }}
         />
+        {measurementId && (
+          <Script
+            id="google-analytics-init"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{
+              __html: googleAnalyticsInitScript(measurementId),
+            }}
+          />
+        )}
       </head>
       <body
         // Body matches <html> via `bg-background` so there's no 1-px
@@ -143,6 +159,7 @@ export default async function RootLayout({
               />
               <main className="flex-1">{children}</main>
               <Footer />
+              <GoogleAnalytics measurementId={measurementId} />
             </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>

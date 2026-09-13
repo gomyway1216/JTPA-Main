@@ -1278,7 +1278,16 @@
         "rsvp": "RSVP"
       },
       "newTitle": "イベント新規作成",
-      "editTitle": "イベント編集"
+      "editTitle": "イベント編集",
+      "promotionLinks": {
+        "title": "告知用リンク",
+        "description": "掲載する媒体に合ったリンクをコピーしてください。リンク先は同じイベントページですが、流入元をGA4で区別できます。",
+        "facebook": "Facebook",
+        "jtpa": "JTPA公式サイト",
+        "mailingList": "メール配信",
+        "copy": "コピー",
+        "copied": "コピーしました"
+      }
     },
     "eventForm": {
       "title": "タイトル",

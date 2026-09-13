@@ -18,7 +18,9 @@ import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedPostContent } from "@/lib/localized-content";
 import {
+  campaignUrl,
   emailShareUrl,
+  eventPromotionLinks,
   facebookShareUrl,
   googleCalendarUrl,
 } from "@/lib/event-links";
@@ -180,6 +182,7 @@ export default async function EventDetailPage({
   const eventEnded = isEventEnded(event);
   const hasActiveRsvp = !!myRsvp && myRsvp.status !== "cancelled";
   const eventUrl = `${siteBaseUrl()}${localizedPath(`/events/${event.slug}`, locale)}`;
+  const promotionLinks = eventPromotionLinks(eventUrl, event.slug);
   const reportPostContent = publishedReportPost
     ? getLocalizedPostContent(publishedReportPost, locale)
     : null;
@@ -302,8 +305,15 @@ export default async function EventDetailPage({
 
       <EventActions
         calendarUrl={googleCalendarUrl(event, eventUrl)}
-        facebookUrl={facebookShareUrl(eventUrl)}
-        emailUrl={emailShareUrl(event.title, eventUrl)}
+        facebookUrl={facebookShareUrl(promotionLinks.facebook)}
+        emailUrl={emailShareUrl(
+          event.title,
+          campaignUrl(eventUrl, {
+            source: "email_share",
+            medium: "email",
+            name: `event_${event.slug}`,
+          }),
+        )}
         eventUrl={eventUrl}
       />
 
