@@ -42,6 +42,9 @@ export default async function AdminLayout({
             {user.isAdmin && <AdminLink href="/admin/about">{t("about")}</AdminLink>}
             {user.isAdmin && <AdminLink href="/admin/users">{t("users")}</AdminLink>}
             {user.isAdmin && (
+              <AdminLink href="/admin/mailing-list">{t("mailingList")}</AdminLink>
+            )}
+            {user.isAdmin && (
               <AdminLink href="/admin/errors">{t("errors")}</AdminLink>
             )}
             {user.isAdmin && (

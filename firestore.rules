@@ -688,6 +688,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // ----- mailing list subscribers -----
+    // Email addresses are PII. Public and admin forms both use Server
+    // Actions/Admin SDK, so no browser client may read or mutate this list.
+    match /mailingListSubscribers/{subscriberId} {
+      allow read, write: if false;
+    }
+
     // ----- auditLogs (server-only operation audit trail) -----
     // Written by Server Actions via Admin SDK. Entries may include actor
     // emails and deleted target snapshots, so only admins may read and no

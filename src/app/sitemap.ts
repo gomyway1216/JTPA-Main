@@ -32,6 +32,7 @@ const STATIC_PATHS = [
   "/qa",
   "/poll",
   "/community",
+  "/mailing-list",
   "/help",
   MAINTAINER_PROFILE_PATH,
 ];

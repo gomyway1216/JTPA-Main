@@ -936,9 +936,19 @@ describe("feedback", () => {
 });
 
 describe("server-only collections", () => {
-  it("mail and errorLogs reject client writes even from admins", async () => {
+  it("mail, mailing list, and error logs reject client access", async () => {
     await assertFails(
       setDoc(doc(admin(), "mail/m1"), { to: "x@example.com" }),
+    );
+    await seed({
+      "mailingListSubscribers/s1": { email: "private@example.com" },
+    });
+    await assertFails(getDoc(doc(admin(), "mailingListSubscribers/s1")));
+    await assertFails(getDoc(doc(anon(), "mailingListSubscribers/s1")));
+    await assertFails(
+      setDoc(doc(admin(), "mailingListSubscribers/s2"), {
+        email: "x@example.com",
+      }),
     );
     await assertFails(
       setDoc(doc(admin(), "errorLogs/log2"), { message: "fake" }),

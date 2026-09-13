@@ -52,8 +52,27 @@
     "events": "イベント",
     "showcase": "みんなのプロジェクト",
     "community": "みんなの投稿",
+    "mailingList": "メール配信登録",
     "help": "ヘルプ・使い方",
     "maintainerText": "JTPA代表・サイト運営: <name>Yudai Yaguchi</name>"
+  },
+  "MailingList": {
+    "metadataTitle": "メール配信登録",
+    "metadataDescription": "ベイエリアAI勉強会の開催情報やコミュニティからのお知らせをメールで受け取れます。",
+    "eyebrow": "Bay Area AI Study Group",
+    "title": "メールで最新情報を受け取る",
+    "description": "勉強会の開催予定や、コミュニティからの大切なお知らせをお送りします。アカウント登録は必要ありません。",
+    "whatYouReceive": "お届けする内容",
+    "eventUpdates": "次回イベントの開催日、テーマ、参加申し込みのご案内",
+    "communityUpdates": "開催レポートやコミュニティからの重要なお知らせ",
+    "emailLabel": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "consent": "上記のお知らせメールを受け取ることに同意します。",
+    "submit": "メール配信に登録",
+    "submitting": "登録中...",
+    "success": "登録が完了しました。次回のお知らせから配信します。",
+    "submitError": "登録に失敗しました。時間を置いてもう一度お試しください。",
+    "privacyNote": "登録したメールアドレスはお知らせの配信にのみ使用します。配信停止を希望する場合は<helpLink>お問い合わせフォーム</helpLink>からご連絡ください。"
   },
   "Theme": {
     "toggle": "テーマを切り替える",
@@ -1080,6 +1099,7 @@
       "feedback": "フィードバック",
       "about": "ベイエリアAI勉強会とは",
       "users": "ユーザー",
+      "mailingList": "メーリングリスト",
       "errors": "エラーログ",
       "audit": "監査ログ",
       "help": "ヘルプ"
@@ -1446,6 +1466,36 @@
       "exportTitle": "メール一斉配信用エクスポート:",
       "exportCount": "オプトイン {recipients} 件 / 全 {total} 名",
       "exportHelp": "プロフィールでメール通知をオプトアウトしたユーザーは含まれません。外部メール配信サービスにそのまま投入してください。"
+    },
+    "mailingList": {
+      "metadataTitle": "メーリングリスト管理",
+      "title": "メーリングリスト管理",
+      "description": "公開登録ページから集まったメールアドレス {count} 件を管理します。",
+      "addEmail": "メールアドレスを手動追加",
+      "emailPlaceholder": "you@example.com",
+      "language": "配信言語",
+      "add": "追加",
+      "added": "メールアドレスを追加しました",
+      "deleted": "メールアドレスを削除しました",
+      "saveFailed": "追加に失敗しました",
+      "deleteFailed": "削除に失敗しました",
+      "deleteConfirm": "{email} をメーリングリストから削除しますか？",
+      "searchAria": "メーリングリストをメールアドレスで検索",
+      "searchPlaceholder": "メールアドレスで絞り込み",
+      "visibleCount": "表示中: {visible} / 全 {total} 件",
+      "empty": "該当するメールアドレスはありません。",
+      "columns": {
+        "email": "メールアドレス",
+        "language": "言語",
+        "source": "登録元",
+        "subscribedAt": "登録日時",
+        "actions": "操作"
+      },
+      "source": {
+        "public": "公開ページ",
+        "admin": "管理者"
+      },
+      "deliveryNote": "この画面では購読者の管理と宛先の出力ができます。一斉配信にはBCCまたは配信停止機能のある外部メール配信サービスを使用してください。"
     },
     "errors": {
       "title": "エラーログ",
