@@ -4,6 +4,7 @@ import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
 import { EventInteractionSections } from "@/app/[locale]/events/[slug]/EventInteractionSections";
+import { EventActions } from "@/app/[locale]/events/[slug]/EventActions";
 import { PresentationSection } from "@/app/[locale]/events/[slug]/PresentationSection";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -16,6 +17,11 @@ import { listPresentations } from "@/lib/data/presentations";
 import { getMyRsvp } from "@/lib/data/rsvps";
 import { getMyProfile, getPublicProfilesByUids } from "@/lib/data/users";
 import { getLocalizedPostContent } from "@/lib/localized-content";
+import {
+  emailShareUrl,
+  facebookShareUrl,
+  googleCalendarUrl,
+} from "@/lib/event-links";
 import { siteBaseUrl } from "@/lib/site";
 import {
   eventTimeZone,
@@ -173,6 +179,7 @@ export default async function EventDetailPage({
     reportPost?.status === "published" ? reportPost : null;
   const eventEnded = isEventEnded(event);
   const hasActiveRsvp = !!myRsvp && myRsvp.status !== "cancelled";
+  const eventUrl = `${siteBaseUrl()}${localizedPath(`/events/${event.slug}`, locale)}`;
   const reportPostContent = publishedReportPost
     ? getLocalizedPostContent(publishedReportPost, locale)
     : null;
@@ -180,10 +187,7 @@ export default async function EventDetailPage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
       <JsonLd
-        data={eventJsonLd(
-          event,
-          `${siteBaseUrl()}${localizedPath(`/events/${event.slug}`, locale)}`,
-        )}
+        data={eventJsonLd(event, eventUrl)}
       />
 
       {event.coverImage?.url && (
@@ -295,6 +299,13 @@ export default async function EventDetailPage({
           )}
         </section>
       )}
+
+      <EventActions
+        calendarUrl={googleCalendarUrl(event, eventUrl)}
+        facebookUrl={facebookShareUrl(eventUrl)}
+        emailUrl={emailShareUrl(event.title, eventUrl)}
+        eventUrl={eventUrl}
+      />
 
       {/* Markdown description — same renderer as Guides (issue #101), so an
           event body gets GFM tables/lists, syntax highlighting, heading
