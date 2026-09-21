@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { localizedPath } from "@/i18n/paths";
 import { routing } from "@/i18n/routing";
+import { preferredContentLocale, type ContentLocale } from "@/lib/content-localization";
 import type { PublicProfile } from "@/lib/data/users";
 import {
   MAINTAINER_LINKS,
@@ -16,21 +17,27 @@ import type { UserLinks } from "@/lib/types";
 export function localizedAlternates(
   path: string,
   locale: string,
-): Metadata["alternates"] {
+  contentLocales: readonly ContentLocale[] = routing.locales,
+) {
+  const canonicalLocale =
+    preferredContentLocale(contentLocales, locale) ?? routing.defaultLocale;
+  const defaultLocale =
+    preferredContentLocale(contentLocales, routing.defaultLocale) ??
+    routing.defaultLocale;
   const languages = Object.fromEntries(
-    routing.locales.map((candidate) => [
+    contentLocales.map((candidate) => [
       candidate,
       absoluteLocalizedUrl(path, candidate),
     ]),
   );
 
   return {
-    canonical: absoluteLocalizedUrl(path, locale),
+    canonical: absoluteLocalizedUrl(path, canonicalLocale),
     languages: {
       ...languages,
-      "x-default": absoluteLocalizedUrl(path, routing.defaultLocale),
+      "x-default": absoluteLocalizedUrl(path, defaultLocale),
     },
-  };
+  } satisfies Metadata["alternates"];
 }
 
 export function absoluteLocalizedUrl(path: string, locale: string): string {

@@ -1,13 +1,17 @@
 import type { MetadataRoute } from "next";
 
-import { localizedPath } from "@/i18n/paths";
-import { CONTENT_LOCALES } from "@/lib/content-localization";
+import { CONTENT_LOCALES, type ContentLocale } from "@/lib/content-localization";
 import { listEvents } from "@/lib/data/events";
 import { listGuides } from "@/lib/data/guides";
 import { listPublishedPosts } from "@/lib/data/posts";
 import { listProjects } from "@/lib/data/projects";
 import { MAINTAINER_PROFILE_PATH } from "@/lib/maintainer";
-import { siteBaseUrl } from "@/lib/site";
+import {
+  getPostContentLocales,
+  getGuideContentLocales,
+  getProjectContentLocales,
+} from "@/lib/localized-content";
+import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
 import type { TsLike } from "@/lib/types";
 import { toDate } from "@/lib/utils";
 
@@ -44,16 +48,12 @@ const STATIC_PATHS = [
 function localizedEntries(
   path: string,
   lastModified?: TsLike,
+  locales: readonly ContentLocale[] = CONTENT_LOCALES,
 ): MetadataRoute.Sitemap {
-  const base = siteBaseUrl();
-  const locales = CONTENT_LOCALES;
-  const urlFor = (locale: string) => `${base}${localizedPath(path, locale)}`;
-  const languages = Object.fromEntries(
-    locales.map((locale) => [locale, urlFor(locale)]),
-  );
+  const languages = localizedAlternates(path, locales[0], locales).languages;
   const date = toDate(lastModified) ?? undefined;
   return locales.map((locale) => ({
-    url: urlFor(locale),
+    url: absoluteLocalizedUrl(path, locale),
     lastModified: date,
     alternates: { languages },
   }));
@@ -73,15 +73,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...STATIC_PATHS.flatMap((path) => localizedEntries(path)),
-    ...posts.flatMap((p) => localizedEntries(`/blog/${p.slug}`, p.updatedAt)),
-    ...guides.flatMap((g) => localizedEntries(`/guide/${g.slug}`, g.updatedAt)),
+    ...posts.flatMap((p) =>
+      localizedEntries(`/blog/${p.slug}`, p.updatedAt, getPostContentLocales(p)),
+    ),
+    ...guides.flatMap((g) =>
+      localizedEntries(`/guide/${g.slug}`, g.updatedAt, getGuideContentLocales(g)),
+    ),
     ...events
       // Members-only events redirect anonymous visitors (crawlers included)
       // to login — keep them out of the sitemap entirely.
       .filter((e) => e.visibility !== "members_only")
-      .flatMap((e) => localizedEntries(`/events/${e.slug}`, e.updatedAt)),
+      .flatMap((e) => localizedEntries(`/events/${e.slug}`, e.updatedAt, ["ja"])),
     ...projects.flatMap((p) =>
-      localizedEntries(`/showcase/${p.slug}`, p.updatedAt),
+      localizedEntries(
+        `/showcase/${p.slug}`,
+        p.updatedAt,
+        getProjectContentLocales(p),
+      ),
     ),
   ];
 }

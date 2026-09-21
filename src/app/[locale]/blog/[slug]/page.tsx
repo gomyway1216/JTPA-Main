@@ -13,8 +13,8 @@ import { getPostBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedPostContent } from "@/lib/localized-content";
-import { authorPersonJsonLd } from "@/lib/seo";
+import { getLocalizedPostContent, getPostContentLocales } from "@/lib/localized-content";
+import { authorPersonJsonLd, localizedAlternates, siteOrganizationId } from "@/lib/seo";
 import { formatDate, toDate } from "@/lib/utils";
 
 // Per-request render (session, like state, comments stay fresh); only the
@@ -29,13 +29,23 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const post = await getPostBySlugCached(slug).catch(() => null);
   if (!post || post.status !== "published") {
-    return {};
+    return { robots: { index: false, follow: false } };
   }
   const content = getLocalizedPostContent(post, locale);
+  const alternates = localizedAlternates(
+    `/blog/${post.slug}`,
+    locale,
+    getPostContentLocales(post),
+  );
   return {
     title: content.title,
     description: content.excerpt,
+    alternates,
     openGraph: {
+      url: alternates.canonical,
+      type: "article",
+      publishedTime: toDate(post.publishedAt)?.toISOString(),
+      modifiedTime: toDate(post.updatedAt)?.toISOString(),
       title: content.title,
       description: content.excerpt,
       images: post.coverImage ? [post.coverImage.url] : undefined,
@@ -96,6 +106,11 @@ export default async function BlogPostPage({
       ? `/my/posts/${post.id}/edit`
       : `/admin/posts/${post.id}/edit`;
   const authorProfile = profilesByUid.get(post.authorUid) ?? null;
+  const pageUrl = localizedAlternates(
+    `/blog/${post.slug}`,
+    locale,
+    getPostContentLocales(post),
+  ).canonical;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -107,6 +122,10 @@ export default async function BlogPostPage({
           "@context": "https://schema.org",
           "@type": "BlogPosting",
           headline: content.title,
+          url: pageUrl,
+          mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
+          dateModified: toDate(post.updatedAt)?.toISOString(),
+          publisher: { "@id": siteOrganizationId() },
           description: content.excerpt,
           datePublished: toDate(post.publishedAt)?.toISOString(),
           author: authorPersonJsonLd({
