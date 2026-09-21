@@ -11,7 +11,8 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getMyPollVote, getPollBySlug } from "@/lib/data/poll";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedPollContent } from "@/lib/localized-content";
+import { getLocalizedPollContent, getPollContentLocales } from "@/lib/localized-content";
+import { localizedAlternates } from "@/lib/seo";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -26,15 +27,23 @@ export async function generateMetadata({
     getLocale(),
     getPollBySlug(slug).catch(() => null),
   ]);
-  if (!poll || poll.status !== "published") return {};
+  if (!poll || poll.status !== "published") {
+    return { robots: { index: false, follow: false } };
+  }
   const content = getLocalizedPollContent(poll, locale);
+  const alternates = localizedAlternates(
+    `/poll/${poll.slug}`,
+    locale,
+    getPollContentLocales(poll),
+  );
   const description = content.description
     ? truncate(content.description, 160)
     : `${content.options.map((o) => o.label).join(" / ")}`;
   return {
     title: content.title,
     description,
-    openGraph: { title: content.title, description },
+    alternates,
+    openGraph: { title: content.title, description, url: alternates.canonical },
   };
 }
 
