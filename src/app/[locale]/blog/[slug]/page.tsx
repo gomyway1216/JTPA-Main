@@ -4,6 +4,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
+import { ReaderNextSteps } from "@/components/community/ReaderNextSteps";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
 import { JsonLd } from "@/components/seo/JsonLd";
@@ -204,6 +205,8 @@ export default async function BlogPostPage({
       )}
 
       <MarkdownBody source={content.body} />
+
+      <ReaderNextSteps />
 
       {/* key={post.id} forces a fresh instance per post so local state
           (draft text, optimistic comment list) doesn't leak when the

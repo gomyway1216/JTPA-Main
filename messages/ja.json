@@ -1842,5 +1842,12 @@
     "waitlistSubject": "[JTPA] 繰り上げ参加のお知らせ: {eventTitle}",
     "presenterRoleSuffix": "（発表者枠）",
     "waitlistText": "{displayName} さん\n\nイベント「{eventTitle}」のキャンセル待ちから繰り上げで参加が確定しました。{roleSuffix}\n\n詳細はこちら: {eventUrl}\n\n参加できなくなった場合は、イベントページから登録をキャンセルしてください。"
+  },
+  "ReaderNextSteps": {
+    "title": "AIの実践を、勉強会でも共有しませんか？",
+    "description": "ベイエリアの日本語AIコミュニティで、試したことや疑問を持ち寄っています。次の開催予定や、メンバーの実践ノウハウをご覧ください。",
+    "events": "次のAI勉強会・イベントを見る",
+    "guides": "AIツールの実践ノウハウを読む",
+    "mailingList": "開催情報をメールで受け取る"
   }
 }
