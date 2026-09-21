@@ -124,6 +124,12 @@ export default async function RootLayout({
           "script in component" console warning is informational only and does
           not affect functionality. */}
       <head>
+        {/* Public Search Console ownership token. Keep it in the initial head
+            rather than streamed metadata so Google's verifier can read it. */}
+        <meta
+          name="google-site-verification"
+          content="vql22zdPH9324E9GKZNQjNB45t5KrfI0xhmwZpn0L2w"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var m=localStorage.getItem('jtpa-theme'),d=window.matchMedia('(prefers-color-scheme:dark)').matches;if(m==='dark'||(m!=='light'&&d))document.documentElement.classList.add('dark')}catch(e){}})()`,

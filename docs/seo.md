@@ -30,6 +30,8 @@ and English public report pages and the sitemap after that window.
 In Search Console, use the property for `https://bayarea-ai.com/`, submit
 `https://bayarea-ai.com/sitemap.xml`, and inspect the homepage, next event and
 updated reports. A sitemap entry is not proof that Google indexed the URL.
+The root layout includes the public HTML verification tag supplied by Search
+Console. Keep this tag in the initial HTML head to retain verified ownership.
 Track search queries, impressions, clicks and CTR before drawing conclusions
 about rankings. English alternatives should represent actual translated bodies.
 
