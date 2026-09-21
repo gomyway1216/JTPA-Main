@@ -22,9 +22,10 @@ import {
   getLocalizedProjectContent,
 } from "@/lib/localized-content";
 import { absoluteLocalizedUrl, localizedAlternates } from "@/lib/seo";
+import { projectCardSummary } from "@/lib/project-card-summary";
 import { eventTimeZone } from "@/lib/time-zones";
 import type { EventDoc, LocationType } from "@/lib/types";
-import { eventCardSummary, formatDateTime, stripMarkdown } from "@/lib/utils";
+import { eventCardSummary, formatDateTime } from "@/lib/utils";
 
 // The route still renders per request (the root layout reads the session
 // cookie for the header), but the Firestore reads below are served from
@@ -128,6 +129,9 @@ export default async function HomePage() {
         <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 lg:grid-cols-[5fr_2fr] lg:gap-12">
           {/* Left: text content */}
           <div className="flex flex-col gap-6 sm:gap-8">
+            <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+              {t("eyebrow")}
+            </p>
             <h1 className="text-3xl font-semibold leading-[1.1] tracking-tighter sm:text-5xl sm:leading-[1.05] lg:text-7xl">
               <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
                 AI
@@ -384,7 +388,7 @@ export default async function HomePage() {
                         />
                       </p>
                       <p className="mt-2 line-clamp-3 flex-1 text-sm text-zinc-600 dark:text-zinc-400">
-                        {stripMarkdown(content.description)}
+                        {projectCardSummary(content.description)}
                       </p>
                       {p.tags.length > 0 && (
                         <div className="mt-3 flex flex-wrap gap-1">

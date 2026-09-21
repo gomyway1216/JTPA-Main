@@ -92,7 +92,7 @@
     "metadataTitle": "Bay Area AI Study Group | Japanese AI Community in the Bay Area",
     "metadataDescription": "A Bay Area community where Japanese technology professionals share AI learning, projects, questions, notes, and practical experiments.",
     "siteName": "JTPA",
-    "eyebrow": "Bay Area AI community",
+    "eyebrow": "A Japanese-speaking AI community in the Bay Area",
     "headlinePrefix": " ideas",
     "headlineSuffix": "get better when people share them.",
     "intro1": "JTPA is a Bay Area community where Japanese technology professionals bring what they are learning and building with AI.",
@@ -180,7 +180,7 @@
     "loadMoreError": "Failed to load more comments"
   },
   "EventsPage": {
-    "metadataTitle": "Events",
+    "metadataTitle": "Japanese AI Meetups & Events in the Bay Area",
     "upcoming": "Upcoming Events",
     "noUpcoming": "There are no upcoming events right now.",
     "past": "Past Events",
@@ -191,7 +191,8 @@
     "reportCta": "Event report",
     "openEvent": "Open details for {title}",
     "reportBadge": "Event report",
-    "readReport": "Read report"
+    "readReport": "Read report",
+    "metadataDescription": "Find upcoming Bay Area AI Study Group events and past meetups. Check dates, locations, registration details, and reports from our Japanese-speaking AI community."
   },
   "ShowcasePage": {
     "metadataTitle": "AI Projects | Bay Area AI Study Group",
@@ -203,16 +204,17 @@
     "by": "by"
   },
   "BlogPage": {
-    "metadataTitle": "Articles",
+    "metadataTitle": "AI Meetup Reports & Articles | Bay Area AI Study Group",
     "title": "Articles",
     "description": "Longer posts, writeups, and reflections from JTPA members.",
     "submit": "Write an article",
     "empty": "No published articles yet.",
-    "emptyHint": "Be the first to submit one."
+    "emptyHint": "Be the first to submit one.",
+    "metadataDescription": "Read Bay Area AI Study Group event reports and member articles about practical AI experiments, projects, lessons learned, and reflections."
   },
   "CommunityPage": {
-    "metadataTitle": "Community Posts",
-    "metadataDescription": "Questions, notes, know-how, Ask Everyone posts, and articles from JTPA members.",
+    "metadataTitle": "AI Community Posts | Bay Area AI Study Group",
+    "metadataDescription": "Explore questions, practical AI notes, polls, and articles from our Japanese-speaking Bay Area AI community. Share what you are learning and building.",
     "title": "Community Posts",
     "description": "Questions, notes, prompts you tried, useful patterns, and things you want to ask everyone. You do not need a finished article; share the trail while you are figuring it out.",
     "actions": {
@@ -242,11 +244,12 @@
     "pollMeta": "{voters, plural, =0 {No responses} =1 {# response} other {# responses}} · {options, plural, =1 {# option} other {# options}}"
   },
   "GuidePage": {
-    "metadataTitle": "Notes & Know-how",
+    "metadataTitle": "Practical AI Tool Guides | Bay Area AI Study Group",
     "title": "Notes & Know-how",
     "description": "A place to leave AI tool notes, prompts you tried, setup tips, and practical patterns. Short notes are welcome too.",
     "submit": "Share know-how",
-    "loginSubmit": "Log in to write"
+    "loginSubmit": "Log in to write",
+    "metadataDescription": "Explore AI tool tips, prompts, setup notes, and practical lessons shared by Bay Area AI Study Group members."
   },
   "GuideList": {
     "searchLabel": "Search notes and know-how",
@@ -257,8 +260,8 @@
     "showing": "Showing {filtered} of {total}"
   },
   "QaPage": {
-    "metadataTitle": "Questions",
-    "metadataDescription": "Questions, advice, and notes from JTPA members",
+    "metadataTitle": "AI Questions & Advice | Bay Area AI Study Group",
+    "metadataDescription": "Share AI tool and project questions, describe what you have tried, and exchange practical advice with Bay Area AI Study Group members.",
     "title": "Questions",
     "description": "Write what you are stuck on, what you tried, or what you want to ask the community. Others can respond with comments, replies, and likes.",
     "submit": "Share a question or discovery",
@@ -267,8 +270,8 @@
     "emptyHint": "Be the first to write a question or note."
   },
   "PollPage": {
-    "metadataTitle": "Ask Everyone",
-    "metadataDescription": "Questions to ask JTPA members",
+    "metadataTitle": "AI Community Polls | Bay Area AI Study Group",
+    "metadataDescription": "Ask Bay Area AI Study Group members about AI tools, workflows, and choices. Explore community polls and share your experience.",
     "title": "Ask Everyone",
     "description": "Ask what others are using, choosing, or thinking about. Multiple selections are supported and responses can be changed anytime.",
     "submit": "Ask everyone",
@@ -615,8 +618,18 @@
     "feedbackSuffix": ".",
     "sourceCode": "Source code:",
     "defaultTitle": "About JTPA",
-    "metadataDescription": "About the Bay Area AI Study Group, what the community does, and JTPA representative and site operator Yudai Yaguchi.",
-    "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and project sharing by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Sharing AI products and projects built by members\n"
+    "metadataDescription": "Get to know our Japanese-speaking AI community in the Bay Area. Find out how to join an event and explore reports of the ideas and projects members have shared.",
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) is a community of Japanese technology professionals centered around the Bay Area. We host meetups focused on AI and machine learning, networking events, and project sharing by members.\n\n# What we do\n\n- Regular offline and online study sessions\n- Lightning talks from community presenters\n- Sharing AI products and projects built by members\n",
+    "firstVisit": {
+      "title": "Joining for the first time",
+      "intro": "The Bay Area AI Study Group is a community centered in the Bay Area where people share AI learning and practical experience in Japanese. You are welcome to come and listen, share a small discovery, or show a project in progress.",
+      "participationTitle": "How to join an event",
+      "participation": "Choose a session from the event list and follow the registration instructions on its detail page. Check that event’s date, time zone, format, location, and participation requirements. The event description is also the place to check whether the session suits beginners or needs any preparation.",
+      "reportsTitle": "Get a feel for the community",
+      "reports": "Event reports introduce the topics and practical examples shared at past sessions. Explore a theme that interests you, then take a look at upcoming events and community posts.",
+      "eventsLink": "Find events and registration details",
+      "reportsLink": "Read event reports and articles"
+    }
   },
   "PublicProfile": {
     "notFoundTitle": "User not found",

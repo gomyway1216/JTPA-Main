@@ -70,6 +70,20 @@ export default async function AboutPage({
       />
       <h1 className="text-3xl font-bold">{title}</h1>
       <MarkdownBody source={body} />
+      <section className="space-y-4 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <h2 className="text-2xl font-semibold">{t("firstVisit.title")}</h2>
+        <p className="text-zinc-600 dark:text-zinc-400">{t("firstVisit.intro")}</p>
+        <h3 className="text-lg font-semibold">{t("firstVisit.participationTitle")}</h3>
+        <p className="text-zinc-600 dark:text-zinc-400">{t("firstVisit.participation")}</p>
+        <Link href="/events" className="inline-block text-blue-600 hover:underline">
+          {t("firstVisit.eventsLink")} →
+        </Link>
+        <h3 className="text-lg font-semibold">{t("firstVisit.reportsTitle")}</h3>
+        <p className="text-zinc-600 dark:text-zinc-400">{t("firstVisit.reports")}</p>
+        <Link href="/blog" className="inline-block text-blue-600 hover:underline">
+          {t("firstVisit.reportsLink")} →
+        </Link>
+      </section>
       {/*
         Maintainer section pinned below the editable about Markdown.
         Kept in the source code (not in `sitePages/about`) so the

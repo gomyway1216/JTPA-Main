@@ -92,7 +92,7 @@
     "metadataTitle": "ベイエリアAI勉強会 | Bay Areaの日本語AIコミュニティ",
     "metadataDescription": "Bay Areaの日本語・日本人テックプロフェッショナルが、AIの学び、実践、プロジェクト、質問を持ち寄るコミュニティです。",
     "siteName": "JTPA",
-    "eyebrow": "Bay Area の AI コミュニティ",
+    "eyebrow": "ベイエリアで日本語で学ぶAIコミュニティ",
     "headlinePrefix": "の試行錯誤を、",
     "headlineSuffix": "みんなで持ち寄る場所。",
     "intro1": "ベイエリアAI勉強会は、Bay Areaの日本語・日本人テックプロフェッショナルがAIの学びや実践を持ち寄るコミュニティです。",
@@ -180,7 +180,7 @@
     "loadMoreError": "コメントの読み込みに失敗しました"
   },
   "EventsPage": {
-    "metadataTitle": "イベント一覧",
+    "metadataTitle": "ベイエリアの日本語AI勉強会・イベント",
     "upcoming": "予定されているイベント",
     "noUpcoming": "現在予定されているイベントはありません。",
     "past": "過去のイベント",
@@ -191,7 +191,8 @@
     "reportCta": "開催報告",
     "openEvent": "{title} の詳細を開く",
     "reportBadge": "開催報告",
-    "readReport": "開催報告を読む"
+    "readReport": "開催報告を読む",
+    "metadataDescription": "ベイエリアAI勉強会の開催予定と過去のイベントを紹介。AIの活用事例やプロジェクトを共有する勉強会の日時・会場・参加方法、開催レポートを確認できます。"
   },
   "ShowcasePage": {
     "metadataTitle": "AIプロジェクト | ベイエリアAI勉強会",
@@ -203,16 +204,17 @@
     "by": "by"
   },
   "BlogPage": {
-    "metadataTitle": "記事",
+    "metadataTitle": "AI勉強会の開催レポート・記事｜ベイエリアAI勉強会",
     "title": "記事",
     "description": "JTPAメンバーが書いた長めの投稿や振り返り。",
     "submit": "記事を書く",
     "empty": "まだ公開済みの記事はありません。",
-    "emptyHint": "最初の記事を投稿してみましょう。"
+    "emptyHint": "最初の記事を投稿してみましょう。",
+    "metadataDescription": "ベイエリアAI勉強会の開催レポートとメンバーの記事。AIの実践、制作事例、学びや振り返りを紹介します。"
   },
   "CommunityPage": {
-    "metadataTitle": "みんなの投稿",
-    "metadataDescription": "JTPAメンバーの質問・相談、メモ・ノウハウ、みんなに聞く、記事。",
+    "metadataTitle": "日本語AIコミュニティの投稿｜ベイエリアAI勉強会",
+    "metadataDescription": "ベイエリアAI勉強会の質問・相談、AIツールのノウハウ、アンケート、記事をまとめて紹介。日々の学びや実践を日本語で共有できます。",
     "title": "みんなの投稿",
     "description": "質問、メモ、試したプロンプト、ノウハウ、みんなに聞きたいこと。完成した記事でなくても、試行錯誤の途中から残してください。",
     "actions": {
@@ -242,11 +244,12 @@
     "pollMeta": "{voters} 人が回答 · {options}つの選択肢"
   },
   "GuidePage": {
-    "metadataTitle": "メモ・ノウハウ",
+    "metadataTitle": "AIツールの実践ノウハウ｜ベイエリアAI勉強会",
     "title": "メモ・ノウハウ",
     "description": "AIツールの使い方、試したプロンプト、設定メモ、うまくいった工夫を残せる場所です。短いメモでも歓迎です。",
     "submit": "ノウハウを残す",
-    "loginSubmit": "ログインして書く"
+    "loginSubmit": "ログインして書く",
+    "metadataDescription": "AIツールの使い方、試したプロンプト、設定のメモや実践の工夫を共有。ベイエリアAI勉強会のメンバーによるノウハウを読めます。"
   },
   "GuideList": {
     "searchLabel": "メモ・ノウハウを検索",
@@ -257,8 +260,8 @@
     "showing": "表示中: {filtered} / 全 {total} 件"
   },
   "QaPage": {
-    "metadataTitle": "質問・相談",
-    "metadataDescription": "JTPAメンバーの質問・相談・メモ投稿",
+    "metadataTitle": "AIの質問・相談｜ベイエリアAI勉強会",
+    "metadataDescription": "AIツールやプロジェクトで困ったこと、試したことを共有する質問・相談ページ。ベイエリアAI勉強会のメンバーとコメントで知見を交換できます。",
     "title": "質問・相談",
     "description": "困っていること、試してみたこと、誰かに聞きたいことを気軽に書けます。コメント・返信・いいねで反応できます。",
     "submit": "質問・発見を共有する",
@@ -267,8 +270,8 @@
     "emptyHint": "最初の質問やメモを書いてみましょう。"
   },
   "PollPage": {
-    "metadataTitle": "みんなに聞く",
-    "metadataDescription": "JTPAメンバーに聞きたいこと・アンケート",
+    "metadataTitle": "AI活用のアンケート・意見交換｜ベイエリアAI勉強会",
+    "metadataDescription": "AIツールの選び方や使い方など、ベイエリアAI勉強会のメンバーに聞いてみたいことをアンケートで共有できます。",
     "title": "みんなに聞く",
     "description": "迷っていること、知りたいこと、みんなの使い方を聞けます。複数選択OK・回答はいつでも変更できます。",
     "submit": "みんなに聞く",
@@ -615,8 +618,18 @@
     "feedbackSuffix": "からお気軽にどうぞ。",
     "sourceCode": "ソースコード:",
     "defaultTitle": "ベイエリアAI勉強会とは",
-    "metadataDescription": "ベイエリアAI勉強会の概要、活動内容、JTPA代表・サイト運営の Yudai Yaguchi について。",
-    "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーが作ったプロジェクトの共有などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクト・プロジェクトの共有\n"
+    "metadataDescription": "ベイエリアで日本語でAIを学び、実践や制作事例を共有するコミュニティ。初めて参加する方に向けたイベントの探し方、参加方法、開催レポートをご案内します。",
+    "defaultBody": "JTPA (Japanese Technology Professionals Association) は、Bay Area を中心に活動する日本人テックプロフェッショナルのコミュニティです。 AI・機械学習を中心とした勉強会、ネットワーキングイベント、メンバーが作ったプロジェクトの共有などを行っています。\n\n# 活動内容\n\n- 定期的なオフライン/オンラインの勉強会\n- 発表者を募集してのライトニングトーク\n- メンバーが開発したAIプロダクト・プロジェクトの共有\n",
+    "firstVisit": {
+      "title": "初めて参加する方へ",
+      "intro": "ベイエリアAI勉強会は、ベイエリアを中心に、AIの学びや実践を日本語で持ち寄るコミュニティです。聞くだけの参加や、小さな発見・制作途中のプロジェクトの共有も歓迎しています。",
+      "participationTitle": "イベントの参加方法",
+      "participation": "イベント一覧から気になる回を選び、詳細ページの案内に沿って申し込んでください。日時・タイムゾーン・開催形式・会場・参加条件は各イベントで確認できます。初心者向けの内容か、準備が必要かも、その回の案内をご確認ください。",
+      "reportsTitle": "参加前に雰囲気を知る",
+      "reports": "開催レポートでは、当日共有された話題や実践例を紹介しています。気になるテーマを見つけたら、次のイベントやコミュニティの投稿も見てみてください。",
+      "eventsLink": "開催予定・参加方法を見る",
+      "reportsLink": "開催レポート・記事を読む"
+    }
   },
   "PublicProfile": {
     "notFoundTitle": "ユーザーが見つかりません",
