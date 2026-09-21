@@ -3,8 +3,10 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { CommentsSection } from "@/components/comments/CommentsSection";
+import { ReaderNextSteps } from "@/components/community/ReaderNextSteps";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { MarkdownBody } from "@/components/markdown/MarkdownBody";
+import { AuthorBadge } from "@/components/users/AuthorBadge";
 import { getSessionUser } from "@/lib/auth/session";
 import { getGuideBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
@@ -113,12 +115,13 @@ export default async function GuideDetailPage({
     console.error("Failed to load guide like state:", err);
     return new Set<string>();
   });
-  // Guides have no rendered author surface (admin/editor-curated, see
-  // the GuideDoc type), but the comments thread does, so batch-fetch
-  // for every commenter the same way the post/qa/poll pages do.
-  const profilesByUid = await getPublicProfilesByUids(
-    comments.map((c) => c.authorUid),
-  );
+  // Use only the public profile projection; denormalized authorName and
+  // createdBy.displayName may contain a name the author chose to keep private.
+  const profilesByUid = await getPublicProfilesByUids([
+    ...(ownerUid ? [ownerUid] : []),
+    ...comments.map((c) => c.authorUid),
+  ]);
+  const authorProfile = ownerUid ? profilesByUid.get(ownerUid) : null;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10 space-y-6">
@@ -135,6 +138,7 @@ export default async function GuideDetailPage({
 
       <header className="space-y-3">
         <h1 className="text-3xl font-bold tracking-tight">{content.title}</h1>
+        {authorProfile && <AuthorBadge profile={authorProfile} size="md" />}
         <p className="text-xs text-zinc-500">
           {t("lastUpdated", { date: formatDate(guide.updatedAt, locale) })}
         </p>
@@ -164,6 +168,8 @@ export default async function GuideDetailPage({
       </header>
 
       <MarkdownBody source={content.body} />
+
+      {guide.status === "published" && <ReaderNextSteps />}
 
       <CommentsSection
         key={guide.id}

@@ -1845,5 +1845,12 @@
     "waitlistSubject": "[JTPA] Waitlist promotion: {eventTitle}",
     "presenterRoleSuffix": " (presenter slot)",
     "waitlistText": "Hi {displayName},\n\nA seat opened for \"{eventTitle}\" and your waitlist registration has been promoted to confirmed.{roleSuffix}\n\nDetails: {eventUrl}\n\nIf you can no longer attend, please cancel from the event page."
+  },
+  "ReaderNextSteps": {
+    "title": "Bring your AI experiments to the community",
+    "description": "Share what you have tried and the questions you have with our Japanese-speaking AI community in the Bay Area. Explore upcoming meetups and practical notes from members.",
+    "events": "Explore upcoming AI meetups",
+    "guides": "Read practical AI guides",
+    "mailingList": "Get event updates by email"
   }
 }
