@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/public-page-metadata";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import {
@@ -24,12 +25,13 @@ import { formatDate, stripMarkdown, toDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("CommunityPage");
-  return {
-    title: t("metadataTitle"),
-    description: t("metadataDescription"),
-  };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return publicPageMetadata("/community", locale);
 }
 
 export default async function CommunityPage() {

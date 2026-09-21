@@ -1,5 +1,6 @@
 import Link from "@/i18n/navigation";
 import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/public-page-metadata";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { GuideListClient } from "@/app/[locale]/guide/_components/GuideListClient";
@@ -11,9 +12,13 @@ import { listPublishedGuidesCached } from "@/lib/data/cached";
 // list itself is served from the shared data cache.
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("GuidePage");
-  return { title: t("metadataTitle") };
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  return publicPageMetadata("/guide", locale);
 }
 
 export default async function GuideIndexPage() {
