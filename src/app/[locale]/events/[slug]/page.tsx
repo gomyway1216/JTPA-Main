@@ -24,6 +24,7 @@ import {
   facebookShareUrl,
   googleCalendarUrl,
 } from "@/lib/event-links";
+import { localizedAlternates } from "@/lib/seo";
 import { siteBaseUrl } from "@/lib/site";
 import {
   eventTimeZone,
@@ -56,18 +57,22 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const event = await getEventBySlug(slug).catch(() => null);
-  // Mirror the page's own gating (`if (!event) notFound()`): any status the
-  // page renders gets metadata. Members-only events are safe to describe
-  // here — the page redirects anonymous visitors before a <head> is ever
-  // sent, so crawlers/unfurlers only see the login redirect.
-  if (!event) return {};
+  // Never expose draft/member-only copy in metadata, including streamed
+  // metadata or authenticated previews.
+  if (!event || event.status === "draft" || event.visibility === "members_only") {
+    return { robots: { index: false, follow: false } };
+  }
+  // Events currently have one shared Japanese body, without translations.
+  const alternates = localizedAlternates(`/events/${event.slug}`, "ja", ["ja"]);
   const description = truncate(stripMarkdown(event.description), 160);
   const imageUrls = eventImageUrls(event);
   const images = imageUrls.length > 0 ? imageUrls : undefined;
   return {
     title: event.title,
     description,
+    alternates,
     openGraph: {
+      url: alternates.canonical,
       title: event.title,
       description,
       images,
@@ -103,6 +108,15 @@ function eventJsonLd(event: EventDoc, eventUrl: string) {
     "@context": "https://schema.org",
     "@type": "Event",
     name: event.title,
+    eventStatus:
+      event.status === "cancelled"
+        ? "https://schema.org/EventCancelled"
+        : "https://schema.org/EventScheduled",
+    eventAttendanceMode: {
+      offline: "https://schema.org/OfflineEventAttendanceMode",
+      online: "https://schema.org/OnlineEventAttendanceMode",
+      hybrid: "https://schema.org/MixedEventAttendanceMode",
+    }[event.location.type],
     description: truncate(stripMarkdown(event.description), 160),
     // toDate() handles the serialized Timestamp shape; toISOString() emits
     // ISO 8601 in UTC (trailing `Z`), which satisfies the "with timezone"
@@ -189,9 +203,14 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 space-y-8">
-      <JsonLd
-        data={eventJsonLd(event, eventUrl)}
-      />
+      {event.status !== "draft" && event.visibility !== "members_only" && (
+        <JsonLd
+          data={eventJsonLd(
+            event,
+            localizedAlternates(`/events/${event.slug}`, "ja", ["ja"]).canonical,
+          )}
+        />
+      )}
 
       {event.coverImage?.url && (
         // Keep the uploaded cover visible end-to-end instead of forcing it

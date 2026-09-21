@@ -15,7 +15,7 @@ const middlewareMocks = vi.hoisted(() => {
         headers: { location: target.toString() },
       });
     }
-    return new Response(null, { headers: { "x-middleware-next": "1" } });
+    return new Response(null, { headers: { "x-middleware-next": "1", link: '<https://example.com/en>; rel="alternate"; hreflang="en"' } });
   });
   return {
     createMiddleware: vi.fn(() => intlProxy),
@@ -82,6 +82,17 @@ describe("proxy", () => {
       expect(response.headers.get("location")).toBeNull();
       expect(response.headers.get("x-middleware-next")).toBe("1");
       expect(middlewareMocks.intlProxy).toHaveBeenCalledOnce();
+    },
+  );
+});
+
+describe("content-aware alternate headers", () => {
+  it.each(["events", "blog", "guide", "showcase", "qa", "poll"])(
+    "leaves %s detail hreflang to content-aware metadata",
+    (section) => {
+      expect(runProxy(`/en/${section}/example`).headers.get("link")).toBeNull();
+      expect(runProxy(`/ja/${section}/example/`).headers.get("link")).toBeNull();
+      expect(runProxy(`/en/${section}`).headers.get("link")).toContain("hreflang");
     },
   );
 });

@@ -10,7 +10,11 @@ import { getGuideBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedGuideContent } from "@/lib/localized-content";
+import {
+  getLocalizedGuideContent,
+  getGuideContentLocales,
+} from "@/lib/localized-content";
+import { localizedAlternates } from "@/lib/seo";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 // Per-request render (session-based draft preview, like state, comments
@@ -27,13 +31,22 @@ export async function generateMetadata({
     getLocale(),
     getGuideBySlugCached(slug).catch(() => null),
   ]);
-  if (!guide || guide.status !== "published") return {};
+  if (!guide || guide.status !== "published") {
+    return { robots: { index: false, follow: false } };
+  }
   const content = getLocalizedGuideContent(guide, locale);
+  const alternates = localizedAlternates(
+    `/guide/${guide.slug}`,
+    locale,
+    getGuideContentLocales(guide),
+  );
   const description = truncate(stripMarkdown(content.body), 160);
   return {
     title: content.title,
     description,
+    alternates,
     openGraph: {
+      url: alternates.canonical,
       title: content.title,
       description,
     },

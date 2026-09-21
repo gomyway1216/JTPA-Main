@@ -1,6 +1,7 @@
 import {
   CONTENT_LOCALES,
   preferredContentLocale,
+  normalizeContentLocales,
   type ContentLocale,
 } from "@/lib/content-localization";
 import type {
@@ -184,4 +185,48 @@ export function getLocalizedPollContent(
         : poll.description,
     options: localizePollOptions(poll.options, content.options),
   };
+}
+
+// Match the same completeness checks as the visible body. Locale checkboxes
+// alone do not prove a translation exists. Legacy records render one shared
+// body: keep one canonical locale, using an unambiguous saved locale when
+// available and the site's original Japanese locale otherwise.
+function indexableLocales<T>(
+  record: { localized?: LocalizedContentMap<T>; locales?: ContentLocale[] },
+  isComplete: (content: T | undefined) => boolean,
+): ContentLocale[] {
+  const translated = completeLocales(record.localized, isComplete);
+  if (translated.length > 0) return translated;
+  const declared = normalizeContentLocales(record.locales);
+  return declared.length === 1 ? declared : ["ja"];
+}
+
+export function getPostContentLocales(
+  record: Pick<PostDoc, "localized" | "locales">,
+): ContentLocale[] {
+  return indexableLocales(record, isCompletePostContent);
+}
+
+export function getGuideContentLocales(
+  record: Pick<GuideDoc, "localized" | "locales">,
+): ContentLocale[] {
+  return indexableLocales(record, isCompleteGuideContent);
+}
+
+export function getProjectContentLocales(
+  record: Pick<ProjectDoc, "localized" | "locales">,
+): ContentLocale[] {
+  return indexableLocales(record, isCompleteProjectContent);
+}
+
+export function getQaContentLocales(
+  record: Pick<QaDoc, "localized" | "locales">,
+): ContentLocale[] {
+  return indexableLocales(record, isCompleteQaContent);
+}
+
+export function getPollContentLocales(
+  record: Pick<PollDoc, "localized" | "locales">,
+): ContentLocale[] {
+  return indexableLocales(record, isCompletePollContent);
 }

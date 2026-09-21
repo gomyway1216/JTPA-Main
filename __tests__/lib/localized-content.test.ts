@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   getLocalizedGuideContent,
+  getPostContentLocales,
+  getGuideContentLocales,
+  getProjectContentLocales,
+  getQaContentLocales,
+  getPollContentLocales,
   getLocalizedPollContent,
   getLocalizedPostContent,
   getLocalizedProjectContent,
@@ -150,5 +155,33 @@ describe("localized content helpers", () => {
         { id: "b", label: "Option B", voteCount: 1 },
       ],
     });
+  });
+});
+
+describe("indexable content languages", () => {
+  it("uses the same completeness criteria as the rendered post body", () => {
+    expect(getPostContentLocales({ locales: ["ja", "en"], localized: {
+      ja: { title: "日本語", excerpt: "抜粋", body: "本文" },
+      en: { title: "English", excerpt: "Excerpt", body: " " },
+    } })).toEqual(["ja"]);
+  });
+
+  it("indexes complete localized bodies even if old locale flags disagree", () => {
+    expect(getGuideContentLocales({ locales: ["ja"], localized: {
+      en: { title: "English", body: "Body" },
+    } })).toEqual(["en"]);
+    expect(getProjectContentLocales({ localized: {
+      ja: { title: "日本語", description: "本文" },
+      en: { title: "English", description: "Body" },
+    } })).toEqual(["ja", "en"]);
+  });
+
+  it("does not claim two translations for legacy shared bodies", () => {
+    expect(getQaContentLocales({ locales: ["ja", "en"] })).toEqual(["ja"]);
+    expect(getQaContentLocales({ locales: ["en"] })).toEqual(["en"]);
+    expect(getPollContentLocales({})).toEqual(["ja"]);
+    expect(getPollContentLocales({ localized: {
+      en: { title: "Poll", description: "", options: [{ id: "one", label: "One" }, { id: "two", label: "Two" }] },
+    } })).toEqual(["en"]);
   });
 });

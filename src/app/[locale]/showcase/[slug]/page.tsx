@@ -13,7 +13,10 @@ import { getProjectBySlugCached } from "@/lib/data/cached";
 import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedProjectContent } from "@/lib/localized-content";
+import {
+  getLocalizedProjectContent,
+  getProjectContentLocales,
+} from "@/lib/localized-content";
 import { canViewProjectDetail } from "@/lib/projects-visibility";
 import {
   absoluteLocalizedUrl,
@@ -41,20 +44,24 @@ export async function generateMetadata({
   const { locale, slug } = await params;
   const project = await getProjectBySlugCached(slug).catch(() => null);
   if (!project || project.status !== "approved") {
-    return {};
+    return { robots: { index: false, follow: false } };
   }
   const content = getLocalizedProjectContent(project, locale);
+  const alternates = localizedAlternates(
+    `/showcase/${project.slug}`,
+    locale,
+    getProjectContentLocales(project),
+  );
   const description = truncate(stripMarkdown(content.description), 160);
   const images = project.thumbnail ? [project.thumbnail.url] : undefined;
-  const canonicalPath = `/showcase/${project.slug}`;
   return {
     title: content.title,
     description,
-    alternates: localizedAlternates(canonicalPath, locale),
+    alternates,
     openGraph: {
       title: content.title,
       description,
-      url: absoluteLocalizedUrl(canonicalPath, locale),
+      url: alternates.canonical,
       images,
     },
     twitter: {
@@ -87,7 +94,11 @@ export default async function ProjectDetailPage({
   const user = await userPromise;
   if (!canViewProjectDetail(project, user, locale)) notFound();
   const content = getLocalizedProjectContent(project, locale);
-  const pageUrl = absoluteLocalizedUrl(`/showcase/${project.slug}`, locale);
+  const pageUrl = localizedAlternates(
+    `/showcase/${project.slug}`,
+    locale,
+    getProjectContentLocales(project),
+  ).canonical;
   const plainDescription = truncate(stripMarkdown(content.description), 300);
   const sameAs = [
     project.appUrl,
