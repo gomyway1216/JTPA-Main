@@ -11,7 +11,8 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getQaBySlug } from "@/lib/data/qa";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedQaContent } from "@/lib/localized-content";
+import { getLocalizedQaContent, getQaContentLocales } from "@/lib/localized-content";
+import { localizedAlternates } from "@/lib/seo";
 import { formatDate, stripMarkdown, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +27,21 @@ export async function generateMetadata({
     getLocale(),
     getQaBySlug(slug).catch(() => null),
   ]);
-  if (!qa || qa.status !== "published") return {};
+  if (!qa || qa.status !== "published") {
+    return { robots: { index: false, follow: false } };
+  }
   const content = getLocalizedQaContent(qa, locale);
+  const alternates = localizedAlternates(
+    `/qa/${qa.slug}`,
+    locale,
+    getQaContentLocales(qa),
+  );
   const description = truncate(stripMarkdown(content.body), 160);
   return {
     title: content.title,
     description,
-    openGraph: { title: content.title, description },
+    alternates,
+    openGraph: { title: content.title, description, url: alternates.canonical },
   };
 }
 

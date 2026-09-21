@@ -9,6 +9,7 @@ import {
 } from "@/lib/maintainer";
 import {
   authorPersonJsonLd,
+  localizedAlternates,
   maintainerPersonId,
   profilePageJsonLd,
   siteIdentityJsonLd,
@@ -123,5 +124,32 @@ describe("authorPersonJsonLd", () => {
 
   it("exports the expected canonical maintainer path", () => {
     expect(MAINTAINER_PROFILE_PATH).toBe("/u/yudai-yaguchi");
+  });
+});
+
+describe("localizedAlternates", () => {
+  it("canonicalizes fallback routes to the actual content language", () => {
+    expect(localizedAlternates("/blog/example", "en", ["ja"])).toEqual({
+      canonical: "https://example.test/ja/blog/example",
+      languages: {
+        ja: "https://example.test/ja/blog/example",
+        "x-default": "https://example.test/ja/blog/example",
+      },
+    });
+    expect(localizedAlternates("/guide/example", "ja", ["en"])).toEqual({
+      canonical: "https://example.test/en/guide/example",
+      languages: {
+        en: "https://example.test/en/guide/example",
+        "x-default": "https://example.test/en/guide/example",
+      },
+    });
+  });
+
+  it("keeps translated pages self-canonical with reciprocal alternates", () => {
+    const ja = localizedAlternates("/blog/example", "ja", ["ja", "en"]);
+    const en = localizedAlternates("/blog/example", "en", ["ja", "en"]);
+    expect(ja.canonical).toBe("https://example.test/ja/blog/example");
+    expect(en.canonical).toBe("https://example.test/en/blog/example");
+    expect(ja.languages).toEqual(en.languages);
   });
 });
