@@ -26,7 +26,8 @@
       "qa": "Questions",
       "poll": "Ask Everyone",
       "about": "About JTPA",
-      "help": "Help"
+      "help": "Help",
+      "search": "Search"
     },
     "userMenu": "User menu",
     "userFallback": "User",
@@ -1865,5 +1866,26 @@
     "events": "Explore upcoming AI meetups",
     "guides": "Read practical AI guides",
     "mailingList": "Get event updates by email"
+  },
+  "SearchPage": {
+    "title": "Search the site",
+    "description": "Find articles, guides, projects, and events in one place.",
+    "label": "Keywords",
+    "placeholder": "e.g. Claude Code, email automation",
+    "submit": "Search",
+    "hint": "Search titles, tags, and content. Separate keywords with spaces to find content containing all of them.",
+    "initial": "Enter an AI tool or topic you want to explore.",
+    "results": "{count, plural, one {# result} other {# results}} for “{query}”",
+    "empty": "No matches found. Try fewer keywords or a different phrase.",
+    "pagination": "Search results pages",
+    "previous": "← Previous",
+    "next": "Next →",
+    "page": "Page {page} of {pages}",
+    "kinds": {
+      "post": "Article / Meetup report",
+      "guide": "Guide / Tips",
+      "project": "Project",
+      "event": "Event"
+    }
   }
 }
