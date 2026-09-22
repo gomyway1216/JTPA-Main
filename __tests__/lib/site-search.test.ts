@@ -84,4 +84,25 @@ describe("public site search", () => {
     expect(searchQuery("a".repeat(500))).toHaveLength(SEARCH_QUERY_MAX_LENGTH);
     expect(buildSearchDocuments(sources({ posts: [post({ slug: "" }), post({ title: "" })], guides: [], projects: [], events: [] }), "ja")).toEqual([]);
   });
+
+  it.each([null, "AI", 42, {}, [null, 42, {}, "valid-tag"]])("tolerates malformed tags: %j", (tags) => {
+    const docs = buildSearchDocuments(sources({
+      posts: [post({ tags: tags as unknown as string[] })],
+      guides: [guide({ tags: tags as unknown as string[] })],
+      projects: [project({ tags: tags as unknown as string[] })],
+    }), "ja");
+    expect(searchDocuments(docs, "Claude Code").total).toBe(4);
+    expect(searchDocuments(docs, "valid-tag").total).toBe(Array.isArray(tags) ? 3 : 0);
+  });
+
+  it("skips invalid titles/slugs and still searches titles when body/excerpt fields are malformed", () => {
+    const docs = buildSearchDocuments(sources({
+      posts: [post({ title: 123 as unknown as string }), post({ slug: null as unknown as string })],
+      guides: [guide({ title: "Claude Code", body: 42 as unknown as string })],
+      projects: [project({ description: null as unknown as string })],
+      events: [event({ summary: {} as unknown as string })],
+    }), "ja");
+    expect(searchDocuments(docs, "Claude Code").total).toBe(2);
+    expect(searchDocuments(docs, "メールツール").total).toBe(1);
+  });
 });

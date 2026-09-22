@@ -34,17 +34,21 @@ function document(
   kind: SearchKind, path: string, slug: string, title: string,
   body: string, tags: string[] = [], excerpt = "",
 ): SearchDocument[] {
-  if (!slug?.trim() || !title?.trim()) return [];
+  // Firestore validation is warn-only. One malformed public record must not
+  // break searches across otherwise valid content in the other collections.
+  if (typeof slug !== "string" || !slug.trim() || typeof title !== "string" || !title.trim()) return [];
+  const safeTags = Array.isArray(tags) ? tags.filter((tag) => typeof tag === "string") : [];
+  const safeExcerpt = typeof excerpt === "string" ? excerpt : "";
   // Keep code samples searchable while removing Markdown presentation.
-  const text = stripMarkdown((body ?? "").replace(/`/g, ""));
+  const text = stripMarkdown((typeof body === "string" ? body : "").replace(/`/g, ""));
   return [{
     kind,
     href: `${path}/${encodeURIComponent(slug)}`,
     title,
-    excerpt: truncate(stripMarkdown(excerpt || text), 180),
+    excerpt: truncate(stripMarkdown(safeExcerpt || text), 180),
     titleText: normalize(title),
-    tagsText: normalize(tags.join(" ")),
-    bodyText: normalize(`${excerpt} ${text}`),
+    tagsText: normalize(safeTags.join(" ")),
+    bodyText: normalize(`${safeExcerpt} ${text}`),
   }];
 }
 
