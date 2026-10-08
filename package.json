@@ -25,7 +25,7 @@
     "firebase": "^12.18.0",
     "firebase-admin": "^13.10.0",
     "highlight.js": "^11.11.1",
-    "next": "16.3.4",
+    "next": "16.4.0",
     "next-intl": "^4.13.0",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
@@ -46,7 +46,7 @@
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.8",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "16.4.0",
     "firebase-tools": "13.35.1",
     "tailwindcss": "^4",
     "typescript": "^5",
@@ -54,10 +54,14 @@
     "vitest": "^4.1.8"
   },
   "overrides": {
+    "@fastify/busboy": "3.2.2",
+    "@grpc/grpc-js": "1.14.5",
     "firebase-tools": {
       "universal-analytics": "0.5.3"
     },
     "protobufjs": "7.6.3",
-    "retry-request": "8.0.3"
+    "retry-request": "8.0.3",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }
