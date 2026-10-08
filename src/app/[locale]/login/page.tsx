@@ -30,6 +30,9 @@ export default async function LoginPage({
         </p>
       </div>
       <SignInButton redirectTo={redirectPath} />
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        {t("emailConsent")}
+      </p>
     </div>
   );
 }

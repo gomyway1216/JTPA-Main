@@ -146,7 +146,8 @@
   },
   "Login": {
     "title": "Log in",
-    "description": "A Google account is required to RSVP for events, share projects, and post to the community."
+    "description": "A Google account is required to RSVP for events, share projects, and post to the community.",
+    "emailConsent": "By logging in, you agree to receive JTPA event announcements at your Google account email address. You can unsubscribe anytime from your profile page."
   },
   "LikeButton": {
     "loginAria": "Log in to like",
