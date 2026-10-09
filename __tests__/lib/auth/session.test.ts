@@ -55,7 +55,7 @@ describe("createSessionCookie", () => {
       // The Admin SDK takes expiresIn in MILLISECONDS — not seconds — so
       // a regression that drops the *1000 would let the cookie expire
       // 1000× too early. Worth pinning the exact value.
-      expiresIn: 60 * 60 * 24 * 5 * 1000,
+      expiresIn: 60 * 60 * 24 * 14 * 1000,
     });
 
     expect(cookieStore.set).toHaveBeenCalledTimes(1);
@@ -76,7 +76,7 @@ describe("createSessionCookie", () => {
       httpOnly: true,
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 5,
+      maxAge: 60 * 60 * 24 * 14,
     });
   });
 
@@ -129,9 +129,19 @@ describe("getSessionUser", () => {
     // Verify failures (expired / tampered cookie / revoked) must NOT
     // bubble up as a 500 — they're just "not signed in".
     cookieStore.get.mockReturnValueOnce({ value: "rotten" });
-    verifySessionCookieMock.mockRejectedValueOnce(new Error("revoked"));
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    verifySessionCookieMock.mockRejectedValueOnce(
+      Object.assign(new Error("revoked"), {
+        code: "auth/id-token-revoked",
+      }),
+    );
     const { getSessionUser } = await importFresh();
     expect(await getSessionUser()).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      "[auth] Session cookie verification failed",
+      { code: "auth/id-token-revoked" },
+    );
+    warn.mockRestore();
   });
 
   it("passes checkRevoked=true to the verifier", async () => {

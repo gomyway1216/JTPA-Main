@@ -47,10 +47,28 @@ export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
       isEditor: decoded.editor === true,
       isContributor: decoded.contributor === true,
     };
-  } catch {
+  } catch (error) {
+    // Keep authentication failures non-fatal, but retain the provider's
+    // coarse error code so unexpectedly short sessions can be diagnosed
+    // without logging the cookie or any user data.
+    console.warn("[auth] Session cookie verification failed", {
+      code: authErrorCode(error),
+    });
     return null;
   }
 });
+
+function authErrorCode(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+  return "unknown";
+}
 
 export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();

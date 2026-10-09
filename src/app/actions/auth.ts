@@ -9,6 +9,8 @@ import {
 } from "@/lib/auth/session";
 import { redirectToLocalizedPath } from "@/lib/i18n/redirects";
 
+export type SessionRefreshResult = { ok: true } | { ok: false };
+
 export async function signInWithIdToken(idToken: string): Promise<void> {
   const decoded = await adminAuth().verifyIdToken(idToken, true);
 
@@ -87,6 +89,37 @@ export async function signInWithIdToken(idToken: string): Promise<void> {
   }
 
   await createSessionCookie(idToken);
+}
+
+/**
+ * Renew the server session from Firebase's persisted browser login.
+ * Unlike the full sign-in path, renewal does not touch the user profile.
+ */
+export async function refreshSessionWithIdToken(
+  idToken: string,
+): Promise<SessionRefreshResult> {
+  try {
+    await adminAuth().verifyIdToken(idToken, true);
+    await createSessionCookie(idToken);
+    return { ok: true };
+  } catch (error) {
+    console.warn("[auth] Session cookie refresh failed", {
+      code: authErrorCode(error),
+    });
+    return { ok: false };
+  }
+}
+
+function authErrorCode(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof error.code === "string"
+  ) {
+    return error.code;
+  }
+  return "unknown";
 }
 
 export async function signOut(locale?: string): Promise<void> {

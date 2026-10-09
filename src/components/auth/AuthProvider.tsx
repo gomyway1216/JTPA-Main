@@ -10,8 +10,11 @@ import {
   useEffect,
   useMemo,
   useState,
+  useTransition,
 } from "react";
+import { useRouter } from "next/navigation";
 
+import { refreshSessionWithIdToken } from "@/app/actions/auth";
 import { clientAuth } from "@/lib/firebase/client";
 import type { SessionUser } from "@/lib/types";
 
@@ -36,14 +39,41 @@ export function AuthProvider({
 }) {
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, startSessionRefresh] = useTransition();
+  const router = useRouter();
 
   useEffect(() => {
+    let active = true;
     const unsub = onIdTokenChanged(clientAuth, (u) => {
       setFirebaseUser(u);
-      setLoading(false);
+      if (!u) {
+        setLoading(false);
+        return;
+      }
+
+      // Firebase persists the browser login and rotates its ID token, but the
+      // server's httpOnly session cookie has a separate fixed lifetime. Renew
+      // that cookie whenever Firebase restores or rotates the user so active
+      // visitors do not appear signed out while Google still knows them.
+      startSessionRefresh(async () => {
+        try {
+          const idToken = await u.getIdToken();
+          const result = await refreshSessionWithIdToken(idToken);
+          if (active && result.ok && initialUser?.uid !== u.uid) {
+            router.refresh();
+          }
+        } catch (error) {
+          console.warn("[auth] Unable to renew browser session", error);
+        } finally {
+          if (active) setLoading(false);
+        }
+      });
     });
-    return () => unsub();
-  }, []);
+    return () => {
+      active = false;
+      unsub();
+    };
+  }, [initialUser?.uid, router]);
 
   const value = useMemo<AuthContextValue>(
     () => ({ user: initialUser, firebaseUser, loading }),
