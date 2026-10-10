@@ -400,7 +400,15 @@
   "PollDetail": {
     "archivedNoticePrefix": "この投稿は管理者によって",
     "archived": "アーカイブ",
-    "archivedNoticeSuffix": "されています。あなた以外には表示されません。"
+    "archivedNoticeSuffix": "されています。あなた以外には表示されません。",
+    "showQr": "QRコードを表示",
+    "qrHeading": "スマートフォンで読み取って回答",
+    "qrHint": "QRコードを読み取り、Googleでログインして回答してください。",
+    "showQrFullscreen": "全画面表示",
+    "exitQrFullscreen": "全画面を終了",
+    "qrFullscreenUnsupported": "このブラウザは全画面表示に対応していません。",
+    "qrFullscreenFailed": "全画面表示を開始できませんでした。",
+    "closeQr": "閉じる"
   },
   "PollResults": {
     "summary": "{voters} 人が回答",

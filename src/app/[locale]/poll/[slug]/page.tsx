@@ -1,8 +1,10 @@
+import QRCode from "qrcode";
 import Link from "@/i18n/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { PollVoteForm } from "@/app/[locale]/poll/_components/PollVoteForm";
+import { PollQrDialog } from "@/app/[locale]/poll/_components/PollQrDialog";
 import { CommentsSection } from "@/components/comments/CommentsSection";
 import { LikeButton } from "@/components/likes/LikeButton";
 import { AuthorBadge } from "@/components/users/AuthorBadge";
@@ -11,8 +13,13 @@ import { listComments } from "@/lib/data/comments";
 import { getMyLikesForParent, RECORD_LIKE_KEY } from "@/lib/data/likes";
 import { getMyPollVote, getPollBySlug } from "@/lib/data/poll";
 import { getPublicProfilesByUids } from "@/lib/data/users";
-import { getLocalizedPollContent, getPollContentLocales } from "@/lib/localized-content";
+import { localizedPath } from "@/i18n/paths";
+import {
+  getLocalizedPollContent,
+  getPollContentLocales,
+} from "@/lib/localized-content";
 import { localizedAlternates } from "@/lib/seo";
+import { siteBaseUrl } from "@/lib/site";
 import { formatDate, truncate } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -100,6 +107,15 @@ export default async function PollDetailPage({
   const canEdit = isAuthorOrAdmin;
   const initialSelectedIds = myVote?.optionIds ?? [];
   const content = getLocalizedPollContent(poll, locale);
+  const pollUrl = `${siteBaseUrl()}${localizedPath(`/poll/${poll.slug}`, locale)}`;
+  const qrSvg = canEdit
+    ? await QRCode.toString(pollUrl, {
+        type: "svg",
+        errorCorrectionLevel: "M",
+        margin: 1,
+        width: 480,
+      })
+    : null;
   const backHref =
     poll.status === "archived" && isAuthor ? "/my/posts" : "/community";
   const backLabel =
@@ -140,12 +156,21 @@ export default async function PollDetailPage({
             user={user}
           />
           {canEdit && (
-            <Link
-              href={`/poll/${poll.slug}/edit`}
-              className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
-            >
-              {common("edit")}
-            </Link>
+            <>
+              <Link
+                href={`/poll/${poll.slug}/edit`}
+                className="text-xs text-zinc-600 hover:underline dark:text-zinc-400"
+              >
+                {common("edit")}
+              </Link>
+              {qrSvg && (
+                <PollQrDialog
+                  pollTitle={content.title}
+                  pollUrl={pollUrl}
+                  qrSvg={qrSvg}
+                />
+              )}
+            </>
           )}
         </div>
       </header>

@@ -400,7 +400,15 @@
   "PollDetail": {
     "archivedNoticePrefix": "This post has been",
     "archived": "archived",
-    "archivedNoticeSuffix": "by an admin. It is only visible to you."
+    "archivedNoticeSuffix": "by an admin. It is only visible to you.",
+    "showQr": "Show QR code",
+    "qrHeading": "Scan with your phone to respond",
+    "qrHint": "Scan the QR code, log in with Google, and submit your response.",
+    "showQrFullscreen": "Show fullscreen",
+    "exitQrFullscreen": "Exit fullscreen",
+    "qrFullscreenUnsupported": "This browser does not support fullscreen mode.",
+    "qrFullscreenFailed": "Fullscreen mode could not be started.",
+    "closeQr": "Close"
   },
   "PollResults": {
     "summary": "{voters, plural, =0 {No responses} =1 {# response} other {# responses}}",
