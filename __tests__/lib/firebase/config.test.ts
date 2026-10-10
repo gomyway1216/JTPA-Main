@@ -35,7 +35,7 @@ describe("session cookie constants", () => {
 
   it("expires the session cookie after 5 days", async () => {
     const { SESSION_COOKIE_MAX_AGE_SEC } = await importConfig();
-    expect(SESSION_COOKIE_MAX_AGE_SEC).toBe(60 * 60 * 24 * 5);
+    expect(SESSION_COOKIE_MAX_AGE_SEC).toBe(60 * 60 * 24 * 14);
   });
 });
 

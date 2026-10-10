@@ -41,7 +41,11 @@ vi.mock("next/navigation", () => ({
   redirect: (path: string) => redirectMock(path),
 }));
 
-import { signInWithIdToken, signOut } from "@/app/actions/auth";
+import {
+  refreshSessionWithIdToken,
+  signInWithIdToken,
+  signOut,
+} from "@/app/actions/auth";
 
 beforeEach(() => {
   verifyIdTokenMock.mockReset();
@@ -209,6 +213,40 @@ describe("signInWithIdToken — session cookie", () => {
     docGetMock.mockResolvedValueOnce({ exists: true, get: () => undefined });
     await signInWithIdToken("the-token");
     expect(createSessionCookieMock).toHaveBeenCalledWith("the-token");
+  });
+});
+
+describe("refreshSessionWithIdToken", () => {
+  it("verifies the refreshed Firebase token and renews the session cookie", async () => {
+    verifyIdTokenMock.mockResolvedValueOnce({ uid: "u1" });
+
+    await expect(refreshSessionWithIdToken("fresh-token")).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(verifyIdTokenMock).toHaveBeenCalledWith("fresh-token", true);
+    expect(createSessionCookieMock).toHaveBeenCalledWith("fresh-token");
+    expect(docGetMock).not.toHaveBeenCalled();
+    expect(docSetMock).not.toHaveBeenCalled();
+  });
+
+  it("does not mint a cookie when the refreshed token is invalid", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    verifyIdTokenMock.mockRejectedValueOnce(
+      Object.assign(new Error("expired"), {
+        code: "auth/id-token-expired",
+      }),
+    );
+
+    await expect(refreshSessionWithIdToken("expired-token")).resolves.toEqual({
+      ok: false,
+    });
+
+    expect(createSessionCookieMock).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledWith("[auth] Session cookie refresh failed", {
+      code: "auth/id-token-expired",
+    });
+    warn.mockRestore();
   });
 });
 
