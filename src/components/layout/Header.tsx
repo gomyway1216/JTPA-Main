@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { href: "/events", key: "events" },
   { href: "/showcase", key: "showcase" },
   { href: "/community", key: "community" },
+  { href: "/search", key: "search" },
 ] as const;
 
 type HeaderProps = {
@@ -165,12 +166,12 @@ export function Header({
     // stacking context above the page area so dropdowns stay clickable
     // even when a page section uses negative-z decorations.
     <header className="sticky top-0 z-30 border-b border-zinc-200/60 bg-white/70 backdrop-blur-xl supports-[backdrop-filter:blur(0)]:bg-white/60 dark:border-zinc-800/60 dark:bg-zinc-950/70 dark:supports-[backdrop-filter:blur(0)]:bg-zinc-950/55 print:hidden">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-lg font-semibold tracking-tight">
             {t("siteName")}
           </Link>
-          <nav className="hidden gap-4 text-sm text-zinc-700 sm:flex dark:text-zinc-300">
+          <nav className="hidden gap-4 text-sm text-zinc-700 lg:flex dark:text-zinc-300">
             {NAV_LINKS.map((l) => (
               <Link
                 key={l.href}
@@ -183,7 +184,7 @@ export function Header({
           </nav>
         </div>
 
-        <div className="flex items-center gap-2 text-sm">
+        <div className="ml-auto flex shrink-0 items-center gap-2 text-sm">
           <ThemeToggle />
           <Link
             href={pathname}
@@ -370,7 +371,7 @@ export function Header({
           ) : (
             <Link
               href="/login"
-              className="rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+              className="whitespace-nowrap rounded-md border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
             >
               {t("login")}
             </Link>
@@ -381,7 +382,7 @@ export function Header({
             onClick={() => setMobileOpen((v) => !v)}
             aria-label={mobileOpen ? t("closeMenu") : t("openMenu")}
             aria-expanded={mobileOpen}
-            className="rounded-md p-2 text-zinc-700 hover:bg-zinc-100 sm:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className="rounded-md p-2 text-zinc-700 hover:bg-zinc-100 lg:hidden dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             {mobileOpen ? (
               <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
@@ -409,7 +410,7 @@ export function Header({
       </div>
 
       {mobileOpen && (
-        <div className="border-t border-zinc-200 bg-white sm:hidden dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="border-t border-zinc-200 bg-white lg:hidden dark:border-zinc-800 dark:bg-zinc-950">
           <nav className="mx-auto flex max-w-6xl flex-col px-4 py-2">
             {NAV_LINKS.map((l) => (
               <Link
