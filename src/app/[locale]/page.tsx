@@ -91,48 +91,15 @@ export default async function HomePage() {
   const profileSetupHref = loginHref("/my/profile", locale);
 
   return (
-    <div className="space-y-24 pb-20 sm:space-y-32 sm:pb-24">
-      {/* Hero is full-bleed so the decorative blobs + dot grid can fill
-          the whole viewport width. The content inside re-applies
-          `mx-auto max-w-6xl` so the text and CTAs stay aligned with the
-          centered card grid below.
-
-          `min-h` is capped to a comfortable hero height on mobile (so
-          short copy + 2 CTAs don't leave a giant empty rectangle below
-          the buttons) and stretches to most-of-the-viewport from `sm:`
-          up, where the heavier desktop type wants more breathing room. */}
-      <section className="relative isolate flex min-h-[36rem] items-center overflow-hidden sm:min-h-[calc(100vh-12rem)]">
-        {/*
-         * Three decorative layers, all `pointer-events-none` +
-         * `aria-hidden`, scoped under `isolate` so their negative
-         * z-index doesn't slip behind the header:
-         *   - dot grid: signals "tech" without a literal terminal
-         *     pattern. Fades to transparent at the edges via a
-         *     radial mask (see `.hero-dot-grid` in globals.css) so it
-         *     doesn't compete with surrounding sections.
-         *   - top-right + bottom-left blobs: cooler at one corner,
-         *     warmer at the other for a sense of depth.
-         */}
-        <div
-          aria-hidden="true"
-          className="hero-dot-grid pointer-events-none absolute inset-0 -z-20"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-32 -z-10 h-[560px] w-[720px] max-w-full rounded-full bg-gradient-to-br from-blue-500/25 via-indigo-500/20 to-violet-500/25 blur-3xl dark:from-blue-500/35 dark:via-indigo-500/30 dark:to-violet-500/35"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-32 -left-24 -z-10 h-[460px] w-[600px] max-w-full rounded-full bg-gradient-to-tr from-violet-500/20 via-indigo-500/15 to-blue-500/20 blur-3xl dark:from-violet-500/30 dark:via-indigo-500/25 dark:to-blue-500/30"
-        />
-
-        <div className="relative mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 px-4 py-12 sm:py-16 lg:grid-cols-[5fr_2fr] lg:gap-12">
+    <div className="space-y-16 pb-20 sm:space-y-20 sm:pb-24">
+      <section className="border-y border-zinc-200/70 bg-zinc-50/70 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-8 px-4 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_14rem] lg:gap-16 lg:py-16">
           {/* Left: text content */}
-          <div className="flex flex-col gap-6 sm:gap-8">
+          <div className="flex flex-col gap-5 sm:gap-6">
             <p className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
               {t("eyebrow")}
             </p>
-            <h1 className="text-3xl font-semibold leading-[1.1] tracking-tighter sm:text-5xl sm:leading-[1.05] lg:text-7xl">
+            <h1 className="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
               <span className="bg-shimmer-gradient animate-gradient-shimmer bg-clip-text text-transparent">
                 AI
               </span>
@@ -142,10 +109,10 @@ export default async function HomePage() {
               {t("headlineSuffix")}
             </h1>
 
-            <p className="text-lg text-zinc-600 sm:text-xl sm:leading-relaxed dark:text-zinc-300">
+            <p className="max-w-3xl text-base leading-relaxed text-zinc-600 sm:text-lg dark:text-zinc-300">
               {t("intro1")} {t("intro2")}
             </p>
-            <div className="flex flex-wrap gap-3 pt-2">
+            <div className="flex flex-wrap gap-3">
               <Link
                 href="/community"
                 className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 bg-[length:200%_100%] bg-left px-5 py-2 text-sm font-medium text-white shadow-sm shadow-indigo-500/30 transition-all hover:bg-right hover:shadow-md hover:shadow-indigo-500/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-white active:scale-[0.98] dark:from-blue-500 dark:via-indigo-500 dark:to-violet-500 dark:shadow-indigo-400/20 dark:focus:ring-indigo-400 dark:focus:ring-offset-zinc-950"
@@ -168,20 +135,20 @@ export default async function HomePage() {
           </div>
 
           {/* Right: logo */}
-          <div className="flex items-center justify-center">
+          <div className="hidden items-center justify-center lg:flex">
             <Image
               src="/images/logo_640_460.png"
               alt={t("siteName")}
               width={640}
               height={460}
               priority
-              className="h-auto w-full"
+              className="h-auto w-full max-w-56"
             />
           </div>
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl space-y-20 px-4">
+      <div className="mx-auto max-w-6xl space-y-16 px-4 sm:space-y-20">
       <FadeUp as="section" className="space-y-6">
         {/* Section head row. On phones the view-all link slides under
             the heading so the H2 + subtitle get the full content width
