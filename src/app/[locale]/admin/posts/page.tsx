@@ -85,9 +85,17 @@ export default async function AdminPostsPage() {
     <div className="space-y-8">
       <LoadErrorBanner show={loadFailed} />
       <section>
-        <h1 className="text-2xl font-bold">
-          {t("titlePending", { count: pending.length })}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">
+            {t("titlePending", { count: pending.length })}
+          </h1>
+          <Link
+            href="/blog/new"
+            className="rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          >
+            {common("createNew")}
+          </Link>
+        </div>
         <div className="mt-4 space-y-3">
           {pending.length === 0 ? (
             <p className="text-sm text-zinc-500">{t("emptyPending")}</p>
